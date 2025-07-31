@@ -72,6 +72,48 @@ export async function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
+  // For local development, bypass Replit OIDC
+  if (process.env.NODE_ENV === 'development' && process.env.REPL_ID === 'local-development') {
+    // Simple local auth for development
+    app.get("/api/login", async (req, res) => {
+      // Create a mock user for local development
+      const mockUser = {
+        id: 'local-user-123',
+        email: 'developer@local.dev',
+        firstName: 'Local',
+        lastName: 'Developer',
+        profileImageUrl: 'https://via.placeholder.com/150'
+      };
+      
+      // Store user in database
+      await storage.upsertUser(mockUser);
+      
+      // Create session
+      req.login({ claims: { sub: mockUser.id }, ...mockUser }, (err) => {
+        if (err) {
+          console.error('Login error:', err);
+          return res.status(500).json({ error: 'Login failed' });
+        }
+        res.redirect('/');
+      });
+    });
+    
+    app.get("/api/callback", (req, res) => {
+      res.redirect('/');
+    });
+    
+    app.get("/api/logout", (req, res) => {
+      req.logout(() => {
+        res.redirect('/');
+      });
+    });
+    
+    passport.serializeUser((user: any, cb) => cb(null, user));
+    passport.deserializeUser((user: any, cb) => cb(null, user));
+    
+    return;
+  }
+
   const config = await getOidcConfig();
 
   const verify: VerifyFunction = async (
