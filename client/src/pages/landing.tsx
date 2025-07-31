@@ -32,6 +32,12 @@ export default function Landing() {
                 Features
               </button>
               <button 
+                onClick={() => scrollToSection('roles')}
+                className="text-gray-600 hover:text-primary transition-colors"
+              >
+                Family Roles
+              </button>
+              <button 
                 onClick={() => scrollToSection('therapy')}
                 className="text-gray-600 hover:text-primary transition-colors"
               >
@@ -244,6 +250,320 @@ export default function Landing() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Who We Serve Section */}
+      <section id="roles" className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Designed for Every Family Member</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Fluenti provides tailored experiences for children, adults, and guardians - ensuring comprehensive support and progress tracking for the entire family.
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Children */}
+            <Card className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-8 hover:shadow-lg transition-shadow">
+              <CardContent className="p-0 text-center">
+                <div className="w-20 h-20 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Heart className="text-white text-3xl" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">For Children</h3>
+                <p className="text-gray-600 mb-6">
+                  Interactive, gamified learning experience designed to make speech therapy fun and engaging for young learners.
+                </p>
+                <div className="space-y-3 text-left">
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="text-green-600 w-5 h-5" />
+                    <span className="text-gray-700">3D AI avatar companions</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="text-green-600 w-5 h-5" />
+                    <span className="text-gray-700">Achievement rewards & badges</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="text-green-600 w-5 h-5" />
+                    <span className="text-gray-700">Age-appropriate exercises</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="text-green-600 w-5 h-5" />
+                    <span className="text-gray-700">Bilingual support (English/Urdu)</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Adults */}
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-8 hover:shadow-lg transition-shadow">
+              <CardContent className="p-0 text-center">
+                <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Brain className="text-white text-3xl" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">For Adults</h3>
+                <p className="text-gray-600 mb-6">
+                  Professional-grade speech therapy and emotional support tools designed for adult learners and mental health needs.
+                </p>
+                <div className="space-y-3 text-left">
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="text-blue-600 w-5 h-5" />
+                    <span className="text-gray-700">Advanced speech analysis</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="text-blue-600 w-5 h-5" />
+                    <span className="text-gray-700">Emotional support chat</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="text-blue-600 w-5 h-5" />
+                    <span className="text-gray-700">Professional progress reports</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="text-blue-600 w-5 h-5" />
+                    <span className="text-gray-700">CBT-based interventions</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Guardians */}
+            <Card className="bg-gradient-to-br from-purple-50 to-pink-100 rounded-2xl p-8 hover:shadow-lg transition-shadow border-2 border-purple-200">
+              <CardContent className="p-0 text-center">
+                <div className="w-20 h-20 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Shield className="text-white text-3xl" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">For Guardians</h3>
+                <p className="text-gray-600 mb-6">
+                  Comprehensive oversight and monitoring tools to track your child's progress and support their learning journey.
+                </p>
+                <div className="space-y-3 text-left">
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="text-purple-600 w-5 h-5" />
+                    <span className="text-gray-700">Real-time progress monitoring</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="text-purple-600 w-5 h-5" />
+                    <span className="text-gray-700">Detailed session reports</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="text-purple-600 w-5 h-5" />
+                    <span className="text-gray-700">Goal setting & milestones</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="text-purple-600 w-5 h-5" />
+                    <span className="text-gray-700">Child safety controls</span>
+                  </div>
+                  <div className="flex items-center space-x-3">
+                    <CheckCircle className="text-purple-600 w-5 h-5" />
+                    <span className="text-gray-700">Communication with therapists</span>
+                  </div>
+                </div>
+                
+                {/* Featured Badge */}
+                <div className="mt-6 p-3 bg-purple-100 rounded-lg border border-purple-200">
+                  <div className="flex items-center justify-center space-x-2">
+                    <Trophy className="text-purple-600 w-5 h-5" />
+                    <span className="text-purple-800 font-semibold text-sm">Most Comprehensive Dashboard</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Guardian Role Highlight */}
+          <div className="mt-16 bg-white rounded-2xl shadow-lg p-8 border border-purple-100">
+            <div className="grid lg:grid-cols-2 gap-8 items-center">
+              <div>
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center">
+                    <Shield className="text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">Guardian Role Features</h3>
+                </div>
+                <p className="text-gray-600 mb-6">
+                  As a Guardian, you have complete oversight of your child's therapy journey with advanced monitoring and control features designed specifically for family management.
+                </p>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="text-purple-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700">Session scheduling</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="text-purple-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700">Progress analytics</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="text-purple-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700">Content filtering</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="text-purple-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700">Time management</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6">
+                <h4 className="font-semibold text-gray-900 mb-4">What Guardians Can Do:</h4>
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-sm font-bold">1</span>
+                    </div>
+                    <span className="text-gray-700 text-sm">Monitor child's daily progress and session completion rates</span>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-sm font-bold">2</span>
+                    </div>
+                    <span className="text-gray-700 text-sm">Set learning goals and customize therapy plans</span>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-sm font-bold">3</span>
+                    </div>
+                    <span className="text-gray-700 text-sm">Receive detailed weekly and monthly progress reports</span>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-sm font-bold">4</span>
+                    </div>
+                    <span className="text-gray-700 text-sm">Communicate directly with AI system about child's needs</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Children Role Highlight */}
+          <div className="mt-16 bg-white rounded-2xl shadow-lg p-8 border border-green-100">
+            <div className="grid lg:grid-cols-2 gap-8 items-center">
+              <div>
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center">
+                    <Heart className="text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">Children's Learning Features</h3>
+                </div>
+                <p className="text-gray-600 mb-6">
+                  Specially designed for young learners with engaging, age-appropriate activities that make speech therapy feel like playing games.
+                </p>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="text-green-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700">Interactive games</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="text-green-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700">Reward system</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="text-green-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700">Visual feedback</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="text-green-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700">Kid-friendly interface</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6">
+                <h4 className="font-semibold text-gray-900 mb-4">What Children Experience:</h4>
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-sm font-bold">1</span>
+                    </div>
+                    <span className="text-gray-700 text-sm">Play interactive games while practicing speech sounds</span>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-sm font-bold">2</span>
+                    </div>
+                    <span className="text-gray-700 text-sm">Earn badges and rewards for completing exercises</span>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-sm font-bold">3</span>
+                    </div>
+                    <span className="text-gray-700 text-sm">Interact with friendly 3D avatar companions</span>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-sm font-bold">4</span>
+                    </div>
+                    <span className="text-gray-700 text-sm">Get instant positive feedback and encouragement</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Adult Role Highlight */}
+          <div className="mt-16 bg-white rounded-2xl shadow-lg p-8 border border-blue-100">
+            <div className="grid lg:grid-cols-2 gap-8 items-center">
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6">
+                <h4 className="font-semibold text-gray-900 mb-4">What Adults Get:</h4>
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-sm font-bold">1</span>
+                    </div>
+                    <span className="text-gray-700 text-sm">Professional-grade speech analysis and correction</span>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-sm font-bold">2</span>
+                    </div>
+                    <span className="text-gray-700 text-sm">24/7 emotional support and mental health assistance</span>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-sm font-bold">3</span>
+                    </div>
+                    <span className="text-gray-700 text-sm">Detailed progress reports and performance analytics</span>
+                  </div>
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                      <span className="text-white text-sm font-bold">4</span>
+                    </div>
+                    <span className="text-gray-700 text-sm">CBT-based interventions and coping strategies</span>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+                    <Brain className="text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-gray-900">Adult Professional Features</h3>
+                </div>
+                <p className="text-gray-600 mb-6">
+                  Comprehensive tools designed for adult learners seeking professional speech therapy and emotional support with advanced analytics.
+                </p>
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="text-blue-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700">Advanced analytics</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="text-blue-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700">Emotional AI support</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="text-blue-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700">Professional reports</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="text-blue-600 w-4 h-4" />
+                    <span className="text-sm text-gray-700">Privacy controls</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
