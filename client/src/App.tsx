@@ -80,10 +80,13 @@ function Router() {
           
           {/* Progress tracking - different views for different roles */}
           <Route path="/progress" component={ProgressDashboard} />
-          
+
+          {/* Achievements page */}
+          <Route path="/achievements" component={require('@/pages/achievements').default} />
+
           {/* Assessment - available to all but different content */}
           <Route path="/assessment" component={Assessment} />
-          
+
           {/* Legacy home route - redirect to appropriate dashboard */}
           <Route path="/home" component={DashboardRedirect} />
         </>
