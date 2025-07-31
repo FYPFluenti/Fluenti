@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Play, Calendar, Shield, Globe, Smartphone, Users, Mic, Brain, MessageCircle, ShieldCheck, Star, Clock, Trophy, Flame, CheckCircle, Facebook, Twitter, Linkedin, Youtube, Mail, Phone, ArrowRight } from "lucide-react";
+import { Play, Calendar, Shield, Globe, Smartphone, Users, Mic, Brain, MessageCircle, ShieldCheck, Star, Clock, Trophy, Flame, CheckCircle, Facebook, Twitter, Linkedin, Youtube, Mail, Phone, ArrowRight, Heart } from "lucide-react";
 
 export default function Landing() {
   const scrollToSection = (sectionId: string) => {
@@ -353,6 +353,183 @@ export default function Landing() {
               </div>
             </div>
           </Card>
+        </div>
+      </section>
+
+      {/* Emotional Support Section */}
+      <section id="support" className="py-20 bg-gradient-to-br from-purple-50 to-pink-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Emotional Support & Well-being</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Our AI-powered emotional support system provides 24/7 assistance, helping children and adults build confidence and emotional resilience.
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <div className="space-y-8">
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Brain className="text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">AI-Powered Emotional Assessment</h3>
+                    <p className="text-gray-600">Advanced sentiment analysis to understand emotional states and provide personalized support.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-pink-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <MessageCircle className="text-pink-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">24/7 Chat Support</h3>
+                    <p className="text-gray-600">Always available emotional support chatbot trained on child psychology principles.</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                    <Shield className="text-indigo-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">Safe & Secure Environment</h3>
+                    <p className="text-gray-600">HIPAA-compliant platform ensuring privacy and safety for all users.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              <div className="space-y-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <div className="w-8 h-8 bg-purple-600 rounded-full"></div>
+                  <span className="font-medium">Emotional Support Chat</span>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-gray-100 rounded-lg p-3 max-w-xs">
+                    <p className="text-sm">I'm feeling nervous about speaking in class tomorrow.</p>
+                  </div>
+                  <div className="bg-purple-100 rounded-lg p-3 max-w-xs ml-auto">
+                    <p className="text-sm">I understand those feelings. Let's practice some breathing exercises together. Would you like to try a confidence-building exercise?</p>
+                  </div>
+                  <div className="bg-purple-50 rounded-lg p-4">
+                    <div className="flex items-center space-x-2 mb-2">
+                      <Heart className="text-purple-600" />
+                      <span className="font-medium text-sm">Emotional State: Anxious</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <CheckCircle className="text-green-600" />
+                      <span className="text-sm text-gray-600">Recommended: Deep breathing + positive affirmations</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Progress Section */}
+      <section id="progress" className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Track Your Progress</h2>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+              Comprehensive analytics and progress tracking to celebrate achievements and identify areas for improvement.
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Progress Stats */}
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-8">
+              <div className="text-center">
+                <Trophy className="w-12 h-12 text-blue-600 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-4">Achievements</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Words Mastered</span>
+                    <span className="font-bold text-blue-600">247</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Sessions Completed</span>
+                    <span className="font-bold text-blue-600">42</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Streak Days</span>
+                    <span className="font-bold text-blue-600">12</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Accuracy Chart */}
+            <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-8">
+              <div className="text-center mb-6">
+                <Star className="w-12 h-12 text-green-600 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold">Accuracy Trends</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>This Week</span>
+                    <span className="font-semibold">94%</span>
+                  </div>
+                  <div className="w-full bg-white rounded-full h-2">
+                    <div className="bg-green-600 h-2 rounded-full" style={{width: '94%'}}></div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Last Week</span>
+                    <span className="font-semibold">87%</span>
+                  </div>
+                  <div className="w-full bg-white rounded-full h-2">
+                    <div className="bg-green-500 h-2 rounded-full" style={{width: '87%'}}></div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Overall</span>
+                    <span className="font-semibold">91%</span>
+                  </div>
+                  <div className="w-full bg-white rounded-full h-2">
+                    <div className="bg-green-600 h-2 rounded-full" style={{width: '91%'}}></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Goals */}
+            <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-8">
+              <div className="text-center">
+                <Flame className="w-12 h-12 text-orange-600 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold mb-4">Goals & Challenges</h3>
+                <div className="space-y-4">
+                  <div className="bg-white rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Weekly Goal</span>
+                      <span className="text-xs text-orange-600">8/10 sessions</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="bg-orange-600 h-2 rounded-full" style={{width: '80%'}}></div>
+                    </div>
+                  </div>
+                  <div className="bg-white rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Accuracy Challenge</span>
+                      <span className="text-xs text-orange-600">95% target</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div className="bg-orange-500 h-2 rounded-full" style={{width: '94%'}}></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
