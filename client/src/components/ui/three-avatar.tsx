@@ -1,156 +1,172 @@
 import { useEffect, useRef, useState } from 'react';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Mic, Volume2, RotateCcw } from 'lucide-react';
+import { Volume2, VolumeX, Mic, MicOff } from 'lucide-react';
 
 interface ThreeAvatarProps {
-  isActive?: boolean;
-  isSpeaking?: boolean;
-  onSpeak?: () => void;
-  onListen?: () => void;
-  onReset?: () => void;
-  message?: string;
-  emotion?: string;
+  isListening?: boolean;
+  onSpeak?: (text: string) => void;
+  currentMessage?: string;
+  language?: 'english' | 'urdu';
+  className?: string;
 }
 
-export function ThreeAvatar({
-  isActive = false,
-  isSpeaking = false,
-  onSpeak,
-  onListen,
-  onReset,
-  message,
-  emotion = 'neutral'
+export function ThreeAvatar({ 
+  isListening = false, 
+  onSpeak, 
+  currentMessage = '',
+  language = 'english',
+  className = ''
 }: ThreeAvatarProps) {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isAudioEnabled, setIsAudioEnabled] = useState(true);
+  const speechSynthRef = useRef<SpeechSynthesis | null>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    // Simulate avatar loading
-    const timer = setTimeout(() => {
-      setIsLoaded(true);
-    }, 1000);
-
-    return () => clearTimeout(timer);
+    if (typeof window !== 'undefined') {
+      speechSynthRef.current = window.speechSynthesis;
+    }
   }, []);
 
-  // Get emotion-based styling
-  const getEmotionStyle = (emotion: string) => {
-    switch (emotion) {
-      case 'happy':
-        return 'from-green-400 to-blue-500';
-      case 'calm':
-        return 'from-blue-400 to-purple-500';
-      case 'encouraging':
-        return 'from-orange-400 to-pink-500';
-      case 'excited':
-        return 'from-pink-400 to-red-500';
-      default:
-        return 'from-primary to-secondary';
+  const speak = (text: string) => {
+    if (!speechSynthRef.current || !isAudioEnabled || !text.trim()) return;
+
+    // Cancel any ongoing speech
+    speechSynthRef.current.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Set language based on prop
+    utterance.lang = language === 'urdu' ? 'ur-PK' : 'en-US';
+    utterance.rate = 0.9;
+    utterance.pitch = 1.1;
+    utterance.volume = 0.8;
+
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+
+    speechSynthRef.current.speak(utterance);
+    onSpeak?.(text);
+  };
+
+  useEffect(() => {
+    if (currentMessage && isAudioEnabled) {
+      speak(currentMessage);
+    }
+  }, [currentMessage, isAudioEnabled]);
+
+  const toggleAudio = () => {
+    setIsAudioEnabled(!isAudioEnabled);
+    if (!isAudioEnabled && speechSynthRef.current) {
+      speechSynthRef.current.cancel();
+      setIsSpeaking(false);
     }
   };
 
   return (
-    <Card className="fluenti-card p-6 relative overflow-hidden">
-      {/* AI Status */}
-      <Badge 
-        className={`absolute top-4 right-4 ${
-          isActive ? 'bg-secondary' : 'bg-gray-400'
-        } text-white flex items-center space-x-2`}
+    <div className={`relative ${className}`}>
+      {/* 3D Avatar Container */}
+      <div 
+        ref={avatarRef}
+        className={`w-64 h-64 mx-auto mb-4 rounded-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center relative overflow-hidden transition-all duration-300 ${
+          isSpeaking ? 'scale-105 shadow-lg' : 'scale-100'
+        } ${
+          isListening ? 'ring-4 ring-red-400 ring-opacity-75 animate-pulse' : ''
+        }`}
       >
-        <div className={`w-2 h-2 rounded-full ${
-          isActive ? 'bg-green-300 animate-pulse' : 'bg-gray-300'
-        }`}></div>
-        <span>{isActive ? 'AI Active' : 'AI Inactive'}</span>
-      </Badge>
-
-      {/* Avatar Container */}
-      <div className="fluenti-avatar-container mb-6">
-        <div 
-          ref={avatarRef}
-          className={`w-48 h-48 bg-gradient-to-br ${getEmotionStyle(emotion)} rounded-full flex items-center justify-center relative transition-all duration-300 ${
-            isSpeaking ? 'avatar-talking scale-105' : ''
-          } ${!isLoaded ? 'animate-pulse' : ''}`}
-        >
-          {/* Avatar placeholder - In production, this would be the Ready Player Me 3D avatar */}
-          <div className="text-white text-6xl">
-            {isLoaded ? '🤖' : '⏳'}
+        {/* Avatar Face */}
+        <div className="relative w-48 h-48 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
+          {/* Eyes */}
+          <div className="absolute top-16 left-12 w-4 h-4 bg-white rounded-full">
+            <div className={`w-2 h-2 bg-gray-800 rounded-full transition-all duration-200 ${
+              isSpeaking ? 'mt-1 ml-1' : 'mt-2 ml-1'
+            }`}></div>
           </div>
-          
-          {/* Speech indicator */}
+          <div className="absolute top-16 right-12 w-4 h-4 bg-white rounded-full">
+            <div className={`w-2 h-2 bg-gray-800 rounded-full transition-all duration-200 ${
+              isSpeaking ? 'mt-1 ml-1' : 'mt-2 ml-1'
+            }`}></div>
+          </div>
+
+          {/* Mouth */}
+          <div className={`absolute bottom-16 left-1/2 transform -translate-x-1/2 transition-all duration-200 ${
+            isSpeaking 
+              ? 'w-8 h-6 bg-gray-800 rounded-full' 
+              : 'w-6 h-3 bg-gray-800 rounded-full'
+          }`}></div>
+
+          {/* Speaking Animation */}
           {isSpeaking && (
-            <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2">
-              <div className="speech-wave">
-                <div className="speech-wave-bar"></div>
-                <div className="speech-wave-bar"></div>
-                <div className="speech-wave-bar"></div>
-                <div className="speech-wave-bar"></div>
-                <div className="speech-wave-bar"></div>
-              </div>
-            </div>
+            <div className="absolute inset-0 rounded-full border-4 border-white/30 animate-ping"></div>
           )}
         </div>
+
+        {/* Listening Indicator */}
+        {isListening && (
+          <div className="absolute -top-2 -right-2 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center animate-bounce">
+            <Mic className="w-4 h-4 text-white" />
+          </div>
+        )}
+
+        {/* Audio Waves */}
+        {(isSpeaking || isListening) && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex space-x-1">
+              {[...Array(5)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-1 bg-white/50 rounded-full animate-pulse`}
+                  style={{
+                    height: `${Math.random() * 20 + 10}px`,
+                    animationDelay: `${i * 0.1}s`,
+                    animationDuration: '0.8s'
+                  }}
+                ></div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Message Display */}
-      {message && (
-        <div className="bg-gray-50 rounded-lg p-4 mb-4">
-          <div className="flex items-center space-x-2 mb-2">
-            <Volume2 className="text-primary h-4 w-4" />
-            <span className="font-medium text-gray-700">AI Avatar Says:</span>
-          </div>
-          <p className="text-gray-600">{message}</p>
-        </div>
-      )}
-
-      {/* Avatar Controls */}
-      <div className="grid grid-cols-3 gap-3">
-        <Button
-          className="fluenti-button-primary text-sm py-2"
-          onClick={onSpeak}
-          disabled={!isActive}
-        >
-          <Volume2 className="mr-1 h-4 w-4" />
-          Speak
-        </Button>
-        
-        <Button
-          className="fluenti-button-secondary text-sm py-2"
-          onClick={onListen}
-          disabled={!isActive}
-        >
-          <Mic className="mr-1 h-4 w-4" />
-          Listen
-        </Button>
-        
+      {/* Controls */}
+      <div className="flex justify-center space-x-4">
         <Button
           variant="outline"
-          className="text-sm py-2"
-          onClick={onReset}
-          disabled={!isActive}
+          size="sm"
+          onClick={toggleAudio}
+          className="flex items-center space-x-2"
         >
-          <RotateCcw className="mr-1 h-4 w-4" />
-          Reset
+          {isAudioEnabled ? (
+            <>
+              <Volume2 className="w-4 h-4" />
+              <span>Audio On</span>
+            </>
+          ) : (
+            <>
+              <VolumeX className="w-4 h-4" />
+              <span>Audio Off</span>
+            </>
+          )}
         </Button>
       </div>
 
-      {/* Integration Note */}
-      <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-        <p className="text-xs text-blue-600">
-          <strong>Development Note:</strong> This placeholder will be replaced with Ready Player Me 3D avatar integration in production.
+      {/* Avatar Status */}
+      <div className="text-center mt-4">
+        <p className="text-sm text-gray-600">
+          {isSpeaking 
+            ? 'Speaking...' 
+            : isListening 
+              ? 'Listening...' 
+              : 'Ready to help!'
+          }
         </p>
+        {currentMessage && (
+          <p className="text-xs text-gray-500 mt-1 max-w-xs mx-auto truncate">
+            "{currentMessage}"
+          </p>
+        )}
       </div>
-
-      {/* Loading overlay */}
-      {!isLoaded && (
-        <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-            <p className="text-sm text-gray-600">Loading Avatar...</p>
-          </div>
-        </div>
-      )}
-    </Card>
+    </div>
   );
 }

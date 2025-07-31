@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ThreeAvatar } from "@/components/ui/three-avatar";
 import { SpeechExercise } from "@/components/speech/speech-exercise";
+import { InitialAssessment } from "@/components/assessment/initial-assessment";
 import { Link } from "wouter";
 import { 
   MessageCircle, 
@@ -20,7 +21,10 @@ import {
   Trophy,
   Target,
   Clock,
-  Volume2
+  Volume2,
+  BookOpen,
+  CheckCircle,
+  Mic
 } from "lucide-react";
 
 interface Exercise {

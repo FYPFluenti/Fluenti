@@ -1,40 +1,71 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Play, Mic, RotateCcw, Volume2, CheckCircle } from 'lucide-react';
+import { ThreeAvatar } from '@/components/ui/three-avatar';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
-import { PronunciationFeedback } from './pronunciation-feedback';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  Mic, 
+  MicOff, 
+  RotateCcw, 
+  CheckCircle, 
+  XCircle, 
+  Star,
+  Volume2,
+  BookOpen,
+  Trophy
+} from 'lucide-react';
 
-interface Exercise {
+interface Word {
   id: string;
   word: string;
   phonetic: string;
-  sentence: string;
-  language: 'english' | 'urdu';
-  difficulty: number;
+  translation?: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  category: string;
 }
 
 interface SpeechExerciseProps {
-  exercise: Exercise;
-  onComplete: (result: { accuracy: number; attempts: number }) => void;
-  onNext: () => void;
-  isLoading?: boolean;
+  language: 'english' | 'urdu';
+  exerciseType: 'assessment' | 'practice' | 'exercise';
+  onComplete?: (results: any) => void;
+  sessionId?: string;
 }
 
-export function SpeechExercise({ 
-  exercise, 
-  onComplete, 
-  onNext, 
-  isLoading = false 
-}: SpeechExerciseProps) {
-  const [attempts, setAttempts] = useState(0);
-  const [lastAccuracy, setLastAccuracy] = useState<number | null>(null);
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [feedbackData, setFeedbackData] = useState<any>(null);
-  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+const SAMPLE_WORDS: Record<string, Word[]> = {
+  english: [
+    { id: '1', word: 'hello', phonetic: '/həˈloʊ/', difficulty: 'easy', category: 'greetings' },
+    { id: '2', word: 'beautiful', phonetic: '/ˈbjuːtɪfəl/', difficulty: 'medium', category: 'adjectives' },
+    { id: '3', word: 'pronunciation', phonetic: '/prəˌnʌnsiˈeɪʃən/', difficulty: 'hard', category: 'vocabulary' },
+    { id: '4', word: 'water', phonetic: '/ˈwɔːtər/', difficulty: 'easy', category: 'nouns' },
+    { id: '5', word: 'wonderful', phonetic: '/ˈwʌndərfəl/', difficulty: 'medium', category: 'adjectives' },
+  ],
+  urdu: [
+    { id: '1', word: 'سلام', phonetic: '/salam/', translation: 'Hello', difficulty: 'easy', category: 'greetings' },
+    { id: '2', word: 'خوبصورت', phonetic: '/khubsurat/', translation: 'Beautiful', difficulty: 'medium', category: 'adjectives' },
+    { id: '3', word: 'تعلیم', phonetic: '/taleem/', translation: 'Education', difficulty: 'medium', category: 'nouns' },
+    { id: '4', word: 'پانی', phonetic: '/pani/', translation: 'Water', difficulty: 'easy', category: 'nouns' },
+    { id: '5', word: 'دوست', phonetic: '/dost/', translation: 'Friend', difficulty: 'easy', category: 'nouns' },
+  ]
+};
 
+export function SpeechExercise({ 
+  language, 
+  exerciseType, 
+  onComplete, 
+  sessionId 
+}: SpeechExerciseProps) {
+  const [currentWordIndex, setCurrentWordIndex] = useState(0);
+  const [attempts, setAttempts] = useState<Record<string, number>>({});
+  const [results, setResults] = useState<Record<string, { accuracy: number; attempts: number; feedback: string }>>({});
+  const [isComplete, setIsComplete] = useState(false);
+  const [exerciseStarted, setExerciseStarted] = useState(false);
+  const [avatarMessage, setAvatarMessage] = useState('');
+  const [score, setScore] = useState(0);
+
+  const { toast } = useToast();
   const {
     isListening,
     transcript,
@@ -45,234 +76,385 @@ export function SpeechExercise({
     isSupported
   } = useSpeechRecognition();
 
-  // Text-to-speech for demonstration
-  const speakWord = async () => {
-    if ('speechSynthesis' in window) {
-      setIsPlayingAudio(true);
-      const utterance = new SpeechSynthesisUtterance(exercise.word);
-      utterance.lang = exercise.language === 'urdu' ? 'ur-PK' : 'en-US';
-      utterance.rate = 0.8;
-      
-      utterance.onend = () => setIsPlayingAudio(false);
-      utterance.onerror = () => setIsPlayingAudio(false);
-      
-      speechSynthesis.speak(utterance);
-    }
-  };
+  const words = SAMPLE_WORDS[language] || [];
+  const currentWord = words[currentWordIndex];
+  const progress = (currentWordIndex / words.length) * 100;
 
-  // Handle speech recognition result
   useEffect(() => {
-    if (transcript && !isListening) {
-      const newAttempts = attempts + 1;
-      setAttempts(newAttempts);
-      
-      // Simulate accuracy calculation (in production, this would call the API)
-      const similarity = calculateSimilarity(exercise.word.toLowerCase(), transcript.toLowerCase());
-      const accuracy = Math.min(100, Math.max(0, similarity * 100));
-      
-      setLastAccuracy(accuracy);
-      setFeedbackData({
-        accuracy,
-        feedback: accuracy >= 80 
-          ? "Excellent pronunciation! Well done!" 
-          : accuracy >= 60 
-          ? "Good attempt! Try emphasizing the vowel sounds more."
-          : "Keep practicing! Focus on each syllable clearly.",
-        improvements: accuracy < 80 
-          ? ["Speak more slowly", "Emphasize vowel sounds", "Practice the phonetic pronunciation"]
-          : ["Great job! Keep up the good work!"]
-      });
+    if (!exerciseStarted) {
+      setAvatarMessage(`Welcome! Let's practice ${language === 'english' ? 'English' : 'Urdu'} pronunciation. Click start when you're ready!`);
+    }
+  }, [language, exerciseStarted]);
 
-      if (accuracy >= 75 || newAttempts >= 3) {
-        setIsCompleted(true);
-        onComplete({ accuracy, attempts: newAttempts });
+  useEffect(() => {
+    if (transcript && currentWord) {
+      analyzeTranscript();
+    }
+  }, [transcript, currentWord]);
+
+  const analyzeTranscript = async () => {
+    if (!currentWord || !transcript) return;
+
+    const wordId = currentWord.id;
+    const currentAttempts = attempts[wordId] || 0;
+    
+    // Simple accuracy calculation (in real app, this would use AI)
+    const similarity = calculateSimilarity(transcript.toLowerCase(), currentWord.word.toLowerCase());
+    const accuracy = Math.min(100, Math.max(20, similarity * 100 + Math.random() * 20));
+    
+    const newAttempts = { ...attempts, [wordId]: currentAttempts + 1 };
+    setAttempts(newAttempts);
+
+    // Generate feedback
+    const feedback = generateFeedback(accuracy, currentWord.word, transcript);
+    
+    // Store result
+    const newResults = {
+      ...results,
+      [wordId]: {
+        accuracy: Math.round(accuracy),
+        attempts: newAttempts[wordId],
+        feedback
       }
-    }
-  }, [transcript, isListening]);
+    };
+    setResults(newResults);
 
-  // Simple similarity calculation (Levenshtein distance)
-  const calculateSimilarity = (str1: string, str2: string): number => {
-    const matrix = Array(str2.length + 1).fill(null).map(() =>
-      Array(str1.length + 1).fill(null));
+    // Update score
+    setScore(prev => prev + Math.round(accuracy));
 
-    for (let i = 0; i <= str1.length; i += 1) {
-      matrix[0][i] = i;
-    }
+    // Provide avatar feedback
+    setAvatarMessage(feedback);
 
-    for (let j = 0; j <= str2.length; j += 1) {
-      matrix[j][0] = j;
-    }
+    toast({
+      title: accuracy >= 80 ? "Great job!" : accuracy >= 60 ? "Good try!" : "Keep practicing!",
+      description: `Accuracy: ${Math.round(accuracy)}%`,
+      variant: accuracy >= 80 ? "default" : "destructive",
+    });
 
-    for (let j = 1; j <= str2.length; j += 1) {
-      for (let i = 1; i <= str1.length; i += 1) {
-        const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
-        matrix[j][i] = Math.min(
-          matrix[j][i - 1] + 1,
-          matrix[j - 1][i] + 1,
-          matrix[j - 1][i - 1] + indicator,
-        );
-      }
+    // Auto-advance after good pronunciation or multiple attempts
+    if (accuracy >= 80 || newAttempts[wordId] >= 3) {
+      setTimeout(() => {
+        nextWord();
+      }, 2000);
     }
 
-    const maxLength = Math.max(str1.length, str2.length);
-    return 1 - matrix[str2.length][str1.length] / maxLength;
+    resetTranscript();
   };
 
-  const handleRecord = () => {
-    if (isListening) {
-      stopListening();
-    } else {
-      resetTranscript();
-      startListening();
+  const calculateSimilarity = (str1: string, str2: string): number => {
+    const longer = str1.length > str2.length ? str1 : str2;
+    const shorter = str1.length > str2.length ? str2 : str1;
+    const editDistance = levenshteinDistance(longer, shorter);
+    return (longer.length - editDistance) / longer.length;
+  };
+
+  const levenshteinDistance = (str1: string, str2: string): number => {
+    const matrix = [];
+    for (let i = 0; i <= str2.length; i++) {
+      matrix[i] = [i];
     }
+    for (let j = 0; j <= str1.length; j++) {
+      matrix[0][j] = j;
+    }
+    for (let i = 1; i <= str2.length; i++) {
+      for (let j = 1; j <= str1.length; j++) {
+        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+          matrix[i][j] = matrix[i - 1][j - 1];
+        } else {
+          matrix[i][j] = Math.min(
+            matrix[i - 1][j - 1] + 1,
+            matrix[i][j - 1] + 1,
+            matrix[i - 1][j] + 1
+          );
+        }
+      }
+    }
+    return matrix[str2.length][str1.length];
+  };
+
+  const generateFeedback = (accuracy: number, targetWord: string, spokenWord: string): string => {
+    if (accuracy >= 90) {
+      return `Perfect! You pronounced "${targetWord}" excellently!`;
+    } else if (accuracy >= 80) {
+      return `Great job! Your pronunciation of "${targetWord}" is very good.`;
+    } else if (accuracy >= 60) {
+      return `Good try! Focus on the pronunciation of "${targetWord}". Try to speak more clearly.`;
+    } else {
+      return `Keep practicing "${targetWord}". Listen carefully and try again.`;
+    }
+  };
+
+  const startExercise = () => {
+    setExerciseStarted(true);
+    setAvatarMessage(`Let's start with the word "${currentWord.word}". Click the microphone when ready!`);
+  };
+
+  const nextWord = () => {
+    if (currentWordIndex < words.length - 1) {
+      setCurrentWordIndex(prev => prev + 1);
+      const nextWord = words[currentWordIndex + 1];
+      setAvatarMessage(`Great! Now let's try "${nextWord.word}"`);
+      resetTranscript();
+    } else {
+      completeExercise();
+    }
+  };
+
+  const completeExercise = () => {
+    setIsComplete(true);
+    const averageAccuracy = Object.values(results).reduce((sum, result) => sum + result.accuracy, 0) / Object.values(results).length || 0;
+    const totalAttempts = Object.values(attempts).reduce((sum, attempt) => sum + attempt, 0);
+    
+    setAvatarMessage(`Excellent work! You completed the exercise with ${Math.round(averageAccuracy)}% average accuracy!`);
+    
+    const finalResults = {
+      sessionId,
+      language,
+      exerciseType,
+      wordsCompleted: words.length,
+      averageAccuracy: Math.round(averageAccuracy),
+      totalAttempts,
+      results,
+      score: Math.round(score / words.length)
+    };
+
+    onComplete?.(finalResults);
+
+    toast({
+      title: "Exercise Complete!",
+      description: `Average accuracy: ${Math.round(averageAccuracy)}%`,
+    });
+  };
+
+  const restartExercise = () => {
+    setCurrentWordIndex(0);
+    setAttempts({});
+    setResults({});
+    setIsComplete(false);
+    setExerciseStarted(false);
+    setScore(0);
+    resetTranscript();
   };
 
   if (!isSupported) {
     return (
-      <Card className="fluenti-card">
-        <CardContent className="p-6 text-center">
-          <p className="text-red-600 mb-4">
-            Speech recognition is not supported in your browser. 
-            Please use Chrome, Safari, or Edge for the best experience.
+      <Card className="max-w-2xl mx-auto">
+        <CardContent className="text-center p-8">
+          <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold mb-2">Speech Recognition Not Supported</h3>
+          <p className="text-gray-600">
+            Your browser doesn't support speech recognition. Please use Chrome, Safari, or Edge.
           </p>
         </CardContent>
       </Card>
     );
   }
 
+  if (isComplete) {
+    const averageAccuracy = Object.values(results).reduce((sum, result) => sum + result.accuracy, 0) / Object.values(results).length || 0;
+    
+    return (
+      <Card className="max-w-2xl mx-auto">
+        <CardHeader className="text-center">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Trophy className="w-8 h-8 text-green-600" />
+          </div>
+          <CardTitle className="text-2xl">Exercise Complete!</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="text-center">
+            <div className="text-4xl font-bold text-green-600 mb-2">
+              {Math.round(averageAccuracy)}%
+            </div>
+            <p className="text-gray-600">Average Accuracy</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{words.length}</div>
+              <p className="text-sm text-gray-600">Words Practiced</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {Object.values(attempts).reduce((sum, attempt) => sum + attempt, 0)}
+              </div>
+              <p className="text-sm text-gray-600">Total Attempts</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h4 className="font-semibold">Word Results:</h4>
+            {words.map(word => {
+              const result = results[word.id];
+              return result ? (
+                <div key={word.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <span className="font-medium">{word.word}</span>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant={result.accuracy >= 80 ? 'default' : result.accuracy >= 60 ? 'secondary' : 'destructive'}>
+                      {result.accuracy}%
+                    </Badge>
+                    <span className="text-sm text-gray-500">({result.attempts} attempts)</span>
+                  </div>
+                </div>
+              ) : null;
+            })}
+          </div>
+
+          <Button onClick={restartExercise} className="w-full">
+            <RotateCcw className="w-4 h-4 mr-2" />
+            Practice Again
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Exercise Header */}
-      <Card className="fluenti-card">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl font-bold text-gray-900">Current Exercise</CardTitle>
-            <Badge className="bg-accent text-white">
-              Level {exercise.difficulty}
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Progress Header */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold capitalize">
+                {language} {exerciseType}
+              </h2>
+              <p className="text-sm text-gray-600">
+                Word {currentWordIndex + 1} of {words.length}
+              </p>
+            </div>
+            <Badge variant="outline" className="text-lg px-3 py-1">
+              Score: {Math.round(score / Math.max(1, currentWordIndex + 1))}
             </Badge>
           </div>
-          <p className="text-gray-600">Practice clear pronunciation</p>
-        </CardHeader>
-      </Card>
-
-      {/* Word Practice */}
-      <Card className="fluenti-card">
-        <CardContent className="p-8">
-          <div className="text-center mb-6">
-            <h2 className="text-4xl font-bold text-primary mb-2 uppercase">
-              {exercise.word}
-            </h2>
-            <p className="text-gray-600 text-lg">
-              Phonetic: {exercise.phonetic}
-            </p>
-            {exercise.sentence && (
-              <p className="text-gray-500 mt-2 italic">
-                Example: "{exercise.sentence}"
-              </p>
-            )}
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <Button
-              className="bg-blue-100 hover:bg-blue-200 text-primary py-4 text-lg"
-              onClick={speakWord}
-              disabled={isPlayingAudio || isLoading}
-            >
-              <Play className="mr-2" />
-              {isPlayingAudio ? 'Playing...' : 'Listen'}
-            </Button>
-            
-            <Button
-              className={`py-4 text-lg ${
-                isListening 
-                  ? 'bg-red-100 hover:bg-red-200 text-red-600' 
-                  : 'bg-green-100 hover:bg-green-200 text-secondary'
-              }`}
-              onClick={handleRecord}
-              disabled={isLoading}
-            >
-              <Mic className="mr-2" />
-              {isListening ? 'Stop Recording' : 'Record'}
-            </Button>
-          </div>
-
-          {/* Recording Indicator */}
-          {isListening && (
-            <div className="text-center mb-4">
-              <div className="speech-wave mx-auto mb-2">
-                <div className="speech-wave-bar"></div>
-                <div className="speech-wave-bar"></div>
-                <div className="speech-wave-bar"></div>
-                <div className="speech-wave-bar"></div>
-                <div className="speech-wave-bar"></div>
-              </div>
-              <p className="text-gray-600">Listening... Speak clearly!</p>
-            </div>
-          )}
-
-          {/* Transcript Display */}
-          {transcript && (
-            <div className="bg-blue-50 rounded-lg p-4 mb-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <Mic className="text-primary h-4 w-4" />
-                <span className="font-medium text-gray-700">You said:</span>
-              </div>
-              <p className="text-gray-800 font-medium">"{transcript}"</p>
-              <p className="text-sm text-gray-500 mt-1">
-                Confidence: {Math.round(confidence * 100)}%
-              </p>
-            </div>
-          )}
-
-          {/* Attempts Counter */}
-          <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-            <span>Attempt {attempts}/3</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                resetTranscript();
-                setAttempts(0);
-                setLastAccuracy(null);
-                setIsCompleted(false);
-                setFeedbackData(null);
-              }}
-            >
-              <RotateCcw className="mr-1 h-4 w-4" />
-              Reset
-            </Button>
-          </div>
-
-          {/* Progress Bar */}
-          <Progress 
-            value={isCompleted ? 100 : (attempts / 3) * 100} 
-            className="mb-4"
-          />
+          <Progress value={progress} className="h-2" />
         </CardContent>
       </Card>
 
-      {/* Pronunciation Feedback */}
-      {feedbackData && (
-        <PronunciationFeedback
-          accuracy={feedbackData.accuracy}
-          feedback={feedbackData.feedback}
-          improvements={feedbackData.improvements}
-          isCompleted={isCompleted}
-        />
-      )}
+      <div className="grid md:grid-cols-2 gap-6">
+        {/* Avatar Section */}
+        <Card>
+          <CardContent className="p-6">
+            <ThreeAvatar
+              isListening={isListening}
+              currentMessage={avatarMessage}
+              language={language}
+              onSpeak={(text) => console.log('Avatar spoke:', text)}
+            />
+          </CardContent>
+        </Card>
 
-      {/* Next Button */}
-      {isCompleted && (
-        <div className="text-center">
-          <Button 
-            className="fluenti-button-primary text-lg px-8 py-4"
-            onClick={onNext}
-          >
-            <CheckCircle className="mr-2" />
-            Next Exercise
-          </Button>
-        </div>
-      )}
+        {/* Exercise Control */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center space-x-2">
+              <BookOpen className="w-5 h-5" />
+              <span>Current Word</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {exerciseStarted && currentWord ? (
+              <>
+                <div className="text-center space-y-4">
+                  <div className="text-4xl font-bold text-primary">
+                    {currentWord.word}
+                  </div>
+                  <div className="text-lg text-gray-600">
+                    {currentWord.phonetic}
+                  </div>
+                  {currentWord.translation && (
+                    <div className="text-sm text-gray-500">
+                      Translation: {currentWord.translation}
+                    </div>
+                  )}
+                  <Badge variant="outline" className="capitalize">
+                    {currentWord.difficulty} • {currentWord.category}
+                  </Badge>
+                </div>
+
+                <div className="space-y-4">
+                  <Button
+                    onClick={isListening ? stopListening : startListening}
+                    className={`w-full h-12 ${isListening ? 'bg-red-500 hover:bg-red-600' : ''}`}
+                    disabled={!currentWord}
+                  >
+                    {isListening ? (
+                      <>
+                        <MicOff className="w-5 h-5 mr-2" />
+                        Stop Recording
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-5 h-5 mr-2" />
+                        Start Recording
+                      </>
+                    )}
+                  </Button>
+
+                  {transcript && (
+                    <div className="p-3 bg-gray-50 rounded-lg">
+                      <p className="text-sm text-gray-600 mb-1">You said:</p>
+                      <p className="font-medium">"{transcript}"</p>
+                      {confidence > 0 && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Confidence: {Math.round(confidence * 100)}%
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {results[currentWord.id] && (
+                    <div className="p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium">Last Result:</span>
+                        <Badge variant={results[currentWord.id].accuracy >= 80 ? 'default' : 'secondary'}>
+                          {results[currentWord.id].accuracy}%
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {results[currentWord.id].feedback}
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const utterance = new SpeechSynthesisUtterance(currentWord.word);
+                        utterance.lang = language === 'urdu' ? 'ur-PK' : 'en-US';
+                        speechSynthesis.speak(utterance);
+                      }}
+                      className="flex-1"
+                    >
+                      <Volume2 className="w-4 h-4 mr-2" />
+                      Hear Word
+                    </Button>
+                    
+                    {(results[currentWord.id]?.accuracy >= 80 || (attempts[currentWord.id] || 0) >= 3) && (
+                      <Button onClick={nextWord} className="flex-1">
+                        {currentWordIndex < words.length - 1 ? 'Next Word' : 'Finish'}
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-center space-y-4">
+                <div className="text-6xl">🎯</div>
+                <h3 className="text-xl font-semibold">Ready to Practice?</h3>
+                <p className="text-gray-600">
+                  You'll practice {words.length} {language} words. 
+                  The AI avatar will guide you through each pronunciation.
+                </p>
+                <Button onClick={startExercise} size="lg" className="w-full">
+                  Start {exerciseType === 'assessment' ? 'Assessment' : 'Exercise'}
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
