@@ -160,8 +160,21 @@ export async function setupAuth(app: Express) {
     });
     
     app.get("/api/logout", (req, res) => {
-      req.logout(() => {
-        res.redirect('/');
+      req.logout((err) => {
+        if (err) {
+          console.error('Logout error:', err);
+        }
+        // Clear the session
+        req.session.destroy((err) => {
+          if (err) {
+            console.error('Session destroy error:', err);
+          }
+          // Clear cookies
+          res.clearCookie('connect.sid');
+          res.clearCookie('session');
+          // Send JSON response instead of redirect for better control
+          res.json({ success: true, message: 'Logged out successfully' });
+        });
       });
     });
     

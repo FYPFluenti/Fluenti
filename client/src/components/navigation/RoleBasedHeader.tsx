@@ -1,6 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import { Link } from "wouter";
 import { MessageCircle, User, Shield, Star } from "lucide-react";
 
@@ -82,9 +83,7 @@ export function RoleBasedHeader() {
             <Badge variant="outline" className={getBadgeColor()}>
               {userType === 'child' ? 'Child' : userType === 'guardian' ? 'Guardian' : 'Adult'}
             </Badge>
-            <Button variant="outline" size="sm">
-              <Link href="/api/logout">Logout</Link>
-            </Button>
+            <LogoutButton />
           </div>
         </div>
       </div>

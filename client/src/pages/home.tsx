@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import { Link } from "wouter";
 import { 
   MessageCircle, 
@@ -92,13 +93,7 @@ export default function Home() {
                 <Settings className="h-4 w-4" />
               </Button>
               
-              <Button 
-                variant="ghost" 
-                size="icon"
-                onClick={() => window.location.href = '/api/logout'}
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
+              <LogoutButton variant="ghost" size="icon" />
             </div>
           </div>
         </div>

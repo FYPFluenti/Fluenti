@@ -9,6 +9,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
+import Logout from "@/pages/logout";
 import Home from "@/pages/home";
 import AdultDashboard from "@/pages/adult-dashboard";
 import ChildDashboard from "@/pages/child-dashboard";
@@ -42,6 +43,7 @@ function Router() {
       {/* Public routes - always accessible */}
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
+      <Route path="/logout" component={Logout} />
       
       {/* Protected routes */}
       {isLoading || !isAuthenticated ? (

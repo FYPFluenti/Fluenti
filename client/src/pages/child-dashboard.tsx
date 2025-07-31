@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import { Link } from "wouter";
 import { MessageCircle, User, Star, Gift, Heart, Smile, ArrowRight, BookOpen, Mic, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,9 +30,7 @@ export default function ChildDashboard() {
                 </span>
               </div>
               <Badge variant="outline" className="bg-pink-100 text-pink-700">Child</Badge>
-              <Button variant="outline" size="sm">
-                <Link href="/api/logout">Logout</Link>
-              </Button>
+              <LogoutButton />
             </div>
           </div>
         </div>

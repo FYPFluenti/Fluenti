@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import { Link } from "wouter";
 import { MessageCircle, User, Users, Calendar, TrendingUp, Shield, ArrowRight, Eye, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -29,9 +30,7 @@ export default function GuardianDashboard() {
                 </span>
               </div>
               <Badge variant="outline" className="bg-green-100 text-green-700">Guardian</Badge>
-              <Button variant="outline" size="sm">
-                <Link href="/api/logout">Logout</Link>
-              </Button>
+              <LogoutButton />
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { LogoutButton } from "@/components/auth/LogoutButton";
 import { Link } from "wouter";
 import { MessageCircle, User, BarChart3, Target, Clock, Trophy, ArrowRight, Heart, Brain, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,9 +35,7 @@ export default function AdultDashboard() {
                 </span>
               </div>
               <Badge variant="outline">Adult</Badge>
-              <Button variant="outline" size="sm">
-                <Link href="/api/logout">Logout</Link>
-              </Button>
+              <LogoutButton />
             </div>
           </div>
         </div>
