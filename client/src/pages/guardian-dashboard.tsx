@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
-import { MessageCircle, User, Users, Calendar, TrendingUp, Shield, ArrowRight, Eye } from "lucide-react";
+import { MessageCircle, User, Users, Calendar, TrendingUp, Shield, ArrowRight, Eye, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function GuardianDashboard() {
@@ -56,7 +56,7 @@ export default function GuardianDashboard() {
               <div className="flex items-center space-x-2">
                 <Users className="w-5 h-5 text-blue-600" />
                 <div>
-                  <p className="text-sm text-blue-700">Children Enrolled</p>
+                  <p className="text-sm text-blue-700">Children Monitored</p>
                   <p className="text-2xl font-bold text-blue-800">2</p>
                 </div>
               </div>
@@ -68,7 +68,7 @@ export default function GuardianDashboard() {
               <div className="flex items-center space-x-2">
                 <TrendingUp className="w-5 h-5 text-green-600" />
                 <div>
-                  <p className="text-sm text-green-700">Avg. Progress</p>
+                  <p className="text-sm text-green-700">Overall Progress</p>
                   <p className="text-2xl font-bold text-green-800">87%</p>
                 </div>
               </div>
@@ -90,151 +90,184 @@ export default function GuardianDashboard() {
           <Card className="bg-gradient-to-br from-orange-50 to-orange-100">
             <CardContent className="p-4">
               <div className="flex items-center space-x-2">
-                <Shield className="w-5 h-5 text-orange-600" />
+                <Eye className="w-5 h-5 text-orange-600" />
                 <div>
-                  <p className="text-sm text-orange-700">Safety Score</p>
-                  <p className="text-2xl font-bold text-orange-800">100%</p>
+                  <p className="text-sm text-orange-700">Active Monitoring</p>
+                  <p className="text-2xl font-bold text-orange-800">24/7</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Child Management */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Child Progress Monitoring */}
+        {/* Child Progress Management - Primary Feature for Guardians */}
+        <div className="grid grid-cols-1 gap-8 mb-8">
+          {/* Child Progress Monitor */}
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Eye className="w-5 h-5" />
-                <span>Child Progress Monitor</span>
+                <Eye className="w-6 h-6 text-green-600" />
+                <span className="text-2xl">Child Progress Monitoring Center</span>
               </CardTitle>
-              <CardDescription>
-                View detailed progress reports and session history
+              <CardDescription className="text-lg">
+                Comprehensive view of your children's speech therapy progress and development
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">Emma (Age 8)</p>
-                    <p className="text-sm text-gray-600">Last session: 2 hours ago</p>
+              <div className="space-y-6">
+                {/* Individual Child Progress */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="font-bold text-blue-900 text-lg">Emma (Age 8)</h3>
+                        <p className="text-sm text-blue-700">Last session: 2 hours ago</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-green-600">92%</p>
+                        <p className="text-sm text-gray-600">Speech Accuracy</p>
+                      </div>
+                    </div>
+                    <Progress value={92} className="h-3 mb-3" />
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-gray-600">Words Practiced:</p>
+                        <p className="font-medium">47 this week</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Games Completed:</p>
+                        <p className="font-medium">12 sessions</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-green-600">92% accuracy</p>
-                    <Progress value={92} className="w-20 h-2" />
+                  
+                  <div className="p-6 bg-purple-50 rounded-lg border border-purple-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <h3 className="font-bold text-purple-900 text-lg">Alex (Age 6)</h3>
+                        <p className="text-sm text-purple-700">Last session: 1 day ago</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-blue-600">78%</p>
+                        <p className="text-sm text-gray-600">Speech Accuracy</p>
+                      </div>
+                    </div>
+                    <Progress value={78} className="h-3 mb-3" />
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <p className="text-gray-600">Words Practiced:</p>
+                        <p className="font-medium">23 this week</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-600">Games Completed:</p>
+                        <p className="font-medium">8 sessions</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">Alex (Age 6)</p>
-                    <p className="text-sm text-gray-600">Last session: 1 day ago</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-blue-600">78% accuracy</p>
-                    <Progress value={78} className="w-20 h-2" />
-                  </div>
-                </div>
-                <Link href="/progress">
-                  <Button className="w-full fluenti-button-primary">
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Button className="fluenti-button-primary">
+                    <BarChart3 className="w-4 h-4 mr-2" />
                     View Detailed Reports
-                    <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Guardian Resources */}
-          <Card className="hover:shadow-lg transition-shadow">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <MessageCircle className="w-5 h-5" />
-                <span>Guardian Resources</span>
-              </CardTitle>
-              <CardDescription>
-                Access tools and guidance for supporting your child
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Button variant="outline" className="w-full justify-start">
-                    📚 Parent's Guide to Speech Therapy
+                  <Button variant="outline">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Schedule Review
                   </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    🎯 Setting Practice Goals
-                  </Button>
-                  <Button variant="outline" className="w-full justify-start">
-                    💬 Communication Tips
+                  <Button variant="outline">
+                    <TrendingUp className="w-4 h-4 mr-2" />
+                    Progress Analytics
                   </Button>
                 </div>
-                <Link href="/emotional-support">
-                  <Button className="w-full" variant="outline">
-                    Access Guidance Center
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Additional Features */}
+        {/* Progress Monitoring Tools */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Session Scheduling */}
+          {/* Weekly Reports */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Calendar className="w-5 h-5" />
-                <span>Schedule Sessions</span>
+                <Calendar className="w-5 h-5 text-blue-500" />
+                <span>Weekly Reports</span>
               </CardTitle>
               <CardDescription>
-                Manage therapy sessions and reminders
+                Comprehensive weekly progress summaries
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" className="w-full">
-                Manage Schedule
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* Assessment Tools */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <TrendingUp className="w-5 h-5" />
-                <span>Assessment Tools</span>
-              </CardTitle>
-              <CardDescription>
-                Track and evaluate speech development
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Link href="/assessment">
+              <div className="space-y-3">
+                <div className="text-sm">
+                  <p className="font-medium">This Week's Highlights:</p>
+                  <ul className="text-gray-600 mt-1 space-y-1">
+                    <li>• Emma: 5% improvement</li>
+                    <li>• Alex: Consistent progress</li>
+                    <li>• 19 total sessions completed</li>
+                  </ul>
+                </div>
                 <Button variant="outline" className="w-full">
-                  Assessment Center
+                  View Full Report
                 </Button>
-              </Link>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Communication Hub */}
+          {/* Session Analytics */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <MessageCircle className="w-5 h-5" />
-                <span>Communication</span>
+                <TrendingUp className="w-5 h-5 text-green-500" />
+                <span>Session Analytics</span>
               </CardTitle>
               <CardDescription>
-                Connect with therapists and support
+                Deep insights into therapy sessions
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" className="w-full">
-                Message Center
-              </Button>
+              <div className="space-y-3">
+                <div className="text-sm">
+                  <p className="font-medium">Key Metrics:</p>
+                  <ul className="text-gray-600 mt-1 space-y-1">
+                    <li>• Average session time: 14 min</li>
+                    <li>• Engagement rate: 94%</li>
+                    <li>• Completion rate: 89%</li>
+                  </ul>
+                </div>
+                <Button variant="outline" className="w-full">
+                  Analyze Sessions
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Progress Alerts */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Eye className="w-5 h-5 text-purple-500" />
+                <span>Progress Alerts</span>
+              </CardTitle>
+              <CardDescription>
+                Real-time notifications and updates
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="text-sm">
+                  <p className="font-medium">Recent Alerts:</p>
+                  <ul className="text-gray-600 mt-1 space-y-1">
+                    <li>• Emma reached new milestone ✅</li>
+                    <li>• Alex needs practice reminder 📝</li>
+                    <li>• Weekly goal achieved 🎯</li>
+                  </ul>
+                </div>
+                <Button variant="outline" className="w-full">
+                  Manage Alerts
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>

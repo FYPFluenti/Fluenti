@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "wouter";
-import { MessageCircle, User, Star, Gift, Heart, Smile, ArrowRight } from "lucide-react";
+import { MessageCircle, User, Star, Gift, Heart, Smile, ArrowRight, BookOpen, Mic, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function ChildDashboard() {
@@ -54,16 +54,16 @@ export default function ChildDashboard() {
           <Card className="bg-gradient-to-br from-yellow-100 to-yellow-200">
             <CardContent className="p-4 text-center">
               <Star className="w-8 h-8 text-yellow-600 mx-auto mb-2" />
-              <p className="text-sm text-yellow-700">Stars Earned</p>
-              <p className="text-2xl font-bold text-yellow-800">24</p>
+              <p className="text-sm text-yellow-700">Words Practiced</p>
+              <p className="text-2xl font-bold text-yellow-800">47</p>
             </CardContent>
           </Card>
           
           <Card className="bg-gradient-to-br from-green-100 to-green-200">
             <CardContent className="p-4 text-center">
               <Gift className="w-8 h-8 text-green-600 mx-auto mb-2" />
-              <p className="text-sm text-green-700">Rewards</p>
-              <p className="text-2xl font-bold text-green-800">3</p>
+              <p className="text-sm text-green-700">Games Won</p>
+              <p className="text-2xl font-bold text-green-800">12</p>
             </CardContent>
           </Card>
           
@@ -84,58 +84,44 @@ export default function ChildDashboard() {
           </Card>
         </div>
 
-        {/* Main Activities */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          {/* Speech Games */}
+        {/* Main Activities - Speech Therapy Focus */}
+        <div className="grid grid-cols-1 gap-8 mb-8">
+          {/* Speech Games - Primary Feature for Children */}
           <Card className="hover:shadow-lg transition-shadow bg-gradient-to-br from-blue-50 to-indigo-100">
             <CardHeader>
               <CardTitle className="flex items-center space-x-2 text-blue-700">
-                <MessageCircle className="w-6 h-6" />
-                <span>Speech Games</span>
+                <MessageCircle className="w-8 h-8" />
+                <span className="text-2xl">🎮 Super Speech Games! 🎮</span>
               </CardTitle>
-              <CardDescription className="text-blue-600">
-                Play fun games while practicing your speech!
+              <CardDescription className="text-blue-600 text-lg">
+                Play amazing games while learning to speak like a superhero! 🦸‍♀️
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2 text-blue-700">
-                    <span>Today's Progress</span>
-                    <span>5/8 games</span>
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-pink-100 rounded-lg text-center">
+                    <MessageCircle className="w-8 h-8 text-pink-600 mx-auto mb-2" />
+                    <h4 className="font-bold text-pink-800">Word Adventures</h4>
+                    <p className="text-sm text-pink-700">Practice saying words like a pro!</p>
                   </div>
-                  <Progress value={62.5} className="h-3 bg-blue-200" />
+                  <div className="p-4 bg-green-100 rounded-lg text-center">
+                    <Star className="w-8 h-8 text-green-600 mx-auto mb-2" />
+                    <h4 className="font-bold text-green-800">Pronunciation Power</h4>
+                    <p className="text-sm text-green-700">Make words sound perfect!</p>
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between text-sm mb-2 text-blue-700 font-medium">
+                    <span>Today's Speech Adventure Progress</span>
+                    <span>3/5 games completed 🌟</span>
+                  </div>
+                  <Progress value={60} className="h-4 bg-blue-200" />
                 </div>
                 <Link href="/speech-therapy">
-                  <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white">
-                    Let's Play! 🎮
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Feelings Helper */}
-          <Card className="hover:shadow-lg transition-shadow bg-gradient-to-br from-pink-50 to-rose-100">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2 text-pink-700">
-                <Heart className="w-6 h-6" />
-                <span>Feelings Helper</span>
-              </CardTitle>
-              <CardDescription className="text-pink-600">
-                Talk about your feelings with our friendly AI buddy!
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <p className="text-sm text-pink-700">
-                  Our AI friend is here to listen and help you feel better! 🤗
-                </p>
-                <Link href="/emotional-support">
-                  <Button className="w-full bg-pink-500 hover:bg-pink-600 text-white">
-                    Chat with Buddy 💬
-                    <ArrowRight className="w-4 h-4 ml-2" />
+                  <Button className="w-full bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white text-xl py-4">
+                    🚀 Start Playing Speech Games! 🚀
+                    <ArrowRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
               </div>
@@ -143,41 +129,78 @@ export default function ChildDashboard() {
           </Card>
         </div>
 
-        {/* Achievement & Progress */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* My Progress */}
-          <Card className="bg-gradient-to-br from-green-50 to-emerald-100">
+        {/* Speech Learning Tools */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          {/* Word Practice */}
+          <Card className="bg-gradient-to-br from-orange-50 to-orange-100">
             <CardHeader>
-              <CardTitle className="text-green-700">My Progress</CardTitle>
-              <CardDescription className="text-green-600">
-                See how much you've improved!
+              <CardTitle className="text-orange-700 flex items-center space-x-2">
+                <BookOpen className="w-6 h-6" />
+                <span>Word Practice</span>
+              </CardTitle>
+              <CardDescription className="text-orange-600">
+                Practice saying words clearly! 📚
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/progress">
-                <Button variant="outline" className="w-full border-green-300 text-green-700 hover:bg-green-100">
-                  See My Progress 📊
-                  <Star className="w-4 h-4 ml-2" />
-                </Button>
-              </Link>
+              <div className="space-y-3">
+                <p className="text-sm text-orange-700">
+                  Learn new words and practice saying them perfectly! 🎯
+                </p>
+                <Link href="/speech-therapy">
+                  <Button variant="outline" className="w-full border-orange-300 text-orange-700 hover:bg-orange-100">
+                    Practice Words 📝
+                  </Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Fun Test */}
-          <Card className="bg-gradient-to-br from-orange-50 to-amber-100">
+          {/* Voice Games */}
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-100">
             <CardHeader>
-              <CardTitle className="text-orange-700">Fun Speech Test</CardTitle>
-              <CardDescription className="text-orange-600">
-                Let's see how well you can speak!
+              <CardTitle className="text-green-700 flex items-center space-x-2">
+                <Mic className="w-6 h-6" />
+                <span>Voice Games</span>
+              </CardTitle>
+              <CardDescription className="text-green-600">
+                Fun voice challenges! 🎤
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Link href="/assessment">
-                <Button variant="outline" className="w-full border-orange-300 text-orange-700 hover:bg-orange-100">
-                  Take the Test 🏆
-                  <Gift className="w-4 h-4 ml-2" />
+              <div className="space-y-3">
+                <p className="text-sm text-green-700">
+                  Play fun games with your voice and win rewards! 🏆
+                </p>
+                <Link href="/speech-therapy">
+                  <Button variant="outline" className="w-full border-green-300 text-green-700 hover:bg-green-100">
+                    Play Voice Games 🎮
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* My Progress */}
+          <Card className="bg-gradient-to-br from-purple-50 to-violet-100">
+            <CardHeader>
+              <CardTitle className="text-purple-700 flex items-center space-x-2">
+                <Trophy className="w-6 h-6" />
+                <span>My Achievements</span>
+              </CardTitle>
+              <CardDescription className="text-purple-600">
+                See how awesome you are! ⭐
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <p className="text-sm text-purple-700">
+                  Check your amazing progress and collect stars! 🌟
+                </p>
+                <Button variant="outline" className="w-full border-purple-300 text-purple-700 hover:bg-purple-100">
+                  See My Stars ⭐
                 </Button>
-              </Link>
+              </div>
             </CardContent>
           </Card>
         </div>

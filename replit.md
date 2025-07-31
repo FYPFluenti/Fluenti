@@ -11,23 +11,28 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend Architecture
+
 - **Framework**: React 18 with TypeScript
-- **Routing**: Wouter for lightweight client-side routing
+- **Routing**: Wouter for lightweight client-side routing with role-based route protection
 - **UI Framework**: Shadcn/ui components with Radix UI primitives
-- **Styling**: Tailwind CSS with custom design tokens and dark mode support
+- **Styling**: Tailwind CSS with custom design tokens and role-specific theming
 - **State Management**: TanStack Query for server state management
+- **Authentication**: Role-based access control with user type-specific interfaces
+- **Component Architecture**: Role-based component rendering and route protection
 - **Build Tool**: Vite for fast development and optimized builds
 
 ### Backend Architecture
+
 - **Runtime**: Node.js with Express.js server
 - **Language**: TypeScript with ES modules
-- **Database ORM**: Drizzle ORM for type-safe database operations
-- **Database**: PostgreSQL (configured for Neon serverless)
-- **Authentication**: Replit Auth with OpenID Connect integration
-- **Session Management**: Express sessions with PostgreSQL store
+- **Database**: MongoDB with Mongoose ODM for flexible document storage
+- **Authentication**: Local development auth with session-based user management
+- **Session Management**: Express sessions with memory store for development
 - **WebSocket**: Real-time communication for chat features
+- **Role-Based Access**: User type-specific API endpoints and data filtering
 
 ### API Design
+
 - RESTful API endpoints under `/api` prefix
 - Authentication middleware protecting sensitive routes
 - Speech therapy endpoints for sessions and recordings
@@ -37,12 +42,15 @@ Preferred communication style: Simple, everyday language.
 ## Key Components
 
 ### Authentication System
-- **Replit Auth Integration**: Mandatory authentication system using OpenID Connect
-- **Session Storage**: PostgreSQL-backed sessions with TTL support
-- **User Management**: Complete user lifecycle with profile management
-- **Guardian Support**: Multi-user type system (child/adult/guardian)
+
+- **Local Development Auth**: Simplified authentication for local development
+- **Role-Based Access Control**: Multi-user type system (child/adult/guardian)
+- **Session Storage**: MongoDB-backed user sessions with role persistence
+- **User Management**: Complete user lifecycle with profile and role management
+- **Dashboard Routing**: Automatic redirect to role-appropriate interfaces
 
 ### Speech Therapy Module
+
 - **Speech Recognition**: Browser-based Web Speech API integration
 - **AI Feedback**: OpenAI GPT-4o powered pronunciation analysis
 - **Exercise System**: Structured therapy sessions with progress tracking
@@ -50,12 +58,14 @@ Preferred communication style: Simple, everyday language.
 - **Multi-language Support**: English and Urdu language exercises
 
 ### Emotional Support System
+
 - **AI Chat Interface**: Conversational emotional support using OpenAI
 - **Emotion Detection**: Real-time emotion analysis from text and voice
 - **CBT Techniques**: Evidence-based therapeutic responses
 - **Crisis Support**: Appropriate escalation for serious concerns
 
 ### Progress Tracking
+
 - **Analytics Dashboard**: Visual progress charts and statistics
 - **Achievement System**: Gamified learning with streaks and badges
 - **Session History**: Detailed record of all therapy sessions
@@ -64,12 +74,14 @@ Preferred communication style: Simple, everyday language.
 ## Data Flow
 
 ### User Authentication Flow
+
 1. User accesses protected route
 2. Replit Auth middleware validates session
 3. User profile retrieved from PostgreSQL
 4. Session state maintained across requests
 
 ### Speech Therapy Flow
+
 1. User initiates therapy session
 2. Exercise data loaded from database
 3. Speech recognition captures user input
@@ -78,6 +90,7 @@ Preferred communication style: Simple, everyday language.
 6. Session results stored for tracking
 
 ### Emotional Support Flow
+
 1. User sends message through chat interface
 2. Message analyzed for emotional content
 3. AI generates appropriate therapeutic response
@@ -87,16 +100,19 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### Database Services
-- **Neon PostgreSQL**: Serverless PostgreSQL database
-- **Drizzle ORM**: Type-safe database operations and migrations
-- **Connection Pooling**: Neon serverless driver for optimal performance
+
+- **MongoDB**: Document-based NoSQL database for flexible data storage
+- **Mongoose ODM**: Object document mapping with schema validation
+- **Local Development**: MongoDB running locally with data persistence
 
 ### AI Services
+
 - **OpenAI GPT-4o**: Speech feedback and emotional support
 - **Speech Recognition**: Browser Web Speech API
 - **Text-to-Speech**: Browser Speech Synthesis API
 
 ### UI Libraries
+
 - **Shadcn/ui**: Complete component library
 - **Radix UI**: Accessible primitive components
 - **Lucide React**: Icon library
@@ -104,6 +120,7 @@ Preferred communication style: Simple, everyday language.
 - **React Hook Form**: Form validation and management
 
 ### Development Tools
+
 - **Vite**: Build tool and development server
 - **TypeScript**: Type safety across the stack
 - **Tailwind CSS**: Utility-first styling
@@ -112,24 +129,28 @@ Preferred communication style: Simple, everyday language.
 ## Deployment Strategy
 
 ### Production Build
+
 - Frontend built with Vite to `dist/public`
 - Backend compiled with esbuild to `dist/index.js`
 - Static assets served by Express in production
 - Environment variables for database and API keys
 
 ### Development Environment
+
 - Vite dev server with HMR for frontend
 - tsx for TypeScript execution in development
 - Automatic database migrations with Drizzle
 - WebSocket support for real-time features
 
 ### Database Management
+
 - Drizzle migrations in `migrations/` directory
 - Schema definitions in `shared/schema.ts`
 - Automatic migration execution on deployment
 - Connection pooling for performance optimization
 
 ### Security Considerations
+
 - Replit Auth for secure authentication
 - Environment variables for sensitive data
 - CORS and security headers configured

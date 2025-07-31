@@ -130,7 +130,7 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
       }
     };
 
-    const emotionResponses = responses[language]?.[emotion] || responses.english.neutral;
+    const emotionResponses = responses[language as keyof typeof responses]?.[emotion as keyof typeof responses.english] || responses.english.neutral;
     return emotionResponses[Math.floor(Math.random() * emotionResponses.length)];
   };
 
@@ -258,9 +258,9 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
                       <div className="flex items-center space-x-2">
                         <Bot className="w-4 h-4" />
                         <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce bounce-delay-1"></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce bounce-delay-2"></div>
+                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce bounce-delay-3"></div>
                         </div>
                       </div>
                     </div>

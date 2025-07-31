@@ -1,9 +1,10 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
+import { RoleBasedComponent } from "@/components/auth/RoleBasedComponent";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Login from "@/pages/login";
@@ -16,6 +17,22 @@ import SpeechTherapy from "@/pages/speech-therapy";
 import EmotionalSupport from "@/pages/emotional-support";
 import ProgressDashboard from "@/pages/progress-dashboard";
 import Assessment from "@/pages/assessment";
+
+function DashboardRedirect() {
+  const { user } = useAuth();
+  const userType = (user as any)?.userType;
+  
+  switch (userType) {
+    case 'child':
+      return <Redirect to="/child-dashboard" />;
+    case 'adult':
+      return <Redirect to="/adult-dashboard" />;
+    case 'guardian':
+      return <Redirect to="/guardian-dashboard" />;
+    default:
+      return <Redirect to="/adult-dashboard" />;
+  }
+}
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -31,14 +48,42 @@ function Router() {
         <Route path="/" component={Landing} />
       ) : (
         <>
-          <Route path="/" component={Home} />
-          <Route path="/adult-dashboard" component={AdultDashboard} />
-          <Route path="/child-dashboard" component={ChildDashboard} />
-          <Route path="/guardian-dashboard" component={GuardianDashboard} />
+          {/* Root redirect to appropriate dashboard */}
+          <Route path="/" component={DashboardRedirect} />
+          
+          {/* Role-specific dashboards */}
+          <Route path="/adult-dashboard">
+            <RoleBasedComponent allowedRoles={['adult']}>
+              <AdultDashboard />
+            </RoleBasedComponent>
+          </Route>
+          
+          <Route path="/child-dashboard">
+            <RoleBasedComponent allowedRoles={['child']}>
+              <ChildDashboard />
+            </RoleBasedComponent>
+          </Route>
+          
+          <Route path="/guardian-dashboard">
+            <RoleBasedComponent allowedRoles={['guardian']}>
+              <GuardianDashboard />
+            </RoleBasedComponent>
+          </Route>
+          
+          {/* Speech therapy - available to all but with different interfaces */}
           <Route path="/speech-therapy" component={SpeechTherapy} />
+          
+          {/* Emotional support - available to all */}
           <Route path="/emotional-support" component={EmotionalSupport} />
+          
+          {/* Progress tracking - different views for different roles */}
           <Route path="/progress" component={ProgressDashboard} />
+          
+          {/* Assessment - available to all but different content */}
           <Route path="/assessment" component={Assessment} />
+          
+          {/* Legacy home route - redirect to appropriate dashboard */}
+          <Route path="/home" component={DashboardRedirect} />
         </>
       )}
       <Route component={NotFound} />

@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ProgressChart } from "@/components/progress/progress-chart";
 import { Achievements } from "@/components/gamification/achievements";
+import { RoleBasedComponent, UserTypeGuard } from "@/components/auth/RoleBasedComponent";
 import { Link } from "wouter";
 import { 
   MessageCircle, 
@@ -24,7 +25,9 @@ import {
   CalendarPlus,
   Star,
   Flame,
-  Award
+  Award,
+  Users,
+  Eye
 } from "lucide-react";
 
 interface UserProgress {
@@ -325,7 +328,7 @@ export default function ProgressDashboard() {
             <CardContent>
               {recentSessions.length > 0 ? (
                 <div className="space-y-3">
-                  {recentSessions.slice(0, 5).map((session) => (
+                  {recentSessions.slice(0, 5).map((session: SessionData) => (
                     <div key={session.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">

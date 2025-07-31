@@ -11,6 +11,8 @@ import { Progress } from "@/components/ui/progress";
 import { ThreeAvatar } from "@/components/ui/three-avatar";
 import { SpeechExercise } from "@/components/speech/speech-exercise";
 import { InitialAssessment } from "@/components/assessment/initial-assessment";
+import { RoleBasedComponent, UserTypeGuard } from "@/components/auth/RoleBasedComponent";
+import { RoleBasedHeader } from "@/components/navigation/RoleBasedHeader";
 import { Link } from "wouter";
 import { 
   MessageCircle, 
@@ -263,38 +265,8 @@ export default function SpeechTherapy() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Link href="/">
-                <Button variant="ghost" size="icon" className="mr-2">
-                  <ArrowLeft className="h-4 w-4" />
-                </Button>
-              </Link>
-              <div className="flex items-center space-x-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
-                  <MessageCircle className="text-white text-lg" />
-                </div>
-                <div>
-                  <span className="text-2xl font-bold text-primary">Fluenti</span>
-                  <p className="text-sm text-gray-600">Speech Therapy</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <Link href="/">
-                <Button variant="ghost" className="flex items-center space-x-2">
-                  <Home className="h-4 w-4" />
-                  <span>Home</span>
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/* Role-based Header */}
+      <RoleBasedHeader />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -302,23 +274,38 @@ export default function SpeechTherapy() {
           /* Welcome Screen */
           <div className="text-center max-w-4xl mx-auto">
             <div className="mb-8">
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                Speech Therapy Session
-              </h1>
-              <p className="text-xl text-gray-600">
-                Practice pronunciation with your AI speech therapist. Get real-time feedback and improve your speaking skills.
-              </p>
+              <UserTypeGuard userType="child">
+                <h1 className="text-4xl font-bold text-purple-600 mb-4">
+                  🎮 Speech Games Time! 🎮
+                </h1>
+                <p className="text-xl text-gray-600">
+                  Let's play fun games while learning to speak better! Your AI buddy is here to help you! 🌟
+                </p>
+              </UserTypeGuard>
+
+              <UserTypeGuard userType="adult">
+                <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                  Speech Therapy Session
+                </h1>
+                <p className="text-xl text-gray-600">
+                  Practice pronunciation with your AI speech therapist. Get real-time feedback and improve your speaking skills.
+                </p>
+              </UserTypeGuard>
+
+              <UserTypeGuard userType="guardian">
+                <h1 className="text-4xl font-bold text-green-700 mb-4">
+                  Speech Therapy Tools
+                </h1>
+                <p className="text-xl text-gray-600">
+                  Access therapeutic tools and exercises. Monitor and support speech development with AI assistance.
+                </p>
+              </UserTypeGuard>
             </div>
 
             <div className="grid lg:grid-cols-2 gap-8 mb-8">
               {/* Avatar Preview */}
               <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-3xl p-8">
-                <ThreeAvatar
-                  isActive={true}
-                  message="Ready to start your speech therapy journey?"
-                  emotion="encouraging"
-                  onSpeak={handleAvatarSpeak}
-                />
+                <ThreeAvatar />
               </div>
 
               {/* Session Info */}
@@ -379,12 +366,28 @@ export default function SpeechTherapy() {
               {createSessionMutation.isPending ? (
                 <>
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                  Starting Session...
+                  <UserTypeGuard userType="child">
+                    Starting Game...
+                  </UserTypeGuard>
+                  <UserTypeGuard userType="adult">
+                    Starting Session...
+                  </UserTypeGuard>
+                  <UserTypeGuard userType="guardian">
+                    Loading Tools...
+                  </UserTypeGuard>
                 </>
               ) : (
                 <>
                   <Play className="mr-2" />
-                  Start Speech Therapy
+                  <UserTypeGuard userType="child">
+                    🎮 Let's Play!
+                  </UserTypeGuard>
+                  <UserTypeGuard userType="adult">
+                    Start Speech Therapy
+                  </UserTypeGuard>
+                  <UserTypeGuard userType="guardian">
+                    Access Therapy Tools
+                  </UserTypeGuard>
                 </>
               )}
             </Button>
@@ -396,12 +399,32 @@ export default function SpeechTherapy() {
               <div className="w-24 h-24 bg-gradient-to-br from-secondary to-accent rounded-full flex items-center justify-center mx-auto mb-6">
                 <Trophy className="text-white text-4xl" />
               </div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                Session Completed! 🎉
-              </h1>
-              <p className="text-xl text-gray-600">
-                Congratulations on completing your speech therapy session!
-              </p>
+              <UserTypeGuard userType="child">
+                <h1 className="text-4xl font-bold text-purple-600 mb-4">
+                  🏆 Amazing Job! You Did It! 🎉
+                </h1>
+                <p className="text-xl text-gray-600">
+                  Wow! You completed all the speech games! You're becoming a super speaker! ⭐
+                </p>
+              </UserTypeGuard>
+
+              <UserTypeGuard userType="adult">
+                <h1 className="text-4xl font-bold text-gray-900 mb-4">
+                  Session Completed! 🎉
+                </h1>
+                <p className="text-xl text-gray-600">
+                  Congratulations on completing your speech therapy session!
+                </p>
+              </UserTypeGuard>
+
+              <UserTypeGuard userType="guardian">
+                <h1 className="text-4xl font-bold text-green-700 mb-4">
+                  Therapy Session Complete! 🎯
+                </h1>
+                <p className="text-xl text-gray-600">
+                  Speech therapy tools session completed successfully. Review progress and insights below.
+                </p>
+              </UserTypeGuard>
             </div>
 
             <div className="grid md:grid-cols-3 gap-6 mb-8">
@@ -457,18 +480,7 @@ export default function SpeechTherapy() {
           <div className="grid lg:grid-cols-2 gap-8">
             {/* Avatar Section */}
             <div>
-              <ThreeAvatar
-                isActive={isAvatarActive}
-                isSpeaking={false}
-                message={avatarMessage}
-                emotion={avatarEmotion}
-                onSpeak={handleAvatarSpeak}
-                onListen={() => {}}
-                onReset={() => {
-                  setAvatarMessage("Let's try that again. Take your time!");
-                  setAvatarEmotion('encouraging');
-                }}
-              />
+              <ThreeAvatar />
 
               {/* Session Progress */}
               <Card className="fluenti-card mt-6">
@@ -501,10 +513,16 @@ export default function SpeechTherapy() {
             {/* Exercise Section */}
             <div>
               <SpeechExercise
-                exercise={currentSession.exercises[currentSession.currentExerciseIndex]}
-                onComplete={handleExerciseComplete}
-                onNext={handleNextExercise}
-                isLoading={recordSpeechMutation.isPending}
+                language={currentSession.exercises[currentSession.currentExerciseIndex].language}
+                exerciseType="exercise"
+                sessionId={currentSession.id}
+                onComplete={(results) => {
+                  // Extract accuracy from results and call handleExerciseComplete
+                  const accuracy = results.averageAccuracy || 0;
+                  const attempts = results.totalAttempts || 1;
+                  handleExerciseComplete({ accuracy, attempts });
+                  handleNextExercise();
+                }}
               />
             </div>
           </div>

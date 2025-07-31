@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmotionalChat } from "@/components/chat/emotional-chat";
+import { RoleBasedComponent, UserTypeGuard } from "@/components/auth/RoleBasedComponent";
 import { Link } from "wouter";
 import { 
   ArrowLeft, 
@@ -11,7 +12,9 @@ import {
   Heart,
   Shield,
   Clock,
-  Brain
+  Brain,
+  Star,
+  Smile
 } from "lucide-react";
 
 export default function EmotionalSupport() {
