@@ -54,13 +54,13 @@ export default function Landing() {
             <div className="flex items-center space-x-4">
               <Button
                 variant="ghost"
-                onClick={() => window.location.href = '/api/login'}
+                onClick={() => window.location.href = '/login'}
                 className="text-gray-600 hover:text-primary transition-colors font-medium"
               >
                 Log In
               </Button>
               <Button
-                onClick={() => window.location.href = '/api/login'}
+                onClick={() => window.location.href = '/signup'}
                 className="fluenti-button-primary"
               >
                 Get Started
@@ -86,7 +86,7 @@ export default function Landing() {
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
                 <Button 
                   className="fluenti-button-primary text-lg"
-                  onClick={() => window.location.href = '/api/login'}
+                  onClick={() => window.location.href = '/signup'}
                 >
                   <Play className="mr-2" />
                   Start Therapy Session
@@ -151,7 +151,7 @@ export default function Landing() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="fluenti-pronunciation-bar">
-                        <div className="fluenti-pronunciation-fill" style={{ width: '95%' }}></div>
+                        <div className="fluenti-pronunciation-fill w-[95%]"></div>
                       </div>
                     </div>
                   </div>
@@ -328,7 +328,7 @@ export default function Landing() {
                         <span className="text-secondary font-bold text-lg">92%</span>
                       </div>
                       <div className="fluenti-pronunciation-bar mb-2">
-                        <div className="fluenti-pronunciation-fill" style={{ width: '92%' }}></div>
+                        <div className="fluenti-pronunciation-fill w-[92%]"></div>
                       </div>
                       <p className="text-sm text-gray-600">Great job! Try emphasizing the 'o' sound more.</p>
                     </div>
@@ -367,7 +367,7 @@ export default function Landing() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             <Button 
               className="bg-white text-primary hover:bg-gray-50 px-8 py-4 rounded-xl font-semibold text-lg"
-              onClick={() => window.location.href = '/api/login'}
+              onClick={() => window.location.href = '/signup'}
             >
               <Users className="mr-2" />
               Create Free Account
