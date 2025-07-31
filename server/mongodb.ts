@@ -22,9 +22,20 @@ async function connectDB() {
       bufferCommands: false,
     };
 
-    cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-      return mongoose;
-    });
+    cached.promise = mongoose.connect(MONGODB_URI, opts)
+      .then((mongoose) => {
+        console.log('MongoDB connected successfully');
+        return mongoose;
+      })
+      .catch(err => {
+        console.error('MongoDB connection error:', err);
+        // For development, setup mock data if MongoDB is not available
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Using mock data for development');
+          return mongoose;
+        }
+        throw err;
+      });
   }
 
   try {

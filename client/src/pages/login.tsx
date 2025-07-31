@@ -4,22 +4,63 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MessageCircle, ArrowLeft } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [userType, setUserType] = useState("adult");
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     
     try {
-      // For local development, redirect to API login
-      window.location.href = '/api/login';
+      // Always use our development login endpoint for now
+      const response = await fetch('/api/dev/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ userType }),
+        credentials: 'include'
+      });
+      
+      const data = await response.json();
+      console.log('Login response:', data);
+      
+      if (data.success) {
+        // Invalidate queries to refresh user data
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        
+        // Wait a moment for the query to update
+        setTimeout(() => {
+          // Redirect to the appropriate dashboard based on user type
+          switch(userType) {
+            case 'child':
+              setLocation('/child-dashboard');
+              break;
+            case 'adult':
+              setLocation('/adult-dashboard');
+              break;
+            case 'guardian':
+              setLocation('/guardian-dashboard');
+              break;
+            default:
+              setLocation('/');
+          }
+        }, 1000);
+      } else {
+        console.error('Login failed:', data);
+        alert('Login failed: ' + (data.message || 'Unknown error'));
+      }
     } catch (error) {
       console.error('Login error:', error);
+      alert('Login error: ' + error);
     } finally {
       setIsLoading(false);
     }
@@ -97,11 +138,41 @@ export default function Login() {
           </form>
         </Card>
 
-        {/* Development Notice */}
-        <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800 text-center">
-            <strong>Development Mode:</strong> In local development, you'll be automatically logged in as a test user.
+        {/* Development Mode Options */}
+        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800 text-center mb-3">
+            <strong>Select User Type:</strong>
           </p>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <Button 
+              variant={userType === 'adult' ? 'default' : 'outline'} 
+              onClick={() => setUserType('adult')}
+              className="text-sm py-2"
+            >
+              Adult
+            </Button>
+            <Button 
+              variant={userType === 'child' ? 'default' : 'outline'} 
+              onClick={() => setUserType('child')}
+              className="text-sm py-2"
+            >
+              Child
+            </Button>
+            <Button 
+              variant={userType === 'guardian' ? 'default' : 'outline'} 
+              onClick={() => setUserType('guardian')}
+              className="text-sm py-2"
+            >
+              Guardian
+            </Button>
+          </div>
+          <Button 
+            onClick={handleSubmit}
+            disabled={isLoading}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {isLoading ? 'Logging in...' : `Login as ${userType.charAt(0).toUpperCase() + userType.slice(1)}`}
+          </Button>
         </div>
       </div>
     </div>

@@ -14,39 +14,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      // For local development, return mock user if database fails
-      if (process.env.NODE_ENV === 'development' && process.env.REPL_ID === 'local-development') {
+      // For local development
+      if (process.env.NODE_ENV === 'development') {
         const mockUser = {
           id: 'local-user-123',
           email: 'developer@local.dev',
           firstName: 'Local',
           lastName: 'Developer',
           profileImageUrl: 'https://via.placeholder.com/150',
-          userType: 'adult',
+          userType: 'adult', // Can be 'adult', 'child', or 'guardian'
           language: 'english',
           createdAt: new Date(),
           updatedAt: new Date(),
         };
         
+        // Try to get from database first, if that fails use mock user
         try {
-          const userId = req.user.claims?.sub || req.user.id;
-          const user = await mongoStorage.getUser(userId);
-          res.json(user);
+          const userId = req.user?.claims?.sub || req.user?.id;
+          if (userId) {
+            const user = await mongoStorage.getUser(userId);
+            if (user) {
+              return res.json(user);
+            }
+          }
+          
+          console.log('Using mock user for development');
+          return res.json(mockUser);
         } catch (error) {
           console.log('Database not available, returning mock user');
-          res.json(mockUser);
+          return res.json(mockUser);
         }
-        return;
       }
       
-      const userId = req.user.claims.sub;
-      const user = await mongoStorage.getUser(userId);
-      res.json(user);
+      // Production flow
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ message: "User ID not found in session" });
+        }
+        
+        const user = await mongoStorage.getUser(userId);
+        if (!user) {
+          return res.status(404).json({ message: "User not found in database" });
+        }
+        
+        res.json(user);
+      } catch (error) {
+        console.error("Error fetching user:", error);
+        res.status(500).json({ message: "Failed to fetch user" });
+      }
     } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+      console.error("Error in auth route:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
+  
+  // Development-only login and signup endpoints
+  if (process.env.NODE_ENV === 'development') {
+    // Quick login with user type
+    app.post('/api/dev/login', async (req, res) => {
+      try {
+        const { userType = 'adult' } = req.body;
+        
+        // Create a mock user
+        const user = await mongoStorage.upsertUser({
+          id: `local-${userType}-${Date.now()}`,
+          email: `${userType}@local.dev`,
+          firstName: `Test`,
+          lastName: `${userType.charAt(0).toUpperCase() + userType.slice(1)}`,
+          profileImageUrl: 'https://via.placeholder.com/150',
+          userType: userType,
+          language: 'english',
+        });
+        
+        // Set user in session (simple approach for development)
+        if (req.session) {
+          (req.session as any).user = {
+            id: user.id,
+            claims: { sub: user.id }
+          };
+          console.log('User logged in via session:', user.id, userType);
+        }
+        
+        res.json({ success: true, user });
+      } catch (error) {
+        console.error("Login error:", error);
+        res.status(500).json({ message: "Login failed" });
+      }
+    });
+    
+    // Session check endpoint for debugging
+    app.get('/api/dev/session', (req, res) => {
+      res.json({
+        session: req.session,
+        user: req.user,
+        isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false
+      });
+    });
+  }
 
   // Speech therapy routes
   app.post('/api/speech/session', isAuthenticated, async (req: any, res) => {

@@ -21,8 +21,9 @@ function getUserDashboardUrl(userType: string): string {
   }
 }
 
-if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
+// Only check for REPLIT_DOMAINS in non-development environments
+if (!process.env.REPLIT_DOMAINS && process.env.NODE_ENV !== 'development') {
+  console.warn("Environment variable REPLIT_DOMAINS not provided, using default");
 }
 
 const getOidcConfig = memoize(
@@ -102,7 +103,7 @@ export async function setupAuth(app: Express) {
   app.use(passport.session());
 
   // For local development, bypass Replit OIDC
-  if (process.env.NODE_ENV === 'development' && process.env.REPL_ID === 'local-development') {
+  if (process.env.NODE_ENV === 'development') {
     // Simple local auth for development
     app.get("/api/login", async (req, res) => {
       // Default user data
@@ -190,19 +191,30 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
-  // For local development, check if user is logged in via session
-  if (process.env.NODE_ENV === 'development' && process.env.REPL_ID === 'local-development') {
+  // For local development, be more permissive
+  if (process.env.NODE_ENV === 'development') {
     if (req.isAuthenticated() && req.user) {
       return next();
-    } else {
-      return res.status(401).json({ message: "Unauthorized" });
     }
+    
+    // Special case: check for development session
+    if (req.session && (req.session as any).user) {
+      req.user = (req.session as any).user;
+      return next();
+    }
+    
+    return res.status(401).json({ message: "Unauthorized - No valid session found" });
   }
 
+  // Production flow
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
-    return res.status(401).json({ message: "Unauthorized" });
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized - Not authenticated" });
+  }
+  
+  if (!user || !user.expires_at) {
+    return res.status(401).json({ message: "Unauthorized - Invalid user data" });
   }
 
   const now = Math.floor(Date.now() / 1000);

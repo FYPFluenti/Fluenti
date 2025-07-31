@@ -13,6 +13,9 @@ export function useAuth() {
   });
 
   const isAuthenticated = !error && !!user;
+  
+  // Debug logging
+  console.log('useAuth state:', { user, isLoading, error, isAuthenticated });
 
   const logout = async () => {
     try {

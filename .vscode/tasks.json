@@ -1,0 +1,19 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"args": [
+				"--env-file=.env",
+				"server/index.ts"
+			],
+			"command": "tsx",
+			"group": "test",
+			"isBackground": true,
+			"label": "Run Development Server",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"type": "shell"
+		}
+	]
+}

@@ -75,6 +75,16 @@ export const mongoStorage = {
     }
   },
 
+  async getSpeechSession(sessionId: string) {
+    try {
+      const session = await SpeechSession.findOne({ id: sessionId });
+      return session;
+    } catch (error) {
+      console.error('Error getting speech session:', error);
+      throw error;
+    }
+  },
+
   async updateSpeechSession(sessionId: string, updates: any) {
     try {
       const session = await SpeechSession.findOneAndUpdate(

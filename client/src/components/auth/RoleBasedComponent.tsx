@@ -11,12 +11,15 @@ export function RoleBasedComponent({ allowedRoles, children, fallback = null }: 
   const { user } = useAuth();
   
   if (!user) {
+    console.log('RoleBasedComponent: User not found in auth');
     return <>{fallback}</>;
   }
   
   const userType = (user as any)?.userType;
+  console.log('RoleBasedComponent:', { userType, allowedRoles, user });
   
-  if (!allowedRoles.includes(userType)) {
+  if (!userType || !allowedRoles.includes(userType)) {
+    console.log(`RoleBasedComponent: User type "${userType}" not in allowed roles:`, allowedRoles);
     return <>{fallback}</>;
   }
   

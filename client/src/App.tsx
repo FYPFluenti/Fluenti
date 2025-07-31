@@ -18,6 +18,7 @@ import SpeechTherapy from "@/pages/speech-therapy";
 import EmotionalSupport from "@/pages/emotional-support";
 import ProgressDashboard from "@/pages/progress-dashboard";
 import Assessment from "@/pages/assessment";
+import Achievements from "@/pages/achievements";
 
 function DashboardRedirect() {
   const { user } = useAuth();
@@ -36,7 +37,20 @@ function DashboardRedirect() {
 }
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  console.log('Router state:', { isAuthenticated, isLoading, user });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div>Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Switch>
@@ -45,10 +59,8 @@ function Router() {
       <Route path="/signup" component={Signup} />
       <Route path="/logout" component={Logout} />
       
-      {/* Protected routes */}
-      {isLoading || !isAuthenticated ? (
-        <Route path="/" component={Landing} />
-      ) : (
+      {/* Protected routes - only when authenticated */}
+      {isAuthenticated ? (
         <>
           {/* Root redirect to appropriate dashboard */}
           <Route path="/" component={DashboardRedirect} />
@@ -82,7 +94,7 @@ function Router() {
           <Route path="/progress" component={ProgressDashboard} />
 
           {/* Achievements page */}
-          <Route path="/achievements" component={require('@/pages/achievements').default} />
+          <Route path="/achievements" component={Achievements} />
 
           {/* Assessment - available to all but different content */}
           <Route path="/assessment" component={Assessment} />
@@ -90,7 +102,14 @@ function Router() {
           {/* Legacy home route - redirect to appropriate dashboard */}
           <Route path="/home" component={DashboardRedirect} />
         </>
+      ) : (
+        <>
+          {/* When not authenticated, show landing page for root */}
+          <Route path="/" component={Landing} />
+        </>
       )}
+      
+      {/* Catch-all for 404 */}
       <Route component={NotFound} />
     </Switch>
   );

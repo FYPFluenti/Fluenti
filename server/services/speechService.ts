@@ -28,30 +28,41 @@ export class SpeechService {
     language: 'english' | 'urdu',
     userAudio?: string
   ) {
-    // Generate AI feedback
-    const feedback = await generateSpeechFeedback(word, phonetic, userTranscription, language);
-    
-    // Get session to get userId - we'll need to update this method
-    const userId = "temp"; // TODO: Get from session
-    
-    // Record the attempt
-    const record = await mongoStorage.createSpeechRecord({
-      sessionId,
-      userId,
-      wordAttempted: word,
-      userPronunciation: userTranscription,
-      accuracyScore: feedback.accuracy,
-      feedback: feedback.feedback,
-      audioUrl: userAudio,
-    });
+    try {
+      // Generate AI feedback
+      const feedback = await generateSpeechFeedback(word, phonetic, userTranscription, language);
+      
+      // Get session to get userId
+      const session = await mongoStorage.getSpeechSession(sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
+      
+      // Record the attempt
+      const record = await mongoStorage.createSpeechRecord({
+        sessionId,
+        userId: session.userId,
+        wordAttempted: word,
+        userPronunciation: userTranscription,
+        accuracyScore: feedback.accuracy,
+        feedback: feedback.feedback,
+        audioUrl: userAudio,
+      });
 
-    // Update session progress
-    await this.updateSessionProgress(sessionId, feedback.accuracy);
-    
-    return {
-      record,
-      feedback
-    };
+      // Update session progress
+      await this.updateSessionProgress(sessionId, feedback.accuracy);
+      
+      return {
+        id: record.id,
+        accuracyScore: feedback.accuracy,
+        feedback: feedback.feedback,
+        phoneticAnalysis: feedback.phoneticAnalysis || '',
+        improvements: feedback.improvements || []
+      };
+    } catch (error) {
+      console.error('Error in recordSpeechAttempt:', error);
+      throw error;
+    }
   }
 
   static async updateSessionProgress(sessionId: string, latestScore: number) {
