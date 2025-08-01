@@ -61,8 +61,21 @@ app.use((req, res, next) => {
   next();
 });
 
+// Add request logging middleware
+app.use((req, res, next) => {
+  console.log(`📥 ${new Date().toISOString()} - ${req.method} ${req.url} from ${req.ip}`);
+  next();
+});
+
+// Root endpoint for basic server check
+app.get('/', (req, res) => {
+  console.log('🏠 Root endpoint accessed');
+  res.json({ message: 'Fluenti Backend API', status: 'running', timestamp: new Date().toISOString() });
+});
+
 // Health check endpoint
 app.get('/health', (req, res) => {
+  console.log('🏥 Health endpoint accessed');
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
