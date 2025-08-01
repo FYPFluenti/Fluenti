@@ -1,5 +1,5 @@
 [build]
-  # Build frontend using npm script with debug info
+  # Build frontend using debug command to identify issues
   command = "npm run build:netlify"
   publish = "dist/public"
 
