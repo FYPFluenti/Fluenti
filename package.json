@@ -8,7 +8,7 @@
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "vite build",
     "build:backend": "esbuild server/backend.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
-    "start": "NODE_ENV=production node dist/index.js",
+    "start": "NODE_ENV=production node dist/backend.js",
     "start:backend": "NODE_ENV=production node dist/backend.js",
     "check": "tsc",
     "db:push": "drizzle-kit push"
