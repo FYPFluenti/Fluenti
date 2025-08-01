@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getQueryFn } from "@/lib/queryClient";
+import { getQueryFn, apiRequest } from "@/lib/queryClient";
 
 export function useAuth() {
   const queryClient = useQueryClient();
@@ -19,11 +19,8 @@ export function useAuth() {
 
   const logout = async () => {
     try {
-      // Call the logout API
-      await fetch('/api/logout', {
-        method: 'GET',
-        credentials: 'include'
-      });
+      // Call the logout API using apiRequest
+      await apiRequest('GET', '/api/logout');
       
       // Clear query cache
       queryClient.clear();

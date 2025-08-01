@@ -3,12 +3,43 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { LogoutButton } from "@/components/auth/LogoutButton";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { MessageCircle, User, Star, Gift, Heart, Smile, ArrowRight, BookOpen, Mic, Trophy } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useEffect } from "react";
+
+interface User {
+  firstName?: string;
+  lastName?: string;
+}
 
 export default function ChildDashboard() {
-  const { user } = useAuth();
+  const { user, isLoading, isAuthenticated } = useAuth() as { user: User; isLoading: boolean; isAuthenticated: boolean };
+  const [, setLocation] = useLocation();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      setLocation('/login');
+    }
+  }, [isLoading, isAuthenticated, setLocation]);
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-pink-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-pink-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 relative overflow-hidden">
