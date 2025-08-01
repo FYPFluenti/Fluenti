@@ -26,8 +26,15 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
   const connect = useCallback(() => {
     try {
-      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-      const wsUrl = `${protocol}//${window.location.host}/ws`;
+      // Configure WebSocket URL based on environment
+      let wsUrl: string;
+      if (import.meta.env.PROD) {
+        // Production: connect to your deployed backend
+        wsUrl = 'wss://fluentiai-backend.onrender.com/ws';
+      } else {
+        // Development: connect to local backend
+        wsUrl = 'ws://localhost:3000/ws';
+      }
       
       const ws = new WebSocket(wsUrl);
 
