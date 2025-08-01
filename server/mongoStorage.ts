@@ -17,15 +17,49 @@ export const mongoStorage = {
     language?: 'english' | 'urdu' | 'both';
   }) {
     try {
-      const user = await User.findOneAndUpdate(
-        { id: userData.id },
-        { 
-          ...userData, 
-          updatedAt: new Date() 
-        },
-        { upsert: true, new: true }
-      );
-      return user;
+      // First, try to find user by email to avoid duplicate key errors
+      const existingUser = await User.findOne({ email: userData.email });
+      
+      if (existingUser) {
+        // Update existing user
+        const user = await User.findOneAndUpdate(
+          { email: userData.email },
+          { 
+            ...userData, 
+            updatedAt: new Date() 
+          },
+          { new: true }
+        );
+        return user;
+      } else {
+        // Create new user - try by id first, then by email as fallback
+        try {
+          const user = await User.findOneAndUpdate(
+            { id: userData.id },
+            { 
+              ...userData, 
+              updatedAt: new Date() 
+            },
+            { upsert: true, new: true }
+          );
+          return user;
+        } catch (duplicateError: any) {
+          // If still duplicate key error, try to find and update by email
+          if (duplicateError.code === 11000) {
+            console.log('Duplicate key error, trying to find by email...');
+            const user = await User.findOneAndUpdate(
+              { email: userData.email },
+              { 
+                ...userData, 
+                updatedAt: new Date() 
+              },
+              { new: true }
+            );
+            return user;
+          }
+          throw duplicateError;
+        }
+      }
     } catch (error) {
       console.error('Error upserting user:', error);
       throw error;
@@ -38,6 +72,16 @@ export const mongoStorage = {
       return user;
     } catch (error) {
       console.error('Error getting user:', error);
+      throw error;
+    }
+  },
+
+  async getUserByEmail(email: string) {
+    try {
+      const user = await User.findOne({ email: email });
+      return user;
+    } catch (error) {
+      console.error('Error getting user by email:', error);
       throw error;
     }
   },

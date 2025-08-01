@@ -76,16 +76,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         const { userType = 'adult' } = req.body;
         
-        // Create a mock user
-        const user = await mongoStorage.upsertUser({
-          id: `local-${userType}-${Date.now()}`,
-          email: `${userType}@local.dev`,
-          firstName: `Test`,
-          lastName: `${userType.charAt(0).toUpperCase() + userType.slice(1)}`,
-          profileImageUrl: 'https://via.placeholder.com/150',
-          userType: userType,
-          language: 'english',
-        });
+        // Try to find existing user first, create only if doesn't exist
+        const email = `${userType}@local.dev`;
+        const staticId = `local-${userType}-user`;
+        
+        let user = await mongoStorage.getUserByEmail(email);
+        
+        if (!user) {
+          // Create a mock user only if it doesn't exist
+          user = await mongoStorage.upsertUser({
+            id: staticId,
+            email: email,
+            firstName: `Test`,
+            lastName: `${userType.charAt(0).toUpperCase() + userType.slice(1)}`,
+            profileImageUrl: 'https://via.placeholder.com/150',
+            userType: userType,
+            language: 'english',
+          });
+        }
         
         // Set user in session (simple approach for development)
         if (req.session) {
