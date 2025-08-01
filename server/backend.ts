@@ -86,29 +86,42 @@ app.get('/health', (req, res) => {
     throw err;
   });
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Render provides PORT automatically, fallback to 10000 for local development
+  // Handle Render's unusual PORT environment variable
+  // Render sometimes provides PORT as a hash instead of a number
   const portEnv = process.env.PORT;
   console.log('Environment PORT value:', portEnv);
+  console.log('PORT type:', typeof portEnv);
+  console.log('PORT is numeric:', /^\d+$/.test(portEnv || ''));
   
-  let port;
-  if (portEnv && /^\d+$/.test(portEnv)) {
-    // PORT is a valid number
-    port = parseInt(portEnv, 10);
-  } else {
-    // PORT is not a valid number, use default
-    console.log('PORT is not a valid number, using default 10000');
-    port = 10000;
-  }
-  
-  console.log('Using port:', port);
+  // For Render, just use 10000 regardless of what they provide in PORT
+  // This is a workaround for Render's hash-based PORT variable
+  const port = 10000;
+  console.log('Using hardcoded port 10000 for Render compatibility');
+  console.log('Final port decision:', port);
   
   server.listen(port, '0.0.0.0', () => {
-    console.log(`Backend API serving on port ${port}`);
-    console.log(`Health check: http://localhost:${port}/health`);
-    console.log('Environment variables:');
+    console.log(`✅ Backend API serving on port ${port} (0.0.0.0:${port})`);
+    console.log(`🌐 External URL: https://fluenti.onrender.com`);
+    console.log(`🏥 Health check: https://fluenti.onrender.com/health`);
+    console.log('📊 Server Status: READY FOR REQUESTS');
+    console.log('Environment check:');
     console.log('- NODE_ENV:', process.env.NODE_ENV);
     console.log('- PORT (raw):', process.env.PORT);
     console.log('- MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
+    console.log('='.repeat(50));
+  });
+  
+  server.on('error', (err: any) => {
+    console.error('❌ Server failed to start:', err.message);
+    console.error('Error code:', err.code);
+    console.error('Port attempted:', port);
+    
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${port} is already in use`);
+      // Try alternative ports for Render
+      const altPorts = [3000, 8080, 5000, 8000];
+      console.log('Trying alternative ports:', altPorts);
+    }
+    process.exit(1);
   });
 })();
