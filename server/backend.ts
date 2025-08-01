@@ -67,6 +67,15 @@ app.get('/health', (req, res) => {
 });
 
 (async () => {
+  // Debug all environment variables
+  console.log('=== ALL ENVIRONMENT VARIABLES ===');
+  Object.keys(process.env).forEach(key => {
+    if (key.includes('PORT') || key.includes('port')) {
+      console.log(`${key}:`, process.env[key]);
+    }
+  });
+  console.log('=====================================');
+  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -78,22 +87,28 @@ app.get('/health', (req, res) => {
   });
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
+  // Render provides PORT automatically, fallback to 10000 for local development
   const portEnv = process.env.PORT;
   console.log('Environment PORT value:', portEnv);
-  const port = parseInt(portEnv || '10000', 10);
-  console.log('Parsed port:', port);
   
-  if (isNaN(port) || port <= 0) {
-    console.error('Invalid port configuration. PORT env:', portEnv, 'Parsed:', port);
-    process.exit(1);
+  let port;
+  if (portEnv && /^\d+$/.test(portEnv)) {
+    // PORT is a valid number
+    port = parseInt(portEnv, 10);
+  } else {
+    // PORT is not a valid number, use default
+    console.log('PORT is not a valid number, using default 10000');
+    port = 10000;
   }
   
-  server.listen(port, () => {
+  console.log('Using port:', port);
+  
+  server.listen(port, '0.0.0.0', () => {
     console.log(`Backend API serving on port ${port}`);
     console.log(`Health check: http://localhost:${port}/health`);
     console.log('Environment variables:');
     console.log('- NODE_ENV:', process.env.NODE_ENV);
-    console.log('- PORT:', process.env.PORT);
+    console.log('- PORT (raw):', process.env.PORT);
     console.log('- MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
   });
 })();
