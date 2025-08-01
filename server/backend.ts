@@ -87,28 +87,42 @@ app.get('/health', (req, res) => {
   });
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Render provides PORT automatically, fallback to 10000 for local development
+  // Render provides PORT automatically, but it might be a hash instead of a number
   const portEnv = process.env.PORT;
   console.log('Environment PORT value:', portEnv);
   
+  // Try different port strategies for Render compatibility
   let port;
   if (portEnv && /^\d+$/.test(portEnv)) {
     // PORT is a valid number
     port = parseInt(portEnv, 10);
+    console.log('Using PORT from environment:', port);
   } else {
-    // PORT is not a valid number, use default
-    console.log('PORT is not a valid number, using default 10000');
-    port = 10000;
+    // Common Render ports to try
+    port = 10000; // Use our successful port
+    console.log('PORT is not a valid number, using Render-compatible port:', port);
   }
   
-  console.log('Using port:', port);
+  console.log('Attempting to bind to port:', port);
   
+  // Try to start server with error handling
   server.listen(port, '0.0.0.0', () => {
-    console.log(`Backend API serving on port ${port}`);
-    console.log(`Health check: http://localhost:${port}/health`);
+    console.log(`✅ Backend API successfully serving on port ${port} (binding to 0.0.0.0)`);
+    console.log(`📍 Server is accessible externally on port ${port}`);
+    console.log(`🏥 Health check endpoint: /health`);
     console.log('Environment variables:');
     console.log('- NODE_ENV:', process.env.NODE_ENV);
     console.log('- PORT (raw):', process.env.PORT);
     console.log('- MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
+    console.log('=== ✅ SERVER SUCCESSFULLY STARTED AND READY FOR REQUESTS ===');
+  });
+  
+  // Add error handling for server startup
+  server.on('error', (err: any) => {
+    console.error('❌ Server failed to start:', err.message);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`Port ${port} is already in use`);
+    }
+    process.exit(1);
   });
 })();
