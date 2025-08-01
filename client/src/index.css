@@ -14,62 +14,62 @@
   --border: hsl(210, 15%, 90%);
   --input: hsl(210, 15%, 90%);
   
-  /* Therapeutic Harmony Palette */
-  --primary: hsl(210, 100%, 56%);          /* Calming Blue */
-  --primary-light: hsl(210, 100%, 85%);    /* Light Blue */
-  --primary-foreground: hsl(210, 100%, 98%);
+  /* New Teal-Blue Color Palette */
+  --primary: hsl(183, 25%, 43%);           /* #356e6f - Medium Teal */
+  --primary-light: hsl(183, 25%, 55%);     /* #6fa3a7 - Light Teal */
+  --primary-foreground: hsl(183, 100%, 98%);
   
-  --secondary: hsl(152, 69%, 45%);         /* Growth Green */
-  --secondary-light: hsl(152, 50%, 90%);   /* Light Green */
-  --secondary-foreground: hsl(152, 100%, 98%);
+  --secondary: hsl(200, 22%, 39%);         /* #2f5156 - Dark Teal */
+  --secondary-light: hsl(200, 22%, 85%);   /* Light version */
+  --secondary-foreground: hsl(200, 100%, 98%);
   
-  --accent: hsl(25, 95%, 53%);             /* Warm Orange */
-  --accent-light: hsl(25, 100%, 95%);      /* Light Orange */
-  --accent-foreground: hsl(25, 9.8%, 10%);
+  --accent: hsl(204, 23%, 24%);            /* #30414b - Blue-gray */
+  --accent-light: hsl(204, 23%, 90%);      /* Light Blue-gray */
+  --accent-foreground: hsl(204, 9.8%, 10%);
   
   --destructive: hsl(0, 84.2%, 60.2%);
   --destructive-foreground: hsl(60, 9.1%, 97.8%);
-  --ring: hsl(210, 100%, 56%);
+  --ring: hsl(183, 25%, 43%);
   --radius: 0.75rem;
   
-  /* Enhanced Fluenti Brand Colors - Therapeutic Harmony */
-  --fluenti-primary: hsl(210, 100%, 56%);     /* Trust Blue */
-  --fluenti-primary-light: hsl(210, 100%, 85%);
-  --fluenti-primary-dark: hsl(210, 100%, 40%);
+  /* Enhanced Fluenti Brand Colors - New Teal Palette */
+  --fluenti-primary: hsl(183, 25%, 43%);      /* #356e6f - Trust Teal */
+  --fluenti-primary-light: hsl(183, 25%, 55%); /* #6fa3a7 - Light Teal */
+  --fluenti-primary-dark: hsl(200, 22%, 39%);  /* #2f5156 - Dark Teal */
   
-  --fluenti-secondary: hsl(152, 69%, 45%);    /* Growth Green */
-  --fluenti-secondary-light: hsl(152, 50%, 90%);
-  --fluenti-secondary-dark: hsl(152, 69%, 35%);
+  --fluenti-secondary: hsl(204, 23%, 24%);    /* #30414b - Professional Blue-gray */
+  --fluenti-secondary-light: hsl(204, 23%, 85%);
+  --fluenti-secondary-dark: hsl(207, 26%, 18%); /* #27343c - Darkest */
   
-  --fluenti-accent: hsl(25, 95%, 53%);        /* Energy Orange */
-  --fluenti-accent-light: hsl(25, 100%, 95%);
-  --fluenti-accent-dark: hsl(25, 95%, 43%);
+  --fluenti-accent: hsl(183, 25%, 55%);       /* #6fa3a7 - Calm Teal */
+  --fluenti-accent-light: hsl(183, 25%, 90%);
+  --fluenti-accent-dark: hsl(183, 25%, 35%);
   
-  /* Role-Specific Colors */
-  --fluenti-purple: hsl(264, 69%, 60%);       /* Guardian Authority */
-  --fluenti-purple-light: hsl(264, 60%, 95%);
-  --fluenti-pink: hsl(328, 69%, 60%);         /* Emotional Support */
-  --fluenti-pink-light: hsl(328, 60%, 95%);
-  --fluenti-indigo: hsl(231, 69%, 60%);       /* Professional */
-  --fluenti-indigo-light: hsl(231, 60%, 95%);
+  /* Role-Specific Colors - Adapted to Teal Palette */
+  --fluenti-purple: hsl(200, 22%, 39%);       /* Dark Teal for Guardian Authority */
+  --fluenti-purple-light: hsl(200, 22%, 90%);
+  --fluenti-pink: hsl(183, 25%, 50%);         /* Teal for Emotional Support */
+  --fluenti-pink-light: hsl(183, 25%, 90%);
+  --fluenti-indigo: hsl(204, 23%, 24%);       /* Professional Blue-gray */
+  --fluenti-indigo-light: hsl(204, 23%, 90%);
   
-  /* Interactive States */
-  --fluenti-hover: hsl(210, 100%, 50%);
-  --fluenti-active: hsl(210, 100%, 45%);
-  --fluenti-focus: hsl(210, 100%, 56%, 0.2);
+  /* Interactive States - Teal Palette */
+  --fluenti-hover: hsl(183, 25%, 38%);
+  --fluenti-active: hsl(183, 25%, 33%);
+  --fluenti-focus: hsl(183, 25%, 43%, 0.2);
   
-  /* Neutral Grays */
-  --fluenti-neutral-50: hsl(210, 20%, 98%);
-  --fluenti-neutral-100: hsl(210, 15%, 95%);
-  --fluenti-neutral-200: hsl(210, 15%, 90%);
-  --fluenti-neutral-600: hsl(215, 16%, 47%);
-  --fluenti-neutral-900: hsl(215, 28%, 17%);
+  /* Neutral Grays - Harmonized with Teal */
+  --fluenti-neutral-50: hsl(183, 10%, 98%);
+  --fluenti-neutral-100: hsl(183, 10%, 95%);
+  --fluenti-neutral-200: hsl(183, 10%, 90%);
+  --fluenti-neutral-600: hsl(204, 16%, 47%);
+  --fluenti-neutral-900: hsl(207, 28%, 17%);
   
-  /* Semantic Colors */
-  --fluenti-success: hsl(152, 69%, 45%);
+  /* Semantic Colors - Adapted to Teal Theme */
+  --fluenti-success: hsl(183, 25%, 43%);
   --fluenti-warning: hsl(45, 95%, 55%);
   --fluenti-error: hsl(0, 84%, 60%);
-  --fluenti-info: hsl(210, 100%, 56%);
+  --fluenti-info: hsl(183, 25%, 55%);
 }
 
 .dark {
