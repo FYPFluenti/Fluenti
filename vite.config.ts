@@ -1,28 +1,14 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import { fileURLToPath, URL } from 'node:url';
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
+import { fileURLToPath } from 'node:url';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
-  plugins: [
-    react(),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer(),
-          ),
-        ]
-      : []),
-  ],
-  // Only define NODE_ENV for development builds
-  define: process.env.NODE_ENV === 'production' ? {} : {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
-  },
+  plugins: [react()],
+  define: {},
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "client", "src"),
@@ -34,6 +20,13 @@ export default defineConfig({
   build: {
     outDir: path.resolve(__dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        assetFileNames: 'assets/[name]-[hash][extname]',
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+      }
+    }
   },
   server: {
     fs: {

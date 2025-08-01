@@ -7,6 +7,7 @@
     "dev": "tsx --env-file=.env server/index.ts",
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "vite build",
+    "build:netlify": "node netlify-debug.js && npm run build:frontend",
     "build:backend": "esbuild server/backend.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/backend.js",
     "start:backend": "NODE_ENV=production node dist/backend.js",
