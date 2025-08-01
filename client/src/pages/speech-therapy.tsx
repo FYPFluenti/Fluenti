@@ -13,7 +13,7 @@ import { SpeechExercise } from "@/components/speech/speech-exercise";
 import { InitialAssessment } from "@/components/assessment/initial-assessment";
 import { RoleBasedComponent, UserTypeGuard } from "@/components/auth/RoleBasedComponent";
 import { RoleBasedHeader } from "@/components/navigation/RoleBasedHeader";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { 
   MessageCircle, 
   Users, 
@@ -51,6 +51,7 @@ export default function SpeechTherapy() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   
   const [currentSession, setCurrentSession] = useState<SessionData | null>(null);
   const [isAvatarActive, setIsAvatarActive] = useState(true);
@@ -60,17 +61,27 @@ export default function SpeechTherapy() {
   // Check authentication
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
+      setLocation('/login');
       return;
     }
-  }, [isAuthenticated, isLoading, toast]);
+  }, [isAuthenticated, isLoading, setLocation]);
+
+  // Show loading while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-blue-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render anything if not authenticated (will redirect)
+  if (!isAuthenticated) {
+    return null;
+  }
 
   // Create new session mutation
   const createSessionMutation = useMutation({
