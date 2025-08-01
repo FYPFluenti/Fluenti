@@ -1,27 +1,28 @@
 [build]
-  command = "npm run build"
-  publish = "dist"
+  # Build only the frontend for static hosting
+  command = "npx vite build"
+  publish = "dist/public"
 
 [build.environment]
   # Disable secrets scanning for expected environment variables
   SECRETS_SCAN_OMIT_KEYS = "NODE_ENV,PORT,MONGODB_URI,OPENAI_API_KEY,SESSION_SECRET"
-  # Alternative: Disable secrets scanning entirely (less secure but will work)
-  # SECRETS_SCAN_ENABLED = "false"
+  # Set NODE_ENV for build
+  NODE_ENV = "production"
 
 # Production environment settings
 [context.production]
-  command = "npm run build"
+  command = "npx vite build"
   
   [context.production.environment]
     NODE_ENV = "production"
 
 # Deploy previews (branch deployments)
 [context.deploy-preview]
-  command = "npm run build"
+  command = "npx vite build"
 
 # Branch deployments
 [context.branch-deploy]
-  command = "npm run build"
+  command = "npx vite build"
 
 # Build settings
 [build.processing]
@@ -55,8 +56,5 @@
   status = 200
   force = false
 
-# API Functions (if you plan to use Netlify Functions later)
-# [[redirects]]
-#   from = "/api/*"
-#   to = "/.netlify/functions/:splat"
-#   status = 200
+# Note: For the API backend, you'll need to deploy it separately
+# to a service like Railway, Render, or Vercel that supports Node.js servers
