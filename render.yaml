@@ -3,7 +3,7 @@ services:
     name: fluenti-backend
     env: node
     buildCommand: npm install && npm run build:backend
-    startCommand: npm start
+    startCommand: npm run start:backend
     envVars:
       - key: NODE_ENV
         value: production
