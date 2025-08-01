@@ -1,6 +1,6 @@
 [build]
-  # Build only the frontend for static hosting
-  command = "npx vite build"
+  # Use npm script to ensure correct vite version
+  command = "npm run build:frontend"
   publish = "dist/public"
 
 [build.environment]
