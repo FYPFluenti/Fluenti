@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { ProgressChart } from "@/components/progress/progress-chart";
 import { Achievements } from "@/components/gamification/achievements";
 import { RoleBasedComponent, UserTypeGuard } from "@/components/auth/RoleBasedComponent";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { 
   MessageCircle, 
   Home, 
@@ -51,32 +51,21 @@ interface SessionData {
 export default function ProgressDashboard() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
-  const [, setLocation] = useLocation();
 
   // Check authentication
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      setLocation('/login');
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
       return;
     }
-  }, [isAuthenticated, isLoading, setLocation]);
-
-  // Show loading while checking authentication
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-blue-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render anything if not authenticated (will redirect)
-  if (!isAuthenticated) {
-    return null;
-  }
+  }, [isAuthenticated, isLoading, toast]);
 
   // Fetch user progress
   const { data: progressData, isLoading: progressLoading, error } = useQuery({
@@ -85,7 +74,21 @@ export default function ProgressDashboard() {
     retry: false,
   });
 
-  if (progressLoading) {
+  useEffect(() => {
+    if (error && isUnauthorizedError(error as Error)) {
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
+      return;
+    }
+  }, [error, toast]);
+
+  if (isLoading || progressLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
