@@ -78,9 +78,22 @@ app.get('/health', (req, res) => {
   });
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
-  const port = parseInt(process.env.PORT || '5000', 10);
+  const portEnv = process.env.PORT;
+  console.log('Environment PORT value:', portEnv);
+  const port = parseInt(portEnv || '10000', 10);
+  console.log('Parsed port:', port);
+  
+  if (isNaN(port) || port <= 0) {
+    console.error('Invalid port configuration. PORT env:', portEnv, 'Parsed:', port);
+    process.exit(1);
+  }
+  
   server.listen(port, () => {
     console.log(`Backend API serving on port ${port}`);
     console.log(`Health check: http://localhost:${port}/health`);
+    console.log('Environment variables:');
+    console.log('- NODE_ENV:', process.env.NODE_ENV);
+    console.log('- PORT:', process.env.PORT);
+    console.log('- MONGODB_URI:', process.env.MONGODB_URI ? 'SET' : 'NOT SET');
   });
 })();

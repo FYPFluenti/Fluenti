@@ -7,11 +7,6 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PORT
-        fromService:
-          type: web
-          name: FluentiAI-backend
-          property: port
       - key: MONGODB_URI
         sync: false  # You'll set this manually in Render dashboard
       - key: OPENAI_API_KEY
