@@ -3,43 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { LogoutButton } from "@/components/auth/LogoutButton";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { MessageCircle, User, Users, Calendar, TrendingUp, Shield, ArrowRight, Eye, BarChart3 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useEffect } from "react";
-
-interface User {
-  firstName?: string;
-  lastName?: string;
-}
 
 export default function GuardianDashboard() {
-  const { user, isLoading, isAuthenticated } = useAuth() as { user: User; isLoading: boolean; isAuthenticated: boolean };
-  const [, setLocation] = useLocation();
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      setLocation('/login');
-    }
-  }, [isLoading, isAuthenticated, setLocation]);
-
-  // Show loading while checking authentication
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 via-teal-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-green-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render anything if not authenticated (will redirect)
-  if (!isAuthenticated) {
-    return null;
-  }
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-teal-50 to-purple-50 relative overflow-hidden">
