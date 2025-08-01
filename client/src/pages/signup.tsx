@@ -39,18 +39,42 @@ export default function Signup() {
         return;
       }
       
-      // Store signup data in session storage to pass to backend
-      const signupData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        userType: formData.userType,
-        language: formData.language
-      };
+      // Use development signup endpoint
+      const response = await fetch('/api/dev/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          userType: formData.userType,
+          language: formData.language
+        }),
+        credentials: 'include'
+      });
       
-      // Redirect to login with signup data as query parameter
-      const encodedData = encodeURIComponent(JSON.stringify(signupData));
-      window.location.href = `/api/login?signupData=${encodedData}`;
+      const data = await response.json();
+      
+      if (data.success) {
+        // Redirect to the appropriate dashboard based on user type
+        switch(formData.userType) {
+          case 'child':
+            window.location.href = '/child-dashboard';
+            break;
+          case 'adult':
+            window.location.href = '/adult-dashboard';
+            break;
+          case 'guardian':
+            window.location.href = '/guardian-dashboard';
+            break;
+          default:
+            window.location.href = '/';
+        }
+      } else {
+        alert(data.message || 'Signup failed');
+      }
     } catch (error) {
       console.error('Signup error:', error);
     } finally {

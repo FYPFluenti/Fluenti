@@ -20,13 +20,34 @@ export default function Login() {
     setIsLoading(true);
     
     try {
-      // Always use our development login endpoint for now
+      // Extract first and last name from email if provided
+      let firstName = 'User';
+      let lastName = '';
+      
+      if (email && email.includes('@')) {
+        const emailParts = email.split('@')[0];
+        if (emailParts.includes('.')) {
+          const nameParts = emailParts.split('.');
+          firstName = nameParts[0]?.charAt(0).toUpperCase() + nameParts[0]?.slice(1) || 'User';
+          lastName = nameParts[1]?.charAt(0).toUpperCase() + nameParts[1]?.slice(1) || '';
+        } else {
+          // If no dot, use the whole email prefix as first name
+          firstName = emailParts.charAt(0).toUpperCase() + emailParts.slice(1) || 'User';
+        }
+      }
+      
+      // Use development login endpoint with actual user details
       const response = await fetch('/api/dev/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ userType }),
+        body: JSON.stringify({ 
+          userType,
+          email: email || undefined, // Don't send empty string
+          firstName,
+          lastName
+        }),
         credentials: 'include'
       });
       

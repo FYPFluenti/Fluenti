@@ -74,25 +74,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Quick login with user type
     app.post('/api/dev/login', async (req, res) => {
       try {
-        const { userType = 'adult' } = req.body;
+        const { userType = 'adult', email, firstName, lastName } = req.body;
         
-        // Try to find existing user first, create only if doesn't exist
-        const email = `${userType}@local.dev`;
-        const staticId = `local-${userType}-user`;
+        // Use provided email or default to userType email
+        const userEmail = email || `${userType}@local.dev`;
         
-        let user = await mongoStorage.getUserByEmail(email);
+        // Create a unique ID based on email
+        const staticId = email ? `user-${Buffer.from(userEmail).toString('base64').slice(0, 10)}` : `local-${userType}-user`;
+        
+        let user = await mongoStorage.getUserByEmail(userEmail);
         
         if (!user) {
-          // Create a mock user only if it doesn't exist
+          // Create a user with provided details or defaults
           user = await mongoStorage.upsertUser({
             id: staticId,
-            email: email,
-            firstName: `Test`,
-            lastName: `${userType.charAt(0).toUpperCase() + userType.slice(1)}`,
+            email: userEmail,
+            firstName: firstName || `Test`,
+            lastName: lastName || `${userType.charAt(0).toUpperCase() + userType.slice(1)}`,
             profileImageUrl: 'https://via.placeholder.com/150',
             userType: userType,
             language: 'english',
           });
+        } else {
+          // Update existing user with new details if provided
+          if (firstName || lastName) {
+            user = await mongoStorage.updateUser(user.id, {
+              firstName: firstName || user.firstName,
+              lastName: lastName || user.lastName,
+            });
+          }
         }
         
         // Set user in session (simple approach for development)
@@ -108,6 +118,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         console.error("Login error:", error);
         res.status(500).json({ message: "Login failed" });
+      }
+    });
+    
+    // Development signup endpoint
+    app.post('/api/dev/signup', async (req, res) => {
+      try {
+        const { firstName, lastName, email, userType, language } = req.body;
+        
+        // Check if user already exists
+        const existingUser = await mongoStorage.getUserByEmail(email);
+        if (existingUser) {
+          return res.status(400).json({ message: "User already exists with this email" });
+        }
+        
+        // Create new user with provided details
+        const user = await mongoStorage.upsertUser({
+          id: `user-${Date.now()}`,
+          email,
+          firstName,
+          lastName,
+          profileImageUrl: 'https://via.placeholder.com/150',
+          userType,
+          language,
+        });
+        
+        // Set user in session
+        if (req.session) {
+          (req.session as any).user = {
+            id: user.id,
+            claims: { sub: user.id }
+          };
+        }
+        
+        res.json({ success: true, user });
+      } catch (error) {
+        console.error("Signup error:", error);
+        res.status(500).json({ message: "Signup failed" });
       }
     });
     
