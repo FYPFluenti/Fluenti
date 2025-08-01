@@ -31,6 +31,7 @@ export default function EmotionalSupport() {
     }
   }, [isAuthenticated, isLoading, setLocation]);
 
+  // Show loading while checking authentication
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-purple-50 flex items-center justify-center">
@@ -46,7 +47,6 @@ export default function EmotionalSupport() {
   if (!isAuthenticated) {
     return null;
   }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 relative overflow-hidden">
       {/* Floating Elements */}
