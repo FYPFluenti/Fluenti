@@ -39,8 +39,8 @@ const getOidcConfig = memoize(
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   
-  // For local development, use memory store
-  if (process.env.NODE_ENV === 'development' && process.env.REPL_ID === 'local-development') {
+  // For local development, use memory store (no PostgreSQL required)
+  if (process.env.NODE_ENV === 'development') {
     return session({
       secret: process.env.SESSION_SECRET!,
       resave: false,
@@ -53,7 +53,21 @@ export function getSession() {
     });
   }
   
-  // Production setup with PostgreSQL store
+  // Production setup with PostgreSQL store (only when DATABASE_URL is available)
+  if (!process.env.DATABASE_URL) {
+    console.warn('DATABASE_URL not found, falling back to memory store');
+    return session({
+      secret: process.env.SESSION_SECRET!,
+      resave: false,
+      saveUninitialized: false,
+      cookie: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: sessionTtl,
+      },
+    });
+  }
+
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
