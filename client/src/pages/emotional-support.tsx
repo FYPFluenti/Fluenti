@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { EmotionalChat } from "@/components/chat/emotional-chat";
 import { RoleBasedComponent, UserTypeGuard } from "@/components/auth/RoleBasedComponent";
-import { Link, useLocation } from "wouter";
+import { Link } from "wouter";
 import { 
   ArrowLeft, 
   Home, 
@@ -20,30 +20,35 @@ import {
 export default function EmotionalSupport() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
-  const [, setLocation] = useLocation();
   const [selectedLanguage, setSelectedLanguage] = useState<'english' | 'urdu'>('english');
 
   // Check authentication
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      setLocation('/login');
+      toast({
+        title: "Unauthorized",
+        description: "You are logged out. Logging in again...",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        window.location.href = "/api/login";
+      }, 500);
       return;
     }
-  }, [isAuthenticated, isLoading, setLocation]);
+  }, [isAuthenticated, isLoading, toast]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-pink-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-red-600">Loading...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
   }
 
-  // Don't render anything if not authenticated (will redirect)
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user) {
     return null;
   }
 
