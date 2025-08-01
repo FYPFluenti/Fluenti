@@ -99,7 +99,7 @@
 
 @layer base {
   * {
-    border: 1px solid #e5e7eb;
+    border-color: inherit;
   }
 
   body {
