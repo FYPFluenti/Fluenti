@@ -70,10 +70,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Development-only login and signup endpoints
+  // Authentication endpoints
   if (process.env.NODE_ENV === 'development') {
-    // Real login endpoint
-    app.post('/api/dev/login', async (req, res) => {
+    // User login endpoint
+    app.post('/api/auth/login', async (req, res) => {
       try {
         const { email, password } = req.body;
         
@@ -100,16 +100,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
     
-    // Real signup endpoint
-    app.post('/api/dev/signup', async (req, res) => {
+    // User signup endpoint
+    app.post('/api/auth/signup', async (req, res) => {
       try {
+        console.log('Signup request received:', req.body);
         const { firstName, lastName, email, password, userType, language } = req.body;
         
         if (!firstName || !lastName || !email || !password || !userType || !language) {
-          return res.status(400).json({ message: "All fields are required" });
+          console.log('Missing required fields');
+          return res.status(400).json({ success: false, message: "All fields are required" });
         }
         
         // Create new user
+        console.log('Creating user with AuthService...');
         const user = await AuthService.signup({
           firstName,
           lastName,
@@ -119,23 +122,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
           language
         });
         
+        console.log('User created successfully:', user.id, user.userType);
+        
         // Set user in session
         if (req.session) {
           (req.session as any).user = {
             id: user.id,
             claims: { sub: user.id }
           };
+          console.log('Session set for user:', user.id);
         }
         
+        console.log('Sending success response');
         res.json({ success: true, user });
       } catch (error: any) {
         console.error("Signup error:", error.message);
-        res.status(400).json({ message: error.message });
+        res.status(400).json({ success: false, message: error.message });
       }
     });
     
-    // Session check endpoint for debugging
-    app.get('/api/dev/session', (req, res) => {
+    // Session information endpoint
+    app.get('/api/auth/session', (req, res) => {
       res.json({
         session: req.session,
         user: req.user,

@@ -21,26 +21,32 @@ export default function Signup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (isLoading) return; // Prevent multiple submissions
+    
     setIsLoading(true);
     
     try {
       if (formData.password !== formData.confirmPassword) {
         alert("Passwords don't match!");
+        setIsLoading(false);
         return;
       }
       
       if (!formData.userType) {
         alert("Please select your role!");
+        setIsLoading(false);
         return;
       }
       
       if (!formData.language) {
         alert("Please select your preferred language!");
+        setIsLoading(false);
         return;
       }
       
-      // Use development signup endpoint
-      const response = await fetch('/api/dev/signup', {
+      // Create new user account
+      const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -57,6 +63,7 @@ export default function Signup() {
       });
       
       const data = await response.json();
+      console.log('Signup response:', data); // Debug log
       
       if (data.success && data.user) {
         // Redirect to the appropriate dashboard based on user's actual type
@@ -74,10 +81,12 @@ export default function Signup() {
             window.location.href = '/';
         }
       } else {
+        console.error('Signup failed:', data);
         alert(data.message || 'Signup failed');
       }
     } catch (error) {
       console.error('Signup error:', error);
+      alert('Network error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -235,15 +244,6 @@ export default function Signup() {
                   Sign in here
                 </Link>
               </div>
-            </div>
-          </div>
-
-          {/* Development Notice */}
-          <div className="mt-6 fluenti-card bg-gradient-to-r from-yellow-50 to-orange-50 border-yellow-200 animate-fade-in" style={{animationDelay: '0.4s'}}>
-            <div className="p-4">
-              <p className="text-sm text-yellow-800 text-center font-medium">
-                <strong>Development Mode:</strong> In local development, you'll be automatically logged in as a test user.
-              </p>
             </div>
           </div>
         </div>
