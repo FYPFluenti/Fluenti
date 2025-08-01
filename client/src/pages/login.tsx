@@ -11,7 +11,6 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [userType, setUserType] = useState("adult");
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
 
@@ -20,33 +19,20 @@ export default function Login() {
     setIsLoading(true);
     
     try {
-      // Extract first and last name from email if provided
-      let firstName = 'User';
-      let lastName = '';
-      
-      if (email && email.includes('@')) {
-        const emailParts = email.split('@')[0];
-        if (emailParts.includes('.')) {
-          const nameParts = emailParts.split('.');
-          firstName = nameParts[0]?.charAt(0).toUpperCase() + nameParts[0]?.slice(1) || 'User';
-          lastName = nameParts[1]?.charAt(0).toUpperCase() + nameParts[1]?.slice(1) || '';
-        } else {
-          // If no dot, use the whole email prefix as first name
-          firstName = emailParts.charAt(0).toUpperCase() + emailParts.slice(1) || 'User';
-        }
+      if (!email || !password) {
+        alert("Please enter both email and password");
+        return;
       }
       
-      // Use development login endpoint with actual user details
+      // Use development login endpoint with real credentials
       const response = await fetch('/api/dev/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
-          userType,
-          email: email || undefined, // Don't send empty string
-          firstName,
-          lastName
+          email,
+          password
         }),
         credentials: 'include'
       });
@@ -54,14 +40,14 @@ export default function Login() {
       const data = await response.json();
       console.log('Login response:', data);
       
-      if (data.success) {
+      if (data.success && data.user) {
         // Invalidate queries to refresh user data
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
         // Wait a moment for the query to update
         setTimeout(() => {
-          // Redirect to the appropriate dashboard based on user type
-          switch(userType) {
+          // Redirect to the appropriate dashboard based on user's actual type from database
+          switch(data.user.userType) {
             case 'child':
               setLocation('/child-dashboard');
               break;
@@ -76,8 +62,7 @@ export default function Login() {
           }
         }, 1000);
       } else {
-        console.error('Login failed:', data);
-        alert('Login failed: ' + (data.message || 'Unknown error'));
+        alert(data.message || 'Login failed');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -165,53 +150,6 @@ export default function Login() {
             </div>
           </div>
 
-          {/* Development Mode Options */}
-          <div className="mt-6 fluenti-card bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 animate-fade-in" style={{animationDelay: '0.4s'}}>
-            <div className="p-4">
-              <p className="text-sm text-blue-800 text-center mb-3 font-medium">
-                <strong>Development Mode - Select User Type:</strong>
-              </p>
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                <button 
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 hover-lift ${
-                    userType === 'adult' 
-                      ? 'fluenti-gradient-primary text-white shadow-lg' 
-                      : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
-                  }`}
-                  onClick={() => setUserType('adult')}
-                >
-                  Adult
-                </button>
-                <button 
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 hover-lift ${
-                    userType === 'child' 
-                      ? 'fluenti-gradient-warm text-white shadow-lg' 
-                      : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
-                  }`}
-                  onClick={() => setUserType('child')}
-                >
-                  Child
-                </button>
-                <button 
-                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 hover-lift ${
-                    userType === 'guardian' 
-                      ? 'fluenti-gradient-cool text-white shadow-lg' 
-                      : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
-                  }`}
-                  onClick={() => setUserType('guardian')}
-                >
-                  Guardian
-                </button>
-              </div>
-              <button 
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className="w-full fluenti-button-accent hover-lift"
-              >
-                {isLoading ? 'Logging in...' : `Login as ${userType.charAt(0).toUpperCase() + userType.slice(1)}`}
-              </button>
-            </div>
-          </div>
         </div>
       </div>
     </div>

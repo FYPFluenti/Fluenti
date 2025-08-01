@@ -6,6 +6,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import * as speechServiceModule from "./services/speechService";
 const { SpeechService } = speechServiceModule;
 import { analyzeEmotion } from "./services/openai";
+import { AuthService } from "./auth";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -71,76 +72,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Development-only login and signup endpoints
   if (process.env.NODE_ENV === 'development') {
-    // Quick login with user type
+    // Real login endpoint
     app.post('/api/dev/login', async (req, res) => {
       try {
-        const { userType = 'adult', email, firstName, lastName } = req.body;
+        const { email, password } = req.body;
         
-        // Use provided email or default to userType email
-        const userEmail = email || `${userType}@local.dev`;
-        
-        // Create a unique ID based on email
-        const staticId = email ? `user-${Buffer.from(userEmail).toString('base64').slice(0, 10)}` : `local-${userType}-user`;
-        
-        let user = await mongoStorage.getUserByEmail(userEmail);
-        
-        if (!user) {
-          // Create a user with provided details or defaults
-          user = await mongoStorage.upsertUser({
-            id: staticId,
-            email: userEmail,
-            firstName: firstName || `Test`,
-            lastName: lastName || `${userType.charAt(0).toUpperCase() + userType.slice(1)}`,
-            profileImageUrl: 'https://via.placeholder.com/150',
-            userType: userType,
-            language: 'english',
-          });
-        } else {
-          // Update existing user with new details if provided
-          if (firstName || lastName) {
-            user = await mongoStorage.updateUser(user.id, {
-              firstName: firstName || user.firstName,
-              lastName: lastName || user.lastName,
-            });
-          }
+        if (!email || !password) {
+          return res.status(400).json({ message: "Email and password are required" });
         }
         
-        // Set user in session (simple approach for development)
+        // Authenticate user
+        const user = await AuthService.login({ email, password });
+        
+        // Set user in session
         if (req.session) {
           (req.session as any).user = {
             id: user.id,
             claims: { sub: user.id }
           };
-          console.log('User logged in via session:', user.id, userType);
+          console.log('User logged in via session:', user.id, user.userType);
         }
         
         res.json({ success: true, user });
-      } catch (error) {
-        console.error("Login error:", error);
-        res.status(500).json({ message: "Login failed" });
+      } catch (error: any) {
+        console.error("Login error:", error.message);
+        res.status(401).json({ message: error.message });
       }
     });
     
-    // Development signup endpoint
+    // Real signup endpoint
     app.post('/api/dev/signup', async (req, res) => {
       try {
-        const { firstName, lastName, email, userType, language } = req.body;
+        const { firstName, lastName, email, password, userType, language } = req.body;
         
-        // Check if user already exists
-        const existingUser = await mongoStorage.getUserByEmail(email);
-        if (existingUser) {
-          return res.status(400).json({ message: "User already exists with this email" });
+        if (!firstName || !lastName || !email || !password || !userType || !language) {
+          return res.status(400).json({ message: "All fields are required" });
         }
         
-        // Create new user with provided details
-        const user = await mongoStorage.upsertUser({
-          id: `user-${Date.now()}`,
-          email,
+        // Create new user
+        const user = await AuthService.signup({
           firstName,
           lastName,
-          profileImageUrl: 'https://via.placeholder.com/150',
+          email,
+          password,
           userType,
-          language,
+          language
         });
         
         // Set user in session
@@ -152,9 +128,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         res.json({ success: true, user });
-      } catch (error) {
-        console.error("Signup error:", error);
-        res.status(500).json({ message: "Signup failed" });
+      } catch (error: any) {
+        console.error("Signup error:", error.message);
+        res.status(400).json({ message: error.message });
       }
     });
     

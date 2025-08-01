@@ -49,6 +49,7 @@ export default function Signup() {
           firstName: formData.firstName,
           lastName: formData.lastName,
           email: formData.email,
+          password: formData.password,
           userType: formData.userType,
           language: formData.language
         }),
@@ -57,9 +58,9 @@ export default function Signup() {
       
       const data = await response.json();
       
-      if (data.success) {
-        // Redirect to the appropriate dashboard based on user type
-        switch(formData.userType) {
+      if (data.success && data.user) {
+        // Redirect to the appropriate dashboard based on user's actual type
+        switch(data.user.userType) {
           case 'child':
             window.location.href = '/child-dashboard';
             break;

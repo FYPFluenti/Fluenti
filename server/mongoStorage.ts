@@ -10,6 +10,7 @@ export const mongoStorage = {
   async upsertUser(userData: {
     id: string;
     email: string;
+    password?: string;
     firstName: string;
     lastName: string;
     profileImageUrl?: string;
