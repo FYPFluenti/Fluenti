@@ -1,5 +1,5 @@
 [build]
-  # Use npm script to ensure correct vite version
+  # Build frontend using npm script
   command = "npm run build:frontend"
   publish = "dist/public"
 
@@ -8,21 +8,23 @@
   SECRETS_SCAN_OMIT_KEYS = "NODE_ENV,PORT,MONGODB_URI,OPENAI_API_KEY,SESSION_SECRET"
   # Set NODE_ENV for build
   NODE_ENV = "production"
+  # Specify Node.js version
+  NODE_VERSION = "18"
 
 # Production environment settings
 [context.production]
-  command = "npx vite build"
+  command = "npm run build:frontend"
   
   [context.production.environment]
     NODE_ENV = "production"
 
 # Deploy previews (branch deployments)
 [context.deploy-preview]
-  command = "npx vite build"
+  command = "npm run build:frontend"
 
 # Branch deployments
 [context.branch-deploy]
-  command = "npx vite build"
+  command = "npm run build:frontend"
 
 # Build settings
 [build.processing]

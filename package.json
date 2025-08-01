@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx --env-file=.env server/index.ts",
-    "build": "npx vite build && npx esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "vite build",
     "build:backend": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "start": "NODE_ENV=production node dist/index.js",
