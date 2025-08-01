@@ -4,35 +4,72 @@
 
 :root {
   --background: hsl(0, 0%, 100%);
-  --foreground: hsl(20, 14.3%, 4.1%);
-  --muted: hsl(60, 4.8%, 95.9%);
-  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --foreground: hsl(215, 28%, 17%);
+  --muted: hsl(210, 20%, 98%);
+  --muted-foreground: hsl(215, 16%, 47%);
   --popover: hsl(0, 0%, 100%);
-  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --popover-foreground: hsl(215, 28%, 17%);
   --card: hsl(0, 0%, 100%);
-  --card-foreground: hsl(20, 14.3%, 4.1%);
-  --border: hsl(20, 5.9%, 90%);
-  --input: hsl(20, 5.9%, 90%);
-  --primary: hsl(207, 90%, 54%);
-  --primary-foreground: hsl(211, 100%, 99%);
-  --secondary: hsl(142, 76%, 36%);
-  --secondary-foreground: hsl(60, 9.1%, 97.8%);
-  --accent: hsl(36, 92%, 47%);
-  --accent-foreground: hsl(24, 9.8%, 10%);
+  --card-foreground: hsl(215, 28%, 17%);
+  --border: hsl(210, 15%, 90%);
+  --input: hsl(210, 15%, 90%);
+  
+  /* Therapeutic Harmony Palette */
+  --primary: hsl(210, 100%, 56%);          /* Calming Blue */
+  --primary-light: hsl(210, 100%, 85%);    /* Light Blue */
+  --primary-foreground: hsl(210, 100%, 98%);
+  
+  --secondary: hsl(152, 69%, 45%);         /* Growth Green */
+  --secondary-light: hsl(152, 50%, 90%);   /* Light Green */
+  --secondary-foreground: hsl(152, 100%, 98%);
+  
+  --accent: hsl(25, 95%, 53%);             /* Warm Orange */
+  --accent-light: hsl(25, 100%, 95%);      /* Light Orange */
+  --accent-foreground: hsl(25, 9.8%, 10%);
+  
   --destructive: hsl(0, 84.2%, 60.2%);
   --destructive-foreground: hsl(60, 9.1%, 97.8%);
-  --ring: hsl(20, 14.3%, 4.1%);
-  --radius: 0.5rem;
+  --ring: hsl(210, 100%, 56%);
+  --radius: 0.75rem;
   
-  /* Fluenti-specific brand colors */
-  --fluenti-primary: hsl(207, 90%, 54%);
-  --fluenti-secondary: hsl(142, 76%, 36%);
-  --fluenti-accent: hsl(36, 92%, 47%);
-  --fluenti-neutral: hsl(210, 20%, 98%);
-  --fluenti-text-primary: hsl(216, 12%, 20%);
-  --fluenti-purple: hsl(264, 69%, 60%);
-  --fluenti-pink: hsl(328, 69%, 60%);
-  --fluenti-indigo: hsl(231, 69%, 60%);
+  /* Enhanced Fluenti Brand Colors - Therapeutic Harmony */
+  --fluenti-primary: hsl(210, 100%, 56%);     /* Trust Blue */
+  --fluenti-primary-light: hsl(210, 100%, 85%);
+  --fluenti-primary-dark: hsl(210, 100%, 40%);
+  
+  --fluenti-secondary: hsl(152, 69%, 45%);    /* Growth Green */
+  --fluenti-secondary-light: hsl(152, 50%, 90%);
+  --fluenti-secondary-dark: hsl(152, 69%, 35%);
+  
+  --fluenti-accent: hsl(25, 95%, 53%);        /* Energy Orange */
+  --fluenti-accent-light: hsl(25, 100%, 95%);
+  --fluenti-accent-dark: hsl(25, 95%, 43%);
+  
+  /* Role-Specific Colors */
+  --fluenti-purple: hsl(264, 69%, 60%);       /* Guardian Authority */
+  --fluenti-purple-light: hsl(264, 60%, 95%);
+  --fluenti-pink: hsl(328, 69%, 60%);         /* Emotional Support */
+  --fluenti-pink-light: hsl(328, 60%, 95%);
+  --fluenti-indigo: hsl(231, 69%, 60%);       /* Professional */
+  --fluenti-indigo-light: hsl(231, 60%, 95%);
+  
+  /* Interactive States */
+  --fluenti-hover: hsl(210, 100%, 50%);
+  --fluenti-active: hsl(210, 100%, 45%);
+  --fluenti-focus: hsl(210, 100%, 56%, 0.2);
+  
+  /* Neutral Grays */
+  --fluenti-neutral-50: hsl(210, 20%, 98%);
+  --fluenti-neutral-100: hsl(210, 15%, 95%);
+  --fluenti-neutral-200: hsl(210, 15%, 90%);
+  --fluenti-neutral-600: hsl(215, 16%, 47%);
+  --fluenti-neutral-900: hsl(215, 28%, 17%);
+  
+  /* Semantic Colors */
+  --fluenti-success: hsl(152, 69%, 45%);
+  --fluenti-warning: hsl(45, 95%, 55%);
+  --fluenti-error: hsl(0, 84%, 60%);
+  --fluenti-info: hsl(210, 100%, 56%);
 }
 
 .dark {
@@ -74,45 +111,293 @@
 }
 
 @layer components {
-  .fluenti-gradient {
-    background: linear-gradient(135deg, var(--fluenti-primary), var(--fluenti-secondary));
-  }
-  
+  /* Enhanced Interactive Cards */
   .fluenti-card {
-    @apply bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300;
+    @apply bg-white rounded-2xl shadow-sm border border-gray-100 transition-all duration-300 hover:shadow-xl hover:scale-[1.02];
   }
   
+  .fluenti-card:hover {
+    border-color: rgb(59 130 246 / 0.2);
+  }
+  
+  .fluenti-card-interactive {
+    @apply fluenti-card cursor-pointer transform-gpu;
+  }
+  
+  .fluenti-card-interactive:hover {
+    box-shadow: 0 25px 50px -12px rgba(59, 130, 246, 0.15);
+  }
+  
+  /* Enhanced Buttons with Therapeutic Harmony Colors */
   .fluenti-button-primary {
-    @apply bg-primary text-primary-foreground hover:bg-blue-700 px-6 py-3 rounded-xl font-semibold transition-colors duration-200 flex items-center justify-center space-x-2;
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 transform-gpu hover:scale-105 active:scale-95;
+    background: linear-gradient(135deg, var(--fluenti-primary), var(--fluenti-primary-dark));
+    color: white;
+    box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+  }
+  
+  .fluenti-button-primary:hover {
+    box-shadow: 0 8px 25px rgba(33, 150, 243, 0.4);
+    background: linear-gradient(135deg, var(--fluenti-hover), var(--fluenti-primary));
   }
   
   .fluenti-button-secondary {
-    @apply bg-secondary text-secondary-foreground hover:bg-green-700 px-6 py-3 rounded-xl font-semibold transition-colors duration-200 flex items-center justify-center space-x-2;
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 transform-gpu hover:scale-105 active:scale-95;
+    background: linear-gradient(135deg, var(--fluenti-secondary), var(--fluenti-secondary-dark));
+    color: white;
+    box-shadow: 0 4px 15px rgba(40, 164, 99, 0.3);
   }
   
+  .fluenti-button-secondary:hover {
+    box-shadow: 0 8px 25px rgba(40, 164, 99, 0.4);
+  }
+  
+  .fluenti-button-accent {
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 transform-gpu hover:scale-105 active:scale-95;
+    background: linear-gradient(135deg, var(--fluenti-accent), var(--fluenti-accent-dark));
+    color: white;
+    box-shadow: 0 4px 15px rgba(255, 107, 26, 0.3);
+  }
+  
+  .fluenti-button-accent:hover {
+    box-shadow: 0 8px 25px rgba(255, 107, 26, 0.4);
+  }
+  
+  /* Role-Specific Button Variants */
+  .fluenti-button-guardian {
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 transform-gpu hover:scale-105;
+    background: linear-gradient(135deg, var(--fluenti-purple), hsl(264, 69%, 50%));
+    color: white;
+    box-shadow: 0 4px 15px hsla(264, 69%, 60%, 0.3);
+  }
+  
+  .fluenti-button-child {
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 transform-gpu hover:scale-105;
+    background: linear-gradient(135deg, var(--fluenti-secondary), var(--fluenti-accent));
+    color: white;
+    box-shadow: 0 4px 15px rgba(40, 164, 99, 0.3);
+  }
+  
+  .fluenti-button-adult {
+    @apply px-6 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 transform-gpu hover:scale-105;
+    background: linear-gradient(135deg, var(--fluenti-indigo), hsl(231, 69%, 50%));
+    color: white;
+    box-shadow: 0 4px 15px hsla(231, 69%, 60%, 0.3);
+  }
+  
+  /* Enhanced Avatar Container */
   .fluenti-avatar-container {
-    @apply aspect-square bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl flex items-center justify-center relative;
+    @apply aspect-square rounded-2xl flex items-center justify-center relative transition-all duration-500 transform-gpu hover:scale-105;
+    background: linear-gradient(135deg, var(--fluenti-primary-light), var(--fluenti-purple-light));
+    box-shadow: 0 20px 40px rgba(33, 150, 243, 0.1);
   }
   
+  .fluenti-avatar-container:hover {
+    box-shadow: 0 30px 60px rgba(33, 150, 243, 0.2);
+  }
+  
+  /* Enhanced Progress Bars */
   .fluenti-pronunciation-bar {
-    @apply w-full bg-gray-200 rounded-full h-3;
+    @apply w-full rounded-full h-3 overflow-hidden;
+    background: var(--fluenti-neutral-200);
   }
   
   .fluenti-pronunciation-fill {
-    @apply bg-secondary h-3 rounded-full transition-all duration-500;
+    @apply h-3 rounded-full transition-all duration-1000;
+    background: linear-gradient(90deg, var(--fluenti-secondary), var(--fluenti-accent));
+    box-shadow: 0 0 10px rgba(40, 164, 99, 0.3);
+  }
+  
+  /* Interactive Gradients */
+  .fluenti-gradient-primary {
+    background: linear-gradient(135deg, var(--fluenti-primary), var(--fluenti-secondary));
+  }
+  
+  .fluenti-gradient-warm {
+    background: linear-gradient(135deg, var(--fluenti-accent), var(--fluenti-pink));
+  }
+  
+  .fluenti-gradient-cool {
+    background: linear-gradient(135deg, var(--fluenti-primary), var(--fluenti-indigo));
+  }
+  
+  /* Enhanced Input Fields */
+  .fluenti-input {
+    @apply w-full px-4 py-3 rounded-xl border-2 transition-all duration-300 focus:outline-none focus:ring-0;
+    border-color: var(--fluenti-neutral-200);
+    background: var(--fluenti-neutral-50);
+  }
+  
+  .fluenti-input:focus {
+    border-color: var(--fluenti-primary);
+    background: white;
+    box-shadow: 0 0 0 3px var(--fluenti-focus);
+  }
+  
+  /* Floating Elements */
+  .fluenti-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  /* Pulsing Elements */
+  .fluenti-pulse {
+    animation: fluentiPulse 2s ease-in-out infinite;
+  }
+  
+  @keyframes fluentiPulse {
+    0%, 100% { 
+      transform: scale(1);
+      box-shadow: 0 0 0 0 var(--fluenti-primary);
+    }
+    50% { 
+      transform: scale(1.05);
+      box-shadow: 0 0 0 10px transparent;
+    }
   }
 }
 
 @layer utilities {
+  /* Enhanced Animation Classes */
   .animate-pulse-slow {
     animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
   
-  .text-gradient {
+  .animate-bounce-gentle {
+    animation: bounceGentle 2s ease-in-out infinite;
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.6s ease-out forwards;
+  }
+  
+  .animate-slide-in-left {
+    animation: slideInLeft 0.8s ease-out forwards;
+  }
+  
+  .animate-slide-in-right {
+    animation: slideInRight 0.8s ease-out forwards;
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 1s ease-out forwards;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.5s ease-out forwards;
+  }
+  
+  /* Gradient Text Effects */
+  .text-gradient-primary {
     background: linear-gradient(135deg, var(--fluenti-primary), var(--fluenti-secondary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+  
+  .text-gradient-warm {
+    background: linear-gradient(135deg, var(--fluenti-accent), var(--fluenti-pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .text-gradient-cool {
+    background: linear-gradient(135deg, var(--fluenti-primary), var(--fluenti-indigo));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  /* Interactive Hover Effects */
+  .hover-lift {
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  .hover-lift:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  }
+  
+  .hover-glow {
+    transition: box-shadow 0.3s ease;
+  }
+  
+  .hover-glow:hover {
+    box-shadow: 0 0 30px var(--fluenti-primary);
+  }
+  
+  /* Focus States */
+  .focus-ring-primary {
+    transition: all 0.2s ease;
+  }
+  
+  .focus-ring-primary:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--fluenti-focus);
+  }
+}
+
+/* Enhanced Keyframe Animations */
+@keyframes bounceGentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-15px); }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 

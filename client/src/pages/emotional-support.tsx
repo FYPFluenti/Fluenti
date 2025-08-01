@@ -53,41 +53,53 @@ export default function EmotionalSupport() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" size="sm" asChild>
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 relative overflow-hidden">
+      {/* Floating Elements */}
+      <div className="absolute top-10 left-10 w-16 h-16 bg-pink-300/20 rounded-full fluenti-float"></div>
+      <div className="absolute top-20 right-20 w-12 h-12 bg-purple-300/20 rounded-full fluenti-float" style={{animationDelay: '1s'}}></div>
+      <div className="absolute bottom-20 left-1/4 w-20 h-20 bg-indigo-300/20 rounded-full fluenti-float" style={{animationDelay: '2s'}}></div>
+      
+      <div className="container mx-auto px-4 py-8 relative z-10">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8 animate-slide-up">
+          <div className="flex items-center space-x-4">
             <Link href="/">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
+              <button className="fluenti-button-outline hover-lift">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </button>
             </Link>
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold">Emotional Support</h1>
-            <p className="text-gray-600">Chat with our AI companion for emotional guidance</p>
+            <div>
+              <h1 className="text-3xl font-bold text-gradient-primary">Emotional Support</h1>
+              <p className="text-gray-600 text-lg">Chat with our AI companion for emotional guidance</p>
+            </div>
           </div>
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2">
-            <Button
-              variant={selectedLanguage === 'english' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedLanguage('english')}
-            >
-              English
-            </Button>
-            <Button
-              variant={selectedLanguage === 'urdu' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedLanguage('urdu')}
-            >
-              اردو
-            </Button>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Heart className="w-6 h-6 text-red-500" />
+          
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <button
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 hover-lift ${
+                  selectedLanguage === 'english' 
+                    ? 'fluenti-gradient-primary text-white shadow-lg' 
+                    : 'fluenti-button-outline'
+                }`}
+                onClick={() => setSelectedLanguage('english')}
+              >
+                English
+              </button>
+              <button
+                className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 hover-lift ${
+                  selectedLanguage === 'urdu' 
+                    ? 'fluenti-gradient-primary text-white shadow-lg' 
+                    : 'fluenti-button-outline'
+                }`}
+                onClick={() => setSelectedLanguage('urdu')}
+              >
+                اردو
+              </button>
+            </div>
+            <div className="flex items-center space-x-2 bg-pink-50 px-3 py-2 rounded-lg">
+              <Heart className="w-6 h-6 text-red-500 fluenti-pulse" />
             <span className="text-sm font-medium">AI Support</span>
           </div>
         </div>
@@ -136,21 +148,22 @@ export default function EmotionalSupport() {
       <EmotionalChat language={selectedLanguage} />
 
       {/* Navigation Footer */}
-      <div className="mt-12 text-center">
+      <div className="mt-12 text-center animate-fade-in">
         <div className="inline-flex items-center space-x-4 text-sm text-gray-500">
-          <Link href="/" className="hover:text-primary transition-colors">
+          <Link href="/" className="hover:text-primary transition-colors hover-lift">
             <Home className="w-4 h-4 inline mr-1" />
             Home
           </Link>
           <span>•</span>
-          <Link href="/speech-therapy" className="hover:text-primary transition-colors">
+          <Link href="/speech-therapy" className="hover:text-primary transition-colors hover-lift">
             Speech Therapy
           </Link>
           <span>•</span>
-          <Link href="/progress" className="hover:text-primary transition-colors">
+          <Link href="/progress" className="hover:text-primary transition-colors hover-lift">
             Progress Dashboard
           </Link>
         </div>
+      </div>
       </div>
     </div>
   );

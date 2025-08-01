@@ -264,30 +264,34 @@ export default function SpeechTherapy() {
     currentSession.currentExerciseIndex >= currentSession.exercises.length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">
+      {/* Floating Elements */}
+      <div className="absolute top-10 left-10 w-16 h-16 bg-blue-300/20 rounded-full fluenti-float"></div>
+      <div className="absolute top-20 right-20 w-12 h-12 bg-purple-300/20 rounded-full fluenti-float" style={{animationDelay: '1s'}}></div>
+      <div className="absolute bottom-20 left-1/4 w-20 h-20 bg-pink-300/20 rounded-full fluenti-float" style={{animationDelay: '2s'}}></div>
+      
       {/* Role-based Header */}
       <RoleBasedHeader />
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {!currentSession ? (
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">{!currentSession ? (
           /* Welcome Screen */
-          <div className="text-center max-w-4xl mx-auto">
+          <div className="text-center max-w-4xl mx-auto animate-slide-up">
             <div className="mb-8">
               <UserTypeGuard userType="child">
-                <h1 className="text-4xl font-bold text-purple-600 mb-4">
-                  🎮 Speech Games Time! 🎮
+                <h1 className="text-5xl font-bold mb-6">
+                  <span className="text-gradient-warm">🎮 Speech Games Time! 🎮</span>
                 </h1>
-                <p className="text-xl text-gray-600">
+                <p className="text-2xl text-gray-600 leading-relaxed">
                   Let's play fun games while learning to speak better! Your AI buddy is here to help you! 🌟
                 </p>
               </UserTypeGuard>
 
               <UserTypeGuard userType="adult">
-                <h1 className="text-4xl font-bold text-gray-900 mb-4">
-                  Speech Therapy Session
+                <h1 className="text-4xl font-bold mb-6">
+                  <span className="text-gradient-primary">Speech Therapy Session</span>
                 </h1>
-                <p className="text-xl text-gray-600">
+                <p className="text-xl text-gray-600 leading-relaxed">
                   Practice pronunciation with your AI speech therapist. Get real-time feedback and improve your speaking skills.
                 </p>
               </UserTypeGuard>

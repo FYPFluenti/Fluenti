@@ -164,34 +164,39 @@ export default function ProgressDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
+      {/* Floating Elements */}
+      <div className="absolute top-10 left-10 w-16 h-16 bg-blue-300/20 rounded-full fluenti-float"></div>
+      <div className="absolute top-20 right-20 w-12 h-12 bg-indigo-300/20 rounded-full fluenti-float" style={{animationDelay: '1s'}}></div>
+      <div className="absolute bottom-20 left-1/4 w-20 h-20 bg-purple-300/20 rounded-full fluenti-float" style={{animationDelay: '2s'}}></div>
+      
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-100">
+      <header className="bg-white/90 backdrop-blur-sm shadow-sm border-b border-indigo-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <Link href="/">
-                <Button variant="ghost" size="icon" className="mr-2">
+                <button type="button" className="fluenti-button-outline mr-2 p-2 hover-lift" aria-label="Go back to home">
                   <ArrowLeft className="h-4 w-4" />
-                </Button>
+                </button>
               </Link>
-              <div className="flex items-center space-x-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
+              <div className="flex items-center space-x-2 hover-lift">
+                <div className="w-10 h-10 fluenti-gradient-primary rounded-xl flex items-center justify-center shadow-lg fluenti-pulse">
                   <BarChart3 className="text-white text-lg" />
                 </div>
                 <div>
-                  <span className="text-2xl font-bold text-primary">Fluenti</span>
-                  <p className="text-sm text-gray-600">Progress Dashboard</p>
+                  <span className="text-2xl font-bold text-gradient-primary">Fluenti</span>
+                  <p className="text-sm text-gray-600 font-medium">Progress Dashboard</p>
                 </div>
               </div>
             </div>
             
             <div className="flex items-center space-x-4">
               <Link href="/">
-                <Button variant="ghost" className="flex items-center space-x-2">
+                <button className="fluenti-button-outline flex items-center space-x-2 hover-lift">
                   <Home className="h-4 w-4" />
                   <span>Home</span>
-                </Button>
+                </button>
               </Link>
             </div>
           </div>

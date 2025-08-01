@@ -67,112 +67,130 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <Link href="/">
-            <Button variant="ghost" className="mb-4">
-              <ArrowLeft className="w-4 h-4 mr-2" />
-              Back to Home
-            </Button>
-          </Link>
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
-              <MessageCircle className="text-white text-xl" />
+    <div className="min-h-screen fluenti-gradient-cool relative overflow-hidden">
+      {/* Floating Elements */}
+      <div className="absolute top-20 left-10 w-20 h-20 bg-white/10 rounded-full fluenti-float"></div>
+      <div className="absolute top-32 right-16 w-16 h-16 bg-white/10 rounded-full fluenti-float" style={{animationDelay: '1s'}}></div>
+      <div className="absolute bottom-20 left-1/4 w-12 h-12 bg-white/10 rounded-full fluenti-float" style={{animationDelay: '2s'}}></div>
+      
+      <div className="flex items-center justify-center p-4 relative z-10 min-h-screen">
+        <div className="w-full max-w-md animate-slide-up">
+          {/* Header */}
+          <div className="text-center mb-8">
+            <Link href="/">
+              <button className="fluenti-button-outline mb-4 hover-lift">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </button>
+            </Link>
+            <div className="flex items-center justify-center space-x-2 mb-4 hover-lift">
+              <div className="w-12 h-12 fluenti-gradient-primary rounded-xl flex items-center justify-center shadow-lg fluenti-pulse">
+                <MessageCircle className="text-white text-xl" />
+              </div>
+              <span className="text-3xl font-bold text-gradient-primary">Fluenti</span>
             </div>
-            <span className="text-3xl font-bold text-primary">Fluenti</span>
+            <h1 className="text-3xl font-bold text-white mb-2 animate-fade-in">Welcome Back</h1>
+            <p className="text-blue-100 text-lg animate-fade-in" style={{animationDelay: '0.1s'}}>Sign in to continue your speech therapy journey</p>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Welcome Back</h1>
-          <p className="text-gray-600 mt-2">Sign in to continue your speech therapy journey</p>
-        </div>
 
-        {/* Login Form */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>
-              Enter your credentials to access your account
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleSubmit}>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+          {/* Login Form */}
+          <div className="fluenti-card fluenti-card-interactive animate-scale-in" style={{animationDelay: '0.2s'}}>
+            <div className="p-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Sign In</h2>
+                <p className="text-gray-600">Enter your credentials to access your account</p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-            </CardContent>
-            <CardFooter className="flex flex-col space-y-4">
-              <Button
-                type="submit"
-                className="w-full fluenti-button-primary"
-                disabled={isLoading}
-              >
-                {isLoading ? "Signing In..." : "Sign In"}
-              </Button>
-              <div className="text-center text-sm text-gray-600">
+              <form onSubmit={handleSubmit}>
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label htmlFor="email" className="text-sm font-medium text-gray-700">Email</label>
+                    <input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      className="fluenti-input"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label htmlFor="password" className="text-sm font-medium text-gray-700">Password</label>
+                    <input
+                      id="password"
+                      type="password"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className="fluenti-input"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full fluenti-button-primary text-lg"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Signing In..." : "Sign In"}
+                  </button>
+                </div>
+              </form>
+              <div className="mt-6 text-center text-sm text-gray-600">
                 Don't have an account?{" "}
-                <Link href="/signup" className="text-primary hover:underline font-medium">
+                <Link href="/signup" className="text-primary hover:text-primary-dark font-medium hover:underline transition-colors duration-300">
                   Sign up here
                 </Link>
               </div>
-            </CardFooter>
-          </form>
-        </Card>
-
-        {/* Development Mode Options */}
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-blue-800 text-center mb-3">
-            <strong>Select User Type:</strong>
-          </p>
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <Button 
-              variant={userType === 'adult' ? 'default' : 'outline'} 
-              onClick={() => setUserType('adult')}
-              className="text-sm py-2"
-            >
-              Adult
-            </Button>
-            <Button 
-              variant={userType === 'child' ? 'default' : 'outline'} 
-              onClick={() => setUserType('child')}
-              className="text-sm py-2"
-            >
-              Child
-            </Button>
-            <Button 
-              variant={userType === 'guardian' ? 'default' : 'outline'} 
-              onClick={() => setUserType('guardian')}
-              className="text-sm py-2"
-            >
-              Guardian
-            </Button>
+            </div>
           </div>
-          <Button 
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            {isLoading ? 'Logging in...' : `Login as ${userType.charAt(0).toUpperCase() + userType.slice(1)}`}
-          </Button>
+
+          {/* Development Mode Options */}
+          <div className="mt-6 fluenti-card bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 animate-fade-in" style={{animationDelay: '0.4s'}}>
+            <div className="p-4">
+              <p className="text-sm text-blue-800 text-center mb-3 font-medium">
+                <strong>Development Mode - Select User Type:</strong>
+              </p>
+              <div className="grid grid-cols-3 gap-2 mb-4">
+                <button 
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 hover-lift ${
+                    userType === 'adult' 
+                      ? 'fluenti-gradient-primary text-white shadow-lg' 
+                      : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
+                  }`}
+                  onClick={() => setUserType('adult')}
+                >
+                  Adult
+                </button>
+                <button 
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 hover-lift ${
+                    userType === 'child' 
+                      ? 'fluenti-gradient-warm text-white shadow-lg' 
+                      : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
+                  }`}
+                  onClick={() => setUserType('child')}
+                >
+                  Child
+                </button>
+                <button 
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 hover-lift ${
+                    userType === 'guardian' 
+                      ? 'fluenti-gradient-cool text-white shadow-lg' 
+                      : 'bg-white text-blue-700 border border-blue-200 hover:bg-blue-50'
+                  }`}
+                  onClick={() => setUserType('guardian')}
+                >
+                  Guardian
+                </button>
+              </div>
+              <button 
+                onClick={handleSubmit}
+                disabled={isLoading}
+                className="w-full fluenti-button-accent hover-lift"
+              >
+                {isLoading ? 'Logging in...' : `Login as ${userType.charAt(0).toUpperCase() + userType.slice(1)}`}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

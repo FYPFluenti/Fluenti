@@ -14,132 +14,141 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
+      <header className="bg-white/95 backdrop-blur-sm shadow-sm border-b border-gray-100 sticky top-0 z-50 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
+            <div className="flex items-center space-x-2 hover-lift">
+              <div className="w-10 h-10 fluenti-gradient-primary rounded-xl flex items-center justify-center shadow-lg">
                 <MessageCircle className="text-white text-lg" />
               </div>
-              <span className="text-2xl font-bold text-primary">Fluenti</span>
+              <span className="text-2xl font-bold text-gradient-primary">Fluenti</span>
             </div>
             
             <nav className="hidden md:flex space-x-8">
               <button 
                 onClick={() => scrollToSection('features')}
-                className="text-gray-600 hover:text-primary transition-colors"
+                className="text-gray-600 hover:text-primary transition-all duration-300 font-medium hover-lift focus-ring-primary relative group"
               >
                 Features
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary transition-all duration-300 group-hover:w-full"></span>
               </button>
               <button 
                 onClick={() => scrollToSection('roles')}
-                className="text-gray-600 hover:text-primary transition-colors"
+                className="text-gray-600 hover:text-primary transition-all duration-300 font-medium hover-lift focus-ring-primary relative group"
               >
                 Family Roles
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary transition-all duration-300 group-hover:w-full"></span>
               </button>
               <button 
                 onClick={() => scrollToSection('therapy')}
-                className="text-gray-600 hover:text-primary transition-colors"
+                className="text-gray-600 hover:text-primary transition-all duration-300 font-medium hover-lift focus-ring-primary relative group"
               >
                 Speech Therapy
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary transition-all duration-300 group-hover:w-full"></span>
               </button>
               <button 
                 onClick={() => scrollToSection('support')}
-                className="text-gray-600 hover:text-primary transition-colors"
+                className="text-gray-600 hover:text-primary transition-all duration-300 font-medium hover-lift focus-ring-primary relative group"
               >
                 Emotional Support
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary transition-all duration-300 group-hover:w-full"></span>
               </button>
               <button 
                 onClick={() => scrollToSection('progress')}
-                className="text-gray-600 hover:text-primary transition-colors"
+                className="text-gray-600 hover:text-primary transition-all duration-300 font-medium hover-lift focus-ring-primary relative group"
               >
                 Progress
+                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-primary to-secondary transition-all duration-300 group-hover:w-full"></span>
               </button>
             </nav>
 
             <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
+              <button
                 onClick={() => window.location.href = '/login'}
-                className="text-gray-600 hover:text-primary transition-colors font-medium"
+                className="text-gray-600 hover:text-primary transition-all duration-300 font-medium px-4 py-2 rounded-lg hover:bg-primary/5 focus-ring-primary"
               >
                 Log In
-              </Button>
-              <Button
+              </button>
+              <button
                 onClick={() => window.location.href = '/signup'}
                 className="fluenti-button-primary"
               >
                 Get Started
-              </Button>
+              </button>
             </div>
           </div>
         </div>
       </header>
 
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-50 to-green-50 py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="bg-gradient-to-br from-blue-50 via-white to-green-50 py-20 relative overflow-hidden">
+        {/* Floating Elements */}
+        <div className="absolute top-20 left-10 w-20 h-20 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-full fluenti-float"></div>
+        <div className="absolute top-32 right-16 w-16 h-16 bg-gradient-to-br from-accent/20 to-pink-300/20 rounded-full fluenti-float" style={{animationDelay: '1s'}}></div>
+        <div className="absolute bottom-20 left-1/4 w-12 h-12 bg-gradient-to-br from-purple-300/20 to-indigo-300/20 rounded-full fluenti-float" style={{animationDelay: '2s'}}></div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h1 className="text-5xl font-bold text-gray-900 leading-tight mb-6">
-                AI-Powered Speech Therapy for
-                <span className="text-primary"> Every Child</span>
+            <div className="animate-slide-in-left">
+              <h1 className="text-5xl font-bold leading-tight mb-6">
+                <span className="text-gradient-primary">AI-Powered Speech Therapy</span> for
+                <span className="text-gradient-warm"> Every Child</span>
               </h1>
               <p className="text-xl text-gray-600 mb-8 leading-relaxed">
                 Interactive 3D AI avatar provides personalized speech therapy exercises with real-time feedback in English and Urdu. Make learning fun while tracking progress.
               </p>
               
               <div className="flex flex-col sm:flex-row gap-4 mb-8">
-                <Button 
-                  className="fluenti-button-primary text-lg"
+                <button 
+                  className="fluenti-button-primary text-lg animate-scale-in"
                   onClick={() => window.location.href = '/signup'}
                 >
                   <Play className="mr-2" />
                   Start Therapy Session
-                </Button>
-                <Button 
-                  variant="outline" 
-                  className="border-2 border-primary text-primary hover:bg-primary hover:text-white px-8 py-4 rounded-xl font-semibold text-lg"
+                </button>
+                <button 
+                  className="fluenti-button-accent text-lg animate-scale-in hover-lift"
                   onClick={() => scrollToSection('assessment')}
+                  style={{animationDelay: '0.2s'}}
                 >
                   <Calendar className="mr-2" />
                   Schedule Assessment
-                </Button>
+                </button>
               </div>
 
-              <div className="flex items-center space-x-6 text-sm text-gray-500">
-                <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-6 text-sm text-gray-500 animate-fade-in" style={{animationDelay: '0.4s'}}>
+                <div className="flex items-center space-x-2 hover-lift">
                   <Shield className="text-secondary" />
                   <span>COPPA Compliant</span>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 hover-lift">
                   <Globe className="text-secondary" />
                   <span>Bilingual Support</span>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 hover-lift">
                   <Smartphone className="text-secondary" />
                   <span>Mobile Friendly</span>
                 </div>
               </div>
             </div>
 
-            <div className="relative">
-              <Card className="fluenti-card p-8 relative overflow-hidden">
+            <div className="relative animate-slide-in-right">
+              <div className="fluenti-card fluenti-card-interactive p-8 relative overflow-hidden">
                 {/* Avatar Demo Area */}
-                <div className="fluenti-avatar-container mb-6">
+                <div className="fluenti-avatar-container mb-6 fluenti-pulse">
                   <div className="w-48 h-48 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center">
                     <Users className="text-white text-6xl" />
                   </div>
                   {/* AI Status Indicator */}
-                  <Badge className="absolute top-4 right-4 bg-secondary text-white flex items-center space-x-2">
+                  <div className="absolute top-4 right-4 bg-secondary text-white px-3 py-1 rounded-full flex items-center space-x-2 animate-bounce-gentle">
                     <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
-                    <span>AI Active</span>
-                  </Badge>
+                    <span className="text-sm font-medium">AI Active</span>
+                  </div>
                 </div>
 
                 {/* Speech Interaction Demo */}
                 <div className="space-y-4">
-                  <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 hover-lift">
                     <div className="flex items-center space-x-2 mb-2">
                       <Mic className="text-primary" />
                       <span className="font-medium text-gray-700">AI Avatar Says:</span>
@@ -147,13 +156,13 @@ export default function Landing() {
                     <p className="text-gray-600">"Let's practice saying 'Hello' - repeat after me!"</p>
                   </div>
 
-                  <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 hover-lift">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-2">
-                        <Mic className="text-primary" />
+                        <Mic className="text-secondary" />
                         <span className="font-medium text-gray-700">Your Speech:</span>
                       </div>
-                      <span className="text-secondary font-semibold">95% Accuracy</span>
+                      <span className="text-gradient-primary font-semibold">95% Accuracy</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="fluenti-pronunciation-bar">
@@ -162,23 +171,34 @@ export default function Landing() {
                     </div>
                   </div>
                 </div>
-              </Card>
+              </div>
 
               {/* Floating Language Indicator */}
-              <Badge className="absolute -top-4 -left-4 bg-accent text-white px-4 py-2 shadow-lg">
-                <Globe className="mr-2" />
-                English | اردو
-              </Badge>
+              <div className="absolute -top-4 -left-4 bg-gradient-to-r from-accent to-orange-500 text-white px-4 py-2 rounded-xl shadow-lg animate-bounce-gentle">
+                <div className="flex items-center space-x-2">
+                  <Globe className="w-4 h-4" />
+                  <span className="font-medium">English | اردو</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* Features Overview */}
-      <section id="features" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Comprehensive Speech & Emotional Support</h2>
+      <section id="features" className="py-20 bg-white relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-5">
+          <div className="absolute top-20 left-10 w-32 h-32 bg-primary rounded-full"></div>
+          <div className="absolute bottom-20 right-10 w-24 h-24 bg-secondary rounded-full"></div>
+          <div className="absolute top-1/2 left-1/2 w-16 h-16 bg-accent rounded-full transform -translate-x-1/2 -translate-y-1/2"></div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center mb-16 animate-fade-in">
+            <h2 className="text-4xl font-bold mb-4">
+              <span className="text-gradient-primary">Comprehensive Speech & Emotional Support</span>
+            </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Our AI-powered platform combines cutting-edge technology with proven therapy techniques to provide accessible, personalized support for children and adults.
             </p>
@@ -192,7 +212,8 @@ export default function Landing() {
                 description: "Engaging virtual therapist guides children through exercises with real-time facial expressions and voice interaction.",
                 features: ["Lifelike animations", "Voice recognition", "Emotional responses"],
                 bgColor: "from-blue-50 to-blue-100",
-                iconBg: "bg-primary"
+                iconBg: "fluenti-gradient-primary",
+                delay: "0s"
               },
               {
                 icon: Mic,
@@ -200,7 +221,8 @@ export default function Landing() {
                 description: "Advanced AI analyzes pronunciation, rhythm, and clarity providing instant feedback and correction suggestions.",
                 features: ["Pronunciation scoring", "Phonetic analysis", "Progress tracking"],
                 bgColor: "from-green-50 to-green-100",
-                iconBg: "bg-secondary"
+                iconBg: "fluenti-gradient-primary",
+                delay: "0.1s"
               },
               {
                 icon: Globe,
@@ -208,7 +230,8 @@ export default function Landing() {
                 description: "Seamless switching between English and Urdu with native speaker pronunciation models and cultural context.",
                 features: ["Native pronunciation", "Cultural adaptation", "Code-switching support"],
                 bgColor: "from-orange-50 to-orange-100",
-                iconBg: "bg-accent"
+                iconBg: "fluenti-gradient-warm",
+                delay: "0.2s"
               },
               {
                 icon: Brain,
@@ -216,7 +239,8 @@ export default function Landing() {
                 description: "AI-powered conversational therapy for adults with emotion detection and personalized mental health support.",
                 features: ["Emotion recognition", "CBT techniques", "Crisis intervention"],
                 bgColor: "from-purple-50 to-purple-100",
-                iconBg: "bg-purple-600"
+                iconBg: "fluenti-gradient-cool",
+                delay: "0.3s"
               },
               {
                 icon: Star,
@@ -224,7 +248,8 @@ export default function Landing() {
                 description: "Interactive games, rewards, and achievements make speech therapy engaging and motivating for children.",
                 features: ["Achievement system", "Interactive games", "Progress rewards"],
                 bgColor: "from-pink-50 to-pink-100",
-                iconBg: "bg-pink-600"
+                iconBg: "fluenti-gradient-warm",
+                delay: "0.4s"
               },
               {
                 icon: Trophy,
@@ -232,23 +257,31 @@ export default function Landing() {
                 description: "Comprehensive analytics for guardians to monitor improvement, session history, and milestone achievements.",
                 features: ["Performance metrics", "Session reports", "Goal tracking"],
                 bgColor: "from-indigo-50 to-indigo-100",
-                iconBg: "bg-indigo-600"
+                iconBg: "fluenti-gradient-cool",
+                delay: "0.5s"
               }
             ].map((feature, index) => (
-              <Card key={index} className={`bg-gradient-to-br ${feature.bgColor} rounded-2xl p-8 hover:shadow-lg transition-shadow`}>
-                <CardContent className="p-0">
-                  <div className={`w-16 h-16 ${feature.iconBg} rounded-xl flex items-center justify-center mb-6`}>
+              <div 
+                key={index} 
+                className={`fluenti-card fluenti-card-interactive bg-gradient-to-br ${feature.bgColor} rounded-2xl p-8 hover-lift animate-slide-up`}
+                style={{animationDelay: feature.delay}}
+              >
+                <div className="p-0">
+                  <div className={`w-16 h-16 ${feature.iconBg} rounded-xl flex items-center justify-center mb-6 fluenti-pulse`}>
                     <feature.icon className="text-white text-2xl" />
                   </div>
                   <h3 className="text-xl font-bold text-gray-900 mb-4">{feature.title}</h3>
                   <p className="text-gray-600 mb-4">{feature.description}</p>
-                  <ul className="text-sm text-gray-500 space-y-1">
+                  <ul className="text-sm text-gray-500 space-y-2">
                     {feature.features.map((item, idx) => (
-                      <li key={idx}>• {item}</li>
+                      <li key={idx} className="flex items-center space-x-2 hover-lift">
+                        <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+                        <span>{item}</span>
+                      </li>
                     ))}
                   </ul>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -266,9 +299,9 @@ export default function Landing() {
 
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Children */}
-            <Card className="bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-8 hover:shadow-lg transition-shadow">
-              <CardContent className="p-0 text-center">
-                <div className="w-20 h-20 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="fluenti-card fluenti-card-interactive bg-gradient-to-br from-green-50 to-emerald-100 rounded-2xl p-8 hover-lift animate-slide-up border-2 border-transparent hover:border-green-200 transition-all duration-300">
+              <div className="p-0 text-center">
+                <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6 fluenti-pulse shadow-lg">
                   <Heart className="text-white text-3xl" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">For Children</h3>
@@ -276,30 +309,30 @@ export default function Landing() {
                   Interactive, gamified learning experience designed to make speech therapy fun and engaging for young learners.
                 </p>
                 <div className="space-y-3 text-left">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="text-green-600 w-5 h-5" />
+                  <div className="flex items-center space-x-3 hover-lift">
+                    <CheckCircle className="text-green-600 w-5 h-5 animate-pulse" />
                     <span className="text-gray-700">3D AI avatar companions</span>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="text-green-600 w-5 h-5" />
+                  <div className="flex items-center space-x-3 hover-lift">
+                    <CheckCircle className="text-green-600 w-5 h-5 animate-pulse" style={{animationDelay: '0.1s'}} />
                     <span className="text-gray-700">Achievement rewards & badges</span>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="text-green-600 w-5 h-5" />
+                  <div className="flex items-center space-x-3 hover-lift">
+                    <CheckCircle className="text-green-600 w-5 h-5 animate-pulse" style={{animationDelay: '0.2s'}} />
                     <span className="text-gray-700">Age-appropriate exercises</span>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="text-green-600 w-5 h-5" />
+                  <div className="flex items-center space-x-3 hover-lift">
+                    <CheckCircle className="text-green-600 w-5 h-5 animate-pulse" style={{animationDelay: '0.3s'}} />
                     <span className="text-gray-700">Bilingual support (English/Urdu)</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Adults */}
-            <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-8 hover:shadow-lg transition-shadow">
-              <CardContent className="p-0 text-center">
-                <div className="w-20 h-20 bg-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="fluenti-card fluenti-card-interactive bg-gradient-to-br from-blue-50 to-indigo-100 rounded-2xl p-8 hover-lift animate-slide-up border-2 border-transparent hover:border-blue-200 transition-all duration-300" style={{animationDelay: '0.1s'}}>
+              <div className="p-0 text-center">
+                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 fluenti-pulse shadow-lg">
                   <Brain className="text-white text-3xl" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">For Adults</h3>
@@ -307,30 +340,30 @@ export default function Landing() {
                   Professional-grade speech therapy and emotional support tools designed for adult learners and mental health needs.
                 </p>
                 <div className="space-y-3 text-left">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="text-blue-600 w-5 h-5" />
+                  <div className="flex items-center space-x-3 hover-lift">
+                    <CheckCircle className="text-blue-600 w-5 h-5 animate-pulse" />
                     <span className="text-gray-700">Advanced speech analysis</span>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="text-blue-600 w-5 h-5" />
+                  <div className="flex items-center space-x-3 hover-lift">
+                    <CheckCircle className="text-blue-600 w-5 h-5 animate-pulse" style={{animationDelay: '0.1s'}} />
                     <span className="text-gray-700">Emotional support chat</span>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="text-blue-600 w-5 h-5" />
+                  <div className="flex items-center space-x-3 hover-lift">
+                    <CheckCircle className="text-blue-600 w-5 h-5 animate-pulse" style={{animationDelay: '0.2s'}} />
                     <span className="text-gray-700">Professional progress reports</span>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="text-blue-600 w-5 h-5" />
+                  <div className="flex items-center space-x-3 hover-lift">
+                    <CheckCircle className="text-blue-600 w-5 h-5 animate-pulse" style={{animationDelay: '0.3s'}} />
                     <span className="text-gray-700">CBT-based interventions</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
 
             {/* Guardians */}
-            <Card className="bg-gradient-to-br from-purple-50 to-pink-100 rounded-2xl p-8 hover:shadow-lg transition-shadow border-2 border-purple-200">
-              <CardContent className="p-0 text-center">
-                <div className="w-20 h-20 bg-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="fluenti-card fluenti-card-interactive bg-gradient-to-br from-purple-50 to-pink-100 rounded-2xl p-8 hover-lift animate-slide-up border-2 border-purple-200 hover:border-purple-300 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-200/50" style={{animationDelay: '0.2s'}}>
+              <div className="p-0 text-center">
+                <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6 fluenti-pulse shadow-lg">
                   <Shield className="text-white text-3xl" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">For Guardians</h3>
@@ -338,37 +371,37 @@ export default function Landing() {
                   Comprehensive oversight and monitoring tools to track your child's progress and support their learning journey.
                 </p>
                 <div className="space-y-3 text-left">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="text-purple-600 w-5 h-5" />
+                  <div className="flex items-center space-x-3 hover-lift">
+                    <CheckCircle className="text-purple-600 w-5 h-5 animate-pulse" />
                     <span className="text-gray-700">Real-time progress monitoring</span>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="text-purple-600 w-5 h-5" />
+                  <div className="flex items-center space-x-3 hover-lift">
+                    <CheckCircle className="text-purple-600 w-5 h-5 animate-pulse" style={{animationDelay: '0.1s'}} />
                     <span className="text-gray-700">Detailed session reports</span>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="text-purple-600 w-5 h-5" />
+                  <div className="flex items-center space-x-3 hover-lift">
+                    <CheckCircle className="text-purple-600 w-5 h-5 animate-pulse" style={{animationDelay: '0.2s'}} />
                     <span className="text-gray-700">Goal setting & milestones</span>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="text-purple-600 w-5 h-5" />
+                  <div className="flex items-center space-x-3 hover-lift">
+                    <CheckCircle className="text-purple-600 w-5 h-5 animate-pulse" style={{animationDelay: '0.3s'}} />
                     <span className="text-gray-700">Child safety controls</span>
                   </div>
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="text-purple-600 w-5 h-5" />
+                  <div className="flex items-center space-x-3 hover-lift">
+                    <CheckCircle className="text-purple-600 w-5 h-5 animate-pulse" style={{animationDelay: '0.4s'}} />
                     <span className="text-gray-700">Communication with therapists</span>
                   </div>
                 </div>
                 
                 {/* Featured Badge */}
-                <div className="mt-6 p-3 bg-purple-100 rounded-lg border border-purple-200">
+                <div className="mt-6 p-3 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg border border-purple-200 hover-lift">
                   <div className="flex items-center justify-center space-x-2">
-                    <Trophy className="text-purple-600 w-5 h-5" />
+                    <Trophy className="text-purple-600 w-5 h-5 animate-bounce-gentle" />
                     <span className="text-purple-800 font-semibold text-sm">Most Comprehensive Dashboard</span>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           </div>
 
           {/* Guardian Role Highlight */}
@@ -854,42 +887,50 @@ export default function Landing() {
       </section>
 
       {/* Call to Action */}
-      <section className="py-20 bg-gradient-to-r from-primary to-secondary">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl font-bold text-white mb-6">Ready to Start Your Journey?</h2>
-          <p className="text-xl text-blue-100 mb-8 leading-relaxed">
+      <section className="py-20 relative overflow-hidden">
+        {/* Animated Background */}
+        <div className="absolute inset-0 fluenti-gradient-primary"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/90 to-secondary/90"></div>
+        
+        {/* Floating Elements */}
+        <div className="absolute top-10 left-10 w-20 h-20 bg-white/10 rounded-full fluenti-float"></div>
+        <div className="absolute top-20 right-20 w-16 h-16 bg-white/10 rounded-full fluenti-float" style={{animationDelay: '1s'}}></div>
+        <div className="absolute bottom-10 left-1/4 w-12 h-12 bg-white/10 rounded-full fluenti-float" style={{animationDelay: '2s'}}></div>
+        
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
+          <h2 className="text-4xl font-bold text-white mb-6 animate-slide-up">Ready to Start Your Journey?</h2>
+          <p className="text-xl text-blue-100 mb-8 leading-relaxed animate-slide-up" style={{animationDelay: '0.1s'}}>
             Join thousands of families already improving speech and emotional well-being with Fluenti's AI-powered therapy platform.
           </p>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8">
-            <Button 
-              className="bg-white text-primary hover:bg-gray-50 px-8 py-4 rounded-xl font-semibold text-lg"
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-8 animate-slide-up" style={{animationDelay: '0.2s'}}>
+            <button 
+              className="bg-white text-primary hover:bg-gray-50 px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center justify-center space-x-2 hover-lift shadow-lg"
               onClick={() => window.location.href = '/signup'}
             >
               <Users className="mr-2" />
               Create Free Account
-            </Button>
-            <Button 
-              variant="outline" 
-              className="border-2 border-white text-white hover:bg-white hover:text-primary px-8 py-4 rounded-xl font-semibold text-lg"
+            </button>
+            <button 
+              className="border-2 border-white text-white hover:bg-white hover:text-primary px-8 py-4 rounded-xl font-semibold text-lg transition-all duration-300 flex items-center justify-center space-x-2 hover-lift"
               onClick={() => scrollToSection('assessment')}
             >
               <Calendar className="mr-2" />
               Schedule Demo
-            </Button>
+            </button>
           </div>
 
-          <div className="flex items-center justify-center space-x-8 text-blue-100">
-            <div className="flex items-center space-x-2">
-              <CheckCircle />
+          <div className="flex items-center justify-center space-x-8 text-blue-100 animate-fade-in" style={{animationDelay: '0.3s'}}>
+            <div className="flex items-center space-x-2 hover-lift">
+              <CheckCircle className="animate-pulse" />
               <span>Free 14-day trial</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <CheckCircle />
+            <div className="flex items-center space-x-2 hover-lift">
+              <CheckCircle className="animate-pulse" style={{animationDelay: '0.1s'}} />
               <span>No credit card required</span>
             </div>
-            <div className="flex items-center space-x-2">
-              <CheckCircle />
+            <div className="flex items-center space-x-2 hover-lift">
+              <CheckCircle className="animate-pulse" style={{animationDelay: '0.2s'}} />
               <span>Cancel anytime</span>
             </div>
           </div>
