@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, LogOut, Home } from 'lucide-react';
+import { apiRequest } from '@/lib/queryClient';
 
 export default function Logout() {
   const [isLoggingOut, setIsLoggingOut] = useState(true);
@@ -13,10 +14,7 @@ export default function Logout() {
     const performLogout = async () => {
       try {
         // Call the logout API
-        const response = await fetch('/api/logout', {
-          method: 'GET',
-          credentials: 'include'
-        });
+        const response = await apiRequest('GET', '/api/logout');
         
         if (response.ok) {
           const data = await response.json();

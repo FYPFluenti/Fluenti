@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { MessageCircle, ArrowLeft } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -25,16 +26,9 @@ export default function Login() {
       }
       
       // Authenticate with the server
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          email,
-          password
-        }),
-        credentials: 'include'
+      const response = await apiRequest('POST', '/api/auth/login', { 
+        email,
+        password
       });
       
       const data = await response.json();

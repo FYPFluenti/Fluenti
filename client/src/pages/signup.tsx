@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MessageCircle, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -46,20 +47,13 @@ export default function Signup() {
       }
       
       // Create new user account
-      const response = await fetch('/api/auth/signup', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          firstName: formData.firstName,
-          lastName: formData.lastName,
-          email: formData.email,
-          password: formData.password,
-          userType: formData.userType,
-          language: formData.language
-        }),
-        credentials: 'include'
+      const response = await apiRequest('POST', '/api/auth/signup', {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password,
+        userType: formData.userType,
+        language: formData.language
       });
       
       const data = await response.json();
