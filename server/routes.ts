@@ -70,8 +70,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Authentication endpoints
-  if (process.env.NODE_ENV === 'development') {
+  // Authentication endpoints (available in all environments)
+  if (mongoStorage) {
     // User login endpoint
     app.post('/api/auth/login', async (req, res) => {
       try {
