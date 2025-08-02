@@ -5,8 +5,26 @@ const API_BASE_URL = import.meta.env.PROD
   ? 'https://fluentiai-backend.onrender.com' 
   : 'http://localhost:3000';
 
-// Convert HTTP URL to WebSocket URL
-const getWebSocketUrl = (url: string) => url.replace('https://', 'wss://').replace('http://', 'ws://');
+// Convert HTTP URL to WebSocket URL with proper validation
+const getWebSocketUrl = (url: string) => {
+  if (!url || url.includes('undefined') || url.includes('null')) {
+    console.warn('Invalid URL provided to getWebSocketUrl:', url);
+    return null;
+  }
+  
+  try {
+    const wsUrl = url.replace('https://', 'wss://').replace('http://', 'ws://');
+    // Additional validation
+    if (!wsUrl.match(/^wss?:\/\/.+:\d+/)) {
+      console.warn('WebSocket URL missing port:', wsUrl);
+      return null;
+    }
+    return wsUrl;
+  } catch (error) {
+    console.warn('Error converting to WebSocket URL:', error);
+    return null;
+  }
+};
 
 interface UseWebSocketOptions {
   onMessage?: (data: any) => void;
@@ -81,13 +99,20 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       // Use consistent API base URL and convert to WebSocket protocol
       const WS_BASE = getWebSocketUrl(API_BASE_URL);
       
+      // Validate WebSocket base URL
+      if (!WS_BASE) {
+        console.error('🛡️ Failed to create valid WebSocket URL from:', API_BASE_URL);
+        return;
+      }
+      
       // Add authentication token to WebSocket connection if available
       let wsUrl = `${WS_BASE}/ws`;
       
-      // Validate the WebSocket URL before attempting connection
-      if (wsUrl.includes('undefined')) {
-        console.error('Invalid WebSocket URL detected:', wsUrl);
+      // Additional validation for undefined values
+      if (wsUrl.includes('undefined') || wsUrl.includes('null') || wsUrl.includes(':undefined')) {
+        console.error('🛡️ Invalid WebSocket URL detected, aborting connection:', wsUrl);
         console.error('API_BASE_URL:', API_BASE_URL);
+        console.error('WS_BASE:', WS_BASE);
         return;
       }
       
@@ -96,23 +121,24 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         wsUrl += `?token=${encodeURIComponent(token)}`;
       }
       
-      // Log connection details for debugging
-      console.log('Connecting to WebSocket:', {
-        url: wsUrl,
+      // Final URL validation
+      if (!wsUrl.match(/^wss?:\/\/.+:\d+/)) {
+        console.error('🛡️ WebSocket URL failed validation:', wsUrl);
+        return;
+      }
+      
+      console.log('🔌 Connecting to WebSocket:', {
+        url: wsUrl.replace(/token=[^&]+/, 'token=***'),
         hasToken: !!token,
-        tokenLength: token ? token.length : 0,
         baseUrl: API_BASE_URL,
         isProd: import.meta.env.PROD
       });
       
-      // Create WebSocket with authorization
+      // Create WebSocket with validation
       const ws = new WebSocket(wsUrl);
       
-      // WebSocket doesn't support custom headers directly, but we've added token to URL
-      // and the server checks for the token param
-      
       ws.onopen = () => {
-        console.log('WebSocket connected');
+        console.log('✅ WebSocket connected');
         setIsConnected(true);
         reconnectAttempts.current = 0;
         onOpen?.();
