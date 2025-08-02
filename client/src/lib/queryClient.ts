@@ -1,5 +1,26 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+// Enhanced error suppression for better UX
+const originalConsoleError = console.error;
+console.error = function(...args) {
+  const message = args.join(' ');
+  
+  // Suppress common expected errors to reduce console noise
+  if (message.includes('401') || 
+      message.includes('Unauthorized') || 
+      message.includes('Failed to load resource') ||
+      (message.includes('speech/session') && message.includes('401'))) {
+    // Still log in development for debugging
+    if (!import.meta.env.PROD) {
+      console.warn('🔒 Auth error (expected):', ...args);
+    }
+    return; // Suppress in production
+  }
+  
+  // Let other errors through
+  originalConsoleError.apply(console, args);
+};
+
 // Configure API base URL based on environment
 const API_BASE_URL = import.meta.env.PROD 
   ? 'https://fluentiai-backend.onrender.com' 
