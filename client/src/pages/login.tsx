@@ -35,8 +35,12 @@ export default function Login() {
       console.log('Login response:', data);
       
       if (data.success && data.user) {
-        // Store auth token in localStorage for WebSocket connections
+        // Store auth token in localStorage for WebSocket connections and API requests
         localStorage.setItem('authToken', data.user.id);
+        
+        // Explicitly notify storage listeners (for useWebSocket)
+        const storageEvent = new Event('storage');
+        window.dispatchEvent(storageEvent);
         
         // Invalidate queries to refresh user data
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });

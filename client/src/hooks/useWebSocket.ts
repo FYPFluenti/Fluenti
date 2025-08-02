@@ -89,15 +89,38 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
         wsUrl += `?token=${encodeURIComponent(token)}`;
       }
       
-      console.log('Connecting to WebSocket:', wsUrl);
+      // Log connection details for debugging
+      console.log('Connecting to WebSocket:', {
+        url: wsUrl,
+        hasToken: !!token,
+        tokenLength: token ? token.length : 0,
+        baseUrl: API_BASE_URL,
+        isProd: import.meta.env.PROD
+      });
       
+      // Create WebSocket with authorization
       const ws = new WebSocket(wsUrl);
-
+      
+      // WebSocket doesn't support custom headers directly, but we've added token to URL
+      // and the server checks for the token param
+      
       ws.onopen = () => {
         console.log('WebSocket connected');
         setIsConnected(true);
         reconnectAttempts.current = 0;
         onOpen?.();
+        
+        // Send authentication message as fallback
+        if (token) {
+          try {
+            ws.send(JSON.stringify({
+              type: 'auth',
+              data: { token }
+            }));
+          } catch (error) {
+            console.error('Failed to send auth message:', error);
+          }
+        }
       };
 
       ws.onmessage = (event) => {
