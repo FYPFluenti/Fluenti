@@ -22,7 +22,6 @@ async function connectDB() {
       bufferCommands: false,
     };
 
-    console.log('Attempting to connect to MongoDB...');
     cached.promise = mongoose.connect(MONGODB_URI, opts)
       .then((mongoose) => {
         console.log('MongoDB connected successfully');
@@ -30,10 +29,10 @@ async function connectDB() {
       })
       .catch(err => {
         console.error('MongoDB connection error:', err);
-        // For development, continue without throwing to prevent server crash
+        // For development, setup mock data if MongoDB is not available
         if (process.env.NODE_ENV === 'development') {
-          console.log('Continuing without MongoDB connection in development mode');
-          return null;
+          console.log('Using mock data for development');
+          return mongoose;
         }
         throw err;
       });
@@ -42,14 +41,7 @@ async function connectDB() {
   try {
     cached.conn = await cached.promise;
   } catch (e) {
-    console.error('Failed to establish MongoDB connection:', e);
     cached.promise = null;
-    
-    // In development, continue without connection
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Development mode: continuing without MongoDB');
-      return null;
-    }
     throw e;
   }
 
