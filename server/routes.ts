@@ -170,7 +170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Speech therapy routes
-  app.post('/api/speech/session', isAuthenticated, async (req: any, res) => {
+  app.post('/api/speech/session', tokenBasedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { sessionType } = req.body;
@@ -183,7 +183,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/speech/record', isAuthenticated, async (req: any, res) => {
+  app.post('/api/speech/record', tokenBasedAuth, async (req: any, res) => {
     try {
       const { sessionId, word, phonetic, userTranscription, language, userAudio } = req.body;
       
@@ -203,7 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/speech/assessment', isAuthenticated, async (req: any, res) => {
+  app.post('/api/speech/assessment', tokenBasedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const { assessmentResults } = req.body;
@@ -216,7 +216,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/speech/progress', isAuthenticated, async (req: any, res) => {
+  app.get('/api/speech/progress', tokenBasedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const progress = await SpeechService.getUserProgress(userId);
@@ -228,7 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Emotional support routes
-  app.post('/api/chat/session', isAuthenticated, async (req: any, res) => {
+  app.post('/api/chat/session', tokenBasedAuth, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
       const session = await mongoStorage.createEmotionalSession({ 
@@ -242,7 +242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/chat/message', isAuthenticated, async (req: any, res) => {
+  app.post('/api/chat/message', tokenBasedAuth, async (req: any, res) => {
     try {
       const { sessionId, message, voiceTone } = req.body;
       
@@ -272,7 +272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/chat/messages/:sessionId', isAuthenticated, async (req: any, res) => {
+  app.get('/api/chat/messages/:sessionId', tokenBasedAuth, async (req: any, res) => {
     try {
       const { sessionId } = req.params;
       const session = await mongoStorage.getEmotionalSessions(req.user.claims.sub, 1);
@@ -285,7 +285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Guardian dashboard routes (TODO: Implement with MongoDB)
-  app.get('/api/guardian/children', isAuthenticated, async (req: any, res) => {
+  app.get('/api/guardian/children', tokenBasedAuth, async (req: any, res) => {
     try {
       // const guardianId = req.user.claims.sub;
       // const children = await mongoStorage.getGuardianChildren(guardianId);
@@ -296,7 +296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/guardian/add-child', isAuthenticated, async (req: any, res) => {
+  app.post('/api/guardian/add-child', tokenBasedAuth, async (req: any, res) => {
     try {
       // const guardianId = req.user.claims.sub;
       // const { childId, relationship } = req.body;

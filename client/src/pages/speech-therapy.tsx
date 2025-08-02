@@ -179,10 +179,15 @@ export default function SpeechTherapy() {
   // Check authentication - useEffect MUST be called before conditional returns
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to access speech therapy sessions.",
+        variant: "destructive",
+      });
       setLocation('/login');
       return;
     }
-  }, [isAuthenticated, isLoading, setLocation]);
+  }, [isAuthenticated, isLoading, setLocation, toast]);
 
   // Handle exercise completion
   const handleExerciseComplete = (result: { accuracy: number; attempts: number }) => {
@@ -256,7 +261,30 @@ export default function SpeechTherapy() {
 
   // Don't render anything if not authenticated (will redirect)
   if (!isAuthenticated || !user) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MessageCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Authentication Required</h2>
+          <p className="text-gray-600 mb-6">Please log in to access your speech therapy sessions.</p>
+          <div className="space-y-3">
+            <Link href="/login">
+              <Button className="w-full">
+                Go to Login
+              </Button>
+            </Link>
+            <Link href="/">
+              <Button variant="outline" className="w-full">
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Home
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   const isSessionCompleted = currentSession && 
@@ -366,13 +394,13 @@ export default function SpeechTherapy() {
               onClick={() => {
                 if (!user) {
                   toast({
-                    title: "Authentication Required",
-                    description: "Please log in to start your speech therapy session.",
+                    title: "Please Log In First",
+                    description: "You need to be logged in to start speech therapy sessions.",
                     variant: "destructive",
                   });
                   setTimeout(() => {
                     setLocation('/login');
-                  }, 1000);
+                  }, 1500);
                   return;
                 }
                 createSessionMutation.mutate();
