@@ -112,18 +112,19 @@ export default function SpeechTherapy() {
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
         toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
+          title: "Authentication Required",
+          description: "Please log in to access speech therapy sessions.",
           variant: "destructive",
         });
+        // Redirect to frontend login page, not API endpoint
         setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+          setLocation('/login');
+        }, 1000);
         return;
       }
       toast({
-        title: "Error",
-        description: "Failed to start speech therapy session. Please try again.",
+        title: "Session Error",
+        description: "Failed to start speech therapy session. Please try logging in again.",
         variant: "destructive",
       });
     },
@@ -362,8 +363,21 @@ export default function SpeechTherapy() {
 
             <Button
               className="fluenti-button-primary text-xl px-12 py-6"
-              onClick={() => createSessionMutation.mutate()}
-              disabled={createSessionMutation.isPending}
+              onClick={() => {
+                if (!user) {
+                  toast({
+                    title: "Authentication Required",
+                    description: "Please log in to start your speech therapy session.",
+                    variant: "destructive",
+                  });
+                  setTimeout(() => {
+                    setLocation('/login');
+                  }, 1000);
+                  return;
+                }
+                createSessionMutation.mutate();
+              }}
+              disabled={createSessionMutation.isPending || !user}
             >
               {createSessionMutation.isPending ? (
                 <>
