@@ -2,8 +2,14 @@ import connectDB from "./mongodb";
 import { User, SpeechSession, SpeechRecord, UserProgress, EmotionalSession } from "./models";
 import { nanoid } from "nanoid";
 
-// Connect to MongoDB
-connectDB();
+// Initialize MongoDB connection
+let isConnected = false;
+async function ensureConnection() {
+  if (!isConnected) {
+    await connectDB();
+    isConnected = true;
+  }
+}
 
 export const mongoStorage = {
   // User operations
@@ -18,6 +24,9 @@ export const mongoStorage = {
     language?: 'english' | 'urdu' | 'both';
   }) {
     try {
+      // Ensure MongoDB connection before any database operations
+      await ensureConnection();
+      
       // First, try to find user by email to avoid duplicate key errors
       const existingUser = await User.findOne({ email: userData.email });
       
@@ -69,6 +78,7 @@ export const mongoStorage = {
 
   async getUser(userId: string) {
     try {
+      await ensureConnection();
       const user = await User.findOne({ id: userId });
       return user;
     } catch (error) {
@@ -79,6 +89,7 @@ export const mongoStorage = {
 
   async getUserByEmail(email: string) {
     try {
+      await ensureConnection();
       const user = await User.findOne({ email: email });
       return user;
     } catch (error) {
@@ -89,6 +100,7 @@ export const mongoStorage = {
 
   async updateUser(userId: string, updates: any) {
     try {
+      await ensureConnection();
       const user = await User.findOneAndUpdate(
         { id: userId },
         { ...updates, updatedAt: new Date() },
@@ -108,6 +120,7 @@ export const mongoStorage = {
     exerciseData?: any;
   }) {
     try {
+      await ensureConnection();
       const session = new SpeechSession({
         id: nanoid(),
         ...sessionData
@@ -122,6 +135,7 @@ export const mongoStorage = {
 
   async getSpeechSession(sessionId: string) {
     try {
+      await ensureConnection();
       const session = await SpeechSession.findOne({ id: sessionId });
       return session;
     } catch (error) {
