@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-// Get API base from queryClient configuration
+// Get API base from environment or default to localhost:3000
 const API_BASE_URL = import.meta.env.PROD 
   ? 'https://fluentiai-backend.onrender.com' 
   : 'http://localhost:3000';
@@ -83,6 +83,13 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       
       // Add authentication token to WebSocket connection if available
       let wsUrl = `${WS_BASE}/ws`;
+      
+      // Validate the WebSocket URL before attempting connection
+      if (wsUrl.includes('undefined')) {
+        console.error('Invalid WebSocket URL detected:', wsUrl);
+        console.error('API_BASE_URL:', API_BASE_URL);
+        return;
+      }
       
       // Add token as query parameter if available
       if (token) {
@@ -187,24 +194,18 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   }, [socket]);
 
   useEffect(() => {
-    // Check if token exists before connecting
-    const token = localStorage.getItem('authToken');
+    // Don't auto-connect WebSocket unless explicitly needed
+    // Components should call connect() manually when they need WebSocket functionality
+    console.log('WebSocket hook initialized but not auto-connecting');
     
-    // Only attempt connection if we're authenticated or if this is a public WebSocket
-    if (token || options.allowUnauthenticated) {
-      connect();
-    } else {
-      console.log('WebSocket connection deferred - no authentication token available');
-    }
-    
-    // Listen for storage events to reconnect when auth changes
+    // Listen for storage events to handle auth changes
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === 'authToken') {
-        if (e.newValue) {
-          // Token was added/changed - reconnect
+        if (e.newValue && socket) {
+          // Token was added/changed and socket exists - reconnect
           disconnect();
           connect();
-        } else {
+        } else if (!e.newValue && socket) {
           // Token was removed - disconnect
           disconnect();
         }
@@ -217,7 +218,7 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       window.removeEventListener('storage', handleStorageChange);
       disconnect();
     };
-  }, [connect, disconnect, options.allowUnauthenticated]);
+  }, [connect, disconnect, socket]);
 
   return {
     socket,

@@ -43,9 +43,12 @@ export default function Login() {
           localStorage.setItem('authToken', data.user.id);
         }
         
-        // Explicitly notify storage listeners (for useWebSocket)
-        const storageEvent = new Event('storage');
-        window.dispatchEvent(storageEvent);
+        // Trigger storage event to notify useAuth hook
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'authToken',
+          newValue: data.authToken || data.user.id,
+          oldValue: null
+        }));
         
         // Invalidate queries to refresh user data
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });

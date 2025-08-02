@@ -46,6 +46,6 @@ export function tokenBasedAuth(req: Request, res: Response, next: NextFunction) 
     return next();
   }
   
-  // No authentication found
+  // No authentication found - return 401 without logging (this is expected behavior)
   return res.status(401).json({ message: "Unauthorized" });
 }

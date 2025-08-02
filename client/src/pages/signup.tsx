@@ -68,9 +68,12 @@ export default function Signup() {
           localStorage.setItem('authToken', data.user.id);
         }
         
-        // Explicitly notify storage listeners (for useWebSocket)
-        const storageEvent = new Event('storage');
-        window.dispatchEvent(storageEvent);
+        // Trigger storage event to notify useAuth hook
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'authToken',
+          newValue: data.authToken || data.user.id,
+          oldValue: null
+        }));
         
         // Redirect to the appropriate dashboard based on user's actual type
         switch(data.user.userType) {

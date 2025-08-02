@@ -8,7 +8,14 @@ const API_BASE_URL = import.meta.env.PROD
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    const error = new Error(`${res.status}: ${text}`);
+    
+    // Don't log 401 errors to reduce console noise - they are expected when not authenticated
+    if (res.status !== 401) {
+      console.error('API Error:', error.message);
+    }
+    
+    throw error;
   }
 }
 
@@ -60,17 +67,26 @@ export const getQueryFn: <T>(options: {
       headers["Authorization"] = `Bearer ${authToken}`;
     }
     
-    const res = await fetch(fullUrl, {
-      headers,
-      credentials: "include",
-    });
+    try {
+      const res = await fetch(fullUrl, {
+        headers,
+        credentials: "include",
+      });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        // Don't log 401 errors when we expect them (e.g., when not authenticated)
+        return null;
+      }
+
+      await throwIfResNotOk(res);
+      return await res.json();
+    } catch (error) {
+      // Only re-throw if it's not a 401 that we're handling gracefully
+      if (unauthorizedBehavior === "returnNull" && error instanceof Error && error.message.includes('401')) {
+        return null;
+      }
+      throw error;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({
