@@ -2,16 +2,21 @@ import connectDB from "./mongodb";
 import { User, SpeechSession, SpeechRecord, UserProgress, EmotionalSession } from "./models";
 import { nanoid } from "nanoid";
 
-// Initialize MongoDB connection
-let isConnected = false;
-async function ensureConnection() {
-  if (!isConnected) {
-    await connectDB();
-    isConnected = true;
-  }
-}
+// Connect to MongoDB and initialize the connection
+let dbConnection = connectDB();
 
 export const mongoStorage = {
+  // Ensure DB is connected before any operation
+  _ensureConnected: async () => {
+    try {
+      await dbConnection;
+    } catch (error) {
+      console.error("Failed to connect to MongoDB:", error);
+      // Retry connection
+      dbConnection = connectDB();
+      await dbConnection;
+    }
+  },
   // User operations
   async upsertUser(userData: {
     id: string;
@@ -24,8 +29,8 @@ export const mongoStorage = {
     language?: 'english' | 'urdu' | 'both';
   }) {
     try {
-      // Ensure MongoDB connection before any database operations
-      await ensureConnection();
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
       
       // First, try to find user by email to avoid duplicate key errors
       const existingUser = await User.findOne({ email: userData.email });
@@ -78,7 +83,9 @@ export const mongoStorage = {
 
   async getUser(userId: string) {
     try {
-      await ensureConnection();
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
       const user = await User.findOne({ id: userId });
       return user;
     } catch (error) {
@@ -89,7 +96,9 @@ export const mongoStorage = {
 
   async getUserByEmail(email: string) {
     try {
-      await ensureConnection();
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
       const user = await User.findOne({ email: email });
       return user;
     } catch (error) {
@@ -100,7 +109,9 @@ export const mongoStorage = {
 
   async updateUser(userId: string, updates: any) {
     try {
-      await ensureConnection();
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
       const user = await User.findOneAndUpdate(
         { id: userId },
         { ...updates, updatedAt: new Date() },
@@ -120,7 +131,9 @@ export const mongoStorage = {
     exerciseData?: any;
   }) {
     try {
-      await ensureConnection();
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
       const session = new SpeechSession({
         id: nanoid(),
         ...sessionData
@@ -135,7 +148,9 @@ export const mongoStorage = {
 
   async getSpeechSession(sessionId: string) {
     try {
-      await ensureConnection();
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
       const session = await SpeechSession.findOne({ id: sessionId });
       return session;
     } catch (error) {
@@ -146,6 +161,9 @@ export const mongoStorage = {
 
   async updateSpeechSession(sessionId: string, updates: any) {
     try {
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
       const session = await SpeechSession.findOneAndUpdate(
         { id: sessionId },
         { ...updates, updatedAt: new Date() },
@@ -160,6 +178,9 @@ export const mongoStorage = {
 
   async getSpeechSessions(userId: string, limit = 10) {
     try {
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
       const sessions = await SpeechSession.find({ userId })
         .sort({ createdAt: -1 })
         .limit(limit);
@@ -195,6 +216,9 @@ export const mongoStorage = {
   // User progress operations
   async getUserProgress(userId: string) {
     try {
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
       let progress = await UserProgress.findOne({ userId });
       if (!progress) {
         progress = new UserProgress({
