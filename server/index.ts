@@ -13,12 +13,17 @@ app.use((req, res, next) => {
     'http://localhost:5173',
     'http://localhost:3000',
     'http://localhost:3001',
-    'https://fluentiai.netlify.app'
+    'https://fluentiai.netlify.app',
+    'https://fluentiai-backend.onrender.com'
   ];
   
   const origin = req.headers.origin;
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (origin) {
+    // For deployment troubleshooting, temporarily allow any origin
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    console.log(`Allowing access from origin: ${origin}`);
   }
   
   res.setHeader('Access-Control-Allow-Credentials', 'true');

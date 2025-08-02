@@ -58,32 +58,7 @@ export default function SpeechTherapy() {
   const [avatarMessage, setAvatarMessage] = useState("Welcome! Let's start your speech therapy session. I'm here to help you improve your pronunciation.");
   const [avatarEmotion, setAvatarEmotion] = useState('encouraging');
 
-  // Check authentication
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      setLocation('/login');
-      return;
-    }
-  }, [isAuthenticated, isLoading, setLocation]);
-
-  // Show loading while checking authentication
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-blue-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render anything if not authenticated (will redirect)
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  // Create new session mutation
+  // Create new session mutation - ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   const createSessionMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest('POST', '/api/speech/session', {
@@ -137,24 +112,25 @@ export default function SpeechTherapy() {
     onError: (error) => {
       if (isUnauthorizedError(error as Error)) {
         toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
+          title: "Authentication Required",
+          description: "Please log in to access speech therapy sessions.",
           variant: "destructive",
         });
+        // Redirect to frontend login page, not API endpoint
         setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+          setLocation('/login');
+        }, 1000);
         return;
       }
       toast({
-        title: "Error",
-        description: "Failed to start speech therapy session. Please try again.",
+        title: "Session Error",
+        description: "Failed to start speech therapy session. Please try logging in again.",
         variant: "destructive",
       });
     },
   });
 
-  // Record speech attempt mutation
+  // Record speech attempt mutation - ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
   const recordSpeechMutation = useMutation({
     mutationFn: async (data: {
       sessionId: string;
@@ -200,6 +176,15 @@ export default function SpeechTherapy() {
     },
   });
 
+  // Check authentication - useEffect MUST be called before conditional returns
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      setLocation('/login');
+      return;
+    }
+  }, [isAuthenticated, isLoading, setLocation]);
+
+  // Handle exercise completion
   const handleExerciseComplete = (result: { accuracy: number; attempts: number }) => {
     if (!currentSession) return;
 
@@ -256,17 +241,20 @@ export default function SpeechTherapy() {
     }
   };
 
+  // CONDITIONAL RETURNS MUST BE AFTER ALL HOOKS
+  // Show loading while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-blue-600">Loading...</p>
         </div>
       </div>
     );
   }
 
+  // Don't render anything if not authenticated (will redirect)
   if (!isAuthenticated || !user) {
     return null;
   }
@@ -375,8 +363,21 @@ export default function SpeechTherapy() {
 
             <Button
               className="fluenti-button-primary text-xl px-12 py-6"
-              onClick={() => createSessionMutation.mutate()}
-              disabled={createSessionMutation.isPending}
+              onClick={() => {
+                if (!user) {
+                  toast({
+                    title: "Authentication Required",
+                    description: "Please log in to start your speech therapy session.",
+                    variant: "destructive",
+                  });
+                  setTimeout(() => {
+                    setLocation('/login');
+                  }, 1000);
+                  return;
+                }
+                createSessionMutation.mutate();
+              }}
+              disabled={createSessionMutation.isPending || !user}
             >
               {createSessionMutation.isPending ? (
                 <>

@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Error Prevention Test</h1>
+    <button onclick="testWebSockets()">Test WebSocket Connections</button>
+    <div id="results"></div>
+
+    <script>
+        // Import our interceptor (simulate what happens in main.tsx)
+        // In a real scenario, this would be loaded from main.tsx
+        
+        function testWebSockets() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<h3>Testing WebSocket connections...</h3>';
+            
+            const testCases = [
+                'ws://localhost:undefined/',
+                'ws://localhost:undefined/ws',
+                'ws://undefined:3000/',
+                'ws://localhost:3000/ws',  // This should work
+                'ws://invalid-url',
+                undefined,
+                null,
+                ''
+            ];
+            
+            testCases.forEach((url, index) => {
+                try {
+                    console.log(`Test ${index + 1}: Attempting to connect to:`, url);
+                    const ws = new WebSocket(url);
+                    
+                    ws.onopen = () => {
+                        console.log(`✅ Test ${index + 1}: Connection opened to ${url}`);
+                        results.innerHTML += `<p>✅ Test ${index + 1}: Connected to ${url}</p>`;
+                        ws.close();
+                    };
+                    
+                    ws.onerror = (error) => {
+                        console.log(`❌ Test ${index + 1}: Connection error for ${url}:`, error);
+                        results.innerHTML += `<p>❌ Test ${index + 1}: Error connecting to ${url}</p>`;
+                    };
+                    
+                    ws.onclose = () => {
+                        console.log(`🔒 Test ${index + 1}: Connection closed for ${url}`);
+                    };
+                    
+                } catch (error) {
+                    console.log(`🛡️ Test ${index + 1}: Intercepted connection attempt to ${url}:`, error.message);
+                    results.innerHTML += `<p>🛡️ Test ${index + 1}: Intercepted invalid URL: ${url}</p>`;
+                }
+            });
+        }
+        
+        // Add console monitoring
+        const originalError = console.error;
+        console.error = function(...args) {
+            if (args.some(arg => typeof arg === 'string' && arg.includes('WebSocket'))) {
+                console.log('🛡️ WebSocket error intercepted:', ...args);
+                return; // Suppress WebSocket errors
+            }
+            originalError.apply(console, args);
+        };
+    </script>
+</body>
+</html>

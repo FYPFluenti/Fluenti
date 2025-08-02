@@ -60,6 +60,21 @@ export default function Signup() {
       console.log('Signup response:', data); // Debug log
       
       if (data.success && data.user) {
+        // Store auth token in localStorage for WebSocket connections and API requests
+        if (data.authToken) {
+          localStorage.setItem('authToken', data.authToken);
+        } else {
+          // Fallback to user ID if authToken not provided
+          localStorage.setItem('authToken', data.user.id);
+        }
+        
+        // Trigger storage event to notify useAuth hook
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'authToken',
+          newValue: data.authToken || data.user.id,
+          oldValue: null
+        }));
+        
         // Redirect to the appropriate dashboard based on user's actual type
         switch(data.user.userType) {
           case 'child':

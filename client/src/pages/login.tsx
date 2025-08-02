@@ -35,6 +35,21 @@ export default function Login() {
       console.log('Login response:', data);
       
       if (data.success && data.user) {
+        // Store auth token in localStorage for WebSocket connections and API requests
+        if (data.authToken) {
+          localStorage.setItem('authToken', data.authToken);
+        } else {
+          // Fallback to user ID if authToken not provided
+          localStorage.setItem('authToken', data.user.id);
+        }
+        
+        // Trigger storage event to notify useAuth hook
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'authToken',
+          newValue: data.authToken || data.user.id,
+          oldValue: null
+        }));
+        
         // Invalidate queries to refresh user data
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         

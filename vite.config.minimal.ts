@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Minimal config for Netlify builds if PostCSS causes issues
 export default defineConfig({
   plugins: [react()],
   define: {},

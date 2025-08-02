@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { mongoStorage } from "./mongoStorage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import { extractTokenFromHeader, tokenBasedAuth } from "./middleware";
 import * as speechServiceModule from "./services/speechService";
 const { SpeechService } = speechServiceModule;
 import { analyzeEmotion } from "./services/openai";
@@ -11,9 +12,12 @@ import { AuthService } from "./auth";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+  
+  // Add token extraction middleware for all routes
+  app.use(extractTokenFromHeader);
 
   // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', tokenBasedAuth, async (req: any, res) => {
     try {
       // For local development
       if (process.env.NODE_ENV === 'development') {
@@ -93,7 +97,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log('User logged in via session:', user.id, user.userType);
         }
         
-        res.json({ success: true, user });
+        // Return user with auth token (user ID can serve as token)
+        res.json({ success: true, user, authToken: user.id });
       } catch (error: any) {
         console.error("Login error:", error.message);
         res.status(401).json({ message: error.message });
@@ -134,7 +139,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         console.log('Sending success response');
-        res.json({ success: true, user });
+        // Return user with auth token (user ID can serve as token)
+        res.json({ success: true, user, authToken: user.id });
       } catch (error: any) {
         console.error("Signup error:", error.message);
         res.status(400).json({ success: false, message: error.message });
@@ -148,6 +154,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: req.user,
         isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false
       });
+    });
+    
+    // Logout endpoint
+    app.get('/api/logout', (req, res) => {
+      if (req.session) {
+        req.session.destroy((err) => {
+          if (err) {
+            console.error('Session destruction error:', err);
+          }
+        });
+      }
+      res.json({ success: true, message: 'Logged out successfully' });
     });
   }
 
@@ -296,14 +314,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // WebSocket server for real-time features
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
-  wss.on('connection', (ws: WebSocket) => {
+  wss.on('connection', async (ws: WebSocket, req) => {
     console.log('New WebSocket connection');
+    
+    // Handle authentication
+    let userId = null;
+    try {
+      // Check query params for token
+      const url = new URL(req.url || '', 'http://localhost');
+      let token = url.searchParams.get('token');
+      
+      // Also check for Authorization header
+      if (!token && req.headers.authorization) {
+        const authHeader = req.headers.authorization;
+        if (authHeader && authHeader.startsWith('Bearer ')) {
+          token = authHeader.substring(7); // Remove "Bearer " prefix
+        }
+      }
+      
+      if (token) {
+        // Verify the token (user ID)
+        const user = await mongoStorage.getUser(token);
+        if (user) {
+          userId = user.id;
+          console.log(`WebSocket authenticated for user: ${userId}`);
+          
+          // Attach user to WebSocket object for future reference
+          (ws as any).user = user;
+        } else {
+          console.warn('Invalid WebSocket token, user not found');
+          ws.close(1008, 'Authentication failed');
+          return;
+        }
+      } else {
+        console.warn('No token provided for WebSocket connection');
+        // Still allow connection for non-authenticated features
+      }
+    } catch (error) {
+      console.error('WebSocket authentication error:', error);
+    }
 
     ws.on('message', async (data) => {
       try {
         const message = JSON.parse(data.toString());
         
-        if (message.type === 'speech_practice') {
+        // Handle auth messages
+        if (message.type === 'auth') {
+          const token = message.data?.token;
+          if (token) {
+            try {
+              const user = await mongoStorage.getUser(token);
+              if (user) {
+                userId = user.id;
+                (ws as any).user = user;
+                console.log(`WebSocket authenticated via message for user: ${userId}`);
+                
+                // Send confirmation
+                if (ws.readyState === WebSocket.OPEN) {
+                  ws.send(JSON.stringify({
+                    type: 'auth_success',
+                    data: { userId }
+                  }));
+                }
+              }
+            } catch (error) {
+              console.error('WebSocket auth message error:', error);
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'auth_error',
+                  data: { message: 'Authentication failed' }
+                }));
+              }
+            }
+          }
+          return; // Don't process further for auth messages
+        }
+        else if (message.type === 'speech_practice') {
           // Handle real-time speech practice feedback
           ws.send(JSON.stringify({
             type: 'speech_feedback',
