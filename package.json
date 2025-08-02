@@ -48,11 +48,13 @@
     "@radix-ui/react-tooltip": "^1.2.0",
     "@replit/vite-plugin-cartographer": "^0.2.8",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
+    "@tailwindcss/postcss": "^4.1.11",
     "@tailwindcss/typography": "^0.5.15",
     "@tanstack/react-query": "^5.60.5",
     "@types/bcryptjs": "^2.4.6",
     "@types/memoizee": "^0.4.12",
     "@vitejs/plugin-react": "^4.3.2",
+    "autoprefixer": "^10.4.21",
     "bcryptjs": "^3.0.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -78,6 +80,7 @@
     "openid-client": "^6.6.2",
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
+    "postcss": "^8.5.6",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
@@ -93,10 +96,7 @@
     "wouter": "^3.3.5",
     "ws": "^8.18.3",
     "zod": "^3.24.2",
-    "zod-validation-error": "^3.4.0",
-    "autoprefixer": "^10.4.21",
-    "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.17"
+    "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
     "@types/connect-pg-simple": "^7.0.3",
