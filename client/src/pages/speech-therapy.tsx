@@ -53,6 +53,14 @@ export default function SpeechTherapy() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
   
+  // Debug: Log authentication state
+  console.log('SpeechTherapy Auth State:', {
+    user: user ? { id: user.id, userType: user.userType, email: user.email } : null,
+    isAuthenticated,
+    isLoading,
+    authToken: localStorage.getItem('authToken')
+  });
+  
   const [currentSession, setCurrentSession] = useState<SessionData | null>(null);
   const [isAvatarActive, setIsAvatarActive] = useState(true);
   const [avatarMessage, setAvatarMessage] = useState("Welcome! Let's start your speech therapy session. I'm here to help you improve your pronunciation.");
