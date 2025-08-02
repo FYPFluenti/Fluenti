@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { MessageCircle, ArrowLeft } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -14,68 +15,82 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
+  
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      setLocation('/');
+    }
+  }, [isAuthenticated, setLocation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
+    if (isLoading) return; // Prevent double submission
+    
     setIsLoading(true);
     
     try {
-      if (!email || !password) {
+      if (!email?.trim() || !password?.trim()) {
         alert("Please enter both email and password");
         return;
       }
       
+      console.log('Attempting login with email:', email);
+      
       // Authenticate with the server
       const response = await apiRequest('POST', '/api/auth/login', { 
-        email,
-        password
+        email: email.trim(),
+        password: password.trim()
       });
       
       const data = await response.json();
       console.log('Login response:', data);
       
       if (data.success && data.user) {
-        // Store auth token in localStorage for WebSocket connections and API requests
-        if (data.authToken) {
-          localStorage.setItem('authToken', data.authToken);
-        } else {
-          // Fallback to user ID if authToken not provided
-          localStorage.setItem('authToken', data.user.id);
-        }
+        console.log('Login successful, setting up authentication...');
+        
+        // Store auth token in localStorage
+        const authToken = data.authToken || data.user.id;
+        localStorage.setItem('authToken', authToken);
         
         // Trigger storage event to notify useAuth hook
         window.dispatchEvent(new StorageEvent('storage', {
           key: 'authToken',
-          newValue: data.authToken || data.user.id,
+          newValue: authToken,
           oldValue: null
         }));
         
-        // Invalidate queries to refresh user data
+        // Clear and invalidate queries to refresh user data
+        queryClient.clear();
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
-        // Wait a moment for the query to update
-        setTimeout(() => {
-          // Redirect to the appropriate dashboard based on user's actual type from database
-          switch(data.user.userType) {
-            case 'child':
-              setLocation('/child-dashboard');
-              break;
-            case 'adult':
-              setLocation('/adult-dashboard');
-              break;
-            case 'guardian':
-              setLocation('/guardian-dashboard');
-              break;
-            default:
-              setLocation('/');
-          }
-        }, 1000);
+        console.log('Redirecting to dashboard for user type:', data.user.userType);
+        
+        // Redirect based on user type
+        const userType = data.user.userType;
+        switch(userType) {
+          case 'child':
+            setLocation('/child-dashboard');
+            break;
+          case 'adult':
+            setLocation('/adult-dashboard');
+            break;
+          case 'guardian':
+            setLocation('/guardian-dashboard');
+            break;
+          default:
+            setLocation('/adult-dashboard');
+        }
       } else {
+        console.error('Login failed:', data.message);
         alert(data.message || 'Login failed');
       }
     } catch (error) {
       console.error('Login error:', error);
-      alert('Login error: ' + error);
+      alert('Login error: ' + (error instanceof Error ? error.message : error));
     } finally {
       setIsLoading(false);
     }
@@ -141,13 +156,14 @@ export default function Login() {
                       className="fluenti-input"
                     />
                   </div>
-                  <button
+                  <Button
                     type="submit"
                     className="w-full fluenti-button-primary text-lg"
                     disabled={isLoading}
+                    onClick={handleSubmit}
                   >
                     {isLoading ? "Signing In..." : "Sign In"}
-                  </button>
+                  </Button>
                 </div>
               </form>
               <div className="mt-6 text-center text-sm text-gray-600">
