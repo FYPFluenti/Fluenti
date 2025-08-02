@@ -36,7 +36,12 @@ export default function Login() {
       
       if (data.success && data.user) {
         // Store auth token in localStorage for WebSocket connections and API requests
-        localStorage.setItem('authToken', data.user.id);
+        if (data.authToken) {
+          localStorage.setItem('authToken', data.authToken);
+        } else {
+          // Fallback to user ID if authToken not provided
+          localStorage.setItem('authToken', data.user.id);
+        }
         
         // Explicitly notify storage listeners (for useWebSocket)
         const storageEvent = new Event('storage');

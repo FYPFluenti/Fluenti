@@ -53,7 +53,15 @@ export const getQueryFn: <T>(options: {
     // Ensure URL is absolute by prepending API_BASE_URL if it's relative
     const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
     
+    // Include auth token in headers if available
+    const headers: Record<string, string> = {};
+    const authToken = localStorage.getItem('authToken');
+    if (authToken) {
+      headers["Authorization"] = `Bearer ${authToken}`;
+    }
+    
     const res = await fetch(fullUrl, {
+      headers,
       credentials: "include",
     });
 

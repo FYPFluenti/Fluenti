@@ -97,7 +97,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log('User logged in via session:', user.id, user.userType);
         }
         
-        res.json({ success: true, user });
+        // Return user with auth token (user ID can serve as token)
+        res.json({ success: true, user, authToken: user.id });
       } catch (error: any) {
         console.error("Login error:", error.message);
         res.status(401).json({ message: error.message });
@@ -138,7 +139,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         console.log('Sending success response');
-        res.json({ success: true, user });
+        // Return user with auth token (user ID can serve as token)
+        res.json({ success: true, user, authToken: user.id });
       } catch (error: any) {
         console.error("Signup error:", error.message);
         res.status(400).json({ success: false, message: error.message });
@@ -152,6 +154,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         user: req.user,
         isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false
       });
+    });
+    
+    // Logout endpoint
+    app.get('/api/logout', (req, res) => {
+      if (req.session) {
+        req.session.destroy((err) => {
+          if (err) {
+            console.error('Session destruction error:', err);
+          }
+        });
+      }
+      res.json({ success: true, message: 'Logged out successfully' });
     });
   }
 
