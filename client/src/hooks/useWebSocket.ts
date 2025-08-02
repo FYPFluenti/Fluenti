@@ -1,10 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+// Get API base from queryClient configuration
+const API_BASE_URL = import.meta.env.PROD 
+  ? 'https://fluentiai-backend.onrender.com' 
+  : 'http://localhost:3000';
+
+// Convert HTTP URL to WebSocket URL
+const getWebSocketUrl = (url: string) => url.replace('https://', 'wss://').replace('http://', 'ws://');
+
 interface UseWebSocketOptions {
   onMessage?: (data: any) => void;
   onError?: (error: Event) => void;
   onOpen?: () => void;
   onClose?: () => void;
+  allowUnauthenticated?: boolean; // Allow connection without auth token
 }
 
 interface UseWebSocketReturn {
@@ -18,23 +27,69 @@ interface UseWebSocketReturn {
 export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketReturn {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const { onMessage, onError, onOpen, onClose } = options;
+  const [authToken, setAuthToken] = useState<string | null>(localStorage.getItem('authToken'));
+  const { onMessage, onError, onOpen, onClose, allowUnauthenticated } = options;
   
   const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
   const reconnectInterval = useRef<NodeJS.Timeout>();
 
+  // Set up localStorage event listener to detect auth changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const newToken = localStorage.getItem('authToken');
+      setAuthToken(newToken);
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Check token periodically
+    const tokenCheckInterval = setInterval(() => {
+      const currentToken = localStorage.getItem('authToken');
+      if (currentToken !== authToken) {
+        setAuthToken(currentToken);
+      }
+    }, 3000);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(tokenCheckInterval);
+    };
+  }, [authToken]);
+  
+  // Reconnect when auth token changes
+  useEffect(() => {
+    if (socket) {
+      // Disconnect and reconnect when auth token changes
+      console.log('Auth token changed, reconnecting WebSocket');
+      disconnect();
+      connect();
+    }
+  }, [authToken]);
+
   const connect = useCallback(() => {
     try {
-      // Configure WebSocket URL based on environment
-      let wsUrl: string;
-      if (import.meta.env.PROD) {
-        // Production: connect to your deployed backend
-        wsUrl = 'wss://fluentiai-backend.onrender.com/ws';
-      } else {
-        // Development: connect to local backend
-        wsUrl = 'ws://localhost:3000/ws';
+      // Get auth token from localStorage
+      const token = localStorage.getItem('authToken');
+      
+      // Check if we should allow unauthenticated connections
+      if (!token && !options.allowUnauthenticated) {
+        console.log('No auth token available and unauthenticated connections not allowed');
+        return;
       }
+      
+      // Use consistent API base URL and convert to WebSocket protocol
+      const WS_BASE = getWebSocketUrl(API_BASE_URL);
+      
+      // Add authentication token to WebSocket connection if available
+      let wsUrl = `${WS_BASE}/ws`;
+      
+      // Add token as query parameter if available
+      if (token) {
+        wsUrl += `?token=${encodeURIComponent(token)}`;
+      }
+      
+      console.log('Connecting to WebSocket:', wsUrl);
       
       const ws = new WebSocket(wsUrl);
 
@@ -56,11 +111,18 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
+        // Log additional connection details for debugging
+        console.log('WebSocket connection details:', {
+          url: wsUrl,
+          readyState: ws.readyState,
+          protocol: ws.protocol,
+          isSecure: wsUrl.startsWith('wss:')
+        });
         onError?.(error);
       };
 
-      ws.onclose = () => {
-        console.log('WebSocket disconnected');
+      ws.onclose = (event) => {
+        console.log(`WebSocket disconnected (Code: ${event.code}, Reason: ${event.reason || 'No reason provided'})`);
         setIsConnected(false);
         setSocket(null);
         onClose?.();
@@ -102,12 +164,37 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
   }, [socket]);
 
   useEffect(() => {
-    connect();
-
+    // Check if token exists before connecting
+    const token = localStorage.getItem('authToken');
+    
+    // Only attempt connection if we're authenticated or if this is a public WebSocket
+    if (token || options.allowUnauthenticated) {
+      connect();
+    } else {
+      console.log('WebSocket connection deferred - no authentication token available');
+    }
+    
+    // Listen for storage events to reconnect when auth changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'authToken') {
+        if (e.newValue) {
+          // Token was added/changed - reconnect
+          disconnect();
+          connect();
+        } else {
+          // Token was removed - disconnect
+          disconnect();
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
     return () => {
+      window.removeEventListener('storage', handleStorageChange);
       disconnect();
     };
-  }, [connect, disconnect]);
+  }, [connect, disconnect, options.allowUnauthenticated]);
 
   return {
     socket,

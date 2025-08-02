@@ -25,6 +25,9 @@ export function useAuth() {
       // Clear query cache
       queryClient.clear();
       
+      // Remove the authToken specifically
+      localStorage.removeItem('authToken');
+      
       // Clear local storage
       localStorage.clear();
       sessionStorage.clear();

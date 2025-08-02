@@ -35,6 +35,9 @@ export default function Login() {
       console.log('Login response:', data);
       
       if (data.success && data.user) {
+        // Store auth token in localStorage for WebSocket connections
+        localStorage.setItem('authToken', data.user.id);
+        
         // Invalidate queries to refresh user data
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         

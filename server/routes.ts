@@ -296,8 +296,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // WebSocket server for real-time features
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
-  wss.on('connection', (ws: WebSocket) => {
+  wss.on('connection', async (ws: WebSocket, req) => {
     console.log('New WebSocket connection');
+    
+    // Handle authentication
+    let userId = null;
+    try {
+      const url = new URL(req.url || '', 'http://localhost');
+      const token = url.searchParams.get('token');
+      
+      if (token) {
+        // Verify the token (user ID)
+        const user = await mongoStorage.getUser(token);
+        if (user) {
+          userId = user.id;
+          console.log(`WebSocket authenticated for user: ${userId}`);
+        } else {
+          console.warn('Invalid WebSocket token, user not found');
+          ws.close(1008, 'Authentication failed');
+          return;
+        }
+      } else {
+        console.warn('No token provided for WebSocket connection');
+      }
+    } catch (error) {
+      console.error('WebSocket authentication error:', error);
+    }
 
     ws.on('message', async (data) => {
       try {
