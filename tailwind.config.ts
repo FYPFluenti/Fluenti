@@ -2,16 +2,15 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: "class",
-  content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
-  theme: {
+content: [
+  "./client/index.html",
+  "./client/src/**/*.{js,jsx,ts,tsx}"
+],  theme: {
     extend: {
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
-      },
-      fontFamily: {
-        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       colors: {
         background: "var(--background)",
@@ -44,7 +43,7 @@ export default {
           DEFAULT: "var(--destructive)",
           foreground: "var(--destructive-foreground)",
         },
-        border: "var(--border)",
+        border: "var(--border)", // Existing border color
         input: "var(--input)",
         ring: "var(--ring)",
         chart: {
