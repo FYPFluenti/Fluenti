@@ -1,36 +1,28 @@
-import { Button } from '@/components/ui/button';
 import { LogOut } from 'lucide-react';
 import { useLocation } from 'wouter';
 
 interface LogoutButtonProps {
   className?: string;
-  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
-  size?: "default" | "sm" | "lg" | "icon";
   children?: React.ReactNode;
 }
 
 export function LogoutButton({ 
-  className, 
-  variant = "outline", 
-  size = "sm",
+  className = "", 
   children 
 }: LogoutButtonProps) {
   const [, setLocation] = useLocation();
 
   const handleLogout = () => {
-    // Navigate to the logout page which will handle the logout process
-    setLocation('/logout');
+    setLocation('/logout'); // redirect to logout
   };
 
   return (
-    <Button
+    <button
       onClick={handleLogout}
-      variant={variant}
-      size={size}
-      className={className}
+      className={`w-full px-4 py-3 text-sm text-left text-[#111] font-medium flex items-center gap-2 hover:bg-gray-100 transition ${className}`}
     >
-      <LogOut className="h-4 w-4 mr-2" />
-      {children || "Logout"}
-    </Button>
+      <LogOut className="w-4 h-4" />
+      {children || "log out"}
+    </button>
   );
 }
