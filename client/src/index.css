@@ -75,25 +75,25 @@
 }
 
 .dark {
-  --background: hsl(240, 10%, 3.9%);
-  --foreground: hsl(0, 0%, 98%);
-  --muted: hsl(240, 3.7%, 15.9%);
-  --muted-foreground: hsl(240, 5%, 64.9%);
-  --popover: hsl(240, 10%, 3.9%);
-  --popover-foreground: hsl(0, 0%, 98%);
-  --card: hsl(240, 10%, 3.9%);
+  --background: hsl(240, 6%, 18%);                /* soft deep grey */
+  --foreground: hsl(0, 0%, 96%);                  /* near-white text */
+  --muted: hsl(240, 5%, 26%);
+  --muted-foreground: hsl(240, 5%, 78%);
+  --popover: hsl(240, 6%, 20%);
+  --popover-foreground: hsl(0, 0%, 96%);
+  --card: hsl(240, 6%, 22%);
   --card-foreground: hsl(0, 0%, 98%);
-  --border: hsl(240, 3.7%, 15.9%);
-  --input: hsl(240, 3.7%, 15.9%);
-  --primary: hsl(207, 90%, 54%);
-  --primary-foreground: hsl(211, 100%, 99%);
-  --secondary: hsl(240, 3.7%, 15.9%);
-  --secondary-foreground: hsl(0, 0%, 98%);
-  --accent: hsl(240, 3.7%, 15.9%);
+  --border: hsl(240, 5%, 30%);
+  --input: hsl(240, 5%, 30%);
+  --primary: hsl(27, 95%, 61%);                   /* warm soft orange */
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(240, 5%, 26%);
+  --secondary-foreground: hsl(0, 0%, 95%);
+  --accent: hsl(240, 5%, 34%);
   --accent-foreground: hsl(0, 0%, 98%);
-  --destructive: hsl(0, 62.8%, 30.6%);
-  --destructive-foreground: hsl(0, 0%, 98%);
-  --ring: hsl(240, 4.9%, 83.9%);
+  --destructive: hsl(0, 63%, 52%);
+  --destructive-foreground: hsl(0, 0%, 100%);
+  --ring: hsl(240, 4.9%, 78%);
   --radius: 0.5rem;
 }
 
@@ -454,3 +454,78 @@
 .speech-wave-bar:nth-child(3) { animation-delay: 0.2s; }
 .speech-wave-bar:nth-child(4) { animation-delay: 0.3s; }
 .speech-wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+/* Custom Fluenti animations and styles */
+.fluenti-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.fluenti-pulse {
+  animation: pulse 2s infinite;
+}
+
+.fluenti-card {
+  @apply rounded-xl shadow-lg border border-gray-100 transition-all duration-300;
+}
+
+.fluenti-card-interactive {
+  @apply hover:scale-105 hover:shadow-xl cursor-pointer;
+}
+
+.fluenti-gradient-warm {
+  @apply bg-gradient-to-r from-pink-500 to-purple-600;
+}
+
+.text-gradient-warm {
+  @apply bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent;
+}
+
+.fluenti-button-primary {
+  @apply bg-gradient-to-r from-blue-500 to-purple-600 text-white font-bold rounded-lg px-6 py-3 hover:from-blue-600 hover:to-purple-700 transition-all duration-300 flex items-center justify-center;
+}
+
+.fluenti-button-outline {
+  @apply border-2 bg-transparent font-medium rounded-lg px-4 py-2 transition-all duration-300;
+}
+
+.hover-lift {
+  @apply hover:transform hover:-translate-y-1 transition-transform duration-300;
+}
+
+.animate-bounce-gentle {
+  animation: bounce-gentle 3s ease-in-out infinite;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.8s ease-out forwards;
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.animate-fade-in {
+  animation: fade-in 1s ease-out forwards;
+  opacity: 0;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+}
+
+@keyframes bounce-gentle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes slide-up {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  to {
+    opacity: 1;
+  }
+}
