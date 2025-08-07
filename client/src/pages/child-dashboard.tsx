@@ -18,6 +18,8 @@ export default function ChildDashboard() {
     isAuthenticated: boolean;
   };
   const [, setLocation] = useLocation();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
 
   const therapyRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
@@ -80,11 +82,11 @@ export default function ChildDashboard() {
 
             {hovered === id && (
               <motion.div
-               initial={{ opacity: 0, x: 5 }}
-    animate={{ opacity: 1, x: 10 }}
-    exit={{ opacity: 0, x: 5 }}
-    className="absolute left-[52px] top-1/2 -translate-y-1/2 bg-white text-sm font-medium text-[#111] px-3 py-[6px] rounded-full shadow-md border border-gray-200 whitespace-nowrap z-10"
-  >
+              initial={{ opacity: 0, x: 5 }}
+      animate={{ opacity: 1, x: 12 }}
+      exit={{ opacity: 0, x: 5 }}
+      className="absolute left-12 bottom-0 bg-white text-base font-semibold text-[#111] px-4 py-2 rounded-lg shadow-md border border-gray-100 z-10 w-30 space-y-1"
+    >
     {label}
               </motion.div>
             )}
@@ -95,33 +97,32 @@ export default function ChildDashboard() {
         <div className="flex-1" />
 
         {/* User Avatar + Popover */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <button
-              className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition"
-              onMouseEnter={() => setHovered("user")}
-              onMouseLeave={() => setHovered(null)}
-            >
-              <User className="w-6 h-6 text-gray-800" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            align="end"
-            side="right"
-            sideOffset={8}
-            className="w-44 bg-white border border-gray-200 rounded-xl shadow-md p-0"
-          >
-            <button
-              onClick={() => setLocation("/settings")}
-              className="w-full px-4 py-3 text-sm flex items-center gap-2 hover:bg-gray-100"
-            >
-              <Settings className="w-4 h-4" />
-              <span className="text-[#111] font-medium">settings</span>
-            </button>
-            <div className="border-t border-gray-200" />
-            <LogoutButton className="w-full px-4 py-3 text-sm text-left hover:bg-gray-100 text-[#111] font-medium flex items-center gap-2" />
-          </PopoverContent>
-        </Popover>
+        <div
+  className="relative"
+  onMouseEnter={() => setShowUserMenu(true)}
+  onMouseLeave={() => setShowUserMenu(false)}
+>
+  <button
+    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition"
+  >
+    <User className="w-6 h-6 text-gray-800" />
+  </button>
+
+  {showUserMenu && (
+    <div className="absolute left-12 bottom-0 w-44 bg-white border border-gray-200 rounded-xl shadow-md p-2 z-50">
+      <button
+        onClick={() => setLocation("/settings")}
+        className="w-full px-4 py-2 text-sm flex items-center gap-2 hover:bg-gray-100 rounded-md"
+      >
+        <Settings className="w-4 h-4" />
+        <span className="text-[#111] font-medium">settings</span>
+      </button>
+      <div className="border-t border-gray-200 my-1" />
+      <LogoutButton className="w-full px-4 py-2 text-sm text-left hover:bg-gray-100 text-[#111] font-medium flex items-center gap-2 rounded-md" />
+    </div>
+  )}
+</div>
+
       </aside>
 
       {/* Main Content */}
