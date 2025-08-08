@@ -101,18 +101,20 @@ export default function ChildDashboard() {
       <main className="ml-20 px-6 pb-24 w-full">
         <header className="flex justify-between items-center py-6 ">
           <div />
-          <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-semibold">Dark Mode</span>
-            <DarkModeToggle />
-            <button
-  onClick={() => setShowPreferences(!showPreferences)}
-  className="p-2 rounded-full hover:bg-muted transition"
->
-  <SlidersHorizontal className="w-6 h-6 text-foreground" />
-</button>
+          <div className="flex items-center gap-6">
+  <div className="flex items-center gap-2">
+    <span className="text-lg font-semibold">Dark Mode</span>
+    <DarkModeToggle />
+  </div>
+  <button
+    onClick={() => setShowPreferences(!showPreferences)}
+    className="p-2 rounded-full hover:bg-muted transition"
+  >
+    <SlidersHorizontal className="w-6 h-6 text-foreground" />
+  </button>
 </div>
-          </div>
+
+         
         </header>
 
         <section ref={therapyRef} className="text-center py-10">
@@ -161,7 +163,7 @@ export default function ChildDashboard() {
           <h4 className="text-sm font-medium">Language</h4>
           <p className="text-xs text-muted-foreground">Conversation only</p>
         </div>
-        <select className="bg-transparent border border-border rounded-md px-3 py-1 text-sm text-foreground">
+        <select className="bg-card text-foreground border border-border rounded-md px-3 py-1 text-sm font-dm-sans focus:outline-none focus:ring-2 focus:ring-primary">
           <option value="en">English</option>
           <option value="ur">Urdu</option>
         </select>

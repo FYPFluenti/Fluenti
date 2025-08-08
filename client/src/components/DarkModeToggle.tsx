@@ -3,8 +3,11 @@ import { useEffect, useState } from "react";
 export default function DarkModeToggle() {
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.theme === "dark" ||
-        (!("theme" in localStorage) && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      return (
+        localStorage.theme === "dark" ||
+        (!("theme" in localStorage) &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches)
+      );
     }
     return false;
   });
@@ -28,10 +31,10 @@ export default function DarkModeToggle() {
         onChange={() => setIsDark(!isDark)}
         className="sr-only"
       />
-      <div className="relative w-10 h-5 bg-gray-300 dark:bg-gray-600 rounded-full transition">
+      <div className="relative !w-16 !h-9 bg-gray-300 dark:bg-gray-600 rounded-full transition">
         <div
-          className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition transform ${
-            isDark ? "translate-x-5" : ""
+          className={`absolute top-1 left-1 !w-7 !h-7 rounded-full bg-white transition-transform ${
+            isDark ? "translate-x-7" : ""
           }`}
         />
       </div>
