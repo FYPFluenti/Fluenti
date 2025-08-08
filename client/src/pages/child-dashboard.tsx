@@ -1,7 +1,7 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { Gamepad2, LineChart, Smile, User, Settings } from "lucide-react";
+import { Gamepad2, LineChart, Smile, User, Settings, SlidersHorizontal, Lock, ArrowRight } from "lucide-react";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { motion } from "framer-motion";
 import DarkModeToggle from "@/components/DarkModeToggle";
@@ -19,6 +19,10 @@ export default function ChildDashboard() {
   };
   const [, setLocation] = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showPreferences, setShowPreferences] = useState(false);
+
+  
+
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
   const therapyRef = useRef<HTMLDivElement>(null);
@@ -61,7 +65,7 @@ export default function ChildDashboard() {
         {[{ ref: therapyRef, icon: Gamepad2, label: "Games", id: "Games" }, { ref: progressRef, icon: LineChart, label: "Progress", id: "progress" }, { ref: motivationRef, icon: Smile, label: "Motivation", id: "motivation" }].map(({ ref, icon: Icon, label, id }) => (
           <div key={id} onMouseEnter={() => setHovered(id)} onMouseLeave={() => setHovered(null)} className="relative group">
             <button onClick={() => scrollToRef(ref)} className={`w-10 h-10 flex items-center justify-center rounded-xl transition ${hovered === id ? "bg-muted" : ""}`}>
-              <Icon className="text-foreground" size={22} />
+              <Icon className="text-foreground w-7 h-7" />
             </button>
 
             {hovered === id && (
@@ -77,17 +81,17 @@ export default function ChildDashboard() {
 
         <div className="relative" onMouseEnter={() => { if (hideTimer.current) clearTimeout(hideTimer.current); setShowUserMenu(true); }} onMouseLeave={() => { hideTimer.current = setTimeout(() => setShowUserMenu(false), 200); }}>
           <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition">
-            <User className="w-6 h-6 text-foreground" />
+            <User className="w-7 h-7 text-foreground" />
           </button>
 
           {showUserMenu && (
             <div className="absolute left-12 bottom-0 w-48 bg-popover border border-border rounded-xl shadow-lg p-4 z-50 space-y-2">
-              <button onClick={() => setLocation("/settings")} className="w-full px-5 py-3 text-sm flex items-center gap-3 hover:bg-muted rounded-lg">
+             <button onClick={() => setLocation("/settings")} className="w-full px-5 py-3 text-sm flex items-center gap-3 hover:bg-muted hover:brightness-90 rounded-lg">
                 <Settings className="w-5 h-5" />
-                <span className="text-foreground font-medium">Settings</span>
+                <span className=" text-foreground font-medium">Settings</span>
               </button>
               <div className="border-t border-border my-1" />
-              <LogoutButton className="w-full px-5 py-3 text-base text-left hover:bg-muted text-foreground font-medium flex items-center gap-3 rounded-lg" />
+              <LogoutButton className="w-full px-5 py-3 text-base text-left hover:bg-muted hover:brightness-90 text-foreground font-medium flex items-center gap-3 rounded-lg" />
             </div>
           )}
         </div>
@@ -95,61 +99,87 @@ export default function ChildDashboard() {
 
       {/* Main Content */}
       <main className="ml-20 px-6 pb-24 w-full">
-        <header className="flex justify-between items-center py-6">
+        <header className="flex justify-between items-center py-6 ">
           <div />
           <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-lg font-semibold">Dark Mode</span>
             <DarkModeToggle />
-            <span className="bg-muted text-foreground px-4 py-1 rounded-full text-sm font-medium">
-              Hi {(user as any)?.firstName}
-            </span>
-            <LogoutButton />
+            <button
+  onClick={() => setShowPreferences(!showPreferences)}
+  className="p-2 rounded-full hover:bg-muted transition"
+>
+  <SlidersHorizontal className="w-6 h-6 text-foreground" />
+</button>
+</div>
           </div>
         </header>
 
         <section ref={therapyRef} className="text-center py-10">
           <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="max-w-xl mx-auto">
-            <h2 className="text-2xl font-bold mb-4">🎮 Gamified Speech Therapy</h2>
-            <p className="text-muted-foreground mb-6">Play, speak, and grow through interactive word games.</p>
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
-              <div className="bg-card text-card-foreground shadow rounded-xl px-6 py-5 text-left border border-border">
-                <h3 className="font-semibold">Word Match</h3>
-                <p className="text-sm text-muted-foreground">Match spoken words to correct visuals.</p>
-              </div>
-              <div className="bg-card text-card-foreground shadow rounded-xl px-6 py-5 text-left border border-border">
-                <h3 className="font-semibold">Say It Fast</h3>
-                <p className="text-sm text-muted-foreground">Speed practice with tongue twisters.</p>
-              </div>
+            <iframe
+              src="https://your-avatar-url.readyplayer.me/avatar"
+              allow="camera *; microphone *"
+              className="mx-auto w-40 h-40 sm:w-48 sm:h-48 rounded-full mb-8"
+              title="AI Avatar"
+            />
+            <h2 className="text-2xl font-bold mb-4">Feeling stuck?</h2>
+            <div className="space-y-3">
+              <button className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all">
+                <div>
+                  <h3 className="text-base font-semibold">voice mode</h3>
+                  <p className="text-sm text-muted-foreground">Say Hi to Your Avatar</p>
+                </div>
+                <ArrowRight className="w-5 h-5" />
+              </button>
+              <button className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all">
+                <div>
+                  <h3 className="text-base font-semibold">text mode</h3>
+                  <p className="text-sm text-muted-foreground">Need a break from talking?</p>
+                </div>
+                <ArrowRight className="w-5 h-5" />
+              </button>
             </div>
           </motion.div>
         </section>
+{/* Preferences Modal (triggered on preferences button click) */}
+{showPreferences && (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.95 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.95 }}
+    className="fixed top-20 right-10 w-[360px] bg-popover border border-border rounded-xl shadow-xl p-6 space-y-4 z-50"
+  >
+    <div>
+      <h3 className="text-lg font-semibold">Preferences</h3>
+      <p className="text-sm text-muted-foreground">Set how the assistant works for you</p>
+    </div>
 
-        <section ref={progressRef} className="text-center py-10">
-          <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="max-w-xl mx-auto">
-            <h2 className="text-2xl font-bold mb-4">📊 Progress Tracking</h2>
-            <p className="text-muted-foreground mb-6">See how far you've come on your fluency journey.</p>
-            <div className="flex justify-center gap-6">
-              <div className="bg-card text-card-foreground border border-border px-6 py-4 rounded-lg shadow text-center w-40">
-                <p className="text-sm text-muted-foreground">Words</p>
-                <p className="text-xl font-bold text-[#ff6b1d]">73</p>
-              </div>
-              <div className="bg-card text-card-foreground border border-border px-6 py-4 rounded-lg shadow text-center w-40">
-                <p className="text-sm text-muted-foreground">Sessions</p>
-                <p className="text-xl font-bold text-[#ff6b1d]">18</p>
-              </div>
-            </div>
-          </motion.div>
-        </section>
+    <div className="pt-4 border-t border-border space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="text-sm font-medium">Language</h4>
+          <p className="text-xs text-muted-foreground">Conversation only</p>
+        </div>
+        <select className="bg-transparent border border-border rounded-md px-3 py-1 text-sm text-foreground">
+          <option value="en">English</option>
+          <option value="ur">Urdu</option>
+        </select>
+      </div>
 
-        <section ref={motivationRef} className="text-center py-10">
-          <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="max-w-xl mx-auto">
-            <h2 className="text-2xl font-bold mb-4">🤖 Motivational AI Avatar</h2>
-            <p className="text-muted-foreground mb-6">Your friendly companion is here to cheer you on.</p>
-            <div className="bg-card text-card-foreground px-8 py-6 rounded-xl shadow border border-border">
-              <p className="text-lg font-semibold">"You’re doing amazing, keep it up!"</p>
-              <p className="text-muted-foreground mt-2">— Ava, your Fluency Buddy</p>
-            </div>
-          </motion.div>
-        </section>
+    </div>
+  </motion.div>
+)}
+
+{/* Preferences Button */}
+<button
+  onClick={() => setShowPreferences(!showPreferences)}
+  className="p-2 rounded-full hover:bg-muted transition fixed top-6 right-6 z-50"
+>
+  <SlidersHorizontal className="w-6 h-6 text-foreground" />
+</button>
+
+      
       </main>
     </div>
   );
