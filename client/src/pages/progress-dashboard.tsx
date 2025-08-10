@@ -1,35 +1,19 @@
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import { isUnauthorizedError } from "@/lib/authUtils";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { ProgressChart } from "@/components/progress/progress-chart";
-import { Achievements } from "@/components/gamification/achievements";
-import { RoleBasedComponent, UserTypeGuard } from "@/components/auth/RoleBasedComponent";
-import { Link, useLocation } from "wouter";
-import { 
-  MessageCircle, 
-  Home, 
-  ArrowLeft, 
-  BarChart3,
-  Trophy,
-  Clock,
-  Target,
-  TrendingUp,
-  Calendar,
-  Download,
-  Share,
-  CalendarPlus,
-  Star,
-  Flame,
-  Award,
-  Users,
-  Eye
+import {
+  Gamepad2,
+  LineChart,
+  Smile,
+  SlidersHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  ArrowRight,
 } from "lucide-react";
+import DarkModeToggle from "@/components/DarkModeToggle";
 
+/* ---------- Types ---------- */
 interface UserProgress {
   overallAccuracy: number;
   sessionsCompleted: number;
@@ -39,7 +23,6 @@ interface UserProgress {
   achievements: string[];
   level: number;
 }
-
 interface SessionData {
   id: string;
   sessionType: string;
@@ -49,380 +32,180 @@ interface SessionData {
 }
 
 export default function ProgressDashboard() {
-  const { toast } = useToast();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
-  // Check authentication
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      setLocation('/login');
-      return;
-    }
-  }, [isAuthenticated, isLoading, setLocation]);
-
-  // Show loading while checking authentication
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-blue-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render anything if not authenticated (will redirect)
-  if (!isAuthenticated) {
-    return null;
-  }
-
-  // Fetch user progress
-  const { data: progressData, isLoading: progressLoading, error } = useQuery({
-    queryKey: ['/api/speech/progress'],
+  const { data: progressData, isLoading: progressLoading, error } = useQuery<{
+    progress: UserProgress;
+    recentSessions: SessionData[];
+    messageCount: number;
+  }>({
+    queryKey: ["/api/speech/progress"],
+    queryFn: async () => {
+      await new Promise((res) => setTimeout(res, 300));
+      return {
+        progress: {
+          overallAccuracy: 88,
+          sessionsCompleted: 4,
+          totalPracticeTime: 120,
+          currentStreak: 5,
+          longestStreak: 10,
+          achievements: ["First Session", "Accuracy 80%"],
+          level: 2,
+        },
+        recentSessions: [
+          {
+            id: "abc123",
+            sessionType: "practice",
+            accuracyScore: 90,
+            wordsCompleted: 20,
+            createdAt: "2024-08-10T12:00:00Z",
+          },
+        ],
+        messageCount: 4,
+      };
+    },
     enabled: !!isAuthenticated,
     retry: false,
   });
 
-  if (progressLoading) {
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) setLocation("/login");
+  }, [isLoading, isAuthenticated, setLocation]);
+
+  if (isLoading || progressLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading progress data...</p>
-        </div>
+      <div className="flex items-center justify-center h-screen text-foreground">
+        Loading…
+      </div>
+    );
+  }
+  if (!isAuthenticated) return null;
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-screen text-red-500">
+        Failed to load progress data.
       </div>
     );
   }
 
-  if (!isAuthenticated || !user) {
-    return null;
-  }
-
-  const progress = (progressData as any)?.progress || {
-    overallAccuracy: 0,
-    sessionsCompleted: 0,
-    totalPracticeTime: 0,
-    currentStreak: 0,
-    longestStreak: 0,
-    achievements: [],
-    level: 1
-  };
-
-  const recentSessions = (progressData as any)?.recentSessions || [];
-
-  // Format time
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`;
-    }
-    return `${minutes}m`;
-  };
-
-  // Sample weekly data for chart
-  const weeklyData = [
-    { day: 'Mon', accuracy: 85, sessions: 2 },
-    { day: 'Tue', accuracy: 92, sessions: 1 },
-    { day: 'Wed', accuracy: 88, sessions: 3 },
-    { day: 'Thu', accuracy: 95, sessions: 2 },
-    { day: 'Fri', accuracy: 90, sessions: 1 },
-    { day: 'Sat', accuracy: 87, sessions: 2 },
-    { day: 'Sun', accuracy: 93, sessions: 1 }
-  ];
-
-  const achievements = [
-    {
-      id: 'perfect_score',
-      title: 'Perfect Pronunciation',
-      description: 'Achieved 100% accuracy on 5 words',
-      icon: Star,
-      color: 'bg-yellow-500',
-      date: 'Today'
-    },
-    {
-      id: 'speed_demon',
-      title: 'Speed Demon',
-      description: 'Completed session in record time',
-      icon: Clock,
-      color: 'bg-blue-500',
-      date: 'Yesterday'
-    },
-    {
-      id: 'week_warrior',
-      title: 'Week Warrior',
-      description: '7 consecutive days of practice',
-      icon: Flame,
-      color: 'bg-red-500',
-      date: 'Today'
-    }
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
-      {/* Floating Elements */}
-      <div className="absolute top-10 left-10 w-16 h-16 bg-blue-300/20 rounded-full fluenti-float"></div>
-      <div className="absolute top-20 right-20 w-12 h-12 bg-indigo-300/20 rounded-full fluenti-float" style={{animationDelay: '1s'}}></div>
-      <div className="absolute bottom-20 left-1/4 w-20 h-20 bg-purple-300/20 rounded-full fluenti-float" style={{animationDelay: '2s'}}></div>
-      
-      {/* Header */}
-      <header className="bg-white/90 backdrop-blur-sm shadow-sm border-b border-indigo-100 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Link href="/">
-                <button type="button" className="fluenti-button-outline mr-2 p-2 hover-lift" aria-label="Go back to home">
-                  <ArrowLeft className="h-4 w-4" />
-                </button>
-              </Link>
-              <div className="flex items-center space-x-2 hover-lift">
-                <div className="w-10 h-10 fluenti-gradient-primary rounded-xl flex items-center justify-center shadow-lg fluenti-pulse">
-                  <BarChart3 className="text-white text-lg" />
-                </div>
-                <div>
-                  <span className="text-2xl font-bold text-gradient-primary">Fluenti</span>
-                  <p className="text-sm text-gray-600 font-medium">Progress Dashboard</p>
-                </div>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <Link href="/">
-                <button className="fluenti-button-outline flex items-center space-x-2 hover-lift">
-                  <Home className="h-4 w-4" />
-                  <span>Home</span>
-                </button>
-              </Link>
+    <div className="min-h-screen bg-background text-foreground flex">
+      {/* Sidebar (unchanged) */}
+      <aside className="w-20 bg-background flex flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-40 border-r border-border">
+        <div className="w-6 h-6 rounded-full bg-orange-400" />
+        {[
+          { icon: Gamepad2, label: "Games", path: "/speech-therapy", id: "Games" },
+          { icon: LineChart, label: "Progress", path: "/progress-dashboard", id: "progress" },
+          { icon: Smile, label: "Motivation", path: "/child-dashboard#motivation", id: "motivation" },
+        ].map(({ icon: Icon, label, path, id }) => (
+          <div key={id} className="relative group">
+            <button
+              onClick={() => setLocation(path)}
+              className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-muted transition"
+              aria-label={label}
+            >
+              <Icon className="w-6 h-6" />
+            </button>
+            <div className="pointer-events-none absolute left-[38px] bottom-0 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-3 transition bg-popover text-popover-foreground text-sm font-medium px-3 py-1 rounded-lg border border-border shadow">
+              {label}
             </div>
           </div>
-        </div>
-      </header>
+        ))}
+      </aside>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header Section */}
-        <Card className="fluenti-card mb-8 bg-gradient-to-r from-primary to-secondary text-white">
-          <CardContent className="p-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold mb-2">
-                  {(user as any)?.firstName || 'User'}'s Progress Dashboard
-                </h1>
-                <p className="opacity-90">
-                  Last session: {recentSessions.length > 0 
-                    ? new Date(recentSessions[0]?.createdAt).toLocaleDateString()
-                    : 'No sessions yet'
-                  }
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="text-4xl font-bold">
-                  {Math.max(1, Math.floor((Date.now() - new Date((user as any)?.createdAt || Date.now()).getTime()) / (1000 * 60 * 60 * 24)))}
-                </div>
-                <div className="opacity-90">Days Active</div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Stats Grid */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
-          <Card className="fluenti-card text-center">
-            <CardContent className="p-6">
-              <div className="w-12 h-12 bg-primary rounded-lg mx-auto mb-4 flex items-center justify-center">
-                <TrendingUp className="text-white" />
-              </div>
-              <div className="text-3xl font-bold text-primary mb-1">
-                {Math.round(progress.overallAccuracy)}%
-              </div>
-              <div className="text-sm text-gray-600">Overall Accuracy</div>
-            </CardContent>
-          </Card>
-
-          <Card className="fluenti-card text-center">
-            <CardContent className="p-6">
-              <div className="w-12 h-12 bg-secondary rounded-lg mx-auto mb-4 flex items-center justify-center">
-                <Clock className="text-white" />
-              </div>
-              <div className="text-3xl font-bold text-secondary mb-1">
-                {formatTime(progress.totalPracticeTime)}
-              </div>
-              <div className="text-sm text-gray-600">Practice Time</div>
-            </CardContent>
-          </Card>
-
-          <Card className="fluenti-card text-center">
-            <CardContent className="p-6">
-              <div className="w-12 h-12 bg-accent rounded-lg mx-auto mb-4 flex items-center justify-center">
-                <Trophy className="text-white" />
-              </div>
-              <div className="text-3xl font-bold text-accent mb-1">
-                {progress.achievements.length}
-              </div>
-              <div className="text-sm text-gray-600">Achievements</div>
-            </CardContent>
-          </Card>
-
-          <Card className="fluenti-card text-center">
-            <CardContent className="p-6">
-              <div className="w-12 h-12 bg-red-500 rounded-lg mx-auto mb-4 flex items-center justify-center">
-                <Flame className="text-white" />
-              </div>
-              <div className="text-3xl font-bold text-red-500 mb-1">
-                {progress.currentStreak}
-              </div>
-              <div className="text-sm text-gray-600">Day Streak</div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid lg:grid-cols-2 gap-8 mb-8">
-          {/* Progress Chart */}
-          <Card className="fluenti-card">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <BarChart3 className="text-primary" />
-                <span>Weekly Progress</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ProgressChart data={weeklyData} />
-            </CardContent>
-          </Card>
-
-          {/* Recent Achievements */}
-          <Card className="fluenti-card">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Trophy className="text-accent" />
-                <span>Recent Achievements</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {achievements.map((achievement) => (
-                <div key={achievement.id} className="flex items-center space-x-3 bg-white rounded-lg p-3 border">
-                  <div className={`w-10 h-10 ${achievement.color} rounded-full flex items-center justify-center`}>
-                    <achievement.icon className="h-5 w-5 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-gray-900">{achievement.title}</div>
-                    <div className="text-sm text-gray-600">{achievement.description}</div>
-                  </div>
-                  <span className="text-xs text-gray-500">{achievement.date}</span>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Session History & Goals */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Session History */}
-          <Card className="fluenti-card lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Calendar className="text-secondary" />
-                <span>Recent Sessions</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {recentSessions.length > 0 ? (
-                <div className="space-y-3">
-                  {recentSessions.slice(0, 5).map((session: SessionData) => (
-                    <div key={session.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
-                          <Target className="h-4 w-4 text-white" />
-                        </div>
-                        <div>
-                          <div className="font-medium text-gray-900 capitalize">
-                            {session.sessionType} Session
-                          </div>
-                          <div className="text-sm text-gray-600">
-                            {new Date(session.createdAt).toLocaleDateString()}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium text-secondary">
-                          {Math.round(session.accuracyScore || 0)}%
-                        </div>
-                        <div className="text-sm text-gray-600">
-                          {session.wordsCompleted} words
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Target className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No sessions completed yet</p>
-                  <p className="text-sm">Start your first speech therapy session!</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Goals & Actions */}
-          <div className="space-y-6">
-            {/* Current Goals */}
-            <Card className="fluenti-card">
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Target className="text-primary" />
-                  <span>Current Goals</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Weekly Sessions</span>
-                  <Badge variant="outline">3/5</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Accuracy Goal</span>
-                  <Badge variant="outline">85%+</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-600">Practice Streak</span>
-                  <Badge variant="outline">{progress.currentStreak} days</Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card className="fluenti-card">
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button className="w-full fluenti-button-primary text-sm" asChild>
-                  <Link href="/speech-therapy">
-                    <Target className="mr-2 h-4 w-4" />
-                    Practice Now
-                  </Link>
-                </Button>
-                
-                <Button variant="outline" className="w-full text-sm">
-                  <Download className="mr-2 h-4 w-4" />
-                  Download Report
-                </Button>
-                
-                <Button variant="outline" className="w-full text-sm">
-                  <Share className="mr-2 h-4 w-4" />
-                  Share Progress
-                </Button>
-                
-                <Button className="w-full fluenti-button-secondary text-sm">
-                  <CalendarPlus className="mr-2 h-4 w-4" />
-                  Schedule Session
-                </Button>
-              </CardContent>
-            </Card>
+      {/* Main */}
+      <main className="ml-20 w-full">
+        {/* Top controls (right) */}
+        <header className="flex justify-end items-center gap-4 px-5 py-5">
+          <div className="flex items-center gap-2">
+            <span className="text-base font-semibold">gen z mode</span>
+            <DarkModeToggle />
           </div>
+          <button
+            onClick={() => setLocation("/child-dashboard?prefs=1")}
+            className="p-2 rounded-full hover:bg-muted transition"
+            aria-label="Preferences"
+          >
+            <SlidersHorizontal className="w-5 h-5" />
+          </button>
+        </header>
+
+                {/* Date pager pill — SLIGHTLY BIGGER, NO BORDER */}
+<div className="px-5">
+  <div className="mx-auto max-w-[600px]">
+    <div className="mx-auto h-11 rounded-full bg-neutral-100 dark:bg-muted/30 flex items-center justify-between px-3">
+      <button
+        className="w-9 h-9 grid place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition"
+        aria-label="Previous week"
+      >
+        <ChevronLeft className="w-4.5 h-4.5" />
+      </button>
+      <span className="text-[15px] font-medium tracking-tight select-none">
+        aug 4 – aug 10
+      </span>
+      <button
+        className="w-9 h-9 grid place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition"
+        aria-label="Next week"
+      >
+        <ChevronRight className="w-4.5 h-4.5" />
+      </button>
+    </div>
+  </div>
+</div>
+
+{/* Title + center content — SLIGHTLY BIGGER */}
+<section className="px-5 pt-9">
+  <div className="mx-auto max-w-3xl text-center">
+    <h1 className="text-[26px] font-bold mb-12">your week</h1>
+
+    {/* Stars illustration — a bit larger */}
+    <div className="flex justify-center mb-5">
+      <svg width="95" height="95" viewBox="0 0 120 120" fill="none">
+        <path d="M60 20l7 18 19 2-15 12 5 18-16-10-16 10 5-18-15-12 19-2 7-18z" fill="#F5B82E" />
+        <circle cx="25" cy="75" r="2" fill="#F5B82E" />
+        <circle cx="95" cy="60" r="2" fill="#F5B82E" />
+        <circle cx="45" cy="95" r="2" fill="#F5B82E" />
+      </svg>
+    </div>
+
+    <p className="text-[15px] text-muted-foreground mb-5">
+      your weekly insights are ready!
+    </p>
+
+    <button
+      className="inline-flex items-center gap-2 bg-[#F5B82E] text-black px-5 py-2.5 rounded-lg text-[15px] font-semibold hover:opacity-90 transition"
+    >
+      view now <ArrowRight className="w-4.5 h-4.5" />
+    </button>
+  </div>
+</section>
+
+{/* Stats — slightly bigger */}
+<section className="px-5 mt-14 pb-10">
+  <div className="mx-auto max-w-4xl">
+    <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+      <span className="w-5 h-5 rounded-full border-2 border-border grid place-items-center text-muted-foreground text-xs">⏱</span>
+      stats
+    </h2>
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div className="bg-card text-card-foreground border border-border rounded-xl p-5">
+        <div className="text-sm text-muted-foreground mb-1.5">convos completed</div>
+        <div className="text-[34px] font-bold leading-none">
+          {progressData?.progress.sessionsCompleted ?? "--"}
         </div>
+      </div>
+
+      <div className="bg-card text-card-foreground border border-border rounded-xl p-5">
+        <div className="text-sm text-muted-foreground mb-1.5">messages</div>
+        <div className="text-[34px] font-bold leading-none">
+          {progressData?.messageCount ?? "--"}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
       </main>
     </div>
   );

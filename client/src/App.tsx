@@ -19,6 +19,7 @@ import EmotionalSupport from "@/pages/emotional-support";
 import ProgressDashboard from "@/pages/progress-dashboard";
 import Assessment from "@/pages/assessment";
 import Achievements from "@/pages/achievements";
+import Settings from "./pages/settings";
 
 function DashboardRedirect() {
   const { user } = useAuth();
@@ -89,13 +90,15 @@ function Router() {
           <Route path="/emotional-support" component={EmotionalSupport} />
           
           {/* Progress tracking - different views for different roles */}
-          <Route path="/progress" component={ProgressDashboard} />
+          <Route path="/progress-dashboard" component={ProgressDashboard} />
 
           {/* Achievements page */}
           <Route path="/achievements" component={Achievements} />
 
           {/* Assessment - available to all but different content */}
           <Route path="/assessment" component={Assessment} />
+
+          <Route path="/settings" component={Settings} />
 
           {/* Legacy home route - redirect to appropriate dashboard */}
           <Route path="/home" component={DashboardRedirect} />
