@@ -98,6 +98,7 @@ export default function ChildDashboard() {
       className={`w-10 h-10 flex items-center justify-center rounded-xl transition ${
         hovered === id ? "bg-muted" : ""
       }`}
+      aria-label={label}
     >
       <Icon className="text-foreground w-7 h-7" />
     </button>
@@ -119,8 +120,12 @@ export default function ChildDashboard() {
         <div className="flex-1" />
 
         <div className="relative" onMouseEnter={() => { if (hideTimer.current) clearTimeout(hideTimer.current); setShowUserMenu(true); }} onMouseLeave={() => { hideTimer.current = setTimeout(() => setShowUserMenu(false), 200); }}>
-          <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition">
-            <User className="w-7 h-7 text-foreground" />
+          <button 
+            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition"
+            aria-label="User menu"
+            title="User menu"
+          >
+            <User className="w-7 h-7 text-foreground" aria-hidden="true" />
           </button>
 
           {showUserMenu && (
@@ -148,8 +153,10 @@ export default function ChildDashboard() {
   <button
     onClick={() => setShowPreferences(!showPreferences)}
     className="p-2 rounded-full hover:bg-muted transition"
+    aria-label="Toggle preferences"
+    title="Preferences"
   >
-    <SlidersHorizontal className="w-6 h-6 text-foreground" />
+    <SlidersHorizontal className="w-6 h-6 text-foreground" aria-hidden="true" />
   </button>
 </div>
 
@@ -202,7 +209,11 @@ export default function ChildDashboard() {
           <h4 className="text-sm font-medium">Language</h4>
           <p className="text-xs text-muted-foreground">Conversation only</p>
         </div>
-        <select className="bg-card text-foreground border border-border rounded-md px-3 py-1 text-sm font-dm-sans focus:outline-none focus:ring-2 focus:ring-primary">
+        <select 
+          className="bg-card text-foreground border border-border rounded-md px-3 py-1 text-sm font-dm-sans focus:outline-none focus:ring-2 focus:ring-primary"
+          aria-label="Select conversation language"
+          title="Select conversation language"
+        >
           <option value="en">English</option>
           <option value="ur">Urdu</option>
         </select>
@@ -376,8 +387,10 @@ export default function ChildDashboard() {
 <button
   onClick={() => setShowPreferences(!showPreferences)}
   className="p-2 rounded-full hover:bg-muted transition fixed top-6 right-6 z-50"
+  aria-label="Toggle preferences"
+  title="Preferences"
 >
-  <SlidersHorizontal className="w-6 h-6 text-foreground" />
+  <SlidersHorizontal className="w-6 h-6 text-foreground" aria-hidden="true" />
 </button>
 
 
