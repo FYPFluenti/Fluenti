@@ -370,6 +370,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test endpoint for Urdu text transmission
+  app.post('/api/test-urdu', async (req: Request, res: Response) => {
+    try {
+      const { text } = req.body;
+      console.log('\n=== URDU TEST ENDPOINT ===');
+      console.log('Received text:', text);
+      console.log('Text length:', text ? text.length : 0);
+      console.log('Has Urdu regex test:', text ? /[\u0600-\u06FF\u0750-\u077F]/.test(text) : false);
+      console.log('Contains پریشان:', text ? text.includes('پریشان') : false);
+      console.log('Contains اداس:', text ? text.includes('اداس') : false);
+      console.log('Character codes:', text ? [...text].map(c => c.charCodeAt(0)).slice(0, 10) : []);
+      
+      res.json({
+        received: text,
+        length: text ? text.length : 0,
+        hasUrdu: text ? /[\u0600-\u06FF\u0750-\u077F]/.test(text) : false,
+        keywords: {
+          pareshan: text ? text.includes('پریشان') : false,
+          udas: text ? text.includes('اداس') : false
+        }
+      });
+    } catch (error) {
+      console.error('Test endpoint error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // New endpoint for emotional support with Hugging Face Whisper STT integration
   app.post('/api/emotional-support', upload.single('audio'), tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -380,6 +407,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let { text, language } = req.body;
       let inputText = text;
+
+      console.log('Received text:', text);
+      console.log('Text length:', text ? text.length : 0);
+      console.log('Language:', language);
 
       // Handle audio file if present (from FormData)
       if (req.file) {
@@ -404,11 +435,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      console.log('Input text for processing:', inputText);
+      console.log('Input text length:', inputText ? inputText.length : 0);
+
       if (!inputText?.trim()) {
         return res.status(400).json({ error: 'No input provided' });
       }
 
       const emotion = await detectEmotion(inputText);
+      console.log('Detected emotion:', emotion);
       
       // Generate context-aware response based on detected emotion
       let supportiveResponse = '';

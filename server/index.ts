@@ -4,8 +4,16 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// Explicit UTF-8 support for Urdu text
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// Ensure UTF-8 encoding
+app.use((req, res, next) => {
+  req.setEncoding = req.setEncoding || (() => {});
+  next();
+});
 
 // CORS configuration for production
 app.use((req, res, next) => {

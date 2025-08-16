@@ -40,7 +40,18 @@ export async function detectEmotion(text: string): Promise<{ emotion: string; sc
       return performKeywordBasedDetection(text);
     }
 
-    // Try simpler emotion classification model first
+    // Check if text contains Urdu characters - if so, prioritize keyword detection
+    const hasUrdu = /[\u0600-\u06FF\u0750-\u077F]/.test(text);
+    if (hasUrdu) {
+      console.log('Urdu text detected, using keyword-based detection');
+      const keywordResult = performKeywordBasedDetection(text);
+      // If keyword detection finds something meaningful, use it
+      if (keywordResult.score > 0.5) {
+        return keywordResult;
+      }
+    }
+
+    // Try simpler emotion classification model for English text
     try {
       const result = await hf.textClassification({
         model: 'j-hartmann/emotion-english-distilroberta-base', // More reliable English model
@@ -53,6 +64,16 @@ export async function detectEmotion(text: string): Promise<{ emotion: string; sc
         const score = Math.round(topEmotion.score * 100) / 100;
 
         console.log(`HF Emotion detected: ${emotion} (${score})`);
+        
+        // For Urdu text or low confidence English results, prefer keyword fallback
+        if (hasUrdu || score < 0.6) {
+          console.log('Low confidence or Urdu text, trying keyword fallback');
+          const keywordResult = performKeywordBasedDetection(text);
+          if (keywordResult.score >= score) {
+            return keywordResult;
+          }
+        }
+        
         return { emotion, score };
       }
     } catch (hfError) {
@@ -70,61 +91,85 @@ export async function detectEmotion(text: string): Promise<{ emotion: string; sc
 
 // Keyword-based emotion detection fallback
 function performKeywordBasedDetection(text: string): { emotion: string; score: number } {
+  console.log('Keyword detection - received text:', text);
+  console.log('Keyword detection - text length:', text ? text.length : 0);
+  
   if (!text || !text.trim()) {
+    console.log('Keyword detection - empty text, returning neutral');
     return { emotion: 'neutral', score: 0.5 };
   }
 
   const lowerText = text.toLowerCase();
+  console.log('Keyword detection - lowercase text:', lowerText);
   
-  // Enhanced keyword matching with higher confidence (English)
+  // Enhanced keyword matching with higher confidence (English + Urdu)
   if (lowerText.includes('anxious') || lowerText.includes('anxiety') || lowerText.includes('worry') || 
       lowerText.includes('worried') || lowerText.includes('stress') || lowerText.includes('nervous') ||
-      // Urdu keywords for anxiety
-      text.includes('پریشان') || text.includes('فکر') || text.includes('گھبرا') || text.includes('بے چین')) {
+      // Urdu keywords for anxiety/worry
+      text.includes('پریشان') || text.includes('فکر') || text.includes('گھبرا') || text.includes('بے چین') ||
+      text.includes('پریشانی') || text.includes('تشویش') || text.includes('خوف زدہ')) {
+    console.log('Keyword detection - found anxiety keywords');
     return { emotion: 'anxious', score: 0.85 };
   } else if (lowerText.includes('sad') || lowerText.includes('depressed') || lowerText.includes('depression') ||
              lowerText.includes('down') || lowerText.includes('upset') || lowerText.includes('crying') ||
              // Urdu keywords for sadness
-             text.includes('اداس') || text.includes('غمگین') || text.includes('افسرده') || text.includes('رو') || text.includes('رونا')) {
+             text.includes('اداس') || text.includes('غمگین') || text.includes('افسرده') || text.includes('رو') || 
+             text.includes('رونا') || text.includes('غم') || text.includes('دکھ') || text.includes('اداسی')) {
+    console.log('Keyword detection - found sadness keywords');
     return { emotion: 'sad', score: 0.85 };
   } else if (lowerText.includes('happy') || lowerText.includes('joy') || lowerText.includes('joyful') ||
              lowerText.includes('great') || lowerText.includes('wonderful') || lowerText.includes('amazing') ||
              lowerText.includes('excited') || lowerText.includes('cheerful') ||
              // Urdu keywords for happiness
-             text.includes('خوش') || text.includes('خوشی') || text.includes('مسرور') || text.includes('شاد')) {
+             text.includes('خوش') || text.includes('خوشی') || text.includes('مسرور') || text.includes('شاد') ||
+             text.includes('خوشگوار') || text.includes('بہتر') || text.includes('اچھا')) {
+    console.log('Keyword detection - found happiness keywords');
     return { emotion: 'happy', score: 0.85 };
   } else if (lowerText.includes('angry') || lowerText.includes('mad') || lowerText.includes('furious') ||
              lowerText.includes('frustrated') || lowerText.includes('irritated') || lowerText.includes('annoyed') ||
              // Urdu keywords for anger
-             text.includes('غصہ') || text.includes('غضب') || text.includes('ناراض') || text.includes('برا')) {
+             text.includes('غصہ') || text.includes('غضب') || text.includes('ناراض') || text.includes('برا') ||
+             text.includes('چڑچڑا') || text.includes('جھنجھلا') || text.includes('کراہت')) {
+    console.log('Keyword detection - found anger keywords');
     return { emotion: 'angry', score: 0.85 };
   } else if (lowerText.includes('overwhelm') || lowerText.includes('too much') || lowerText.includes('can\'t handle') ||
              lowerText.includes('exhausted') || lowerText.includes('burned out') ||
              // Urdu keywords for overwhelmed
-             text.includes('تھکا') || text.includes('تھکاوٹ') || text.includes('بہت زیادہ') || text.includes('برداشت نہیں')) {
+             text.includes('تھکا') || text.includes('تھکاوٹ') || text.includes('بہت زیادہ') || text.includes('برداشت نہیں') ||
+             text.includes('ہار گیا') || text.includes('مغلوب') || text.includes('بے بس')) {
+    console.log('Keyword detection - found overwhelmed keywords');
     return { emotion: 'overwhelmed', score: 0.85 };
   } else if (lowerText.includes('afraid') || lowerText.includes('scared') || lowerText.includes('fear') ||
              lowerText.includes('terrified') || lowerText.includes('frightened') ||
              // Urdu keywords for fear
-             text.includes('ڈر') || text.includes('خوف') || text.includes('گھبرا') || text.includes('بوجھل')) {
+             text.includes('ڈر') || text.includes('خوف') || text.includes('گھبرا') || text.includes('بوجھل') ||
+             text.includes('ڈرا') || text.includes('خائف') || text.includes('سہمے')) {
+    console.log('Keyword detection - found fear keywords');
     return { emotion: 'fearful', score: 0.85 };
   } else if (lowerText.includes('lonely') || lowerText.includes('alone') || lowerText.includes('isolated') ||
              // Urdu keywords for loneliness
-             text.includes('اکیلا') || text.includes('تنہا') || text.includes('علیحدگی')) {
+             text.includes('اکیلا') || text.includes('تنہا') || text.includes('علیحدگی') ||
+             text.includes('تنہائی') || text.includes('الگ') || text.includes('اکیلے پن')) {
+    console.log('Keyword detection - found loneliness keywords');
     return { emotion: 'lonely', score: 0.85 };
   } else if (lowerText.includes('confused') || lowerText.includes('lost') || lowerText.includes('uncertain') ||
-             // Urdu keywords for confusion
-             text.includes('پریشان') || text.includes('کنفیوز') || text.includes('سمجھ نہیں')) {
+             // Urdu keywords for confusion (note: پریشان is also in anxiety, but context matters)
+             text.includes('کنفیوز') || text.includes('سمجھ نہیں') || text.includes('الجھن') ||
+             text.includes('بے یقین') || text.includes('شک') || text.includes('حیران')) {
+    console.log('Keyword detection - found confusion keywords');
     return { emotion: 'confused', score: 0.80 };
   }
   
   // Check for positive indicators (English + Urdu)
   if (lowerText.includes('good') || lowerText.includes('fine') || lowerText.includes('okay') ||
       lowerText.includes('alright') || lowerText.includes('well') ||
-      text.includes('ٹھیک') || text.includes('اچھا') || text.includes('بہتر')) {
+      text.includes('ٹھیک') || text.includes('اچھا') || text.includes('بہتر') ||
+      text.includes('ٹھیک ہے') || text.includes('بہت اچھا') || text.includes('خوب')) {
+    console.log('Keyword detection - found positive keywords');
     return { emotion: 'content', score: 0.70 };
   }
   
+  console.log('Keyword detection - no keywords matched, returning neutral');
   return { emotion: 'neutral', score: 0.5 };
 }
 
