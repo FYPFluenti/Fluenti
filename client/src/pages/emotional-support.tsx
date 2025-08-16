@@ -4,7 +4,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { EmotionalChat } from "@/components/chat/emotional-chat";
 import { RoleBasedComponent, UserTypeGuard } from "@/components/auth/RoleBasedComponent";
 import { Link, useLocation } from "wouter";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
@@ -399,9 +398,6 @@ export default function EmotionalSupport() {
           </Card>
         </div>
 
-      {/* Emotional Chat Component */}
-      <EmotionalChat language={selectedLanguage} />
-
         {/* Navigation Footer */}
         <div className="mt-12 text-center animate-fade-in">
           <div className="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-sm text-gray-500">
@@ -409,14 +405,7 @@ export default function EmotionalSupport() {
               <Home className="w-4 h-4 mr-1" />
               Home
             </Link>
-            <span className="hidden sm:inline">•</span>
-            <Link href="/speech-therapy" className="hover:text-primary transition-colors hover-lift">
-              Speech Therapy
-            </Link>
-            <span className="hidden sm:inline">•</span>
-            <Link href="/progress" className="hover:text-primary transition-colors hover-lift">
-              Progress Dashboard
-            </Link>
+           
           </div>
         </div>
       </div>
