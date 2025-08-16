@@ -32,7 +32,7 @@ export default function EmotionalSupport() {
 
   // Set up speech recognition with proper language codes
   const speechLanguage = selectedLanguage === 'urdu' ? 'ur-PK' : 'en-US';
-  const { startListening, stopListening, isListening, transcript, resetTranscript } = useSpeechRecognition(speechLanguage);
+  const { startListening, stopListening, isListening, transcript, resetTranscript, error: speechError } = useSpeechRecognition(speechLanguage);
 
   // API call function for emotional support
   const processInput = async (audioBlob?: Blob) => {
@@ -239,18 +239,34 @@ export default function EmotionalSupport() {
               </div>
 
               {/* Status Indicators */}
-              {(isListening || isProcessing) && (
-                <div className="flex items-center justify-center p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-200">
+              {(isListening || isProcessing || speechError) && (
+                <div className="flex flex-col gap-3">
                   {isListening && (
-                    <div className="flex items-center space-x-2 text-red-600">
-                      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                      <span className="text-sm font-medium">Listening...</span>
+                    <div className="flex items-center justify-center p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-200">
+                      <div className="flex items-center space-x-2 text-red-600">
+                        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm font-medium">
+                          Listening... {selectedLanguage === 'urdu' ? '(اردو میں بولیں)' : '(Speak now)'}
+                        </span>
+                      </div>
                     </div>
                   )}
+                  
                   {isProcessing && (
-                    <div className="flex items-center space-x-2 text-blue-600">
-                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                      <span className="text-sm font-medium">Processing your input...</span>
+                    <div className="flex items-center justify-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                      <div className="flex items-center space-x-2 text-blue-600">
+                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-sm font-medium">Processing your input...</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {speechError && (
+                    <div className="flex items-center justify-center p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-lg border border-red-200">
+                      <div className="flex items-center space-x-2 text-red-600">
+                        <div className="w-4 h-4 text-red-500">⚠️</div>
+                        <span className="text-sm font-medium">{speechError}</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -269,33 +285,70 @@ export default function EmotionalSupport() {
 
               {/* Quick Actions */}
               <div className="flex flex-wrap gap-2 pt-4">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setInputText("I'm feeling anxious about work today")}
-                  className="text-xs hover:bg-pink-50"
-                  disabled={isProcessing}
-                >
-                  Try: "I'm feeling anxious"
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setInputText("I'm having trouble sleeping")}
-                  className="text-xs hover:bg-purple-50"
-                  disabled={isProcessing}
-                >
-                  Try: "Trouble sleeping"
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setInputText("I feel overwhelmed")}
-                  className="text-xs hover:bg-indigo-50"
-                  disabled={isProcessing}
-                >
-                  Try: "Feeling overwhelmed"
-                </Button>
+                {selectedLanguage === 'english' ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInputText("I'm feeling anxious about work today")}
+                      className="text-xs hover:bg-pink-50"
+                      disabled={isProcessing}
+                    >
+                      Try: "I'm feeling anxious"
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInputText("I'm having trouble sleeping")}
+                      className="text-xs hover:bg-purple-50"
+                      disabled={isProcessing}
+                    >
+                      Try: "Trouble sleeping"
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInputText("I feel overwhelmed")}
+                      className="text-xs hover:bg-indigo-50"
+                      disabled={isProcessing}
+                    >
+                      Try: "Feeling overwhelmed"
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInputText("میں کام کے بارے میں پریشان ہوں")}
+                      className="text-xs hover:bg-pink-50"
+                      disabled={isProcessing}
+                      dir="rtl"
+                    >
+                      Try: "میں پریشان ہوں"
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInputText("مجھے نیند نہیں آتی")}
+                      className="text-xs hover:bg-purple-50"
+                      disabled={isProcessing}
+                      dir="rtl"
+                    >
+                      Try: "نیند کی مسئلہ"
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setInputText("میں بہت تھکا ہوا محسوس کر رہا ہوں")}
+                      className="text-xs hover:bg-indigo-50"
+                      disabled={isProcessing}
+                      dir="rtl"
+                    >
+                      Try: "تھکاوٹ"
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </CardContent>

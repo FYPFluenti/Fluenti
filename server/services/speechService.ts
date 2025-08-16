@@ -37,65 +37,95 @@ export async function detectEmotion(text: string): Promise<{ emotion: string; sc
   try {
     if (!process.env.HUGGINGFACE_API_KEY || process.env.HUGGINGFACE_API_KEY === 'your-hf-token' || !text.trim()) {
       console.log('Mock emotion detection: No API key or empty text');
-      return { emotion: 'neutral', score: 0.5 };
+      return performKeywordBasedDetection(text);
     }
 
-    // Use Hugging Face's emotion classification model
-    const result = await hf.textClassification({
-      model: 'cardiffnlp/twitter-roberta-base-emotion-multilingual-latest', // Supports multilingual emotion detection
-      inputs: text,
-    });
+    // Try simpler emotion classification model first
+    try {
+      const result = await hf.textClassification({
+        model: 'j-hartmann/emotion-english-distilroberta-base', // More reliable English model
+        inputs: text,
+      });
 
-    if (result && result.length > 0) {
-      // Get the highest confidence emotion
-      const topEmotion = result[0];
-      
-      // Map HF emotion labels to more user-friendly names
-      const emotionMapping: { [key: string]: string } = {
-        'anger': 'angry',
-        'anticipation': 'excited',
-        'disgust': 'disgusted',
-        'fear': 'fearful',
-        'joy': 'happy',
-        'love': 'loving',
-        'optimism': 'optimistic',
-        'pessimism': 'pessimistic',
-        'sadness': 'sad',
-        'surprise': 'surprised',
-        'trust': 'trusting'
-      };
+      if (result && result.length > 0) {
+        const topEmotion = result[0];
+        const emotion = topEmotion.label.toLowerCase();
+        const score = Math.round(topEmotion.score * 100) / 100;
 
-      const emotion = emotionMapping[topEmotion.label.toLowerCase()] || topEmotion.label.toLowerCase();
-      const score = Math.round(topEmotion.score * 100) / 100; // Round to 2 decimal places
-
-      console.log(`Emotion detected: ${emotion} (${score})`);
-      return { emotion, score };
+        console.log(`HF Emotion detected: ${emotion} (${score})`);
+        return { emotion, score };
+      }
+    } catch (hfError) {
+      console.log('Hugging Face model failed, trying fallback:', hfError);
+      // Fall through to keyword-based detection
     }
 
-    // Fallback if no results
-    return { emotion: 'neutral', score: 0.5 };
+    // Fallback to keyword-based detection
+    return performKeywordBasedDetection(text);
   } catch (error) {
     console.error('Emotion detection error:', error);
-    
-    // Simple keyword-based fallback for common emotional expressions
-    const lowerText = text.toLowerCase();
-    
-    if (lowerText.includes('anxious') || lowerText.includes('worry') || lowerText.includes('stress')) {
-      return { emotion: 'anxious', score: 0.8 };
-    } else if (lowerText.includes('sad') || lowerText.includes('depressed') || lowerText.includes('down')) {
-      return { emotion: 'sad', score: 0.8 };
-    } else if (lowerText.includes('happy') || lowerText.includes('joy') || lowerText.includes('great')) {
-      return { emotion: 'happy', score: 0.8 };
-    } else if (lowerText.includes('angry') || lowerText.includes('mad') || lowerText.includes('frustrated')) {
-      return { emotion: 'angry', score: 0.8 };
-    } else if (lowerText.includes('excited') || lowerText.includes('amazing') || lowerText.includes('wonderful')) {
-      return { emotion: 'excited', score: 0.8 };
-    } else if (lowerText.includes('overwhelm') || lowerText.includes('too much') || lowerText.includes('can\'t handle')) {
-      return { emotion: 'overwhelmed', score: 0.8 };
-    }
-    
+    return performKeywordBasedDetection(text);
+  }
+}
+
+// Keyword-based emotion detection fallback
+function performKeywordBasedDetection(text: string): { emotion: string; score: number } {
+  if (!text || !text.trim()) {
     return { emotion: 'neutral', score: 0.5 };
   }
+
+  const lowerText = text.toLowerCase();
+  
+  // Enhanced keyword matching with higher confidence (English)
+  if (lowerText.includes('anxious') || lowerText.includes('anxiety') || lowerText.includes('worry') || 
+      lowerText.includes('worried') || lowerText.includes('stress') || lowerText.includes('nervous') ||
+      // Urdu keywords for anxiety
+      text.includes('پریشان') || text.includes('فکر') || text.includes('گھبرا') || text.includes('بے چین')) {
+    return { emotion: 'anxious', score: 0.85 };
+  } else if (lowerText.includes('sad') || lowerText.includes('depressed') || lowerText.includes('depression') ||
+             lowerText.includes('down') || lowerText.includes('upset') || lowerText.includes('crying') ||
+             // Urdu keywords for sadness
+             text.includes('اداس') || text.includes('غمگین') || text.includes('افسرده') || text.includes('رو') || text.includes('رونا')) {
+    return { emotion: 'sad', score: 0.85 };
+  } else if (lowerText.includes('happy') || lowerText.includes('joy') || lowerText.includes('joyful') ||
+             lowerText.includes('great') || lowerText.includes('wonderful') || lowerText.includes('amazing') ||
+             lowerText.includes('excited') || lowerText.includes('cheerful') ||
+             // Urdu keywords for happiness
+             text.includes('خوش') || text.includes('خوشی') || text.includes('مسرور') || text.includes('شاد')) {
+    return { emotion: 'happy', score: 0.85 };
+  } else if (lowerText.includes('angry') || lowerText.includes('mad') || lowerText.includes('furious') ||
+             lowerText.includes('frustrated') || lowerText.includes('irritated') || lowerText.includes('annoyed') ||
+             // Urdu keywords for anger
+             text.includes('غصہ') || text.includes('غضب') || text.includes('ناراض') || text.includes('برا')) {
+    return { emotion: 'angry', score: 0.85 };
+  } else if (lowerText.includes('overwhelm') || lowerText.includes('too much') || lowerText.includes('can\'t handle') ||
+             lowerText.includes('exhausted') || lowerText.includes('burned out') ||
+             // Urdu keywords for overwhelmed
+             text.includes('تھکا') || text.includes('تھکاوٹ') || text.includes('بہت زیادہ') || text.includes('برداشت نہیں')) {
+    return { emotion: 'overwhelmed', score: 0.85 };
+  } else if (lowerText.includes('afraid') || lowerText.includes('scared') || lowerText.includes('fear') ||
+             lowerText.includes('terrified') || lowerText.includes('frightened') ||
+             // Urdu keywords for fear
+             text.includes('ڈر') || text.includes('خوف') || text.includes('گھبرا') || text.includes('بوجھل')) {
+    return { emotion: 'fearful', score: 0.85 };
+  } else if (lowerText.includes('lonely') || lowerText.includes('alone') || lowerText.includes('isolated') ||
+             // Urdu keywords for loneliness
+             text.includes('اکیلا') || text.includes('تنہا') || text.includes('علیحدگی')) {
+    return { emotion: 'lonely', score: 0.85 };
+  } else if (lowerText.includes('confused') || lowerText.includes('lost') || lowerText.includes('uncertain') ||
+             // Urdu keywords for confusion
+             text.includes('پریشان') || text.includes('کنفیوز') || text.includes('سمجھ نہیں')) {
+    return { emotion: 'confused', score: 0.80 };
+  }
+  
+  // Check for positive indicators (English + Urdu)
+  if (lowerText.includes('good') || lowerText.includes('fine') || lowerText.includes('okay') ||
+      lowerText.includes('alright') || lowerText.includes('well') ||
+      text.includes('ٹھیک') || text.includes('اچھا') || text.includes('بہتر')) {
+    return { emotion: 'content', score: 0.70 };
+  }
+  
+  return { emotion: 'neutral', score: 0.5 };
 }
 
 export interface SpeechAssessmentResult {
