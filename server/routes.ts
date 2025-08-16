@@ -5,9 +5,18 @@ import { mongoStorage } from "./mongoStorage";
 import { setupAuth, isAuthenticated } from "./simpleAuth";
 import { extractTokenFromHeader, tokenBasedAuth } from "./middleware";
 import * as speechServiceModule from "./services/speechService";
-const { SpeechService } = speechServiceModule;
+const { SpeechService, transcribeAudio, detectEmotion } = speechServiceModule;
 import { analyzeEmotion } from "./services/openai";
 import { AuthService } from "./auth";
+import multer from 'multer';
+
+// Configure multer for handling form data
+const upload = multer({ 
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 // Extend Express Request type to include session and user properties
 interface AuthenticatedRequest extends Request {
@@ -316,6 +325,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching chat messages:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // Temporary test endpoint for Phase 1 testing (no auth required)
+  app.post('/api/test-emotional-support', async (req: Request, res: Response) => {
+    try {
+      const { audio, text, language } = req.body;
+      let inputText = text;
+
+      if (audio) {
+        try {
+          const audioBuffer = Buffer.from(audio, 'base64');
+          const whisperLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+          inputText = await transcribeAudio(audioBuffer, whisperLanguage);
+        } catch (sttError) {
+          console.warn('STT failed, using text input:', sttError);
+          inputText = text || 'Could not transcribe audio';
+        }
+      }
+
+      if (!inputText) {
+        return res.status(400).json({ error: 'No input provided' });
+      }
+
+      const emotion = await detectEmotion(inputText);
+      
+      // Mock response for testing (since we don't want to require OpenAI for testing)
+      const mockResponse = `I understand you're feeling ${emotion.emotion}. That's completely valid. Would you like to tell me more about what's making you feel this way?`;
+      
+      res.json({ 
+        transcription: inputText, 
+        emotion, 
+        response: mockResponse,
+        detectedEmotion: emotion.emotion,
+        confidence: emotion.score
+      });
+    } catch (error) {
+      console.error("Error processing test emotional support request:", error);
+      res.status(500).json({ 
+        error: 'Processing failed',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // New endpoint for emotional support with Hugging Face Whisper STT integration
+  app.post('/api/emotional-support', upload.single('audio'), tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      let { text, language } = req.body;
+      let inputText = text;
+
+      // Handle audio file if present (from FormData)
+      if (req.file) {
+        try {
+          const audioBuffer = req.file.buffer;
+          const whisperLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+          inputText = await transcribeAudio(audioBuffer, whisperLanguage);
+        } catch (sttError) {
+          console.warn('STT failed, using text input:', sttError);
+          inputText = text || 'Could not transcribe audio';
+        }
+      }
+      // Handle base64 audio (from JSON)
+      else if (req.body.audio) {
+        try {
+          const audioBuffer = Buffer.from(req.body.audio, 'base64');
+          const whisperLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+          inputText = await transcribeAudio(audioBuffer, whisperLanguage);
+        } catch (sttError) {
+          console.warn('STT failed, using text input:', sttError);
+          inputText = text || 'Could not transcribe audio';
+        }
+      }
+
+      if (!inputText?.trim()) {
+        return res.status(400).json({ error: 'No input provided' });
+      }
+
+      const emotion = await detectEmotion(inputText);
+      
+      // Use existing OpenAI service for response generation
+      const emotionAnalysis = await analyzeEmotion(inputText);
+      
+      res.json({ 
+        transcription: inputText, 
+        emotion, 
+        response: emotionAnalysis.response,
+        detectedEmotion: emotionAnalysis.emotion,
+        confidence: emotionAnalysis.confidence
+      });
+    } catch (error) {
+      console.error("Error processing emotional support request:", error);
+      res.status(500).json({ error: 'Processing failed' });
     }
   });
 

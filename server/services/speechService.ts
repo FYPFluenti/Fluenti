@@ -1,5 +1,42 @@
 import { mongoStorage } from "../mongoStorage";
 import { generateSpeechFeedback, generatePersonalizedExercises } from "./openai";
+import { HfInference } from '@huggingface/inference';
+import wav from 'wav';  // For potential audio conversion
+import fs from 'fs';  // If needed for temp files
+
+const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
+
+export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur' = 'en'): Promise<string> {
+  try {
+    // For Phase 1 testing - return mock transcription if no HF key
+    if (!process.env.HUGGINGFACE_API_KEY || process.env.HUGGINGFACE_API_KEY === 'your-hf-token') {
+      console.log('Mock STT: No Hugging Face API key configured, returning mock transcription');
+      return `[Mock STT ${language.toUpperCase()}] This is a mock transcription for testing Phase 1 integration.`;
+    }
+
+    const model = 'openai/whisper-medium';  // Multilingual; supports Urdu/English
+    // Convert buffer to Blob (Whisper expects audio file-like input)
+    // Convert Buffer to Uint8Array to ensure compatibility with Blob constructor
+    const uint8Array = new Uint8Array(audioBuffer);
+    const audioBlob = new Blob([uint8Array], { type: 'audio/wav' });  // Assume WAV; adjust if frontend uses webm
+
+    const result = await hf.automaticSpeechRecognition({
+      model,
+      data: audioBlob,
+    });
+    return result.text || '';
+  } catch (error) {
+    console.error('STT Error:', error);
+    // Fallback to mock for testing
+    return `[STT Error - Mock Response] Could not transcribe audio: ${error instanceof Error ? error.message : 'Unknown error'}`;
+  }
+}
+
+// Placeholder for later phases (e.g., emotion detection)
+export async function detectEmotion(text: string): Promise<{ emotion: string; score: number }> {
+  // Implement in Phase 3
+  return { emotion: 'neutral', score: 0.5 };
+}
 
 export interface SpeechAssessmentResult {
   overallScore: number;
