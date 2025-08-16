@@ -137,8 +137,8 @@ export default function EmotionalSupport() {
       
       <div className="container mx-auto px-4 py-8 relative z-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8 animate-slide-up">
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 space-y-4 lg:space-y-0 animate-slide-up">
+          <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
             <Link href="/">
               <button className="fluenti-button-outline hover-lift">
                 <ArrowLeft className="w-4 h-4 mr-2" />
@@ -146,15 +146,15 @@ export default function EmotionalSupport() {
               </button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gradient-primary">Emotional Support</h1>
-              <p className="text-gray-600 text-lg">Chat with our AI companion for emotional guidance</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-gradient-primary">Emotional Support</h1>
+              <p className="text-gray-600 text-base md:text-lg">Chat with our AI companion for emotional guidance</p>
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
             <div className="flex items-center space-x-2">
               <button
-                className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 hover-lift ${
+                className={`px-3 py-2 text-sm md:px-4 md:py-2 md:text-base rounded-lg font-medium transition-all duration-300 hover-lift ${
                   selectedLanguage === 'english' 
                     ? 'fluenti-gradient-primary text-white shadow-lg' 
                     : 'fluenti-button-outline'
@@ -164,7 +164,7 @@ export default function EmotionalSupport() {
                 English
               </button>
               <button
-                className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 hover-lift ${
+                className={`px-3 py-2 text-sm md:px-4 md:py-2 md:text-base rounded-lg font-medium transition-all duration-300 hover-lift ${
                   selectedLanguage === 'urdu' 
                     ? 'fluenti-gradient-primary text-white shadow-lg' 
                     : 'fluenti-button-outline'
@@ -175,112 +175,197 @@ export default function EmotionalSupport() {
               </button>
             </div>
             <div className="flex items-center space-x-2 bg-pink-50 px-3 py-2 rounded-lg">
-              <Heart className="w-6 h-6 text-red-500 fluenti-pulse" />
-            <span className="text-sm font-medium">AI Support</span>
+              <Heart className="w-5 h-5 md:w-6 md:h-6 text-red-500 fluenti-pulse" />
+              <span className="text-sm font-medium">AI Support</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Phase 1 Test Interface */}
-      <Card className="mb-8">
-        <CardContent className="p-6">
-          <h3 className="text-xl font-semibold mb-4">Phase 1 Test - Voice & Text Input</h3>
-          
-          <div className="space-y-4">
-            <div className="flex items-center space-x-4">
-              <Input
-                type="text"
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                placeholder={selectedLanguage === 'urdu' ? "یہاں لکھیں..." : "Type here..."}
-                className="flex-1"
-                disabled={isProcessing}
-              />
-              <Button 
-                onClick={handleRecord}
-                variant={isListening ? "destructive" : "outline"}
-                disabled={isProcessing}
-              >
-                {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                {isListening ? 'Stop' : 'Record'}
-              </Button>
-              <Button 
-                onClick={() => processInput()}
-                disabled={!inputText.trim() || isProcessing}
-              >
-                {isProcessing ? 'Processing...' : 'Send'}
-              </Button>
+        {/* Phase 1 Test Interface */}
+        <Card className="mb-8 shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+          <CardContent className="p-6">
+            <div className="flex items-center space-x-2 mb-6">
+              <Star className="w-6 h-6 text-yellow-500" />
+              <h3 className="text-xl font-semibold text-gray-800">Voice & Text Input</h3>
+              <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Phase 1</span>
             </div>
             
-            {response && (
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <h4 className="font-medium mb-2">AI Response:</h4>
-                <p className="text-sm">{response}</p>
+            <div className="space-y-4">
+              {/* Input Section */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <Input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder={selectedLanguage === 'urdu' ? "اپنے جذبات یہاں لکھیں..." : "Share your feelings here..."}
+                  className="flex-1 min-h-[44px] border-pink-200 focus:border-pink-400 focus:ring-pink-400"
+                  disabled={isProcessing}
+                  dir={selectedLanguage === 'urdu' ? 'rtl' : 'ltr'}
+                />
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={handleRecord}
+                    variant={isListening ? "destructive" : "outline"}
+                    disabled={isProcessing}
+                    className="min-w-[100px] transition-all duration-300"
+                  >
+                    {isListening ? (
+                      <>
+                        <MicOff className="w-4 h-4 mr-2" />
+                        Stop
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-4 h-4 mr-2" />
+                        Record
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    onClick={() => processInput()}
+                    disabled={!inputText.trim() || isProcessing}
+                    className="min-w-[100px] fluenti-gradient-primary hover:shadow-lg transition-all duration-300"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Processing...
+                      </>
+                    ) : (
+                      'Send'
+                    )}
+                  </Button>
+                </div>
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Support Features Info */}
-      <div className="grid md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3 mb-3">
-              <Shield className="w-8 h-8 text-blue-500" />
-              <h3 className="font-semibold">Safe Space</h3>
+              {/* Status Indicators */}
+              {(isListening || isProcessing) && (
+                <div className="flex items-center justify-center p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-200">
+                  {isListening && (
+                    <div className="flex items-center space-x-2 text-red-600">
+                      <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm font-medium">Listening...</span>
+                    </div>
+                  )}
+                  {isProcessing && (
+                    <div className="flex items-center space-x-2 text-blue-600">
+                      <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      <span className="text-sm font-medium">Processing your input...</span>
+                    </div>
+                  )}
+                </div>
+              )}
+              
+              {/* Response Section */}
+              {response && (
+                <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Smile className="w-5 h-5 text-blue-600" />
+                    <h4 className="font-semibold text-blue-900">AI Companion Response:</h4>
+                  </div>
+                  <p className="text-gray-700 leading-relaxed">{response}</p>
+                </div>
+              )}
+
+              {/* Quick Actions */}
+              <div className="flex flex-wrap gap-2 pt-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setInputText("I'm feeling anxious about work today")}
+                  className="text-xs hover:bg-pink-50"
+                  disabled={isProcessing}
+                >
+                  Try: "I'm feeling anxious"
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setInputText("I'm having trouble sleeping")}
+                  className="text-xs hover:bg-purple-50"
+                  disabled={isProcessing}
+                >
+                  Try: "Trouble sleeping"
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setInputText("I feel overwhelmed")}
+                  className="text-xs hover:bg-indigo-50"
+                  disabled={isProcessing}
+                >
+                  Try: "Feeling overwhelmed"
+                </Button>
+              </div>
             </div>
-            <p className="text-sm text-gray-600">
-              Your conversations are private and secure. Share your feelings without judgment.
-            </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3 mb-3">
-              <Clock className="w-8 h-8 text-green-500" />
-              <h3 className="font-semibold">24/7 Available</h3>
-            </div>
-            <p className="text-sm text-gray-600">
-              Get emotional support anytime you need it, day or night.
-            </p>
-          </CardContent>
-        </Card>
+        {/* Support Features Info */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Shield className="w-6 h-6 text-blue-600" />
+                </div>
+                <h3 className="font-semibold text-gray-800">Safe Space</h3>
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Your conversations are private and secure. Share your feelings without judgment in this confidential environment.
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-3 mb-3">
-              <Brain className="w-8 h-8 text-purple-500" />
-              <h3 className="font-semibold">AI-Powered</h3>
-            </div>
-            <p className="text-sm text-gray-600">
-              Advanced emotional intelligence to understand and respond to your needs.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 hover-lift">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Clock className="w-6 h-6 text-green-600" />
+                </div>
+                <h3 className="font-semibold text-gray-800">24/7 Available</h3>
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Get emotional support anytime you need it, day or night. We're always here when you need someone to listen.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 hover-lift sm:col-span-2 lg:col-span-1">
+            <CardContent className="p-6">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="p-2 bg-purple-100 rounded-lg">
+                  <Brain className="w-6 h-6 text-purple-600" />
+                </div>
+                <h3 className="font-semibold text-gray-800">AI-Powered</h3>
+              </div>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Advanced emotional intelligence to understand and respond to your needs with empathy and care.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
       {/* Emotional Chat Component */}
       <EmotionalChat language={selectedLanguage} />
 
-      {/* Navigation Footer */}
-      <div className="mt-12 text-center animate-fade-in">
-        <div className="inline-flex items-center space-x-4 text-sm text-gray-500">
-          <Link href="/" className="hover:text-primary transition-colors hover-lift">
-            <Home className="w-4 h-4 inline mr-1" />
-            Home
-          </Link>
-          <span>•</span>
-          <Link href="/speech-therapy" className="hover:text-primary transition-colors hover-lift">
-            Speech Therapy
-          </Link>
-          <span>•</span>
-          <Link href="/progress" className="hover:text-primary transition-colors hover-lift">
-            Progress Dashboard
-          </Link>
+        {/* Navigation Footer */}
+        <div className="mt-12 text-center animate-fade-in">
+          <div className="inline-flex flex-wrap items-center justify-center gap-2 sm:gap-4 text-sm text-gray-500">
+            <Link href="/" className="hover:text-primary transition-colors hover-lift flex items-center">
+              <Home className="w-4 h-4 mr-1" />
+              Home
+            </Link>
+            <span className="hidden sm:inline">•</span>
+            <Link href="/speech-therapy" className="hover:text-primary transition-colors hover-lift">
+              Speech Therapy
+            </Link>
+            <span className="hidden sm:inline">•</span>
+            <Link href="/progress" className="hover:text-primary transition-colors hover-lift">
+              Progress Dashboard
+            </Link>
+          </div>
         </div>
-      </div>
       </div>
     </div>
   );

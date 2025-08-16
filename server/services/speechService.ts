@@ -32,10 +32,70 @@ export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur'
   }
 }
 
-// Placeholder for later phases (e.g., emotion detection)
+// Emotion detection using Hugging Face
 export async function detectEmotion(text: string): Promise<{ emotion: string; score: number }> {
-  // Implement in Phase 3
-  return { emotion: 'neutral', score: 0.5 };
+  try {
+    if (!process.env.HUGGINGFACE_API_KEY || process.env.HUGGINGFACE_API_KEY === 'your-hf-token' || !text.trim()) {
+      console.log('Mock emotion detection: No API key or empty text');
+      return { emotion: 'neutral', score: 0.5 };
+    }
+
+    // Use Hugging Face's emotion classification model
+    const result = await hf.textClassification({
+      model: 'cardiffnlp/twitter-roberta-base-emotion-multilingual-latest', // Supports multilingual emotion detection
+      inputs: text,
+    });
+
+    if (result && result.length > 0) {
+      // Get the highest confidence emotion
+      const topEmotion = result[0];
+      
+      // Map HF emotion labels to more user-friendly names
+      const emotionMapping: { [key: string]: string } = {
+        'anger': 'angry',
+        'anticipation': 'excited',
+        'disgust': 'disgusted',
+        'fear': 'fearful',
+        'joy': 'happy',
+        'love': 'loving',
+        'optimism': 'optimistic',
+        'pessimism': 'pessimistic',
+        'sadness': 'sad',
+        'surprise': 'surprised',
+        'trust': 'trusting'
+      };
+
+      const emotion = emotionMapping[topEmotion.label.toLowerCase()] || topEmotion.label.toLowerCase();
+      const score = Math.round(topEmotion.score * 100) / 100; // Round to 2 decimal places
+
+      console.log(`Emotion detected: ${emotion} (${score})`);
+      return { emotion, score };
+    }
+
+    // Fallback if no results
+    return { emotion: 'neutral', score: 0.5 };
+  } catch (error) {
+    console.error('Emotion detection error:', error);
+    
+    // Simple keyword-based fallback for common emotional expressions
+    const lowerText = text.toLowerCase();
+    
+    if (lowerText.includes('anxious') || lowerText.includes('worry') || lowerText.includes('stress')) {
+      return { emotion: 'anxious', score: 0.8 };
+    } else if (lowerText.includes('sad') || lowerText.includes('depressed') || lowerText.includes('down')) {
+      return { emotion: 'sad', score: 0.8 };
+    } else if (lowerText.includes('happy') || lowerText.includes('joy') || lowerText.includes('great')) {
+      return { emotion: 'happy', score: 0.8 };
+    } else if (lowerText.includes('angry') || lowerText.includes('mad') || lowerText.includes('frustrated')) {
+      return { emotion: 'angry', score: 0.8 };
+    } else if (lowerText.includes('excited') || lowerText.includes('amazing') || lowerText.includes('wonderful')) {
+      return { emotion: 'excited', score: 0.8 };
+    } else if (lowerText.includes('overwhelm') || lowerText.includes('too much') || lowerText.includes('can\'t handle')) {
+      return { emotion: 'overwhelmed', score: 0.8 };
+    }
+    
+    return { emotion: 'neutral', score: 0.5 };
+  }
 }
 
 export interface SpeechAssessmentResult {

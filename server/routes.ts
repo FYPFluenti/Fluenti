@@ -410,15 +410,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const emotion = await detectEmotion(inputText);
       
-      // Use existing OpenAI service for response generation
-      const emotionAnalysis = await analyzeEmotion(inputText);
+      // Generate context-aware response based on detected emotion
+      let supportiveResponse = '';
+      switch (emotion.emotion.toLowerCase()) {
+        case 'anxious':
+        case 'fearful':
+          supportiveResponse = `I can sense you're feeling ${emotion.emotion}. Anxiety can feel overwhelming, but you're not alone. Let's take a deep breath together. Can you tell me what's been causing these feelings?`;
+          break;
+        case 'sad':
+        case 'depressed':
+          supportiveResponse = `I understand you're feeling ${emotion.emotion}. It's okay to feel this way, and your feelings are valid. Sometimes talking about what's bothering you can help. What's been weighing on your mind?`;
+          break;
+        case 'angry':
+        case 'frustrated':
+          supportiveResponse = `I can hear that you're feeling ${emotion.emotion}. These are natural emotions, and it's important to acknowledge them. What situation has been causing you to feel this way?`;
+          break;
+        case 'happy':
+        case 'excited':
+        case 'joyful':
+          supportiveResponse = `It's wonderful to hear that you're feeling ${emotion.emotion}! I'm glad you're experiencing positive emotions. What's been bringing you joy lately?`;
+          break;
+        case 'overwhelmed':
+          supportiveResponse = `Feeling overwhelmed is very common, and you're brave for recognizing it. Let's break things down into manageable pieces. What feels like the most pressing issue right now?`;
+          break;
+        case 'lonely':
+          supportiveResponse = `I hear that you're feeling lonely. That's a difficult emotion to experience. Remember that reaching out, like you're doing now, is a positive step. You're not as alone as you might feel.`;
+          break;
+        default:
+          supportiveResponse = `Thank you for sharing with me. I'm here to listen and support you through whatever you're experiencing. How are you feeling right now, and what would be most helpful for you?`;
+      }
+      
+      // Try to use OpenAI for more sophisticated response if available
+      let finalResponse = supportiveResponse;
+      try {
+        const emotionAnalysis = await analyzeEmotion(inputText);
+        finalResponse = emotionAnalysis.response;
+      } catch (error) {
+        console.log('OpenAI analysis failed, using fallback response:', error);
+        // Keep the supportive response we generated above
+      }
       
       res.json({ 
         transcription: inputText, 
         emotion, 
-        response: emotionAnalysis.response,
-        detectedEmotion: emotionAnalysis.emotion,
-        confidence: emotionAnalysis.confidence
+        response: finalResponse,
+        detectedEmotion: emotion.emotion,
+        confidence: emotion.score
       });
     } catch (error) {
       console.error("Error processing emotional support request:", error);
