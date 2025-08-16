@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Improved Emotional Support</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        textarea {
+            width: 100%;
+            min-height: 60px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-family: inherit;
+            resize: vertical;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 5px;
+            background: #f0f8ff;
+            border-left: 4px solid #007bff;
+        }
+        .error {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 Test Improved Emotional Support</h1>
+        
+        <div class="test-section">
+            <h3>Test Different Emotions</h3>
+            <textarea id="userInput" placeholder="Enter how you're feeling...">I feel overwhelmed and stressed about everything</textarea>
+            <br><br>
+            <button onclick="testEmotion()">Get Emotional Support</button>
+            <div id="result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Quick Test Emotions</h3>
+            <button onclick="testQuick('I feel very anxious about my future')">Test Anxiety</button>
+            <button onclick="testQuick('I am feeling so happy today!')">Test Happiness</button>
+            <button onclick="testQuick('I feel sad and depressed')">Test Sadness</button>
+            <button onclick="testQuick('I am really angry right now')">Test Anger</button>
+            <button onclick="testQuick('I feel so lonely and isolated')">Test Loneliness</button>
+        </div>
+    </div>
+
+    <script>
+        async function testEmotion() {
+            const text = document.getElementById('userInput').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!text.trim()) {
+                resultDiv.innerHTML = '<div class="result error">Please enter some text first.</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="result">Processing your emotions...</div>';
+
+            try {
+                const response = await fetch('/api/emotional-support', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: text,
+                        language: 'en-US'
+                    })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `
+                        <div class="result">
+                            <h4>🎯 Detected Emotion: ${data.detectedEmotion} (${(data.confidence * 100).toFixed(1)}% confidence)</h4>
+                            <h4>💙 Supportive Response:</h4>
+                            <p><strong>"${data.response}"</strong></p>
+                            <hr>
+                            <small><em>Transcription: "${data.transcription}"</em></small>
+                        </div>
+                    `;
+                } else {
+                    const error = await response.text();
+                    resultDiv.innerHTML = `<div class="result error">Error: ${response.status} - ${error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="result error">Network error: ${error.message}</div>`;
+            }
+        }
+
+        function testQuick(text) {
+            document.getElementById('userInput').value = text;
+            testEmotion();
+        }
+
+        // Test on page load
+        window.onload = function() {
+            testEmotion();
+        };
+    </script>
+</body>
+</html>

@@ -31,7 +31,18 @@ export default function EmotionalSupport() {
 
   // Set up speech recognition with proper language codes
   const speechLanguage = selectedLanguage === 'urdu' ? 'ur-PK' : 'en-US';
-  const { startListening, stopListening, isListening, transcript, resetTranscript, error: speechError } = useSpeechRecognition(speechLanguage);
+  const { 
+    startListening, 
+    stopListening, 
+    isListening, 
+    transcript, 
+    resetTranscript, 
+    error: speechError,
+    isRecording,
+    audioBlob,
+    startRecording,
+    sendAudioToBackend 
+  } = useSpeechRecognition(speechLanguage);
 
   // API call function for emotional support
   const processInput = async (audioBlob?: Blob) => {
@@ -94,12 +105,64 @@ export default function EmotionalSupport() {
     }
   }, [transcript]);
 
-  const handleRecord = () => {
-    if (isListening) {
+  const handleRecord = async () => {
+    if (isRecording) {
+      // First stop the recording and wait for it to complete
+      try {
+        console.log('Stopping recording...');
+        const recordedBlob = await stopRecording();
+        
+        console.log('Recording stopped, received blob:', recordedBlob);
+        
+        // Check if we have an audio blob
+        if (!recordedBlob || recordedBlob.size === 0) {
+          throw new Error('No audio data recorded');
+        }
+        
+        // Now send to backend
+        await sendAudioToBackend((result) => {
+          if (result && result.transcription) {
+            setInputText(result.transcription);
+            toast({
+              title: "Recording Successful",
+              description: "Audio transcribed successfully!",
+              variant: "default",
+            });
+          }
+        }, recordedBlob);
+        
+      } catch (error) {
+        console.error('Error processing recording:', error);
+        toast({
+          title: "Processing Error",
+          description: "Failed to process audio recording.",
+          variant: "destructive",
+        });
+      }
+    } else if (isListening) {
+      // Stop Web Speech API
       stopListening();
     } else {
+      // Start new recording - prefer MediaRecorder for Phase 2
       resetTranscript();
-      startListening();
+      try {
+        console.log('Starting MediaRecorder...');
+        await startRecording();
+        toast({
+          title: "Recording Started",
+          description: "Speak now to record your message.",
+          variant: "default",
+        });
+      } catch (error) {
+        console.error('Error starting MediaRecorder:', error);
+        toast({
+          title: "Recording Error",
+          description: "Failed to start recording. Trying fallback...",
+          variant: "destructive",
+        });
+        // Fallback to Web Speech API
+        startListening();
+      }
     }
   };
 
@@ -204,14 +267,14 @@ export default function EmotionalSupport() {
                 <div className="flex gap-2">
                   <Button 
                     onClick={handleRecord}
-                    variant={isListening ? "destructive" : "outline"}
+                    variant={(isListening || isRecording) ? "destructive" : "outline"}
                     disabled={isProcessing}
                     className="min-w-[100px] transition-all duration-300"
                   >
-                    {isListening ? (
+                    {(isListening || isRecording) ? (
                       <>
                         <MicOff className="w-4 h-4 mr-2" />
-                        Stop
+                        {isRecording ? "Stop Recording" : "Stop"}
                       </>
                     ) : (
                       <>
@@ -238,12 +301,23 @@ export default function EmotionalSupport() {
               </div>
 
               {/* Status Indicators */}
-              {(isListening || isProcessing || speechError) && (
+              {(isListening || isRecording || isProcessing || speechError) && (
                 <div className="flex flex-col gap-3">
-                  {isListening && (
-                    <div className="flex items-center justify-center p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-200">
+                  {isRecording && (
+                    <div className="flex items-center justify-center p-4 bg-gradient-to-r from-red-50 to-pink-50 rounded-lg border border-red-200">
                       <div className="flex items-center space-x-2 text-red-600">
                         <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
+                        <span className="text-sm font-medium">
+                          Recording... {selectedLanguage === 'urdu' ? '(اردو میں بولیں)' : '(Speak now)'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {isListening && !isRecording && (
+                    <div className="flex items-center justify-center p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-pink-200">
+                      <div className="flex items-center space-x-2 text-pink-600">
+                        <div className="w-3 h-3 bg-pink-500 rounded-full animate-pulse"></div>
                         <span className="text-sm font-medium">
                           Listening... {selectedLanguage === 'urdu' ? '(اردو میں بولیں)' : '(Speak now)'}
                         </span>
@@ -266,6 +340,16 @@ export default function EmotionalSupport() {
                         <div className="w-4 h-4 text-red-500">⚠️</div>
                         <span className="text-sm font-medium">{speechError}</span>
                       </div>
+                    </div>
+                  )}
+                  
+                  {/* Debug info for audio recording */}
+                  {process.env.NODE_ENV === 'development' && (
+                    <div className="text-xs text-gray-500 p-2 bg-gray-50 rounded">
+                      <div>Recording: {isRecording ? 'Yes' : 'No'}</div>
+                      <div>Listening: {isListening ? 'Yes' : 'No'}</div>
+                      <div>Audio Blob: {audioBlob ? `${audioBlob.size} bytes` : 'None'}</div>
+                      <div>MediaRecorder Support: {navigator.mediaDevices ? 'Yes' : 'No'}</div>
                     </div>
                   )}
                 </div>
