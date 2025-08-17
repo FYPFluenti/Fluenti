@@ -54,17 +54,45 @@ export default function EmotionalSupport() {
   const [isProcessing, setIsProcessing] = useState(false);
   // Phase 3: State for emotion detection results
   const [lastProcessedData, setLastProcessedData] = useState<any>(null);
+  // Chat messages state
+  const [chatMessages, setChatMessages] = useState<Array<{
+    id: string;
+    type: 'user' | 'ai';
+    content: string;
+    timestamp: Date;
+    emotion?: { emotion: string; score: number };
+  }>>([
+    {
+      id: '1',
+      type: 'ai',
+      content: "hey there! what's on your mind today? I'm here to listen and support you through whatever you're feeling.",
+      timestamp: new Date()
+    }
+  ]);
 
   // Adult Dashboard state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+  const chatMessagesRef = useRef<HTMLDivElement>(null);
 
   // Phase 1: WebSocket integration for real-time communication
   const { socket, isConnected, sendMessage } = useWebSocket({
     onMessage: (data) => {
       if (data.type === 'emotional-support-response') {
-        setResponse(data.response);
+        const aiResponse = data.response;
+        setResponse(aiResponse);
+        
+        // Add AI response to chat messages
+        const aiMessage = {
+          id: Date.now().toString(),
+          type: 'ai' as const,
+          content: aiResponse,
+          timestamp: new Date(),
+          emotion: data.emotion
+        };
+        setChatMessages(prev => [...prev, aiMessage]);
+        
         // Phase 3: Store processed data from WebSocket for emotion display
         setLastProcessedData(data);
         setIsProcessing(false);
@@ -98,6 +126,20 @@ export default function EmotionalSupport() {
 
   // Phase 1 & 2: API call function for emotional support
   const processInput = async (audioBlob?: Blob) => {
+    if (!inputText.trim() && !audioBlob) return;
+    
+    // Add user message to chat
+    const userMessage = {
+      id: Date.now().toString(),
+      type: 'user' as const,
+      content: inputText,
+      timestamp: new Date()
+    };
+    setChatMessages(prev => [...prev, userMessage]);
+    
+    // Clear input and set processing state
+    const currentInput = inputText;
+    setInputText('');
     setIsProcessing(true);
     
     try {
@@ -111,7 +153,7 @@ export default function EmotionalSupport() {
             sendMessage({
               type: 'emotional-support',
               audio: audioData.split(',')[1], // Remove data:audio/wav;base64, prefix
-              text: inputText,
+              text: currentInput,
               language: language // Phase 1: Use 'en' | 'ur' language codes
             });
           };
@@ -119,7 +161,7 @@ export default function EmotionalSupport() {
         } else {
           sendMessage({
             type: 'emotional-support',
-            text: inputText,
+            text: currentInput,
             language: language
           });
         }
@@ -129,7 +171,7 @@ export default function EmotionalSupport() {
       // Fallback to HTTP API
       const formData = new FormData();
       if (audioBlob) formData.append('audio', audioBlob);
-      formData.append('text', inputText);
+      formData.append('text', currentInput);
       formData.append('language', language); // Phase 1: Use 'en' | 'ur' language codes
 
       const res = await fetch('/api/emotional-support', { 
@@ -145,14 +187,33 @@ export default function EmotionalSupport() {
       }
 
       const data = await res.json();
-      setResponse(data.response || 'I understand. Please tell me more.');
+      const aiResponse = data.response || 'I understand. Please tell me more.';
+      
+      // Add AI response to chat
+      const aiMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai' as const,
+        content: aiResponse,
+        timestamp: new Date(),
+        emotion: data.emotion
+      };
+      setChatMessages(prev => [...prev, aiMessage]);
+      
+      setResponse(aiResponse);
       
       // Phase 3: Store processed data for emotion display
       setLastProcessedData(data);
       
       // Update input text with transcription if available
-      if (data.transcription) {
-        setInputText(data.transcription);
+      if (data.transcription && data.transcription !== currentInput) {
+        // Update the user message with the transcription
+        setChatMessages(prev => 
+          prev.map(msg => 
+            msg.id === userMessage.id 
+              ? { ...msg, content: data.transcription }
+              : msg
+          )
+        );
       }
       
       // Phase 3: Enhanced emotion display with detailed information
@@ -173,6 +234,15 @@ export default function EmotionalSupport() {
         description: "Failed to process your input. Please try again.",
         variant: "destructive"
       });
+      
+      // Add error message to chat
+      const errorMessage = {
+        id: (Date.now() + 2).toString(),
+        type: 'ai' as const,
+        content: "I'm sorry, I encountered an error processing your message. Please try again.",
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsProcessing(false);
     }
@@ -184,6 +254,13 @@ export default function EmotionalSupport() {
       setInputText(transcript);
     }
   }, [transcript]);
+
+  // Auto-scroll to bottom when new messages are added
+  useEffect(() => {
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+    }
+  }, [chatMessages, isProcessing]);
 
   const handleRecord = async () => {
     if (isRecording) {
@@ -271,393 +348,255 @@ export default function EmotionalSupport() {
     return null;
   }
   return (
-    <div className="flex h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-indigo-50 dark:bg-gradient-to-br dark:from-gray-900 dark:via-purple-900/20 dark:to-indigo-900/20">
-      {/* Sidebar */}
-      <motion.div 
-        ref={sidebarRef}
-        className="w-20 flex flex-col items-center py-6 bg-white/80 backdrop-blur-sm border-r border-gray-200 dark:bg-gray-800/80 dark:border-gray-700"
-        initial={{ x: -50 }}
-        animate={{ x: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="flex flex-col items-center space-y-6 h-full">
-          {/* Top Navigation */}
-          <div className="flex flex-col items-center space-y-4">
-            <Link href="/adult-dashboard" className="group">
-              <div className="p-3 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors duration-200">
-                <Home className="w-5 h-5" />
-              </div>
-            </Link>
-            <Link href="/adult-insights" className="group">
-              <div className="p-3 rounded-xl bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors duration-200">
-                <BarChart className="w-5 h-5" />
-              </div>
-            </Link>
-            <Link href="/adult-history" className="group">
-              <div className="p-3 rounded-xl bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50 transition-colors duration-200">
-                <History className="w-5 h-5" />
-              </div>
-            </Link>
-            <button onClick={() => setIsFeedbackOpen(true)} className="group">
-              <div className="p-3 rounded-xl bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 hover:bg-pink-200 dark:hover:bg-pink-900/50 transition-colors duration-200">
-                <ThumbsUp className="w-5 h-5" />
-              </div>
-            </button>
-            <div className="p-3 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400">
-              <Heart className="w-5 h-5" />
-            </div>
-          </div>
+    <div className="fixed inset-0 bg-background flex flex-col items-center justify-center">
+      {/* Top right close */}
+      <Link href="/adult-dashboard">
+        <button className="absolute top-4 right-4 text-muted-foreground hover:text-foreground">
+          ✕
+        </button>
+      </Link>
 
-          {/* Bottom Section */}
-          <div className="flex-1 flex flex-col justify-end space-y-4">
-            <button onClick={() => setIsSettingsOpen(true)} className="group">
-              <div className="p-3 rounded-xl bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200">
-                <Settings className="w-5 h-5" />
-              </div>
-            </button>
-            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-              <LogoutButton />
-            </div>
-          </div>
-        </div>
-      </motion.div>
+      {/* Sidebar mock */}
+      <div className="absolute left-0 top-0 bottom-0 w-16 flex flex-col items-center py-6 gap-8 bg-background border-r border-border">
+        <span className="w-8 h-8 rounded-full bg-[#F5B82E]" />
+        <Star className="w-6 h-6 text-muted-foreground" />
+        <Clock className="w-6 h-6 text-muted-foreground" />
+        <ThumbsUp className="w-6 h-6 text-muted-foreground" />
+        <Brain className="w-6 h-6 text-purple-500" />
+        <User className="w-6 h-6 text-muted-foreground mt-auto" />
+      </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col">
-        {/* Top Bar */}
-        <div className="flex justify-between items-center p-6 bg-white/50 backdrop-blur-sm border-b border-gray-200 dark:bg-gray-800/50 dark:border-gray-700">
-          <div className="flex items-center space-x-4">
-            <motion.div
-              className="w-12 h-12 rounded-full bg-gradient-to-r from-pink-400 to-purple-500 flex items-center justify-center shadow-lg"
-              whileHover={{ scale: 1.05 }}
-            >
-              <span className="text-white font-bold text-lg">
-                {user?.name?.charAt(0).toUpperCase() || 'A'}
-              </span>
-            </motion.div>
+      {/* Main Chat Area */}
+      <div className="flex flex-col pl-24 max-w-3xl w-full h-full">
+        {/* Header */}
+        <div className="py-4 border-b border-border mb-4">
+          <div className="flex items-center gap-3">
+            <span className="w-10 h-10 rounded-full bg-[#F5B82E] flex items-center justify-center">
+              <Brain className="w-5 h-5 text-black" />
+            </span>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Emotional Support</h1>
-              <p className="text-gray-600 dark:text-gray-400">Chat with our AI companion for emotional guidance</p>
+              <h2 className="text-xl font-semibold text-foreground">Emotional Support Chat</h2>
+              <p className="text-sm text-muted-foreground">
+                {isConnected ? 'Connected • Real-time support' : 'Offline mode'}
+              </p>
             </div>
           </div>
           
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <button
-                className={`px-3 py-2 rounded-lg font-medium transition-all duration-300 ${
-                  language === 'en' 
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                }`}
-                onClick={() => setLanguage('en')}
-              >
-                English
-              </button>
-              <button
-                className={`px-3 py-2 rounded-lg font-medium transition-all duration-300 ${
-                  language === 'ur' 
-                    ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
-                }`}
-                onClick={() => setLanguage('ur')}
-              >
-                اردو
-              </button>
-            </div>
-            <DarkModeToggle />
+          {/* Language Toggle */}
+          <div className="flex items-center space-x-2 mt-3">
+            <button
+              className={`px-3 py-2 rounded-lg font-medium transition-all duration-300 text-sm ${
+                language === 'en' 
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
+                  : 'bg-muted text-foreground'
+              }`}
+              onClick={() => setLanguage('en')}
+            >
+              English
+            </button>
+            <button
+              className={`px-3 py-2 rounded-lg font-medium transition-all duration-300 text-sm ${
+                language === 'ur' 
+                  ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
+                  : 'bg-muted text-foreground'
+              }`}
+              onClick={() => setLanguage('ur')}
+            >
+              اردو
+            </button>
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="max-w-4xl mx-auto">
-            {/* Phase 1 Test Interface */}
-            <Card className="mb-8 shadow-lg border-0 bg-white/80 backdrop-blur-sm dark:bg-gray-800/80">
-              <CardContent className="p-6">
-                <div className="flex items-center space-x-2 mb-6">
-                  <Star className="w-6 h-6 text-yellow-500" />
-                  <h3 className="text-xl font-semibold text-gray-800 dark:text-white">Voice & Text Input</h3>
-                  <span className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 text-xs font-medium px-2.5 py-0.5 rounded-full">Phase 1</span>
-                </div>
-                
-                <div className="space-y-4">
-                  {/* Input Section */}
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <Input
-                      type="text"
-                      value={inputText}
-                      onChange={(e) => setInputText(e.target.value)}
-                      placeholder={language === 'ur' ? "اپنے جذبات یہاں لکھیں..." : "Share your feelings here..."}
-                      className="flex-1 min-h-[44px] border-pink-200 focus:border-pink-400 focus:ring-pink-400 dark:border-gray-600 dark:focus:border-pink-500"
-                      disabled={isProcessing}
-                      dir={language === 'ur' ? 'rtl' : 'ltr'}
-                    />
-                    <div className="flex gap-2">
-                      <Button 
-                        onClick={handleRecord}
-                        variant={(isListening || isRecording) ? "destructive" : "outline"}
-                        disabled={isProcessing}
-                        className="min-w-[100px] transition-all duration-300"
-                      >
-                        {(isListening || isRecording) ? (
-                          <>
-                            <MicOff className="w-4 h-4 mr-2" />
-                            {isRecording ? "Stop Recording" : "Stop"}
-                          </>
-                        ) : (
-                          <>
-                            <Mic className="w-4 h-4 mr-2" />
-                            Record
-                          </>
-                        )}
-                      </Button>
-                      <Button 
-                        onClick={() => processInput()}
-                        disabled={!inputText.trim() || isProcessing}
-                        className="min-w-[100px] bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white shadow-lg transition-all duration-300"
-                      >
-                        {isProcessing ? (
-                          <>
-                            <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            Processing...
-                          </>
-                        ) : (
-                          'Send'
-                        )}
-                      </Button>
-                    </div>
+        {/* Chat Messages */}
+        <div ref={chatMessagesRef} className="flex-1 overflow-y-auto mb-4 space-y-4">
+          {/* Display chat messages */}
+          {chatMessages.map((message) => (
+            <div key={message.id} className={`flex items-start gap-3 ${message.type === 'user' ? 'flex-row-reverse' : ''}`}>
+              {message.type === 'ai' ? (
+                <span className="w-8 h-8 rounded-full bg-[#F5B82E] flex items-center justify-center flex-shrink-0">
+                  <Brain className="w-4 h-4 text-black" />
+                </span>
+              ) : (
+                <span className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
+                  {user?.firstName?.charAt(0) || user?.name?.charAt(0) || 'U'}
+                </span>
+              )}
+              <div className={`rounded-xl px-4 py-2 shadow-sm max-w-md ${
+                message.type === 'ai' 
+                  ? 'bg-muted/40 text-foreground' 
+                  : 'bg-blue-500 text-white'
+              }`}>
+                <p className="text-sm">{message.content}</p>
+                {message.emotion && (
+                  <div className="mt-2 pt-2 border-t border-border/20 text-xs opacity-70">
+                    <span className="capitalize">{message.emotion.emotion}</span>
+                    <span className="ml-2">({Math.round(message.emotion.score * 100)}%)</span>
                   </div>
-
-                  {/* Status Indicators */}
-                  {(isListening || isRecording || isProcessing || speechError) && (
-                    <div className="flex flex-col gap-3">
-                      {isRecording && (
-                        <div className="flex items-center justify-center p-4 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                          <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
-                            <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                            <span className="text-sm font-medium">
-                              Recording... {language === 'ur' ? '(اردو میں بولیں)' : '(Speak now)'}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {isListening && !isRecording && (
-                        <div className="flex items-center justify-center p-4 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20 rounded-lg border border-pink-200 dark:border-pink-800">
-                          <div className="flex items-center space-x-2 text-pink-600 dark:text-pink-400">
-                            <div className="w-3 h-3 bg-pink-500 rounded-full animate-pulse"></div>
-                            <span className="text-sm font-medium">
-                              Listening... {language === 'ur' ? '(اردو میں بولیں)' : '(Speak now)'}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {isProcessing && (
-                        <div className="flex items-center justify-center p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                          <div className="flex items-center space-x-2 text-blue-600 dark:text-blue-400">
-                            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                            <span className="text-sm font-medium">Processing your input...</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {speechError && (
-                        <div className="flex items-center justify-center p-4 bg-gradient-to-r from-red-50 to-pink-50 dark:from-red-900/20 dark:to-pink-900/20 rounded-lg border border-red-200 dark:border-red-800">
-                          <div className="flex items-center space-x-2 text-red-600 dark:text-red-400">
-                            <div className="w-4 h-4 text-red-500">⚠️</div>
-                            <span className="text-sm font-medium">{speechError}</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Debug info for audio recording */}
-                      {process.env.NODE_ENV === 'development' && (
-                        <div className="text-xs text-gray-500 p-2 bg-gray-50 dark:bg-gray-800 rounded">
-                          <div>Recording: {isRecording ? 'Yes' : 'No'}</div>
-                          <div>Listening: {isListening ? 'Yes' : 'No'}</div>
-                          <div>Audio Blob: {audioBlob ? `${audioBlob.size} bytes` : 'None'}</div>
-                          <div>MediaRecorder Support: {navigator.mediaDevices ? 'Yes' : 'No'}</div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Response Section */}
-                  {response && (
-                    <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl border border-blue-200 dark:border-blue-800 shadow-sm">
-                      <div className="flex items-center space-x-2 mb-3">
-                        <Smile className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                        <h4 className="font-semibold text-blue-900 dark:text-blue-300">AI Companion Response:</h4>
-                      </div>
-                      <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{response}</p>
-                    </div>
-                  )}
-
-                  {/* Phase 3: Enhanced Emotion Detection Display */}
-                  {lastProcessedData && lastProcessedData.emotion && (
-                    <div className="p-6 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-xl border border-purple-200 dark:border-purple-800 shadow-sm">
-                      <div className="flex items-center space-x-2 mb-3">
-                        <Brain className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                        <h4 className="font-semibold text-purple-900 dark:text-purple-300">Emotion Analysis:</h4>
-                      </div>
-                      
-                      <div className="space-y-3">
-                        {/* Primary Emotion Display as specified in Phase 3 */}
-                        <div className="flex items-center justify-between p-3 bg-white/80 dark:bg-gray-800/80 rounded-lg">
-                          <span className="font-medium text-gray-800 dark:text-gray-200">Detected Emotion:</span>
-                          <div className="text-right">
-                            <span className="font-semibold text-purple-700 dark:text-purple-400 capitalize">
-                              {lastProcessedData.emotion.emotion}
-                            </span>
-                            <div className="text-sm text-gray-600 dark:text-gray-400">
-                              Score: {Math.round(lastProcessedData.emotion.score * 100)}%
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Emotion Source and Confidence Indicator */}
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600 dark:text-gray-400">Detection Source:</span>
-                          <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full text-xs font-medium">
-                            {lastProcessedData.emotionSource || 'text-only'}
-                          </span>
-                        </div>
-
-                        {/* Confidence Bar */}
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                          <div 
-                            className="bg-gradient-to-r from-purple-400 to-pink-500 h-2 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.round(lastProcessedData.emotion.score * 100)}%` }}
-                          ></div>
-                        </div>
-
-                        {/* Additional Emotion Metadata if available */}
-                        {lastProcessedData.emotionDetails && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-200 dark:border-gray-700">
-                            Analysis Method: {lastProcessedData.emotionDetails.method || 'Keyword-based fallback'}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Quick Actions */}
-                  <div className="flex flex-wrap gap-2 pt-4">
-                    {language === 'en' ? (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setInputText("I'm feeling anxious about work today")}
-                          className="text-xs hover:bg-pink-50 dark:hover:bg-pink-900/20"
-                          disabled={isProcessing}
-                        >
-                          Try: "I'm feeling anxious"
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setInputText("I'm having trouble sleeping")}
-                          className="text-xs hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                          disabled={isProcessing}
-                        >
-                          Try: "Trouble sleeping"
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setInputText("I feel overwhelmed")}
-                          className="text-xs hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
-                          disabled={isProcessing}
-                        >
-                          Try: "Feeling overwhelmed"
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setInputText("میں کام کے بارے میں پریشان ہوں")}
-                          className="text-xs hover:bg-pink-50 dark:hover:bg-pink-900/20"
-                          disabled={isProcessing}
-                          dir="rtl"
-                        >
-                          Try: "میں پریشان ہوں"
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setInputText("مجھے نیند نہیں آتی")}
-                          className="text-xs hover:bg-purple-50 dark:hover:bg-purple-900/20"
-                          disabled={isProcessing}
-                          dir="rtl"
-                        >
-                          Try: "نیند کی مسئلہ"
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setInputText("میں بہت تھکا ہوا محسوس کر رہا ہوں")}
-                          className="text-xs hover:bg-indigo-50 dark:hover:bg-indigo-900/20"
-                          disabled={isProcessing}
-                          dir="rtl"
-                        >
-                          Try: "تھکاوٹ"
-                        </Button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Support Features Info */}
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              <Card className="shadow-lg border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                      <Shield className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <h3 className="font-semibold text-gray-800 dark:text-white">Safe Space</h3>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    Your conversations are private and secure. Share your feelings without judgment in this confidential environment.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
-                      <Clock className="w-6 h-6 text-green-600 dark:text-green-400" />
-                    </div>
-                    <h3 className="font-semibold text-gray-800 dark:text-white">24/7 Available</h3>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    Get emotional support anytime you need it, day or night. We're always here when you need someone to listen.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card className="shadow-lg border-0 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm hover:shadow-xl transition-all duration-300 sm:col-span-2 lg:col-span-1">
-                <CardContent className="p-6">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                      <Brain className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                    </div>
-                    <h3 className="font-semibold text-gray-800 dark:text-white">AI-Powered</h3>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                    Advanced emotional intelligence to understand and respond to your needs with empathy and care.
-                  </p>
-                </CardContent>
-              </Card>
+                )}
+              </div>
             </div>
+          ))}
+
+          {/* Processing indicator */}
+          {isProcessing && (
+            <div className="flex items-start gap-3">
+              <span className="w-8 h-8 rounded-full bg-[#F5B82E] flex items-center justify-center">
+                <Brain className="w-4 h-4 text-black animate-pulse" />
+              </span>
+              <div className="bg-muted/40 text-foreground rounded-xl px-4 py-2 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <span className="text-sm text-muted-foreground ml-2">Analyzing your feelings...</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Recording/Listening Status */}
+          {(isRecording || isListening) && (
+            <div className="flex justify-center">
+              <div className={`px-4 py-2 rounded-full text-xs font-medium ${
+                isRecording 
+                  ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
+                  : 'bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400'
+              }`}>
+                {isRecording ? 'Recording...' : 'Listening...'} 
+                {language === 'ur' ? ' (اردو میں بولیں)' : ' (Speak now)'}
+              </div>
+            </div>
+          )}
+
+          {/* Speech Error */}
+          {speechError && (
+            <div className="flex justify-center">
+              <div className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-xs font-medium">
+                ⚠️ {speechError}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Quick suggestions */}
+        <div className="mb-4">
+          <div className="flex flex-wrap gap-2">
+            {language === 'en' ? (
+              <>
+                <button
+                  onClick={() => {
+                    setInputText("I'm feeling anxious about work today");
+                    setTimeout(() => processInput(), 100);
+                  }}
+                  className="px-3 py-1 text-xs bg-muted/60 hover:bg-muted text-foreground rounded-full transition-colors"
+                  disabled={isProcessing}
+                >
+                  Try: "I'm feeling anxious"
+                </button>
+                <button
+                  onClick={() => {
+                    setInputText("I'm having trouble sleeping");
+                    setTimeout(() => processInput(), 100);
+                  }}
+                  className="px-3 py-1 text-xs bg-muted/60 hover:bg-muted text-foreground rounded-full transition-colors"
+                  disabled={isProcessing}
+                >
+                  Try: "Trouble sleeping"
+                </button>
+                <button
+                  onClick={() => {
+                    setInputText("I feel overwhelmed");
+                    setTimeout(() => processInput(), 100);
+                  }}
+                  className="px-3 py-1 text-xs bg-muted/60 hover:bg-muted text-foreground rounded-full transition-colors"
+                  disabled={isProcessing}
+                >
+                  Try: "Feeling overwhelmed"
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    setInputText("میں کام کے بارے میں پریشان ہوں");
+                    setTimeout(() => processInput(), 100);
+                  }}
+                  className="px-3 py-1 text-xs bg-muted/60 hover:bg-muted text-foreground rounded-full transition-colors"
+                  disabled={isProcessing}
+                  dir="rtl"
+                >
+                  Try: "میں پریشان ہوں"
+                </button>
+                <button
+                  onClick={() => {
+                    setInputText("مجھے نیند نہیں آتی");
+                    setTimeout(() => processInput(), 100);
+                  }}
+                  className="px-3 py-1 text-xs bg-muted/60 hover:bg-muted text-foreground rounded-full transition-colors"
+                  disabled={isProcessing}
+                  dir="rtl"
+                >
+                  Try: "نیند کی مسئلہ"
+                </button>
+              </>
+            )}
           </div>
+        </div>
+
+        {/* Input */}
+        <div className="w-full flex items-center gap-3 border border-border rounded-xl bg-card p-3 shadow-sm">
+          <textarea
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            placeholder={isRecording ? "Recording..." : (language === 'ur' ? "اپنے جذبات یہاں لکھیں..." : "Share your feelings here...")}
+            rows={1}
+            className="flex-1 resize-none bg-transparent outline-none text-foreground placeholder:text-muted-foreground/70"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                processInput();
+              }
+            }}
+            disabled={isProcessing || isRecording}
+            dir={language === 'ur' ? 'rtl' : 'ltr'}
+          />
+          
+          {/* Voice recording button */}
+          <button 
+            onClick={handleRecord}
+            className={`w-10 h-10 rounded-full border border-border grid place-items-center transition-colors ${
+              (isRecording || isListening) ? 'bg-red-500 text-white' : 'text-muted-foreground hover:bg-muted'
+            }`}
+            disabled={isProcessing}
+            title={(isRecording || isListening) ? "Stop recording" : "Start voice input"}
+          >
+            {(isRecording || isListening) ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+          </button>
+          
+          {/* Send button */}
+          <button
+            onClick={() => processInput()}
+            disabled={(!inputText.trim() && !isRecording) || isProcessing}
+            className="w-10 h-10 rounded-full grid place-items-center bg-[#F5B82E] hover:brightness-95 disabled:opacity-50 transition-all"
+            aria-label="send"
+          >
+            {isProcessing ? (
+              <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+            ) : (
+              <svg viewBox="0 0 24 24" className="w-4 h-4 text-black">
+                <path fill="currentColor" d="M3 11l18-8-8 18-2-7-8-3z" />
+              </svg>
+            )}
+          </button>
+        </div>
+
+        {/* Connection status and language indicator */}
+        <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+            <span>{isConnected ? 'Real-time mode' : 'Offline mode'}</span>
+          </div>
+          <span>Language: {language === 'ur' ? 'اردو' : 'English'}</span>
         </div>
       </div>
 
@@ -668,68 +607,6 @@ export default function EmotionalSupport() {
         language={language}
         onLanguageChange={setLanguage}
       />
-
-      {/* Adult Feedback Modal */}
-      {isFeedbackOpen && (
-        <motion.div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={() => setIsFeedbackOpen(false)}
-        >
-          <motion.div
-            className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl"
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.9, opacity: 0 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white">Feedback</h2>
-              <button
-                onClick={() => setIsFeedbackOpen(false)}
-                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  How was your session today?
-                </label>
-                <div className="flex space-x-2">
-                  {[1, 2, 3, 4, 5].map((rating) => (
-                    <button
-                      key={rating}
-                      className="text-2xl hover:scale-110 transition-transform"
-                    >
-                      ⭐
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Additional Comments
-                </label>
-                <textarea
-                  className="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  rows={4}
-                  placeholder="Share your thoughts about the session..."
-                />
-              </div>
-
-              <button className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white py-3 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-colors">
-                Submit Feedback
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
     </div>
   );
 }
