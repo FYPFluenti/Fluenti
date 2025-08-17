@@ -10,3 +10,10 @@ vite.config.ts.*
 .env.development
 data/db/*
 !data/db/.gitkeep
+
+# ML Model Cache - Don't commit large model files
+models/hf_cache/
+*.bin
+*.safetensors
+*.pt
+*.pth
