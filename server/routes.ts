@@ -12,7 +12,8 @@ import {
   detectEmotionFromAudio, 
   combineEmotions 
 } from "./services/emotionService";
-import { analyzeEmotion } from "./services/openai";
+// Phase 4: Import response generation functions
+import { analyzeEmotion, generateEmotionalResponse } from "./services/openai";
 import { AuthService } from "./auth";
 import multer from 'multer';
 
@@ -359,13 +360,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const emotionLanguage = language?.startsWith('ur') ? 'ur' : 'en';
       const emotion = await detectEmotionFromText(inputText, emotionLanguage);
       
-      // Mock response for testing (since we don't want to require OpenAI for testing)
-      const mockResponse = `I understand you're feeling ${emotion.emotion}. That's completely valid. Would you like to tell me more about what's making you feel this way?`;
+      // Phase 4: Generate personalized response based on detected emotion
+      let response = `I understand you're feeling ${emotion.emotion}. That's completely valid. Would you like to tell me more about what's making you feel this way?`;
+      
+      try {
+        response = await generateEmotionalResponse(emotion.emotion, inputText, emotionLanguage);
+        console.log('Phase 4: Generated personalized response for test endpoint');
+      } catch (error) {
+        console.log('Phase 4: Using fallback response for test endpoint');
+      }
       
       res.json({ 
         transcription: inputText, 
         emotion, 
-        response: mockResponse,
+        response: response,
         detectedEmotion: emotion.emotion,
         confidence: emotion.score
       });
@@ -562,19 +570,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           supportiveResponse = `Thank you for sharing with me. I'm here to listen and support you through whatever you're experiencing. Your feelings are valid and important. How are you feeling right now, and what would be most helpful for you? I'm here to provide a safe space for you to express yourself.`;
       }
       
-      // Use enhanced Hugging Face responses (OpenAI disabled)
+      // Phase 4: Enhanced response generation system
       let finalResponse = supportiveResponse;
-      console.log('Using enhanced Hugging Face response system');
       
-      /* OpenAI integration disabled - uncomment to re-enable:
       try {
-        const emotionAnalysis = await analyzeEmotion(inputText);
-        finalResponse = emotionAnalysis.response;
-        console.log('OpenAI analysis successful');
+        // Phase 4: Use the new generateEmotionalResponse with fallback chain
+        const emotionLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+        finalResponse = await generateEmotionalResponse(finalEmotion.emotion, inputText, emotionLanguage);
+        console.log('Phase 4: Generated personalized emotional response');
       } catch (error) {
-        console.log('Using Hugging Face fallback response (OpenAI unavailable)');
+        console.log('Phase 4: Response generation failed, using rule-based fallback');
+        finalResponse = supportiveResponse;
       }
-      */
       
       res.json({ 
         transcription: inputText, 

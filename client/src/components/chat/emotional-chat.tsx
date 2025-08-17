@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ThreeAvatar } from '@/components/ui/three-avatar';
 import { useToast } from '@/hooks/use-toast';
+import { useWebSocket } from '@/hooks/useWebSocket';
 import { 
   Send, 
   Heart, 
@@ -41,6 +42,90 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { toast } = useToast();
+
+  // Phase 4: WebSocket streaming for real-time response generation
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
+  const [streamingContent, setStreamingContent] = useState<string>('');
+
+  const { sendMessage: sendWebSocketMessage, isConnected } = useWebSocket({
+    onMessage: (data) => {
+      try {
+        const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+        
+        if (parsedData.type === 'emotion_response_stream') {
+          // Handle streaming response chunks
+          if (parsedData.chunk) {
+            setStreamingContent(prev => prev + parsedData.chunk);
+          }
+          
+          // Handle end of stream
+          if (parsedData.complete) {
+            const finalMessage: Message = {
+              id: streamingMessageId || (Date.now() + 1).toString(),
+              content: streamingContent,
+              sender: 'ai',
+              timestamp: new Date(),
+              emotion: parsedData.detectedEmotion ? mapEmotionToUI(parsedData.detectedEmotion) : 'neutral'
+            };
+
+            setMessages(prev => {
+              // Replace streaming message with final message
+              if (streamingMessageId) {
+                return prev.map(msg => msg.id === streamingMessageId ? finalMessage : msg);
+              } else {
+                return [...prev, finalMessage];
+              }
+            });
+            
+            setStreamingMessageId(null);
+            setStreamingContent('');
+            setIsLoading(false);
+
+            // Show emotion detection toast
+            if (parsedData.detectedEmotion) {
+              toast({
+                title: `Emotion Detected: ${parsedData.detectedEmotion}`,
+                description: `Confidence: ${Math.round((parsedData.confidence || 0) * 100)}%`,
+              });
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error parsing WebSocket message:', error);
+      }
+    }
+  });
+
+  // Helper function to map emotions from API to UI
+  const mapEmotionToUI = (emotion: string): 'happy' | 'sad' | 'neutral' | 'anxious' | 'excited' => {
+    switch (emotion.toLowerCase()) {
+      case 'joy':
+      case 'excitement':
+      case 'amusement':
+      case 'love':
+      case 'gratitude':
+      case 'admiration':
+      case 'optimism':
+      case 'approval':
+      case 'relief':
+        return 'happy';
+      case 'sadness':
+      case 'disappointment':
+      case 'grief':
+        return 'sad';
+      case 'fear':
+      case 'nervousness':
+        return 'anxious';
+      case 'excitement':
+        return 'excited';
+      case 'anger':
+      case 'annoyance':
+      case 'stress':
+        return 'anxious';
+      default:
+        return 'neutral';
+    }
+  };
 
   useEffect(() => {
     // Initial welcome message
@@ -148,12 +233,100 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
     setInputMessage('');
     setIsLoading(true);
 
-    // Detect emotion and generate response
-    const detectedEmotion = detectEmotion(inputMessage);
-    setCurrentEmotion(detectedEmotion);
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim()) return;
 
-    // Simulate AI processing time
-    setTimeout(() => {
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content: inputMessage,
+      sender: 'user',
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsLoading(true);
+
+    // Phase 4: Try WebSocket streaming first, fallback to HTTP
+    if (isConnected) {
+      try {
+        // Create streaming message placeholder
+        const streamingId = (Date.now() + 1).toString();
+        setStreamingMessageId(streamingId);
+        setStreamingContent('');
+
+        const streamingMessage: Message = {
+          id: streamingId,
+          content: '...',
+          sender: 'ai',
+          timestamp: new Date(),
+          emotion: 'neutral'
+        };
+
+        setMessages(prev => [...prev, streamingMessage]);
+
+        // Send message via WebSocket for streaming response
+        sendWebSocketMessage({
+          type: 'emotion_support_request',
+          text: inputMessage,
+          language: language === 'urdu' ? 'ur' : 'en',
+          stream: true
+        });
+
+        return; // WebSocket will handle the response
+      } catch (error) {
+        console.error('WebSocket streaming failed:', error);
+        // Fall through to HTTP fallback
+      }
+    }
+
+    // HTTP fallback for when WebSocket is unavailable
+    try {
+      const response = await fetch('/api/emotional-support', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          text: inputMessage,
+          language: language === 'urdu' ? 'ur' : 'en'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get emotional support response');
+      }
+
+      const data = await response.json();
+      
+      const detectedEmotion = mapEmotionToUI(data.detectedEmotion || 'neutral');
+      setCurrentEmotion(detectedEmotion);
+
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: data.response || 'I\'m here to help you.',
+        sender: 'ai',
+        timestamp: new Date(),
+        emotion: detectedEmotion
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
+      setIsLoading(false);
+
+      // Show emotion detection toast
+      toast({
+        title: `Emotion Detected: ${data.detectedEmotion}`,
+        description: `Confidence: ${Math.round((data.confidence || 0) * 100)}%`,
+      });
+
+    } catch (error) {
+      console.error('Error getting emotional support:', error);
+      
+      // Final fallback to local response if both API methods fail
+      const detectedEmotion = detectEmotion(inputMessage);
+      setCurrentEmotion(detectedEmotion);
+      
       const response = generateResponse(inputMessage, detectedEmotion);
       
       const aiMessage: Message = {
@@ -166,7 +339,14 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
 
       setMessages(prev => [...prev, aiMessage]);
       setIsLoading(false);
-    }, 1000 + Math.random() * 2000);
+
+      toast({
+        title: "Connection Error",
+        description: "Using offline emotional support. Please check your connection.",
+        variant: "destructive"
+      });
+    }
+  };
   };
 
   const getEmotionIcon = (emotion?: string) => {
@@ -235,10 +415,26 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
                         {message.sender === 'ai' && <Bot className="w-4 h-4 mt-1 flex-shrink-0" />}
                         {message.sender === 'user' && <User className="w-4 h-4 mt-1 flex-shrink-0" />}
                         <div className="flex-1">
-                          <p className="text-sm">{message.content}</p>
+                          <p className="text-sm">
+                            {/* Phase 4: Display streaming content for real-time responses */}
+                            {message.id === streamingMessageId 
+                              ? (streamingContent || message.content)
+                              : message.content
+                            }
+                            {/* Show typing indicator for streaming messages */}
+                            {message.id === streamingMessageId && streamingContent && (
+                              <span className="inline-block w-2 h-2 bg-gray-400 rounded-full ml-1 animate-pulse" />
+                            )}
+                          </p>
                           <div className="flex items-center justify-between mt-1">
                             <span className="text-xs opacity-70">
                               {message.timestamp.toLocaleTimeString()}
+                              {/* Show connection type indicator */}
+                              {message.sender === 'ai' && (
+                                <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-600">
+                                  {isConnected ? 'Live' : 'API'}
+                                </span>
+                              )}
                             </span>
                             {message.emotion && message.sender === 'ai' && (
                               <div className="flex items-center space-x-1">
