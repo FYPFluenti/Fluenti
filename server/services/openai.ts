@@ -1,5 +1,22 @@
 import OpenAI from "openai";
 
+// Type definitions
+interface EmotionAnalysis {
+  emotion: string;
+  confidence: number;
+  explanation?: string;
+  supportType?: string;
+  response?: string;
+}
+
+interface SpeechFeedback {
+  accuracy: number;
+  feedback: string;
+  suggestions?: string[];
+  phoneticAnalysis?: string;
+  improvements?: string[];
+}
+
 // Phase 4: Use gpt-4o-mini for cost efficiency as specified in 2025 recommendations
 const openai = new OpenAI({ 
   apiKey: process.env.OPENAI_API_KEY || process.env.OPENAI_API_KEY_ENV_VAR || ""
@@ -339,3 +356,7 @@ export async function generatePersonalizedExercises(
     return [];
   }
 }
+async function generateResponse(emotion: string, text: string, language: string): Promise<string> {
+  throw new Error("Function not implemented.");
+}
+

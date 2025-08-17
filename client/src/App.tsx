@@ -12,6 +12,8 @@ import Signup from "@/pages/signup";
 import Logout from "@/pages/logout";
 import Home from "@/pages/home";
 import AdultDashboard from "@/pages/adult-dashboard";
+import AdultInsights from "@/pages/adult-insights";
+import AdultHistory from "@/pages/adult-history";
 import ChildDashboard from "@/pages/child-dashboard";
 import GuardianDashboard from "@/pages/guardian-dashboard";
 import SpeechTherapy from "@/pages/speech-therapy";
@@ -71,6 +73,18 @@ function Router() {
             </RoleBasedComponent>
           </Route>
           
+          <Route path="/adult-insights">
+            <RoleBasedComponent allowedRoles={['adult']}>
+              <AdultInsights />
+            </RoleBasedComponent>
+          </Route>
+          
+          <Route path="/adult-history">
+            <RoleBasedComponent allowedRoles={['adult']}>
+              <AdultHistory />
+            </RoleBasedComponent>
+          </Route>
+          
           <Route path="/child-dashboard">
             <RoleBasedComponent allowedRoles={['child']}>
               <ChildDashboard />
@@ -98,7 +112,11 @@ function Router() {
           {/* Assessment - available to all but different content */}
           <Route path="/assessment" component={Assessment} />
 
-          <Route path="/settings" component={Settings} />
+          <Route path="/settings">
+            <RoleBasedComponent allowedRoles={['child']}>
+              <Settings />
+            </RoleBasedComponent>
+          </Route>
 
           {/* Legacy home route - redirect to appropriate dashboard */}
           <Route path="/home" component={DashboardRedirect} />

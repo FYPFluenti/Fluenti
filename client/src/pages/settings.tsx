@@ -96,6 +96,8 @@ export default function Settings() {
                 className="relative inline-flex h-6 w-12 cursor-not-allowed rounded-full bg-muted aria-checked:bg-primary transition"
                 role="switch"
                 aria-checked="true"
+                aria-label="Necessary cookies (required)"
+                title="Necessary cookies (required)"
               >
                 <span className="pointer-events-none absolute top-1 left-1 inline-block h-4 w-4 rounded-full bg-foreground/60" />
               </button>
@@ -115,7 +117,9 @@ export default function Settings() {
                   analyticsOn ? "bg-foreground" : "bg-muted"
                 }`}
                 role="switch"
-                aria-checked={analyticsOn}
+                aria-checked={analyticsOn ? "true" : "false"}
+                aria-label={`Analytics cookies ${analyticsOn ? 'enabled' : 'disabled'}`}
+                title={`Toggle analytics cookies ${analyticsOn ? 'off' : 'on'}`}
               >
                 <span
                   className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-background transition ${

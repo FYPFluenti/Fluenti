@@ -30,6 +30,8 @@ export default function DarkModeToggle() {
         checked={isDark}
         onChange={() => setIsDark(!isDark)}
         className="sr-only"
+        aria-label="Toggle dark mode"
+        title="Toggle dark mode"
       />
       <div className="relative !w-16 !h-9 bg-gray-300 dark:bg-gray-600 rounded-full transition">
         <div

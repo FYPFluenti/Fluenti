@@ -304,7 +304,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Save AI response
       await mongoStorage.addMessageToEmotionalSession(sessionId, {
         role: 'assistant',
-        content: emotionAnalysis.response
+        content: emotionAnalysis.response || 'I understand you might be going through something difficult. Would you like to talk about it?'
       });
       
       res.json({
