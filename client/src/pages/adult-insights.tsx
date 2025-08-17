@@ -75,7 +75,11 @@ export default function AdultInsights() {
                 <History className="w-5 h-5" />
               </div>
             </motion.a>
-            <button onClick={() => setIsFeedbackOpen(true)} className="group">
+            <button 
+              onClick={() => setIsFeedbackOpen(true)} 
+              className="group"
+              aria-label="Open feedback form"
+            >
               <div className="p-3 rounded-xl bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-400 hover:bg-pink-200 dark:hover:bg-pink-900/50 transition-colors duration-200">
                 <ThumbsUp className="w-5 h-5" />
               </div>
@@ -89,7 +93,11 @@ export default function AdultInsights() {
 
           {/* Bottom Section */}
           <div className="flex-1 flex flex-col justify-end space-y-4">
-            <button onClick={() => setShowAdultSettings(true)} className="group">
+            <button 
+              onClick={() => setShowAdultSettings(true)} 
+              className="group"
+              aria-label="Open settings"
+            >
               <div className="p-3 rounded-xl bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200">
                 <Settings className="w-5 h-5" />
               </div>

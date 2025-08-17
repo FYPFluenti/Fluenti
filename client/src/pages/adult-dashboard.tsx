@@ -182,16 +182,16 @@ export default function AdultDashboard() {
             />
             <h2 className="text-2xl font-bold mb-4">coffee and calmi time?</h2>
             <div className="space-y-3">
-              <button onClick={() => setShowVoiceUI(true)} className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all">
+              <button onClick={() => setLocation('/emotional-support-voice')} className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all">
                 <div>
                   <h3 className="text-base font-semibold">voice mode</h3>
-                  <p className="text-sm text-muted-foreground">upgrade to pro for voice mode</p>
+                  <p className="text-sm text-muted-foreground">talk it out with AI therapy</p>
                 </div>
                 <ArrowRight className="w-5 h-5" />
               </button>
               <button onClick={() => setLocation('/emotional-support')} className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all">
                 <div>
-                  <h3 className="text-base font-semibold">text mode</h3>
+                  <h3 className="text-base font-semibold">chat mode</h3>
                   <p className="text-sm text-muted-foreground">not in the talking mood?</p>
                 </div>
                 <ArrowRight className="w-5 h-5" />

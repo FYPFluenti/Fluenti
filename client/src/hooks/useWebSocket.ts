@@ -9,20 +9,19 @@ const API_BASE_URL = import.meta.env.PROD
 const getWebSocketUrl = (url: string) => {
   if (!url || url.includes('undefined') || url.includes('null')) {
     console.warn('Invalid URL provided to getWebSocketUrl:', url);
-    return null;
+    return 'ws://localhost:3000'; // Fallback to safe default
   }
   
   try {
     const wsUrl = url.replace('https://', 'wss://').replace('http://', 'ws://');
-    // Additional validation
-    if (!wsUrl.match(/^wss?:\/\/.+:\d+/)) {
-      console.warn('WebSocket URL missing port:', wsUrl);
-      return null;
+    // For localhost, ensure port is included
+    if (wsUrl.includes('localhost') && !wsUrl.includes(':')) {
+      return 'ws://localhost:3000';
     }
     return wsUrl;
   } catch (error) {
     console.warn('Error converting to WebSocket URL:', error);
-    return null;
+    return 'ws://localhost:3000'; // Fallback to safe default
   }
 };
 

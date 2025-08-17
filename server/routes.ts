@@ -421,12 +421,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User not authenticated" });
       }
 
-      let { text, language } = req.body;
+      let { text, language, mode, requestTTS } = req.body;
       let inputText = text;
+      const isVoiceMode = mode === 'voice' || requestTTS === 'true';
 
       console.log('Received text:', text);
       console.log('Text length:', text ? text.length : 0);
       console.log('Language:', language);
+      console.log('Mode:', mode, 'Voice mode:', isVoiceMode);
 
       // Handle audio file if present (from FormData)
       if (req.file) {
@@ -582,6 +584,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('Phase 4: Response generation failed, using rule-based fallback');
         finalResponse = supportiveResponse;
       }
+
+      // Voice Mode: Add TTS generation if requested
+      let audioResponse = null;
+      if (isVoiceMode && requestTTS === 'true') {
+        try {
+          // TODO: Implement TTS generation here
+          // audioResponse = await generateTTS(finalResponse, language);
+          console.log('TTS requested for voice mode but not implemented yet');
+        } catch (ttsError) {
+          console.warn('TTS generation failed:', ttsError);
+        }
+      }
       
       res.json({ 
         transcription: inputText, 
@@ -591,7 +605,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         confidence: finalEmotion.score,
         // Phase 3: Additional metadata for debugging/monitoring
         emotionSource: voiceEmotion ? 'combined' : 'text-only',
-        language: language || 'en'
+        language: language || 'en',
+        // Voice Mode: Include audio response if generated
+        audioBlob: audioResponse,
+        voiceMode: isVoiceMode
       });
     } catch (error) {
       console.error("Error processing emotional support request:", error);
@@ -723,6 +740,178 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 supportType: emotionAnalysis.supportType
               }
             }));
+          }
+        } else if (message.type === 'emotional-support') {
+          // Handle emotional support chat via WebSocket
+          try {
+            const { text, language, audio } = message;
+            let inputText = text;
+
+            // Handle audio if present
+            if (audio) {
+              try {
+                const audioBuffer = Buffer.from(audio, 'base64');
+                const whisperLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+                inputText = await transcribeAudio(audioBuffer, whisperLanguage);
+              } catch (sttError) {
+                console.warn('WebSocket STT failed, using text input:', sttError);
+                inputText = text || 'Could not transcribe audio';
+              }
+            }
+
+            if (!inputText?.trim()) {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  data: { message: 'No input provided' }
+                }));
+              }
+              return;
+            }
+
+            // Process emotion detection
+            let finalEmotion = { emotion: 'neutral', score: 0.5 };
+            try {
+              const emotionLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+              const textEmotion = await detectEmotionFromText(inputText, emotionLanguage);
+              
+              if (audio) {
+                try {
+                  const audioBuffer = Buffer.from(audio, 'base64');
+                  const voiceEmotion = await detectEmotionFromAudio(audioBuffer, emotionLanguage);
+                  finalEmotion = combineEmotions(textEmotion, voiceEmotion);
+                } catch (voiceError) {
+                  finalEmotion = textEmotion;
+                }
+              } else {
+                finalEmotion = textEmotion;
+              }
+            } catch (emotionError) {
+              console.warn('WebSocket emotion detection failed:', emotionError);
+            }
+
+            // Generate response
+            let finalResponse = '';
+            try {
+              const emotionLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+              finalResponse = await generateEmotionalResponse(finalEmotion.emotion, inputText, emotionLanguage);
+            } catch (error) {
+              finalResponse = 'I understand. Please tell me more about how you\'re feeling.';
+            }
+
+            // Send response via WebSocket
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'emotional-support-response',
+                response: finalResponse,
+                emotion: finalEmotion,
+                transcription: inputText
+              }));
+            }
+          } catch (error) {
+            console.error('WebSocket emotional support error:', error);
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                data: { message: 'Failed to process emotional support request' }
+              }));
+            }
+          }
+        } else if (message.type === 'emotional-support-voice') {
+          // Handle emotional support VOICE mode via WebSocket
+          try {
+            const { text, language, audio, requestTTS, voiceSettings } = message;
+            let inputText = text;
+
+            // Handle audio if present
+            if (audio) {
+              try {
+                const audioBuffer = Buffer.from(audio, 'base64');
+                const whisperLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+                inputText = await transcribeAudio(audioBuffer, whisperLanguage);
+              } catch (sttError) {
+                console.warn('WebSocket Voice STT failed, using text input:', sttError);
+                inputText = text || 'Could not transcribe audio';
+              }
+            }
+
+            if (!inputText?.trim()) {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                  type: 'error',
+                  data: { message: 'No voice input provided' }
+                }));
+              }
+              return;
+            }
+
+            // Enhanced emotion detection for voice mode
+            let finalEmotion = { emotion: 'neutral', score: 0.5 };
+            try {
+              const emotionLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+              const textEmotion = await detectEmotionFromText(inputText, emotionLanguage);
+              
+              if (audio) {
+                try {
+                  const audioBuffer = Buffer.from(audio, 'base64');
+                  const voiceEmotion = await detectEmotionFromAudio(audioBuffer, emotionLanguage);
+                  finalEmotion = combineEmotions(textEmotion, voiceEmotion);
+                  console.log('Voice WebSocket: Combined emotion detected:', finalEmotion);
+                } catch (voiceError) {
+                  console.warn('Voice WebSocket: Audio emotion detection failed, using text-only');
+                  finalEmotion = textEmotion;
+                }
+              } else {
+                finalEmotion = textEmotion;
+              }
+            } catch (emotionError) {
+              console.warn('WebSocket voice emotion detection failed:', emotionError);
+            }
+
+            // Generate empathetic response for voice mode
+            let finalResponse = '';
+            try {
+              const emotionLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+              finalResponse = await generateEmotionalResponse(finalEmotion.emotion, inputText, emotionLanguage);
+              console.log('Voice WebSocket: Generated response for', finalEmotion.emotion);
+            } catch (error) {
+              console.warn('Voice WebSocket: Response generation failed, using fallback');
+              finalResponse = language?.startsWith('ur') 
+                ? 'میں سمجھ رہا ہوں۔ براہ کرم مجھے بتائیں کہ آپ کیسا محسوس کر رہے ہیں۔' 
+                : 'I understand. Please tell me more about how you\'re feeling.';
+            }
+
+            // TODO: Add Text-to-Speech (TTS) generation here
+            let audioResponse = null;
+            if (requestTTS) {
+              try {
+                // Placeholder for TTS implementation
+                // audioResponse = await generateTTS(finalResponse, language, voiceSettings);
+                console.log('TTS requested but not implemented yet');
+              } catch (ttsError) {
+                console.warn('TTS generation failed:', ttsError);
+              }
+            }
+
+            // Send voice response via WebSocket
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'emotional-support-voice-response',
+                response: finalResponse,
+                emotion: finalEmotion,
+                transcription: inputText,
+                audioBlob: audioResponse, // Will be null until TTS is implemented
+                voiceMode: true
+              }));
+            }
+          } catch (error) {
+            console.error('WebSocket emotional support voice error:', error);
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({
+                type: 'error',
+                data: { message: 'Failed to process voice emotional support request' }
+              }));
+            }
           }
         }
       } catch (error) {

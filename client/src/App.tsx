@@ -18,6 +18,7 @@ import ChildDashboard from "@/pages/child-dashboard";
 import GuardianDashboard from "@/pages/guardian-dashboard";
 import SpeechTherapy from "@/pages/speech-therapy";
 import EmotionalSupport from "@/pages/emotional-support";
+import EmotionalSupportVoice from "@/pages/emotional-support-voice";
 import ProgressDashboard from "@/pages/progress-dashboard";
 import Assessment from "@/pages/assessment";
 import Achievements from "@/pages/achievements";
@@ -102,6 +103,7 @@ function Router() {
           
           {/* Emotional support - available to all */}
           <Route path="/emotional-support" component={EmotionalSupport} />
+          <Route path="/emotional-support-voice" component={EmotionalSupportVoice} />
           
           {/* Progress tracking - different views for different roles */}
           <Route path="/progress-dashboard" component={ProgressDashboard} />

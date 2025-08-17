@@ -50,48 +50,44 @@ export default function EmotionalSupport() {
   // Phase 1 Specification: Use 'en' | 'ur' language codes
   const [language, setLanguage] = useState<'en' | 'ur'>('en');
   const [inputText, setInputText] = useState('');
-  const [response, setResponse] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   // Phase 3: State for emotion detection results
   const [lastProcessedData, setLastProcessedData] = useState<any>(null);
-  // Chat messages state
+  
+  // Chat conversation state
   const [chatMessages, setChatMessages] = useState<Array<{
     id: string;
     type: 'user' | 'ai';
     content: string;
     timestamp: Date;
     emotion?: { emotion: string; score: number };
-  }>>([
-    {
-      id: '1',
-      type: 'ai',
-      content: "hey there! what's on your mind today? I'm here to listen and support you through whatever you're feeling.",
-      timestamp: new Date()
-    }
-  ]);
+  }>>([]);
 
   // Adult Dashboard state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const chatMessagesRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new messages are added
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [chatMessages]);
 
   // Phase 1: WebSocket integration for real-time communication
   const { socket, isConnected, sendMessage } = useWebSocket({
     onMessage: (data) => {
       if (data.type === 'emotional-support-response') {
-        const aiResponse = data.response;
-        setResponse(aiResponse);
-        
         // Add AI response to chat messages
-        const aiMessage = {
-          id: Date.now().toString(),
-          type: 'ai' as const,
-          content: aiResponse,
+        setChatMessages(prev => [...prev, {
+          id: Date.now() + '-ai',
+          type: 'ai',
+          content: data.response,
           timestamp: new Date(),
           emotion: data.emotion
-        };
-        setChatMessages(prev => [...prev, aiMessage]);
+        }]);
         
         // Phase 3: Store processed data from WebSocket for emotion display
         setLastProcessedData(data);
@@ -128,19 +124,21 @@ export default function EmotionalSupport() {
   const processInput = async (audioBlob?: Blob) => {
     if (!inputText.trim() && !audioBlob) return;
     
-    // Add user message to chat
-    const userMessage = {
-      id: Date.now().toString(),
-      type: 'user' as const,
-      content: inputText,
-      timestamp: new Date()
-    };
-    setChatMessages(prev => [...prev, userMessage]);
+    const userMessage = inputText.trim();
     
-    // Clear input and set processing state
-    const currentInput = inputText;
-    setInputText('');
+    // Add user message to chat immediately
+    if (userMessage) {
+      const userChatMessage = {
+        id: Date.now() + '-user',
+        type: 'user' as const,
+        content: userMessage,
+        timestamp: new Date()
+      };
+      setChatMessages(prev => [...prev, userChatMessage]);
+    }
+    
     setIsProcessing(true);
+    setInputText(''); // Clear input after adding to chat
     
     try {
       // Try WebSocket first for real-time communication
@@ -153,7 +151,7 @@ export default function EmotionalSupport() {
             sendMessage({
               type: 'emotional-support',
               audio: audioData.split(',')[1], // Remove data:audio/wav;base64, prefix
-              text: currentInput,
+              text: userMessage,
               language: language // Phase 1: Use 'en' | 'ur' language codes
             });
           };
@@ -161,7 +159,7 @@ export default function EmotionalSupport() {
         } else {
           sendMessage({
             type: 'emotional-support',
-            text: currentInput,
+            text: userMessage,
             language: language
           });
         }
@@ -171,7 +169,7 @@ export default function EmotionalSupport() {
       // Fallback to HTTP API
       const formData = new FormData();
       if (audioBlob) formData.append('audio', audioBlob);
-      formData.append('text', currentInput);
+      formData.append('text', userMessage);
       formData.append('language', language); // Phase 1: Use 'en' | 'ur' language codes
 
       const res = await fetch('/api/emotional-support', { 
@@ -187,34 +185,18 @@ export default function EmotionalSupport() {
       }
 
       const data = await res.json();
-      const aiResponse = data.response || 'I understand. Please tell me more.';
       
-      // Add AI response to chat
-      const aiMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'ai' as const,
-        content: aiResponse,
+      // Add AI response to chat messages
+      setChatMessages(prev => [...prev, {
+        id: Date.now() + '-ai',
+        type: 'ai',
+        content: data.response || 'I understand. Please tell me more.',
         timestamp: new Date(),
         emotion: data.emotion
-      };
-      setChatMessages(prev => [...prev, aiMessage]);
-      
-      setResponse(aiResponse);
+      }]);
       
       // Phase 3: Store processed data for emotion display
       setLastProcessedData(data);
-      
-      // Update input text with transcription if available
-      if (data.transcription && data.transcription !== currentInput) {
-        // Update the user message with the transcription
-        setChatMessages(prev => 
-          prev.map(msg => 
-            msg.id === userMessage.id 
-              ? { ...msg, content: data.transcription }
-              : msg
-          )
-        );
-      }
       
       // Phase 3: Enhanced emotion display with detailed information
       const emotionInfo = data.emotion || { emotion: 'unknown', score: 0 };
@@ -234,15 +216,6 @@ export default function EmotionalSupport() {
         description: "Failed to process your input. Please try again.",
         variant: "destructive"
       });
-      
-      // Add error message to chat
-      const errorMessage = {
-        id: (Date.now() + 2).toString(),
-        type: 'ai' as const,
-        content: "I'm sorry, I encountered an error processing your message. Please try again.",
-        timestamp: new Date()
-      };
-      setChatMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsProcessing(false);
     }
@@ -254,13 +227,6 @@ export default function EmotionalSupport() {
       setInputText(transcript);
     }
   }, [transcript]);
-
-  // Auto-scroll to bottom when new messages are added
-  useEffect(() => {
-    if (chatMessagesRef.current) {
-      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
-    }
-  }, [chatMessages, isProcessing]);
 
   const handleRecord = async () => {
     if (isRecording) {
@@ -380,6 +346,16 @@ export default function EmotionalSupport() {
                 {isConnected ? 'Connected • Real-time support' : 'Offline mode'}
               </p>
             </div>
+            
+            {/* Mode switcher */}
+            <div className="ml-auto">
+              <Link href="/emotional-support-voice">
+                <button className="px-3 py-2 bg-purple-500 text-white rounded-lg text-sm hover:bg-purple-600 transition-colors flex items-center gap-2">
+                  <Mic className="w-4 h-4" />
+                  Voice Mode
+                </button>
+              </Link>
+            </div>
           </div>
           
           {/* Language Toggle */}
@@ -408,27 +384,41 @@ export default function EmotionalSupport() {
         </div>
 
         {/* Chat Messages */}
-        <div ref={chatMessagesRef} className="flex-1 overflow-y-auto mb-4 space-y-4">
-          {/* Display chat messages */}
+        <div ref={chatContainerRef} className="flex-1 overflow-y-auto mb-4 space-y-4">
+          {/* Initial AI greeting */}
+          <div className="flex items-start gap-3">
+            <span className="w-8 h-8 rounded-full bg-[#F5B82E] flex items-center justify-center">
+              <Brain className="w-4 h-4 text-black" />
+            </span>
+            <div className="bg-muted/40 text-foreground rounded-xl px-4 py-2 shadow-sm max-w-md">
+              hey there! I'm here to provide emotional support. what's on your mind today? feel free to share your feelings - I'm listening.
+            </div>
+          </div>
+
+          {/* Chat Messages */}
           {chatMessages.map((message) => (
-            <div key={message.id} className={`flex items-start gap-3 ${message.type === 'user' ? 'flex-row-reverse' : ''}`}>
-              {message.type === 'ai' ? (
-                <span className="w-8 h-8 rounded-full bg-[#F5B82E] flex items-center justify-center flex-shrink-0">
+            <div key={message.id} className={`flex items-start gap-3 ${
+              message.type === 'user' ? 'flex-row-reverse' : ''
+            }`}>
+              <span className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                message.type === 'user' 
+                  ? 'bg-purple-500 text-white' 
+                  : 'bg-[#F5B82E]'
+              }`}>
+                {message.type === 'user' ? (
+                  <User className="w-4 h-4" />
+                ) : (
                   <Brain className="w-4 h-4 text-black" />
-                </span>
-              ) : (
-                <span className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm font-medium flex-shrink-0">
-                  {user?.firstName?.charAt(0) || user?.name?.charAt(0) || 'U'}
-                </span>
-              )}
+                )}
+              </span>
               <div className={`rounded-xl px-4 py-2 shadow-sm max-w-md ${
-                message.type === 'ai' 
-                  ? 'bg-muted/40 text-foreground' 
-                  : 'bg-blue-500 text-white'
+                message.type === 'user'
+                  ? 'bg-purple-500 text-white'
+                  : 'bg-muted/40 text-foreground'
               }`}>
                 <p className="text-sm">{message.content}</p>
                 {message.emotion && (
-                  <div className="mt-2 pt-2 border-t border-border/20 text-xs opacity-70">
+                  <div className="mt-2 pt-2 border-t border-border/30 text-xs opacity-70">
                     <span className="capitalize">{message.emotion.emotion}</span>
                     <span className="ml-2">({Math.round(message.emotion.score * 100)}%)</span>
                   </div>
@@ -484,30 +474,21 @@ export default function EmotionalSupport() {
             {language === 'en' ? (
               <>
                 <button
-                  onClick={() => {
-                    setInputText("I'm feeling anxious about work today");
-                    setTimeout(() => processInput(), 100);
-                  }}
+                  onClick={() => setInputText("I'm feeling anxious about work today")}
                   className="px-3 py-1 text-xs bg-muted/60 hover:bg-muted text-foreground rounded-full transition-colors"
                   disabled={isProcessing}
                 >
                   Try: "I'm feeling anxious"
                 </button>
                 <button
-                  onClick={() => {
-                    setInputText("I'm having trouble sleeping");
-                    setTimeout(() => processInput(), 100);
-                  }}
+                  onClick={() => setInputText("I'm having trouble sleeping")}
                   className="px-3 py-1 text-xs bg-muted/60 hover:bg-muted text-foreground rounded-full transition-colors"
                   disabled={isProcessing}
                 >
                   Try: "Trouble sleeping"
                 </button>
                 <button
-                  onClick={() => {
-                    setInputText("I feel overwhelmed");
-                    setTimeout(() => processInput(), 100);
-                  }}
+                  onClick={() => setInputText("I feel overwhelmed")}
                   className="px-3 py-1 text-xs bg-muted/60 hover:bg-muted text-foreground rounded-full transition-colors"
                   disabled={isProcessing}
                 >
@@ -517,10 +498,7 @@ export default function EmotionalSupport() {
             ) : (
               <>
                 <button
-                  onClick={() => {
-                    setInputText("میں کام کے بارے میں پریشان ہوں");
-                    setTimeout(() => processInput(), 100);
-                  }}
+                  onClick={() => setInputText("میں کام کے بارے میں پریشان ہوں")}
                   className="px-3 py-1 text-xs bg-muted/60 hover:bg-muted text-foreground rounded-full transition-colors"
                   disabled={isProcessing}
                   dir="rtl"
@@ -528,10 +506,7 @@ export default function EmotionalSupport() {
                   Try: "میں پریشان ہوں"
                 </button>
                 <button
-                  onClick={() => {
-                    setInputText("مجھے نیند نہیں آتی");
-                    setTimeout(() => processInput(), 100);
-                  }}
+                  onClick={() => setInputText("مجھے نیند نہیں آتی")}
                   className="px-3 py-1 text-xs bg-muted/60 hover:bg-muted text-foreground rounded-full transition-colors"
                   disabled={isProcessing}
                   dir="rtl"
