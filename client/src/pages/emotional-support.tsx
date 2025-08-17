@@ -30,12 +30,16 @@ export default function EmotionalSupport() {
   const [inputText, setInputText] = useState('');
   const [response, setResponse] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  // Phase 3: State for emotion detection results
+  const [lastProcessedData, setLastProcessedData] = useState<any>(null);
 
   // Phase 1: WebSocket integration for real-time communication
   const { socket, isConnected, sendMessage } = useWebSocket({
     onMessage: (data) => {
       if (data.type === 'emotional-support-response') {
         setResponse(data.response);
+        // Phase 3: Store processed data from WebSocket for emotion display
+        setLastProcessedData(data);
         setIsProcessing(false);
       }
     },
@@ -116,14 +120,22 @@ export default function EmotionalSupport() {
       const data = await res.json();
       setResponse(data.response || 'I understand. Please tell me more.');
       
+      // Phase 3: Store processed data for emotion display
+      setLastProcessedData(data);
+      
       // Update input text with transcription if available
       if (data.transcription) {
         setInputText(data.transcription);
       }
       
+      // Phase 3: Enhanced emotion display with detailed information
+      const emotionInfo = data.emotion || { emotion: 'unknown', score: 0 };
+      const confidencePercent = Math.round(emotionInfo.score * 100);
+      const emotionSource = data.emotionSource || 'text-only';
+      
       toast({
         title: "Analysis Complete",
-        description: `Detected emotion: ${data.emotion?.emotion || 'unknown'}`,
+        description: `Detected emotion: ${emotionInfo.emotion} (${confidencePercent}% confidence, ${emotionSource})`,
       });
       
       return data;
@@ -404,6 +416,54 @@ export default function EmotionalSupport() {
                     <h4 className="font-semibold text-blue-900">AI Companion Response:</h4>
                   </div>
                   <p className="text-gray-700 leading-relaxed">{response}</p>
+                </div>
+              )}
+
+              {/* Phase 3: Enhanced Emotion Detection Display */}
+              {lastProcessedData && lastProcessedData.emotion && (
+                <div className="p-6 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-200 shadow-sm">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Brain className="w-5 h-5 text-purple-600" />
+                    <h4 className="font-semibold text-purple-900">Emotion Analysis:</h4>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    {/* Primary Emotion Display as specified in Phase 3 */}
+                    <div className="flex items-center justify-between p-3 bg-white/80 rounded-lg">
+                      <span className="font-medium text-gray-800">Detected Emotion:</span>
+                      <div className="text-right">
+                        <span className="font-semibold text-purple-700 capitalize">
+                          {lastProcessedData.emotion.emotion}
+                        </span>
+                        <div className="text-sm text-gray-600">
+                          Score: {Math.round(lastProcessedData.emotion.score * 100)}%
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Emotion Source and Confidence Indicator */}
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Detection Source:</span>
+                      <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                        {lastProcessedData.emotionSource || 'text-only'}
+                      </span>
+                    </div>
+
+                    {/* Confidence Bar */}
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-gradient-to-r from-purple-400 to-pink-500 h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.round(lastProcessedData.emotion.score * 100)}%` }}
+                      ></div>
+                    </div>
+
+                    {/* Additional Emotion Metadata if available */}
+                    {lastProcessedData.emotionDetails && (
+                      <div className="text-xs text-gray-500 pt-2 border-t border-gray-200">
+                        Analysis Method: {lastProcessedData.emotionDetails.method || 'Keyword-based fallback'}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 

@@ -6,6 +6,12 @@ import { setupAuth, isAuthenticated } from "./simpleAuth";
 import { extractTokenFromHeader, tokenBasedAuth } from "./middleware";
 import * as speechServiceModule from "./services/speechService";
 const { SpeechService, transcribeAudio, detectEmotion } = speechServiceModule;
+// Phase 3: Import emotion detection services
+import { 
+  detectEmotionFromText, 
+  detectEmotionFromAudio, 
+  combineEmotions 
+} from "./services/emotionService";
 import { analyzeEmotion } from "./services/openai";
 import { AuthService } from "./auth";
 import multer from 'multer';
@@ -442,28 +448,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'No input provided' });
       }
 
-      const emotion = await detectEmotion(inputText);
-      console.log('Detected emotion:', emotion);
+      // Phase 3: Enhanced emotion detection system
+      let finalEmotion = { emotion: 'neutral', score: 0.5 };
+      let voiceEmotion = null; // Declare in proper scope for use later
+      
+      try {
+        // Extract language code for emotion detection
+        const emotionLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+        
+        // Detect emotion from text (transcribed speech)
+        const textEmotion = await detectEmotionFromText(inputText, emotionLanguage);
+        console.log('Text emotion detected:', textEmotion);
+        
+        // If we have audio, also detect emotion from voice tone
+        if (req.file) {
+          try {
+            voiceEmotion = await detectEmotionFromAudio(req.file.buffer, emotionLanguage);
+            console.log('Voice emotion detected:', voiceEmotion);
+          } catch (voiceError) {
+            console.warn('Voice emotion detection failed:', voiceError);
+          }
+        } else if (req.body.audio) {
+          try {
+            const audioBuffer = Buffer.from(req.body.audio, 'base64');
+            voiceEmotion = await detectEmotionFromAudio(audioBuffer, emotionLanguage);
+            console.log('Voice emotion detected:', voiceEmotion);
+          } catch (voiceError) {
+            console.warn('Voice emotion detection failed:', voiceError);
+          }
+        }
+        
+        // Combine text and voice emotions if both available
+        if (voiceEmotion) {
+          finalEmotion = combineEmotions(textEmotion, voiceEmotion);
+          console.log('Combined emotion result:', finalEmotion);
+        } else {
+          finalEmotion = textEmotion;
+          console.log('Using text-only emotion:', finalEmotion);
+        }
+        
+      } catch (emotionError) {
+        console.warn('Phase 3 emotion detection failed, using fallback:', emotionError);
+        // Fallback to old system if Phase 3 fails
+        try {
+          finalEmotion = await detectEmotion(inputText);
+        } catch (fallbackError) {
+          console.warn('All emotion detection methods failed:', fallbackError);
+          finalEmotion = { emotion: 'neutral', score: 0.5 };
+        }
+      }
+
+      console.log('Final detected emotion:', finalEmotion);
       
       // Generate context-aware response based on detected emotion
       let supportiveResponse = '';
-      switch (emotion.emotion.toLowerCase()) {
+      switch (finalEmotion.emotion.toLowerCase()) {
         case 'anxious':
+        case 'anxiety':
         case 'fearful':
         case 'fear':
-          supportiveResponse = `I can sense you're feeling ${emotion.emotion}. Anxiety can feel overwhelming, but you're not alone. Let's take a deep breath together - inhale for 4 counts, hold for 4, exhale for 6. Can you tell me what's been causing these feelings? Remember, anxiety is treatable and you can get through this.`;
+          supportiveResponse = `I can sense you're feeling ${finalEmotion.emotion}. Anxiety can feel overwhelming, but you're not alone. Let's take a deep breath together - inhale for 4 counts, hold for 4, exhale for 6. Can you tell me what's been causing these feelings? Remember, anxiety is treatable and you can get through this.`;
           break;
         case 'sad':
         case 'sadness':
         case 'depressed':
         case 'depression':
-          supportiveResponse = `I understand you're feeling ${emotion.emotion}. It's okay to feel this way, and your feelings are completely valid. Sometimes talking about what's bothering you can help lighten the load. What's been weighing on your mind? Remember, you don't have to carry this alone.`;
+          supportiveResponse = `I understand you're feeling ${finalEmotion.emotion}. It's okay to feel this way, and your feelings are completely valid. Sometimes talking about what's bothering you can help lighten the load. What's been weighing on your mind? Remember, you don't have to carry this alone.`;
           break;
         case 'angry':
         case 'anger':
         case 'frustrated':
         case 'frustration':
-          supportiveResponse = `I can hear that you're feeling ${emotion.emotion}. These are natural emotions, and it's important to acknowledge them rather than suppress them. What situation has been causing you to feel this way? Let's explore some healthy ways to process these feelings.`;
+          supportiveResponse = `I can hear that you're feeling ${finalEmotion.emotion}. These are natural emotions, and it's important to acknowledge them rather than suppress them. What situation has been causing you to feel this way? Let's explore some healthy ways to process these feelings.`;
           break;
         case 'happy':
         case 'happiness':
@@ -471,7 +527,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case 'excitement':
         case 'joyful':
         case 'joy':
-          supportiveResponse = `It's wonderful to hear that you're feeling ${emotion.emotion}! I'm genuinely glad you're experiencing positive emotions. What's been bringing you joy lately? It's important to celebrate and appreciate these good moments.`;
+          supportiveResponse = `It's wonderful to hear that you're feeling ${finalEmotion.emotion}! I'm genuinely glad you're experiencing positive emotions. What's been bringing you joy lately? It's important to celebrate and appreciate these good moments.`;
           break;
         case 'overwhelmed':
         case 'overwhelming':
@@ -497,6 +553,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         case 'surprise':
           supportiveResponse = `I notice you might be feeling surprised or caught off guard by something. Life can certainly throw unexpected things our way. How are you processing this surprise? Whether it's good or challenging news, I'm here to listen and support you.`;
           break;
+        case 'neutral':
+          supportiveResponse = `Thank you for sharing with me. I'm here to listen and support you through whatever you're experiencing. Your feelings are valid and important. How are you feeling right now, and what would be most helpful for you? I'm here to provide a safe space for you to express yourself.`;
+          break;
         default:
           supportiveResponse = `Thank you for sharing with me. I'm here to listen and support you through whatever you're experiencing. Your feelings are valid and important. How are you feeling right now, and what would be most helpful for you? I'm here to provide a safe space for you to express yourself.`;
       }
@@ -517,10 +576,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json({ 
         transcription: inputText, 
-        emotion, 
+        emotion: finalEmotion,  // Phase 3: Return the enhanced emotion detection result
         response: finalResponse,
-        detectedEmotion: emotion.emotion,
-        confidence: emotion.score
+        detectedEmotion: finalEmotion.emotion,
+        confidence: finalEmotion.score,
+        // Phase 3: Additional metadata for debugging/monitoring
+        emotionSource: voiceEmotion ? 'combined' : 'text-only',
+        language: language || 'en'
       });
     } catch (error) {
       console.error("Error processing emotional support request:", error);
