@@ -355,7 +355,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: 'No input provided' });
       }
 
-      const emotion = await detectEmotion(inputText);
+      // Phase 3: Use the new emotion detection system
+      const emotionLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+      const emotion = await detectEmotionFromText(inputText, emotionLanguage);
       
       // Mock response for testing (since we don't want to require OpenAI for testing)
       const mockResponse = `I understand you're feeling ${emotion.emotion}. That's completely valid. Would you like to tell me more about what's making you feel this way?`;
