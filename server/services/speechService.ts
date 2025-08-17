@@ -128,21 +128,26 @@ export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur'
       }
     }
 
-    // Phase 2: Model Selection Strategy
+    // Phase 2: Model Selection Strategy (Updated to Phase 2 Specifications)
     let model = 'openai/whisper-large-v3';  // Primary multilingual model (99+ languages)
     if (language === 'ur') {
-      // For better Urdu accuracy, use medium model which is more stable
-      model = 'openai/whisper-medium';  
-      console.log('Using Whisper model optimized for Urdu processing');
+      // Phase 2 Specification: Use Urdu-specific model for better accuracy
+      model = 'Abdul145/whisper-medium-urdu-custom';  // Urdu-specific for better accuracy
+      console.log('Using Urdu-specific Whisper model for enhanced Urdu processing');
+    } else {
+      console.log('Using Whisper Large V3 for multilingual processing');
     }
 
     console.log(`Phase 2 STT: Processing ${language} audio with model: ${model}`);
     
-    // Enhanced audio processing
+    // Phase 2: Fix - Create proper Blob with content-type for fal-ai provider compatibility
+    // Convert Buffer to Uint8Array for Blob compatibility
     const uint8Array = new Uint8Array(processedBuffer);
     const audioBlob = new Blob([uint8Array], { 
-      type: 'audio/wav'  // Always use WAV after conversion
+      type: detectedFormat === 'wav' ? 'audio/wav' : 'audio/mpeg'
     });
+    
+    console.log(`Sending ${audioBlob.size} bytes as ${audioBlob.type} to ${model}`);
 
     const result = await hf.automaticSpeechRecognition({
       model: model,
@@ -160,7 +165,7 @@ export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur'
         console.log('Retrying with Whisper Medium model...');
         const fallbackResult = await hf.automaticSpeechRecognition({
           model: 'openai/whisper-medium',
-          data: audioBlob,
+          data: audioBlob,  // Use the same Blob
         });
         return fallbackResult.text || transcription;
       }
@@ -200,7 +205,20 @@ export async function detectEmotion(text: string): Promise<{ emotion: string; sc
       }
     }
 
-    // Try simpler emotion classification model for English text
+    // PRIORITY: Check for common negative expressions first before using HF model
+    // The HF model sometimes misclassifies these common negative phrases
+    const lowerText = text.toLowerCase();
+    if (lowerText.includes('not feeling well') || lowerText.includes('dont feel good') || 
+        lowerText.includes("don't feel good") || lowerText.includes('not feeling good') ||
+        lowerText.includes('feeling bad') || lowerText.includes('not well') ||
+        lowerText.includes('feel sick') || lowerText.includes('unwell') ||
+        lowerText.includes('feel down') || lowerText.includes('feeling down') ||
+        lowerText.includes('not okay') || lowerText.includes('feel worse')) {
+      console.log('Detected common negative expression, using keyword-based detection');
+      return performKeywordBasedDetection(text);
+    }
+
+    // Try Hugging Face emotion classification model for English text
     try {
       const result = await hf.textClassification({
         model: 'j-hartmann/emotion-english-distilroberta-base', // More reliable English model
@@ -213,6 +231,14 @@ export async function detectEmotion(text: string): Promise<{ emotion: string; sc
         const score = Math.round(topEmotion.score * 100) / 100;
 
         console.log(`HF Emotion detected: ${emotion} (${score})`);
+        
+        // Validation: If HF model returns "joy" for negative-sounding text, use keyword detection
+        if (emotion === 'joy' && (lowerText.includes('not') || lowerText.includes("don't") || 
+            lowerText.includes('bad') || lowerText.includes('sick') || lowerText.includes('wrong') ||
+            lowerText.includes('terrible') || lowerText.includes('awful') || lowerText.includes('worse'))) {
+          console.log('HF model returned joy for negative text, using keyword fallback');
+          return performKeywordBasedDetection(text);
+        }
         
         // For Urdu text or low confidence English results, prefer keyword fallback
         if (hasUrdu || score < 0.6) {
@@ -251,9 +277,21 @@ function performKeywordBasedDetection(text: string): { emotion: string; score: n
   const lowerText = text.toLowerCase();
   console.log('Keyword detection - lowercase text:', lowerText);
   
-  // Enhanced keyword matching with higher confidence (English + Urdu)
-  if (lowerText.includes('anxious') || lowerText.includes('anxiety') || lowerText.includes('worry') || 
+  // Enhanced keyword matching with negative context detection first
+  // Check for negative phrases and common depression/sadness indicators
+  if (lowerText.includes('not feeling well') || lowerText.includes('dont feel good') || 
+      lowerText.includes("don't feel good") || lowerText.includes('not feeling good') ||
+      lowerText.includes('feeling bad') || lowerText.includes('feeling terrible') ||
+      lowerText.includes('feeling awful') || lowerText.includes('not well') ||
+      lowerText.includes('feel sick') || lowerText.includes('unwell') ||
+      lowerText.includes('feel down') || lowerText.includes('feeling down') ||
+      lowerText.includes('not okay') || lowerText.includes('not fine') ||
+      lowerText.includes('feel worse') || lowerText.includes('getting worse')) {
+    console.log('Keyword detection - found negative wellness keywords');
+    return { emotion: 'sad', score: 0.90 };
+  } else if (lowerText.includes('anxious') || lowerText.includes('anxiety') || lowerText.includes('worry') || 
       lowerText.includes('worried') || lowerText.includes('stress') || lowerText.includes('nervous') ||
+      lowerText.includes('panic') || lowerText.includes('tense') || lowerText.includes('overwhelm') ||
       // Urdu keywords for anxiety/worry
       text.includes('پریشان') || text.includes('فکر') || text.includes('گھبرا') || text.includes('بے چین') ||
       text.includes('پریشانی') || text.includes('تشویش') || text.includes('خوف زدہ')) {
@@ -261,6 +299,7 @@ function performKeywordBasedDetection(text: string): { emotion: string; score: n
     return { emotion: 'anxious', score: 0.85 };
   } else if (lowerText.includes('sad') || lowerText.includes('depressed') || lowerText.includes('depression') ||
              lowerText.includes('down') || lowerText.includes('upset') || lowerText.includes('crying') ||
+             lowerText.includes('miserable') || lowerText.includes('unhappy') || lowerText.includes('blue') ||
              // Urdu keywords for sadness
              text.includes('اداس') || text.includes('غمگین') || text.includes('افسرده') || text.includes('رو') || 
              text.includes('رونا') || text.includes('غم') || text.includes('دکھ') || text.includes('اداسی')) {
@@ -268,7 +307,8 @@ function performKeywordBasedDetection(text: string): { emotion: string; score: n
     return { emotion: 'sad', score: 0.85 };
   } else if (lowerText.includes('happy') || lowerText.includes('joy') || lowerText.includes('joyful') ||
              lowerText.includes('great') || lowerText.includes('wonderful') || lowerText.includes('amazing') ||
-             lowerText.includes('excited') || lowerText.includes('cheerful') ||
+             lowerText.includes('excited') || lowerText.includes('cheerful') || lowerText.includes('fantastic') ||
+             lowerText.includes('excellent') || lowerText.includes('brilliant') ||
              // Urdu keywords for happiness
              text.includes('خوش') || text.includes('خوشی') || text.includes('مسرور') || text.includes('شاد') ||
              text.includes('خوشگوار') || text.includes('بہتر') || text.includes('اچھا')) {
@@ -281,7 +321,7 @@ function performKeywordBasedDetection(text: string): { emotion: string; score: n
              text.includes('چڑچڑا') || text.includes('جھنجھلا') || text.includes('کراہت')) {
     console.log('Keyword detection - found anger keywords');
     return { emotion: 'angry', score: 0.85 };
-  } else if (lowerText.includes('overwhelm') || lowerText.includes('too much') || lowerText.includes('can\'t handle') ||
+  } else if (lowerText.includes('too much') || lowerText.includes('can\'t handle') ||
              lowerText.includes('exhausted') || lowerText.includes('burned out') ||
              // Urdu keywords for overwhelmed
              text.includes('تھکا') || text.includes('تھکاوٹ') || text.includes('بہت زیادہ') || text.includes('برداشت نہیں') ||

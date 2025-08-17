@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { RoleBasedComponent, UserTypeGuard } from "@/components/auth/RoleBasedComponent";
 import { Link, useLocation } from "wouter";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useWebSocket } from "@/hooks/useWebSocket";
 import { 
   ArrowLeft, 
   Home, 
@@ -24,13 +25,32 @@ export default function EmotionalSupport() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
-  const [selectedLanguage, setSelectedLanguage] = useState<'english' | 'urdu'>('english');
+  // Phase 1 Specification: Use 'en' | 'ur' language codes
+  const [language, setLanguage] = useState<'en' | 'ur'>('en');
   const [inputText, setInputText] = useState('');
   const [response, setResponse] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Set up speech recognition with proper language codes
-  const speechLanguage = selectedLanguage === 'urdu' ? 'ur-PK' : 'en-US';
+  // Phase 1: WebSocket integration for real-time communication
+  const { socket, isConnected, sendMessage } = useWebSocket({
+    onMessage: (data) => {
+      if (data.type === 'emotional-support-response') {
+        setResponse(data.response);
+        setIsProcessing(false);
+      }
+    },
+    onError: (error) => {
+      console.error('WebSocket error:', error);
+      toast({
+        title: "Connection Error",
+        description: "Real-time connection lost. Using fallback mode.",
+        variant: "destructive"
+      });
+    }
+  });
+
+  // Phase 2: Set up speech recognition with proper language codes
+  const speechLanguage = language === 'ur' ? 'ur-PK' : 'en-US';
   const { 
     startListening, 
     stopListening, 
@@ -41,38 +61,52 @@ export default function EmotionalSupport() {
     isRecording,
     audioBlob,
     startRecording,
+    stopRecording,
     sendAudioToBackend 
   } = useSpeechRecognition(speechLanguage);
 
-  // API call function for emotional support
+  // Phase 1 & 2: API call function for emotional support
   const processInput = async (audioBlob?: Blob) => {
     setIsProcessing(true);
+    
     try {
-      let requestBody: FormData | string;
-      let headers: Record<string, string> = {
-        'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-      };
-
-      if (audioBlob) {
-        // Send as FormData for audio
-        const formData = new FormData();
-        formData.append('audio', audioBlob);
-        formData.append('text', inputText);
-        formData.append('language', speechLanguage);
-        requestBody = formData;
-      } else {
-        // Send as JSON for text-only
-        headers['Content-Type'] = 'application/json';
-        requestBody = JSON.stringify({
-          text: inputText,
-          language: speechLanguage
-        });
+      // Try WebSocket first for real-time communication
+      if (isConnected && socket) {
+        if (audioBlob) {
+          // Convert blob to base64 for WebSocket transmission
+          const reader = new FileReader();
+          reader.onload = () => {
+            const audioData = reader.result as string;
+            sendMessage({
+              type: 'emotional-support',
+              audio: audioData.split(',')[1], // Remove data:audio/wav;base64, prefix
+              text: inputText,
+              language: language // Phase 1: Use 'en' | 'ur' language codes
+            });
+          };
+          reader.readAsDataURL(audioBlob);
+        } else {
+          sendMessage({
+            type: 'emotional-support',
+            text: inputText,
+            language: language
+          });
+        }
+        return; // WebSocket will handle the response
       }
+
+      // Fallback to HTTP API
+      const formData = new FormData();
+      if (audioBlob) formData.append('audio', audioBlob);
+      formData.append('text', inputText);
+      formData.append('language', language); // Phase 1: Use 'en' | 'ur' language codes
 
       const res = await fetch('/api/emotional-support', { 
         method: 'POST', 
-        headers,
-        body: requestBody 
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        },
+        body: formData 
       });
       
       if (!res.ok) {
@@ -82,10 +116,17 @@ export default function EmotionalSupport() {
       const data = await res.json();
       setResponse(data.response || 'I understand. Please tell me more.');
       
+      // Update input text with transcription if available
+      if (data.transcription) {
+        setInputText(data.transcription);
+      }
+      
       toast({
         title: "Analysis Complete",
-        description: `Detected emotion: ${data.detectedEmotion}`,
+        description: `Detected emotion: ${data.emotion?.emotion || 'unknown'}`,
       });
+      
+      return data;
     } catch (error) {
       console.error('Error:', error);
       toast({
@@ -217,21 +258,21 @@ export default function EmotionalSupport() {
             <div className="flex items-center space-x-2">
               <button
                 className={`px-3 py-2 text-sm md:px-4 md:py-2 md:text-base rounded-lg font-medium transition-all duration-300 hover-lift ${
-                  selectedLanguage === 'english' 
+                  language === 'en' 
                     ? 'fluenti-gradient-primary text-white shadow-lg' 
                     : 'fluenti-button-outline'
                 }`}
-                onClick={() => setSelectedLanguage('english')}
+                onClick={() => setLanguage('en')}
               >
                 English
               </button>
               <button
                 className={`px-3 py-2 text-sm md:px-4 md:py-2 md:text-base rounded-lg font-medium transition-all duration-300 hover-lift ${
-                  selectedLanguage === 'urdu' 
+                  language === 'ur' 
                     ? 'fluenti-gradient-primary text-white shadow-lg' 
                     : 'fluenti-button-outline'
                 }`}
-                onClick={() => setSelectedLanguage('urdu')}
+                onClick={() => setLanguage('ur')}
               >
                 اردو
               </button>
@@ -259,10 +300,10 @@ export default function EmotionalSupport() {
                   type="text"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder={selectedLanguage === 'urdu' ? "اپنے جذبات یہاں لکھیں..." : "Share your feelings here..."}
+                  placeholder={language === 'ur' ? "اپنے جذبات یہاں لکھیں..." : "Share your feelings here..."}
                   className="flex-1 min-h-[44px] border-pink-200 focus:border-pink-400 focus:ring-pink-400"
                   disabled={isProcessing}
-                  dir={selectedLanguage === 'urdu' ? 'rtl' : 'ltr'}
+                  dir={language === 'ur' ? 'rtl' : 'ltr'}
                 />
                 <div className="flex gap-2">
                   <Button 
@@ -308,7 +349,7 @@ export default function EmotionalSupport() {
                       <div className="flex items-center space-x-2 text-red-600">
                         <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
                         <span className="text-sm font-medium">
-                          Recording... {selectedLanguage === 'urdu' ? '(اردو میں بولیں)' : '(Speak now)'}
+                          Recording... {language === 'ur' ? '(اردو میں بولیں)' : '(Speak now)'}
                         </span>
                       </div>
                     </div>
@@ -319,7 +360,7 @@ export default function EmotionalSupport() {
                       <div className="flex items-center space-x-2 text-pink-600">
                         <div className="w-3 h-3 bg-pink-500 rounded-full animate-pulse"></div>
                         <span className="text-sm font-medium">
-                          Listening... {selectedLanguage === 'urdu' ? '(اردو میں بولیں)' : '(Speak now)'}
+                          Listening... {language === 'ur' ? '(اردو میں بولیں)' : '(Speak now)'}
                         </span>
                       </div>
                     </div>
@@ -368,7 +409,7 @@ export default function EmotionalSupport() {
 
               {/* Quick Actions */}
               <div className="flex flex-wrap gap-2 pt-4">
-                {selectedLanguage === 'english' ? (
+                {language === 'en' ? (
                   <>
                     <Button
                       variant="outline"
