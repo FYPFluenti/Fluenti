@@ -1,0 +1,94 @@
+{
+  "folders": [
+    {
+      "name": "FLUENTI - Root",
+      "path": "."
+    },
+    {
+      "name": "Client (Frontend)",
+      "path": "./client"
+    },
+    {
+      "name": "Server (Backend)",
+      "path": "./server"
+    },
+    {
+      "name": "Shared",
+      "path": "./shared"
+    }
+  ],
+  "settings": {
+    "typescript.preferences.importModuleSpecifier": "relative",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.eslint": "explicit"
+    },
+    "eslint.workingDirectories": ["client", "server"],
+    "python.defaultInterpreterPath": "./.venv/Scripts/python.exe",
+    "jupyter.notebookFileRoot": "${workspaceFolder}",
+    "files.associations": {
+      "*.env": "dotenv"
+    },
+    "editor.rulers": [80, 120],
+    "editor.wordWrap": "on"
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-toolsai.jupyter",
+      "dbaeumer.vscode-eslint",
+      "ms-python.vscode-pylance",
+      "esbenp.prettier-vscode",
+      "github.copilot",
+      "github.copilot-chat"
+    ]
+  },
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Start Dev Server",
+        "type": "shell",
+        "command": "npm run dev",
+        "group": "build",
+        "presentation": {
+          "reveal": "always",
+          "panel": "new"
+        },
+        "runOptions": {
+          "runOn": "folderOpen"
+        }
+      },
+      {
+        "label": "Install Dependencies",
+        "type": "shell",
+        "command": "npm install",
+        "group": "build"
+      },
+      {
+        "label": "Run Tests",
+        "type": "shell",
+        "command": "npm test",
+        "group": "test"
+      }
+    ]
+  },
+  "launch": {
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Debug Server",
+        "type": "node",
+        "request": "launch",
+        "program": "${workspaceFolder}/server/index.ts",
+        "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+        "runtimeArgs": ["-r", "tsx/cjs"],
+        "env": {
+          "NODE_ENV": "development"
+        },
+        "console": "integratedTerminal",
+        "skipFiles": ["<node_internals>/**"]
+      }
+    ]
+  }
+}
