@@ -6,7 +6,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { RoleBasedComponent, UserTypeGuard } from "@/components/auth/RoleBasedComponent";
 import { Link, useLocation } from "wouter";
-import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useWebSocket } from "@/hooks/useWebSocket";
 import { motion } from "framer-motion";
 import { 
@@ -18,8 +17,6 @@ import {
   Brain,
   Star,
   Smile,
-  Mic,
-  MicOff,
   BarChart,
   History,
   MessageSquare,
@@ -105,24 +102,9 @@ export default function EmotionalSupport() {
   });
 
   // Phase 2: Set up speech recognition with proper language codes
-  const speechLanguage = language === 'ur' ? 'ur-PK' : 'en-US';
-  const { 
-    startListening, 
-    stopListening, 
-    isListening, 
-    transcript, 
-    resetTranscript, 
-    error: speechError,
-    isRecording,
-    audioBlob,
-    startRecording,
-    stopRecording,
-    sendAudioToBackend 
-  } = useSpeechRecognition(speechLanguage);
-
   // Phase 1 & 2: API call function for emotional support
-  const processInput = async (audioBlob?: Blob) => {
-    if (!inputText.trim() && !audioBlob) return;
+  const processInput = async () => {
+    if (!inputText.trim()) return;
     
     const userMessage = inputText.trim();
     
@@ -143,32 +125,16 @@ export default function EmotionalSupport() {
     try {
       // Try WebSocket first for real-time communication
       if (isConnected && socket) {
-        if (audioBlob) {
-          // Convert blob to base64 for WebSocket transmission
-          const reader = new FileReader();
-          reader.onload = () => {
-            const audioData = reader.result as string;
-            sendMessage({
-              type: 'emotional-support',
-              audio: audioData.split(',')[1], // Remove data:audio/wav;base64, prefix
-              text: userMessage,
-              language: language // Phase 1: Use 'en' | 'ur' language codes
-            });
-          };
-          reader.readAsDataURL(audioBlob);
-        } else {
-          sendMessage({
-            type: 'emotional-support',
-            text: userMessage,
-            language: language
-          });
-        }
+        sendMessage({
+          type: 'emotional-support',
+          text: userMessage,
+          language: language
+        });
         return; // WebSocket will handle the response
       }
 
       // Fallback to HTTP API
       const formData = new FormData();
-      if (audioBlob) formData.append('audio', audioBlob);
       formData.append('text', userMessage);
       formData.append('language', language); // Phase 1: Use 'en' | 'ur' language codes
 
@@ -218,74 +184,6 @@ export default function EmotionalSupport() {
       });
     } finally {
       setIsProcessing(false);
-    }
-  };
-
-  // Handle transcript updates
-  useEffect(() => {
-    if (transcript) {
-      setInputText(transcript);
-    }
-  }, [transcript]);
-
-  const handleRecord = async () => {
-    if (isRecording) {
-      // First stop the recording and wait for it to complete
-      try {
-        console.log('Stopping recording...');
-        const recordedBlob = await stopRecording();
-        
-        console.log('Recording stopped, received blob:', recordedBlob);
-        
-        // Check if we have an audio blob
-        if (!recordedBlob || recordedBlob.size === 0) {
-          throw new Error('No audio data recorded');
-        }
-        
-        // Now send to backend
-        await sendAudioToBackend((result) => {
-          if (result && result.transcription) {
-            setInputText(result.transcription);
-            toast({
-              title: "Recording Successful",
-              description: "Audio transcribed successfully!",
-              variant: "default",
-            });
-          }
-        }, recordedBlob);
-        
-      } catch (error) {
-        console.error('Error processing recording:', error);
-        toast({
-          title: "Processing Error",
-          description: "Failed to process audio recording.",
-          variant: "destructive",
-        });
-      }
-    } else if (isListening) {
-      // Stop Web Speech API
-      stopListening();
-    } else {
-      // Start new recording - prefer MediaRecorder for Phase 2
-      resetTranscript();
-      try {
-        console.log('Starting MediaRecorder...');
-        await startRecording();
-        toast({
-          title: "Recording Started",
-          description: "Speak now to record your message.",
-          variant: "default",
-        });
-      } catch (error) {
-        console.error('Error starting MediaRecorder:', error);
-        toast({
-          title: "Recording Error",
-          description: "Failed to start recording. Trying fallback...",
-          variant: "destructive",
-        });
-        // Fallback to Web Speech API
-        startListening();
-      }
     }
   };
 
@@ -345,16 +243,6 @@ export default function EmotionalSupport() {
               <p className="text-sm text-muted-foreground">
                 {isConnected ? 'Connected • Real-time support' : 'Offline mode'}
               </p>
-            </div>
-            
-            {/* Mode switcher */}
-            <div className="ml-auto">
-              <Link href="/emotional-support-voice">
-                <button className="px-3 py-2 bg-purple-500 text-white rounded-lg text-sm hover:bg-purple-600 transition-colors flex items-center gap-2">
-                  <Mic className="w-4 h-4" />
-                  Voice Mode
-                </button>
-              </Link>
             </div>
           </div>
           
@@ -444,28 +332,6 @@ export default function EmotionalSupport() {
             </div>
           )}
 
-          {/* Recording/Listening Status */}
-          {(isRecording || isListening) && (
-            <div className="flex justify-center">
-              <div className={`px-4 py-2 rounded-full text-xs font-medium ${
-                isRecording 
-                  ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400'
-                  : 'bg-pink-100 text-pink-600 dark:bg-pink-900/30 dark:text-pink-400'
-              }`}>
-                {isRecording ? 'Recording...' : 'Listening...'} 
-                {language === 'ur' ? ' (اردو میں بولیں)' : ' (Speak now)'}
-              </div>
-            </div>
-          )}
-
-          {/* Speech Error */}
-          {speechError && (
-            <div className="flex justify-center">
-              <div className="px-4 py-2 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full text-xs font-medium">
-                ⚠️ {speechError}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Quick suggestions */}
@@ -523,7 +389,7 @@ export default function EmotionalSupport() {
           <textarea
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder={isRecording ? "Recording..." : (language === 'ur' ? "اپنے جذبات یہاں لکھیں..." : "Share your feelings here...")}
+            placeholder={language === 'ur' ? "اپنے جذبات یہاں لکھیں..." : "Share your feelings here..."}
             rows={1}
             className="flex-1 resize-none bg-transparent outline-none text-foreground placeholder:text-muted-foreground/70"
             onKeyDown={(e) => {
@@ -532,26 +398,14 @@ export default function EmotionalSupport() {
                 processInput();
               }
             }}
-            disabled={isProcessing || isRecording}
+            disabled={isProcessing}
             dir={language === 'ur' ? 'rtl' : 'ltr'}
           />
-          
-          {/* Voice recording button */}
-          <button 
-            onClick={handleRecord}
-            className={`w-10 h-10 rounded-full border border-border grid place-items-center transition-colors ${
-              (isRecording || isListening) ? 'bg-red-500 text-white' : 'text-muted-foreground hover:bg-muted'
-            }`}
-            disabled={isProcessing}
-            title={(isRecording || isListening) ? "Stop recording" : "Start voice input"}
-          >
-            {(isRecording || isListening) ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-          </button>
           
           {/* Send button */}
           <button
             onClick={() => processInput()}
-            disabled={(!inputText.trim() && !isRecording) || isProcessing}
+            disabled={!inputText.trim() || isProcessing}
             className="w-10 h-10 rounded-full grid place-items-center bg-[#F5B82E] hover:brightness-95 disabled:opacity-50 transition-all"
             aria-label="send"
           >
