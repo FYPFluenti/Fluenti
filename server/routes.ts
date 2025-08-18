@@ -5,7 +5,7 @@ import { mongoStorage } from "./mongoStorage";
 import { setupAuth, isAuthenticated } from "./simpleAuth";
 import { extractTokenFromHeader, tokenBasedAuth } from "./middleware";
 import * as speechServiceModule from "./services/speechService";
-const { SpeechService, transcribeAudio, detectEmotion } = speechServiceModule;
+const { SpeechService, transcribeAudio } = speechServiceModule;
 // Phase 3: Import emotion detection services
 import { 
   detectEmotionFromText, 
@@ -500,14 +500,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
       } catch (emotionError) {
-        console.warn('Phase 3 emotion detection failed, using fallback:', emotionError);
-        // Fallback to old system if Phase 3 fails
-        try {
-          finalEmotion = await detectEmotion(inputText);
-        } catch (fallbackError) {
-          console.warn('All emotion detection methods failed:', fallbackError);
-          finalEmotion = { emotion: 'neutral', score: 0.5 };
-        }
+        console.warn('Phase 3 emotion detection failed, using neutral fallback:', emotionError);
+        // Fallback to neutral emotion if Phase 3 fails
+        finalEmotion = { emotion: 'neutral', score: 0.5 };
       }
 
       console.log('Final detected emotion:', finalEmotion);

@@ -1,385 +1,48 @@
 import { mongoStorage } from "../mongoStorage";
 import { generateSpeechFeedback, generatePersonalizedExercises } from "./openai";
-import { HfInference } from '@huggingface/inference';
-import { AudioProcessor } from './audioProcessor';
+import { spawn } from 'child_process';
 import fs from 'fs';
-import { Readable } from 'stream';
 import path from 'path';
 
-const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
-
-// Phase 2: Enhanced audio format conversion using AudioProcessor
-async function convertAudioToWav(audioBuffer: Buffer): Promise<string> {
-  try {
-    const outputPath = path.join(process.cwd(), 'temp', `converted_${Date.now()}.wav`);
-    
-    // Ensure temp directory exists
-    await AudioProcessor.ensureTempDir();
-    
-    // Detect format and convert accordingly
-    const format = detectAudioFormat(audioBuffer);
-    console.log(`Detected audio format: ${format}`);
-    
-    if (format === 'webm' || format === 'unknown') {
-      // Use our AudioProcessor for WebM to WAV conversion
-      return await AudioProcessor.webmToWav(audioBuffer, outputPath);
-    } else if (format === 'wav') {
-      // Already WAV, just save it
-      await fs.promises.writeFile(outputPath, audioBuffer);
-      return outputPath;
-    } else {
-      // Use general conversion for other formats
-      return await AudioProcessor.convertToWav(audioBuffer, outputPath, {
-        sampleRate: 16000,
-        channels: 1,
-        bitDepth: 16
-      });
-    }
-  } catch (error) {
-    console.error('Audio conversion error:', error);
-    throw error;
-  }
-}
-
-// Phase 2: Enhanced audio format detection
-function detectAudioFormat(buffer: Buffer): string {
-  // Check for common audio format signatures
-  if (buffer.length < 12) return 'unknown';
-  
-  const header = buffer.subarray(0, 12);
-  
-  // WAV format
-  if (header.includes(Buffer.from('RIFF')) && header.includes(Buffer.from('WAVE'))) {
-    return 'wav';
-  }
-  
-  // WebM format
-  if (header.includes(Buffer.from([0x1A, 0x45, 0xDF, 0xA3]))) {
-    return 'webm';
-  }
-  
-  // MP3 format
-  if (header.includes(Buffer.from('ID3')) || header[0] === 0xFF && (header[1] & 0xE0) === 0xE0) {
-    return 'mp3';
-  }
-  
-  // OGG format
-  if (header.includes(Buffer.from('OggS'))) {
-    return 'ogg';
-  }
-  
-  return 'unknown';
-}
-
-// Phase 2: Fallback transcription using Vosk (offline)
-export async function fallbackTranscribe(audioBuffer: Buffer, language: 'en' | 'ur'): Promise<string> {
-  try {
-    // This would require Vosk models to be downloaded
-    // For now, implement a simple keyword-based fallback
-    console.log('Phase 2: Using fallback transcription method');
-    
-    // Placeholder for Vosk implementation
-    // const modelPath = process.env.VOSK_MODEL_PATH + (language === 'ur' ? '/vosk-model-hi-0.22' : '/vosk-model-en-us-0.22');
-    // if (!fs.existsSync(modelPath)) throw new Error('Vosk model not found');
-    
-    // For Phase 2, return a helpful fallback
-    return `[Fallback STT] Audio received (${audioBuffer.length} bytes) but primary STT failed. Manual transcription needed.`;
-  } catch (error) {
-    console.error('Fallback transcription error:', error);
-    return '[Fallback STT Error] All transcription methods failed.';
-  }
-}
-
-// Phase 2: Enhanced transcription with automatic fallback
-export async function transcribeAudioWithFallback(audioBuffer: Buffer, language: 'en' | 'ur' = 'en'): Promise<string> {
-  try {
-    // Try primary Hugging Face transcription
-    const result = await transcribeAudio(audioBuffer, language);
-    
-    // Check if transcription quality is acceptable
-    if (result.includes('[Phase 2 STT Error]') || result.length < 5) {
-      console.log('Primary transcription failed, trying fallback...');
-      return await fallbackTranscribe(audioBuffer, language);
-    }
-    
-    return result;
-  } catch (error) {
-    console.error('All transcription methods failed:', error);
-    return await fallbackTranscribe(audioBuffer, language);
-  }
-}
-
+// Main transcription function using local Whisper
 export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur' = 'en'): Promise<string> {
-  let tempFilePath: string | null = null;
-  
-  try {
-    // Phase 2: Enhanced model selection based on language
-    if (!process.env.HUGGINGFACE_API_KEY || process.env.HUGGINGFACE_API_KEY === 'your-hf-token') {
-      console.log('Mock STT: No Hugging Face API key configured, returning mock transcription');
-      return `[Mock STT ${language.toUpperCase()}] This is a mock transcription for testing Phase 2 integration.`;
-    }
-
-    // Phase 2: Audio format detection and conversion
-    const detectedFormat = detectAudioFormat(audioBuffer);
-    console.log(`Phase 2 STT: Detected audio format: ${detectedFormat}, size: ${audioBuffer.length} bytes`);
-
-    let processedBuffer = audioBuffer;
-    
-    // Convert non-WAV formats to WAV for better Whisper compatibility
-    if (detectedFormat !== 'wav') {
-      try {
-        console.log('Converting audio to WAV format for optimal processing...');
-        tempFilePath = await convertAudioToWav(audioBuffer);
-        processedBuffer = await fs.promises.readFile(tempFilePath);
-        console.log(`Audio converted and saved to: ${tempFilePath}`);
-      } catch (conversionError) {
-        console.warn('Audio conversion failed, using original buffer:', conversionError);
-        // Continue with original buffer
-      }
-    }
-
-    // Phase 2: Model Selection Strategy (Updated to Phase 2 Specifications)
-    let model = 'openai/whisper-large-v3';  // Primary multilingual model (99+ languages)
-    if (language === 'ur') {
-      // Phase 2 Specification: Use Urdu-specific model for better accuracy
-      model = 'Abdul145/whisper-medium-urdu-custom';  // Urdu-specific for better accuracy
-      console.log('Using Urdu-specific Whisper model for enhanced Urdu processing');
-    } else {
-      console.log('Using Whisper Large V3 for multilingual processing');
-    }
-
-    console.log(`Phase 2 STT: Processing ${language} audio with model: ${model}`);
-    
-    // Phase 2: Fix - Create proper Blob with content-type for fal-ai provider compatibility
-    // Convert Buffer to Uint8Array for Blob compatibility
-    const uint8Array = new Uint8Array(processedBuffer);
-    const audioBlob = new Blob([uint8Array], { 
-      type: detectedFormat === 'wav' ? 'audio/wav' : 'audio/mpeg'
-    });
-    
-    console.log(`Sending ${audioBlob.size} bytes as ${audioBlob.type} to ${model}`);
-
-    const result = await hf.automaticSpeechRecognition({
-      model: model,
-      data: audioBlob,
-    });
-
-    const transcription = result.text || '';
-    console.log(`Phase 2 STT Result: "${transcription}" (${transcription.length} chars)`);
-    
-    // Phase 2: Quality validation
-    if (transcription.length < 2 && processedBuffer.length > 5000) {
-      console.warn('Low quality transcription detected, trying fallback model...');
-      // Try fallback with different model
-      if (model !== 'openai/whisper-medium') {
-        console.log('Retrying with Whisper Medium model...');
-        const fallbackResult = await hf.automaticSpeechRecognition({
-          model: 'openai/whisper-medium',
-          data: audioBlob,  // Use the same Blob
-        });
-        return fallbackResult.text || transcription;
-      }
-    }
-
-    return transcription;
-  } catch (error) {
-    console.error('Phase 2 STT Error:', error);
-    
-    // Phase 2: Enhanced error handling with retry logic
-    if (error instanceof Error && error.message.includes('rate limit')) {
-      console.warn('Rate limit hit, implementing backoff...');
-      // Could implement exponential backoff here
-    }
-    
-    // Fallback with helpful error message
-    return `[Phase 2 STT Error] Could not transcribe ${language} audio: ${error instanceof Error ? error.message : 'Unknown error'}. Please check audio format and try again.`;
-  } finally {
-    // Clean up temporary file if created
-    if (tempFilePath) {
-      try {
-        await fs.promises.unlink(tempFilePath);
-        console.log(`Cleaned up temp file: ${tempFilePath}`);
-      } catch (cleanupError) {
-        console.warn(`Failed to cleanup temp file ${tempFilePath}:`, cleanupError);
-      }
-    }
-  }
-}
-
-// Emotion detection using Hugging Face
-export async function detectEmotion(text: string): Promise<{ emotion: string; score: number }> {
-  try {
-    if (!process.env.HUGGINGFACE_API_KEY || process.env.HUGGINGFACE_API_KEY === 'your-hf-token' || !text.trim()) {
-      console.log('Mock emotion detection: No API key or empty text');
-      return performKeywordBasedDetection(text);
-    }
-
-    // Check if text contains Urdu characters - if so, prioritize keyword detection
-    const hasUrdu = /[\u0600-\u06FF\u0750-\u077F]/.test(text);
-    if (hasUrdu) {
-      console.log('Urdu text detected, using keyword-based detection');
-      const keywordResult = performKeywordBasedDetection(text);
-      // If keyword detection finds something meaningful, use it
-      if (keywordResult.score > 0.5) {
-        return keywordResult;
-      }
-    }
-
-    // PRIORITY: Check for common negative expressions first before using HF model
-    // The HF model sometimes misclassifies these common negative phrases
-    const lowerText = text.toLowerCase();
-    if (lowerText.includes('not feeling well') || lowerText.includes('dont feel good') || 
-        lowerText.includes("don't feel good") || lowerText.includes('not feeling good') ||
-        lowerText.includes('feeling bad') || lowerText.includes('not well') ||
-        lowerText.includes('feel sick') || lowerText.includes('unwell') ||
-        lowerText.includes('feel down') || lowerText.includes('feeling down') ||
-        lowerText.includes('not okay') || lowerText.includes('feel worse')) {
-      console.log('Detected common negative expression, using keyword-based detection');
-      return performKeywordBasedDetection(text);
-    }
-
-    // Try Hugging Face emotion classification model for English text
+  return new Promise((resolve, reject) => {
     try {
-      const result = await hf.textClassification({
-        model: 'j-hartmann/emotion-english-distilroberta-base', // More reliable English model
-        inputs: text,
+      // Save buffer to temp WAV file
+      const tempPath = path.join(__dirname, 'temp_audio.wav');
+      fs.writeFileSync(tempPath, audioBuffer);
+
+      // Python code for Whisper (auto-loads model on first run)
+      // Use different model based on language
+      const model = language === 'ur' ? 'openai/whisper-medium' : 'openai/whisper-small';
+      const pythonCode = `
+import torch
+from transformers import pipeline
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
+pipe = pipeline("automatic-speech-recognition", model="${model}", device=0 if torch.cuda.is_available() else -1)
+transcription = pipe("${tempPath.replace(/\\/g, '\\\\')}")['text']  # Escape backslashes for Windows path
+print(transcription)
+      `;
+
+      // Spawn Python process
+      const python = spawn('python', ['-c', pythonCode]);
+
+      let output = '';
+      let errorOutput = '';
+      python.stdout.on('data', (data) => { output += data.toString(); });
+      python.stderr.on('data', (data) => { errorOutput += data.toString(); });
+      python.on('close', (code) => {
+        fs.unlinkSync(tempPath);  // Clean up temp file
+        if (code !== 0) {
+          reject(`Python error: ${errorOutput}`);
+        } else {
+          resolve(output.trim());
+        }
       });
-
-      if (result && result.length > 0) {
-        const topEmotion = result[0];
-        const emotion = topEmotion.label.toLowerCase();
-        const score = Math.round(topEmotion.score * 100) / 100;
-
-        console.log(`HF Emotion detected: ${emotion} (${score})`);
-        
-        // Validation: If HF model returns "joy" for negative-sounding text, use keyword detection
-        if (emotion === 'joy' && (lowerText.includes('not') || lowerText.includes("don't") || 
-            lowerText.includes('bad') || lowerText.includes('sick') || lowerText.includes('wrong') ||
-            lowerText.includes('terrible') || lowerText.includes('awful') || lowerText.includes('worse'))) {
-          console.log('HF model returned joy for negative text, using keyword fallback');
-          return performKeywordBasedDetection(text);
-        }
-        
-        // For Urdu text or low confidence English results, prefer keyword fallback
-        if (hasUrdu || score < 0.6) {
-          console.log('Low confidence or Urdu text, trying keyword fallback');
-          const keywordResult = performKeywordBasedDetection(text);
-          if (keywordResult.score >= score) {
-            return keywordResult;
-          }
-        }
-        
-        return { emotion, score };
-      }
-    } catch (hfError) {
-      console.log('Hugging Face model failed, trying fallback:', hfError);
-      // Fall through to keyword-based detection
+    } catch (err) {
+      reject(`STT setup error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
-
-    // Fallback to keyword-based detection
-    return performKeywordBasedDetection(text);
-  } catch (error) {
-    console.error('Emotion detection error:', error);
-    return performKeywordBasedDetection(text);
-  }
-}
-
-// Keyword-based emotion detection fallback
-function performKeywordBasedDetection(text: string): { emotion: string; score: number } {
-  console.log('Keyword detection - received text:', text);
-  console.log('Keyword detection - text length:', text ? text.length : 0);
-  
-  if (!text || !text.trim()) {
-    console.log('Keyword detection - empty text, returning neutral');
-    return { emotion: 'neutral', score: 0.5 };
-  }
-
-  const lowerText = text.toLowerCase();
-  console.log('Keyword detection - lowercase text:', lowerText);
-  
-  // Enhanced keyword matching with negative context detection first
-  // Check for negative phrases and common depression/sadness indicators
-  if (lowerText.includes('not feeling well') || lowerText.includes('dont feel good') || 
-      lowerText.includes("don't feel good") || lowerText.includes('not feeling good') ||
-      lowerText.includes('feeling bad') || lowerText.includes('feeling terrible') ||
-      lowerText.includes('feeling awful') || lowerText.includes('not well') ||
-      lowerText.includes('feel sick') || lowerText.includes('unwell') ||
-      lowerText.includes('feel down') || lowerText.includes('feeling down') ||
-      lowerText.includes('not okay') || lowerText.includes('not fine') ||
-      lowerText.includes('feel worse') || lowerText.includes('getting worse')) {
-    console.log('Keyword detection - found negative wellness keywords');
-    return { emotion: 'sad', score: 0.90 };
-  } else if (lowerText.includes('anxious') || lowerText.includes('anxiety') || lowerText.includes('worry') || 
-      lowerText.includes('worried') || lowerText.includes('stress') || lowerText.includes('nervous') ||
-      lowerText.includes('panic') || lowerText.includes('tense') || lowerText.includes('overwhelm') ||
-      // Urdu keywords for anxiety/worry
-      text.includes('پریشان') || text.includes('فکر') || text.includes('گھبرا') || text.includes('بے چین') ||
-      text.includes('پریشانی') || text.includes('تشویش') || text.includes('خوف زدہ')) {
-    console.log('Keyword detection - found anxiety keywords');
-    return { emotion: 'anxious', score: 0.85 };
-  } else if (lowerText.includes('sad') || lowerText.includes('depressed') || lowerText.includes('depression') ||
-             lowerText.includes('down') || lowerText.includes('upset') || lowerText.includes('crying') ||
-             lowerText.includes('miserable') || lowerText.includes('unhappy') || lowerText.includes('blue') ||
-             // Urdu keywords for sadness
-             text.includes('اداس') || text.includes('غمگین') || text.includes('افسرده') || text.includes('رو') || 
-             text.includes('رونا') || text.includes('غم') || text.includes('دکھ') || text.includes('اداسی')) {
-    console.log('Keyword detection - found sadness keywords');
-    return { emotion: 'sad', score: 0.85 };
-  } else if (lowerText.includes('happy') || lowerText.includes('joy') || lowerText.includes('joyful') ||
-             lowerText.includes('great') || lowerText.includes('wonderful') || lowerText.includes('amazing') ||
-             lowerText.includes('excited') || lowerText.includes('cheerful') || lowerText.includes('fantastic') ||
-             lowerText.includes('excellent') || lowerText.includes('brilliant') ||
-             // Urdu keywords for happiness
-             text.includes('خوش') || text.includes('خوشی') || text.includes('مسرور') || text.includes('شاد') ||
-             text.includes('خوشگوار') || text.includes('بہتر') || text.includes('اچھا')) {
-    console.log('Keyword detection - found happiness keywords');
-    return { emotion: 'happy', score: 0.85 };
-  } else if (lowerText.includes('angry') || lowerText.includes('mad') || lowerText.includes('furious') ||
-             lowerText.includes('frustrated') || lowerText.includes('irritated') || lowerText.includes('annoyed') ||
-             // Urdu keywords for anger
-             text.includes('غصہ') || text.includes('غضب') || text.includes('ناراض') || text.includes('برا') ||
-             text.includes('چڑچڑا') || text.includes('جھنجھلا') || text.includes('کراہت')) {
-    console.log('Keyword detection - found anger keywords');
-    return { emotion: 'angry', score: 0.85 };
-  } else if (lowerText.includes('too much') || lowerText.includes('can\'t handle') ||
-             lowerText.includes('exhausted') || lowerText.includes('burned out') ||
-             // Urdu keywords for overwhelmed
-             text.includes('تھکا') || text.includes('تھکاوٹ') || text.includes('بہت زیادہ') || text.includes('برداشت نہیں') ||
-             text.includes('ہار گیا') || text.includes('مغلوب') || text.includes('بے بس')) {
-    console.log('Keyword detection - found overwhelmed keywords');
-    return { emotion: 'overwhelmed', score: 0.85 };
-  } else if (lowerText.includes('afraid') || lowerText.includes('scared') || lowerText.includes('fear') ||
-             lowerText.includes('terrified') || lowerText.includes('frightened') ||
-             // Urdu keywords for fear
-             text.includes('ڈر') || text.includes('خوف') || text.includes('گھبرا') || text.includes('بوجھل') ||
-             text.includes('ڈرا') || text.includes('خائف') || text.includes('سہمے')) {
-    console.log('Keyword detection - found fear keywords');
-    return { emotion: 'fearful', score: 0.85 };
-  } else if (lowerText.includes('lonely') || lowerText.includes('alone') || lowerText.includes('isolated') ||
-             // Urdu keywords for loneliness
-             text.includes('اکیلا') || text.includes('تنہا') || text.includes('علیحدگی') ||
-             text.includes('تنہائی') || text.includes('الگ') || text.includes('اکیلے پن')) {
-    console.log('Keyword detection - found loneliness keywords');
-    return { emotion: 'lonely', score: 0.85 };
-  } else if (lowerText.includes('confused') || lowerText.includes('lost') || lowerText.includes('uncertain') ||
-             // Urdu keywords for confusion (note: پریشان is also in anxiety, but context matters)
-             text.includes('کنفیوز') || text.includes('سمجھ نہیں') || text.includes('الجھن') ||
-             text.includes('بے یقین') || text.includes('شک') || text.includes('حیران')) {
-    console.log('Keyword detection - found confusion keywords');
-    return { emotion: 'confused', score: 0.80 };
-  }
-  
-  // Check for positive indicators (English + Urdu)
-  if (lowerText.includes('good') || lowerText.includes('fine') || lowerText.includes('okay') ||
-      lowerText.includes('alright') || lowerText.includes('well') ||
-      text.includes('ٹھیک') || text.includes('اچھا') || text.includes('بہتر') ||
-      text.includes('ٹھیک ہے') || text.includes('بہت اچھا') || text.includes('خوب')) {
-    console.log('Keyword detection - found positive keywords');
-    return { emotion: 'content', score: 0.70 };
-  }
-  
-  console.log('Keyword detection - no keywords matched, returning neutral');
-  return { emotion: 'neutral', score: 0.5 };
+  });
 }
 
 export interface SpeechAssessmentResult {
@@ -490,21 +153,6 @@ export class SpeechService {
       };
     } catch (error) {
       console.error('Error getting user progress:', error);
-      throw error;
-    }
-  }
-
-  static async getSessionDetails(sessionId: string) {
-    try {
-      // For now, return basic session info
-      // TODO: Implement proper session details retrieval
-      return {
-        id: sessionId,
-        status: 'active',
-        progress: 0,
-      };
-    } catch (error) {
-      console.error('Error getting session details:', error);
       throw error;
     }
   }
