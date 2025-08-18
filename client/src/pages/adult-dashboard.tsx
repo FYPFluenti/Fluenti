@@ -1,6 +1,6 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Home, BarChart, History, MessageSquare, User, Settings, SlidersHorizontal, ArrowRight, Sun, Moon } from "lucide-react";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { motion } from "framer-motion";
@@ -27,7 +27,9 @@ export default function AdultDashboard() {
   const [showVoiceUI, setShowVoiceUI] = useState(false);
   const [listening, setListening] = useState(false);
   const [showAdultSettings, setShowAdultSettings] = useState(false);
-  const [language, setLanguage] = useState<'en' | 'ur'>('en');
+  const [language, setLanguage] = useState<'en' | 'ur'>(
+    (localStorage.getItem('language') as 'en' | 'ur') || 'en'
+  );
   
   // Note: Emotional Support Chat functionality moved to /emotional-support page
   // These states are kept for potential future use but chat UI removed
@@ -43,6 +45,11 @@ export default function AdultDashboard() {
     if (ref.current) {
       ref.current.scrollIntoView({ behavior: "smooth" });
     }
+  };
+
+  const handleLanguageChange = (val: 'en' | 'ur') => {
+    setLanguage(val);
+    localStorage.setItem('language', val);  // Persist for modes
   };
 
   const submitFeedback = () => {
@@ -181,21 +188,53 @@ export default function AdultDashboard() {
               title="AI Avatar"
             />
             <h2 className="text-2xl font-bold mb-4">coffee and calmi time?</h2>
-            <div className="space-y-3">
-              <button onClick={() => setLocation('/emotional-support-voice')} className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all">
-                <div>
-                  <h3 className="text-base font-semibold">voice mode</h3>
-                  <p className="text-sm text-muted-foreground">talk it out with AI therapy</p>
-                </div>
-                <ArrowRight className="w-5 h-5" />
-              </button>
-              <button onClick={() => setLocation('/emotional-support')} className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all">
-                <div>
-                  <h3 className="text-base font-semibold">chat mode</h3>
-                  <p className="text-sm text-muted-foreground">not in the talking mood?</p>
-                </div>
-                <ArrowRight className="w-5 h-5" />
-              </button>
+            
+            {/* Skeleton Mode Controls */}
+            <div className="mb-6">
+              <div className="flex items-center justify-center space-x-2 mb-4">
+                <button
+                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 text-sm ${
+                    language === 'en' 
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
+                      : 'bg-muted text-foreground'
+                  }`}
+                  onClick={() => handleLanguageChange('en')}
+                >
+                  English
+                </button>
+                <button
+                  className={`px-4 py-2 rounded-lg font-medium transition-all duration-300 text-sm ${
+                    language === 'ur' 
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg' 
+                      : 'bg-muted text-foreground'
+                  }`}
+                  onClick={() => handleLanguageChange('ur')}
+                >
+                  اردو
+                </button>
+              </div>
+              
+              <div className="space-y-3">
+                <Link href="/emotional-support">
+                  <button className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all">
+                    <div>
+                      <h3 className="text-base font-semibold">Chat Mode</h3>
+                      <p className="text-sm text-muted-foreground">Type your messages</p>
+                    </div>
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                </Link>
+                
+                <Link href="/emotional-support-voice">
+                  <button className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all">
+                    <div>
+                      <h3 className="text-base font-semibold">Voice Mode</h3>
+                      <p className="text-sm text-muted-foreground">Speak your messages</p>
+                    </div>
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                </Link>
+              </div>
             </div>
           </motion.div>
         </section>
@@ -227,7 +266,7 @@ export default function AdultDashboard() {
                   <select 
                     className="bg-background text-foreground border border-border rounded-lg px-4 py-2 text-base focus:outline-none focus:ring-2 focus:ring-primary min-w-[120px]"
                     value={language}
-                    onChange={(e) => setLanguage(e.target.value as 'en' | 'ur')}
+                    onChange={(e) => handleLanguageChange(e.target.value as 'en' | 'ur')}
                     aria-label="Select conversation language"
                     title="Select conversation language"
                   >
