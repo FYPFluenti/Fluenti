@@ -19,7 +19,7 @@ async function test() {
     
     // Note: You need to provide the path to your actual audio file
     // Record a WAV file using Audacity and place it in the test-audio directory
-    const audioPath = path.join(process.cwd(), 'server', 'test-audio', 'english_test.wav');
+    const audioPath = path.join(process.cwd(), 'server', 'test-audio', 'stressed_test.wav');
     
     console.log('🎯 Testing STT with audio file:', audioPath);
     console.log('Note: Make sure to record a WAV file and place it in server/test-audio/');

@@ -102,31 +102,6 @@ async function testSystemDiagnostics() {
       console.log('⚠️ Python check failed:', e.message);
     }
     
-    // Check available packages
-    console.log('\n📦 Checking Python packages...');
-    try {
-      const pipList = await execAsync('.venv\\Scripts\\pip.exe list', {
-        cwd: process.cwd()
-      });
-      const relevantPackages = pipList.stdout.split('\n').filter(line => 
-        line.includes('torch') || line.includes('transformers') || 
-        line.includes('librosa') || line.includes('whisper')
-      );
-      console.log('✅ Key packages installed:');
-      relevantPackages.forEach(pkg => console.log('  ' + pkg));
-    } catch (e) {
-      console.log('⚠️ Package check failed:', e.message);
-    }
-    
-    // Check ffmpeg
-    console.log('\n🎬 Checking ffmpeg...');
-    try {
-      const ffmpegCheck = await execAsync('ffmpeg -version');
-      console.log('✅ FFmpeg available in PATH');
-    } catch (e) {
-      console.log('⚠️ FFmpeg not in PATH - using bundled version');
-    }
-    
     // Memory check
     console.log('\n🧠 Memory usage:');
     const memUsage = process.memoryUsage();
@@ -233,48 +208,3 @@ module.exports = {
   testPerformanceOptimization,
   runCompleteTestSuite
 };
-  
-  for (const text of urduTests) {
-    try {
-      const response = await fetch('http://localhost:3000/api/emotional-support', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, language: 'ur' })
-      });
-      
-      const data = await response.json();
-      console.log(`✓ "${text}"`);
-      console.log(`  → Detected: ${data.emotion?.emotion || 'unknown'} (${Math.round((data.emotion?.score || 0) * 100)}% confidence)`);
-      console.log(`  → Source: ${data.emotionSource || 'text-only'}`);
-      console.log('');
-    } catch (error) {
-      console.error(`✗ Error testing "${text}":`, error.message);
-    }
-  }
-
-  // Step 3: Test Edge Cases and Robustness
-  console.log('Step 3: Testing Edge Cases & Robustness');
-  console.log('----------------------------------------');
-  
-  const edgeCases = [
-    "",                                    // Empty text
-    "Hello there",                         // Neutral text
-    "Maybe I don't know how I feel",       // Ambiguous
-    "I'm feeling anxious but also excited" // Mixed emotions
-  ];
-  
-  for (const text of edgeCases) {
-    try {
-      const response = await fetch('http://localhost:3000/api/emotional-support', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, language: 'en' })
-      });
-      
-      const data = await response.json();
-      console.log(`✓ "${text}"`);
-      console.log(`  → Detected: ${data.emotion?.emotion || 'unknown'} (${Math.round((data.emotion?.score || 0) * 100)}% confidence)`);
-      console.log('');
-    } catch (error) {
-      console.error(`✗ Error testing "${text}":`, error.message);
-

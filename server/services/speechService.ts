@@ -12,9 +12,9 @@ export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur'
       const tempPath = path.join(process.cwd(), 'temp_audio.wav');
       fs.writeFileSync(tempPath, audioBuffer);
 
-      // Python code for Whisper (auto-loads model on first run)
-      // Use tiny model to avoid memory issues, different model based on language
-      const model = language === 'ur' ? 'openai/whisper-small' : 'openai/whisper-tiny';
+      // Use the smallest possible models to avoid memory issues
+      // For both languages, use tiny model to conserve memory
+      const model = 'openai/whisper-tiny';
       
       // Ensure ffmpeg is available in Python environment
       const ffmpegPath = path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'WinGet', 'Packages', 'Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe', 'ffmpeg-7.1.1-full_build', 'bin');
@@ -22,6 +22,7 @@ export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur'
       const pythonCode = `
 import os
 import torch
+import gc
 from transformers import pipeline
 
 # Add ffmpeg to PATH for this Python session (prepend to ensure it's found)
@@ -29,19 +30,55 @@ ffmpeg_path = r"${ffmpegPath.replace(/\\/g, '\\\\')}"
 if ffmpeg_path not in os.environ.get('PATH', ''):
     os.environ['PATH'] = ffmpeg_path + os.pathsep + os.environ.get('PATH', '')
 
-device = "cpu"  # Use CPU for now to ensure stability
-pipe = pipeline("automatic-speech-recognition", model="${model}", device=-1)
-result = pipe("${tempPath.replace(/\\/g, '\\\\')}")
-print(result['text'])  # Extract text from result dict
+try:
+    # Check if CUDA is available and use GPU if possible
+    device = 0 if torch.cuda.is_available() else -1
+    torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+    
+    print(f"Using device: {'GPU (CUDA)' if device == 0 else 'CPU'}")
+    
+    # Create pipeline with correct parameters (remove unsupported ones)
+    pipe = pipeline(
+        "automatic-speech-recognition", 
+        model="${model}",
+        device=device,
+        torch_dtype=torch_dtype
+    )
+    
+    print("Model loaded successfully")
+    
+    # Process audio file
+    result = pipe("${tempPath.replace(/\\/g, '\\\\')}")
+    
+    # Clean up memory immediately after use
+    del pipe
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    
+    print(result['text'])  # Extract text from result dict
+    
+except Exception as e:
+    print(f"Whisper processing failed: {str(e)}")
+    # Clean up on error
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+    # Return error message that will be caught by the fallback system
+    raise Exception(f"Model processing error: {str(e)}")
       `;
 
       // Use virtual environment Python
       const venvPython = path.join(process.cwd(), '.venv', 'Scripts', 'python.exe');
       
-      // Set environment for spawned process
+      // Set environment for spawned process with GPU optimization
       const env = { 
         ...process.env,
-        PYTHONPATH: path.join(process.cwd(), '.venv', 'Lib', 'site-packages')
+        PYTHONPATH: path.join(process.cwd(), '.venv', 'Lib', 'site-packages'),
+        PYTORCH_CUDA_ALLOC_CONF: 'max_split_size_mb:128',
+        OMP_NUM_THREADS: '2',  // Allow a bit more threading for GPU
+        CUDA_VISIBLE_DEVICES: '0',  // Ensure we use the first GPU
+        HF_HUB_DISABLE_SYMLINKS_WARNING: '1'  // Disable symlink warnings
       };
       
       // Spawn Python process using virtual environment
@@ -49,15 +86,51 @@ print(result['text'])  # Extract text from result dict
 
       let output = '';
       let errorOutput = '';
+      
+      // Set a timeout to prevent hanging
+      const timeout = setTimeout(() => {
+        python.kill();
+        reject('STT timeout - model loading or processing took too long');
+      }, 30000); // 30 second timeout
+      
       python.stdout.on('data', (data) => { output += data.toString(); });
       python.stderr.on('data', (data) => { errorOutput += data.toString(); });
       python.on('close', (code) => {
-        fs.unlinkSync(tempPath);  // Clean up temp file
-        if (code !== 0) {
-          reject(`Python error: ${errorOutput}`);
-        } else {
-          resolve(output.trim());
+        clearTimeout(timeout);
+        
+        // Clean up temp file
+        try {
+          if (fs.existsSync(tempPath)) {
+            fs.unlinkSync(tempPath);
+          }
+        } catch (cleanupError) {
+          console.warn('Failed to cleanup temp file:', cleanupError);
         }
+        
+        if (code !== 0) {
+          console.error('Python STT error:', errorOutput);
+          
+          // Check for specific memory errors
+          if (errorOutput.includes('memory allocation') || errorOutput.includes('OutOfMemoryError')) {
+            reject('STT failed: Insufficient memory to load Whisper model. Try with a smaller audio file.');
+          } else if (errorOutput.includes('No module named')) {
+            reject('STT failed: Missing Python dependencies. Please check installation.');
+          } else {
+            reject(`STT failed: ${errorOutput.substring(0, 200)}...`);
+          }
+        } else {
+          const transcription = output.trim();
+          if (transcription.includes('Could not transcribe audio')) {
+            reject('STT failed: Model could not process the audio file');
+          } else {
+            resolve(transcription || 'No speech detected');
+          }
+        }
+      });
+      
+      python.on('error', (err) => {
+        clearTimeout(timeout);
+        reject(`STT process error: ${err.message}`);
       });
     } catch (err) {
       reject(`STT setup error: ${err instanceof Error ? err.message : 'Unknown error'}`);
