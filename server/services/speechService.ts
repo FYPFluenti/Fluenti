@@ -1,38 +1,44 @@
 import { mongoStorage } from "../mongoStorage";
 import { generateSpeechFeedback, generatePersonalizedExercises } from "./openai";
 import { HfInference } from '@huggingface/inference';
-import wav from 'wav';  // For potential audio conversion
-import fs from 'fs';  // If needed for temp files
-import { Readable } from 'stream';  // For buffer to stream conversion
-import ffmpeg from 'fluent-ffmpeg';  // For audio format conversion
-import { promisify } from 'util';
-import { pipeline } from 'stream';
+import { AudioProcessor } from './audioProcessor';
+import fs from 'fs';
+import { Readable } from 'stream';
+import path from 'path';
 
 const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
 
-// Phase 2: Audio format conversion function
-async function convertAudioToWav(audioBuffer: Buffer): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    const inputStream = Readable.from(audioBuffer);
+// Phase 2: Enhanced audio format conversion using AudioProcessor
+async function convertAudioToWav(audioBuffer: Buffer): Promise<string> {
+  try {
+    const outputPath = path.join(process.cwd(), 'temp', `converted_${Date.now()}.wav`);
     
-    ffmpeg(inputStream)
-      .format('wav')
-      .audioCodec('pcm_s16le')
-      .audioFrequency(16000)  // Downsample to 16kHz for Whisper optimization
-      .audioChannels(1)       // Mono for better processing
-      .on('error', (err) => {
-        console.error('FFmpeg conversion error:', err);
-        reject(err);
-      })
-      .on('end', () => {
-        const convertedBuffer = Buffer.concat(chunks);
-        console.log(`Audio converted: ${audioBuffer.length} bytes -> ${convertedBuffer.length} bytes`);
-        resolve(convertedBuffer);
-      })
-      .pipe()
-      .on('data', (chunk) => chunks.push(chunk));
-  });
+    // Ensure temp directory exists
+    await AudioProcessor.ensureTempDir();
+    
+    // Detect format and convert accordingly
+    const format = detectAudioFormat(audioBuffer);
+    console.log(`Detected audio format: ${format}`);
+    
+    if (format === 'webm' || format === 'unknown') {
+      // Use our AudioProcessor for WebM to WAV conversion
+      return await AudioProcessor.webmToWav(audioBuffer, outputPath);
+    } else if (format === 'wav') {
+      // Already WAV, just save it
+      await fs.promises.writeFile(outputPath, audioBuffer);
+      return outputPath;
+    } else {
+      // Use general conversion for other formats
+      return await AudioProcessor.convertToWav(audioBuffer, outputPath, {
+        sampleRate: 16000,
+        channels: 1,
+        bitDepth: 16
+      });
+    }
+  } catch (error) {
+    console.error('Audio conversion error:', error);
+    throw error;
+  }
 }
 
 // Phase 2: Enhanced audio format detection
@@ -104,6 +110,8 @@ export async function transcribeAudioWithFallback(audioBuffer: Buffer, language:
 }
 
 export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur' = 'en'): Promise<string> {
+  let tempFilePath: string | null = null;
+  
   try {
     // Phase 2: Enhanced model selection based on language
     if (!process.env.HUGGINGFACE_API_KEY || process.env.HUGGINGFACE_API_KEY === 'your-hf-token') {
@@ -118,10 +126,12 @@ export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur'
     let processedBuffer = audioBuffer;
     
     // Convert non-WAV formats to WAV for better Whisper compatibility
-    if (detectedFormat !== 'wav' && detectedFormat !== 'unknown') {
+    if (detectedFormat !== 'wav') {
       try {
         console.log('Converting audio to WAV format for optimal processing...');
-        processedBuffer = await convertAudioToWav(audioBuffer);
+        tempFilePath = await convertAudioToWav(audioBuffer);
+        processedBuffer = await fs.promises.readFile(tempFilePath);
+        console.log(`Audio converted and saved to: ${tempFilePath}`);
       } catch (conversionError) {
         console.warn('Audio conversion failed, using original buffer:', conversionError);
         // Continue with original buffer
@@ -183,6 +193,16 @@ export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur'
     
     // Fallback with helpful error message
     return `[Phase 2 STT Error] Could not transcribe ${language} audio: ${error instanceof Error ? error.message : 'Unknown error'}. Please check audio format and try again.`;
+  } finally {
+    // Clean up temporary file if created
+    if (tempFilePath) {
+      try {
+        await fs.promises.unlink(tempFilePath);
+        console.log(`Cleaned up temp file: ${tempFilePath}`);
+      } catch (cleanupError) {
+        console.warn(`Failed to cleanup temp file ${tempFilePath}:`, cleanupError);
+      }
+    }
   }
 }
 
