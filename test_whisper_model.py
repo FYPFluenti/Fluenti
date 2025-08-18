@@ -23,7 +23,7 @@ def check_environment():
     print(f"CUDA available: {torch.cuda.is_available()}")
     
     if torch.cuda.is_available():
-        print(f"CUDA version: {torch.version.cuda}")
+        print(f"CUDA version: {torch.version.cuda}") # pyright: ignore[reportAttributeAccessIssue]
         print(f"GPU count: {torch.cuda.device_count()}")
         for i in range(torch.cuda.device_count()):
             gpu = torch.cuda.get_device_properties(i)
