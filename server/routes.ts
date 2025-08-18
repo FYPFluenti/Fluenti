@@ -17,7 +17,7 @@ import {
 // Phase 4: Import response generation functions
 import { analyzeEmotion, generateEmotionalResponse } from "./services/openai";
 import { AuthService } from "./auth";
-import multer from 'multer';
+
 
 // Configure multer for handling form data
 const upload = multer({ 
@@ -412,6 +412,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Test endpoint error:', error);
       res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error occurred' });
+    }
+  });
+
+  // Test endpoint for chat mode (no auth required)
+  app.post('/api/test-chat', async (req: Request, res: Response) => {
+    try {
+      const { message, sessionId, language } = req.body;
+      
+      console.log('\n=== CHAT MODE TEST ===');
+      console.log('Received message:', message);
+      console.log('Message length:', message ? message.length : 0);
+      console.log('Session ID:', sessionId);
+      console.log('Language:', language || 'en');
+      
+      // Validate input
+      if (!message || message.trim().length === 0) {
+        return res.status(400).json({ 
+          error: 'No message provided',
+          received: message 
+        });
+      }
+      
+      // Process text input (no STT needed for chat mode)
+      const processedMessage = message.trim();
+      
+      // Simple emotion detection for testing (placeholder)
+      let detectedEmotion = 'neutral';
+      const lowerMessage = processedMessage.toLowerCase();
+      
+      if (lowerMessage.includes('sad') || lowerMessage.includes('upset') || lowerMessage.includes('depressed')) {
+        detectedEmotion = 'sad';
+      } else if (lowerMessage.includes('angry') || lowerMessage.includes('mad') || lowerMessage.includes('frustrated')) {
+        detectedEmotion = 'angry';
+      } else if (lowerMessage.includes('anxious') || lowerMessage.includes('worried') || lowerMessage.includes('nervous')) {
+        detectedEmotion = 'anxious';
+      } else if (lowerMessage.includes('happy') || lowerMessage.includes('joy') || lowerMessage.includes('excited')) {
+        detectedEmotion = 'happy';
+      }
+      
+      // Generate appropriate response based on emotion
+      let chatResponse = '';
+      switch (detectedEmotion) {
+        case 'sad':
+          chatResponse = "I can hear that you're feeling sad. It's okay to feel this way sometimes. Would you like to tell me more about what's making you feel sad?";
+          break;
+        case 'angry':
+          chatResponse = "I understand you're feeling frustrated or angry. Those feelings are completely valid. What's been causing these feelings?";
+          break;
+        case 'anxious':
+          chatResponse = "I notice you might be feeling anxious. That can be really overwhelming. Let's take this one step at a time. What's been worrying you?";
+          break;
+        case 'happy':
+          chatResponse = "It's wonderful to hear you're feeling positive! I'm glad you're having a good moment. What's been bringing you joy?";
+          break;
+        default:
+          chatResponse = "Thank you for sharing that with me. I'm here to listen and support you. How are you feeling right now?";
+      }
+      
+      // Return chat response
+      res.json({
+        success: true,
+        userMessage: processedMessage,
+        detectedEmotion: detectedEmotion,
+        chatResponse: chatResponse,
+        timestamp: new Date().toISOString(),
+        sessionId: sessionId || 'test-session',
+        language: language || 'en',
+        mode: 'chat-text',
+        sttUsed: false  // Confirm no STT was used
+      });
+      
+    } catch (error) {
+      console.error('Chat test endpoint error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        mode: 'chat-text'
+      });
     }
   });
 

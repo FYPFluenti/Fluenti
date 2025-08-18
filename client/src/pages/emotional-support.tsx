@@ -16,20 +16,22 @@ const EmotionalSupportChat = () => {
     setInput(''); // Clear input immediately
     
     try {
-      const formData = new FormData();
-      formData.append('mode', 'chat');
-      formData.append('language', language);
-      formData.append('text', userMessage);
-      formData.append('history', JSON.stringify(messages.map(m => ({ user: m.user, ai: m.ai }))));
-
-      const res = await fetch('/api/emotional-support', { method: 'POST', body: formData });
+      const res = await fetch('http://localhost:3000/api/test-chat', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage,
+          language: language,
+          sessionId: `support-session-${Date.now()}`
+        })
+      });
       const data = await res.json();
       
       // Add new message
       const newMessage = {
         id: Date.now().toString(),
         user: userMessage,
-        ai: data.response || "I understand. Can you tell me more?",
+        ai: data.chatResponse || "I understand. Can you tell me more?",
         timestamp: new Date()
       };
       

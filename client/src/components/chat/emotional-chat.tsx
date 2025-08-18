@@ -280,17 +280,17 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
       }
     }
 
-    // HTTP fallback for when WebSocket is unavailable
+    // HTTP fallback for when WebSocket is unavailable - Use test-chat for text-only mode
     try {
-      const response = await fetch('/api/emotional-support', {
+      const response = await fetch('http://localhost:3000/api/test-chat', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          text: inputMessage,
-          language: language === 'urdu' ? 'ur' : 'en'
+          message: inputMessage,
+          language: language === 'urdu' ? 'ur' : 'en',
+          sessionId: `chat-session-${Date.now()}`
         })
       });
 
@@ -305,7 +305,7 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: data.response || 'I\'m here to help you.',
+        content: data.chatResponse || 'I\'m here to help you.',
         sender: 'ai',
         timestamp: new Date(),
         emotion: detectedEmotion
@@ -317,7 +317,7 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
       // Show emotion detection toast
       toast({
         title: `Emotion Detected: ${data.detectedEmotion}`,
-        description: `Confidence: ${Math.round((data.confidence || 0) * 100)}%`,
+        description: `Mode: ${data.mode || 'chat-text'}`,
       });
 
     } catch (error) {
