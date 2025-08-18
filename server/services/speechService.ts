@@ -9,23 +9,43 @@ export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur'
   return new Promise((resolve, reject) => {
     try {
       // Save buffer to temp WAV file
-      const tempPath = path.join(__dirname, 'temp_audio.wav');
+      const tempPath = path.join(process.cwd(), 'temp_audio.wav');
       fs.writeFileSync(tempPath, audioBuffer);
 
       // Python code for Whisper (auto-loads model on first run)
-      // Use different model based on language
-      const model = language === 'ur' ? 'openai/whisper-medium' : 'openai/whisper-small';
+      // Use tiny model to avoid memory issues, different model based on language
+      const model = language === 'ur' ? 'openai/whisper-small' : 'openai/whisper-tiny';
+      
+      // Ensure ffmpeg is available in Python environment
+      const ffmpegPath = path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'WinGet', 'Packages', 'Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe', 'ffmpeg-7.1.1-full_build', 'bin');
+      
       const pythonCode = `
+import os
 import torch
 from transformers import pipeline
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
-pipe = pipeline("automatic-speech-recognition", model="${model}", device=0 if torch.cuda.is_available() else -1)
-transcription = pipe("${tempPath.replace(/\\/g, '\\\\')}")['text']  # Escape backslashes for Windows path
-print(transcription)
+
+# Add ffmpeg to PATH for this Python session (prepend to ensure it's found)
+ffmpeg_path = r"${ffmpegPath.replace(/\\/g, '\\\\')}"
+if ffmpeg_path not in os.environ.get('PATH', ''):
+    os.environ['PATH'] = ffmpeg_path + os.pathsep + os.environ.get('PATH', '')
+
+device = "cpu"  # Use CPU for now to ensure stability
+pipe = pipeline("automatic-speech-recognition", model="${model}", device=-1)
+result = pipe("${tempPath.replace(/\\/g, '\\\\')}")
+print(result['text'])  # Extract text from result dict
       `;
 
-      // Spawn Python process
-      const python = spawn('python', ['-c', pythonCode]);
+      // Use virtual environment Python
+      const venvPython = path.join(process.cwd(), '.venv', 'Scripts', 'python.exe');
+      
+      // Set environment for spawned process
+      const env = { 
+        ...process.env,
+        PYTHONPATH: path.join(process.cwd(), '.venv', 'Lib', 'site-packages')
+      };
+      
+      // Spawn Python process using virtual environment
+      const python = spawn(venvPython, ['-c', pythonCode], { env });
 
       let output = '';
       let errorOutput = '';
