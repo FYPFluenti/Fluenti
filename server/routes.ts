@@ -3,17 +3,19 @@ import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import multer from "multer";
 import { mongoStorage } from "./mongoStorage";
+import path from "path";
+import fs from "fs";
 import { setupAuth, isAuthenticated } from "./simpleAuth";
 import { extractTokenFromHeader, tokenBasedAuth } from "./middleware";
 import * as speechServiceModule from "./services/speechService";
 const { SpeechService, transcribeAudio } = speechServiceModule;
 import { simpleTranscribeAudio, validateAudioBuffer } from "./services/simpleSpeechService";
-// Phase 3: Import emotion detection services
+// Phase 3: Import OPTIMIZED emotion detection services
 import { 
   detectEmotionFromText, 
   detectEmotionFromAudio, 
-  combineEmotions 
-} from "./services/emotionService";
+  detectCombinedEmotion 
+} from "./services/emotionServiceOptimized";
 // Phase 4: Import response generation functions
 import { analyzeEmotion, generateEmotionalResponse } from "./services/openai";
 import { AuthService } from "./auth";
@@ -39,6 +41,78 @@ interface AuthenticatedRequest extends Request {
     userType?: string;
   };
   isAuthenticated?: () => boolean;
+}
+
+// Phase 3: Emotional Support Response Generation
+function generateEmotionalSupportResponse(
+  text: string, 
+  emotion: string, 
+  confidence: number, 
+  language: string = 'en'
+): string {
+  const responses = {
+    en: {
+      stress: [
+        "I can sense you're feeling overwhelmed. Let's take this one step at a time. What's been weighing on your mind?",
+        "Stress can feel overwhelming, but you're not alone. Would you like to talk about what's causing this pressure?",
+        "I notice you might be feeling stressed. Taking deep breaths can help. What's been on your mind lately?"
+      ],
+      sadness: [
+        "I can hear that you're going through a difficult time. Your feelings are valid, and I'm here to listen.",
+        "It sounds like you're feeling sad. That's completely okay - would you like to share what's been bothering you?",
+        "I sense some sadness in what you're sharing. Sometimes talking helps - I'm here for you."
+      ],
+      anger: [
+        "I can feel your frustration. It's okay to feel angry - these emotions are valid. What's been upsetting you?",
+        "It sounds like something has really bothered you. Would you like to talk about what's making you feel this way?",
+        "I sense some anger in your message. Let's work through this together - what happened?"
+      ],
+      fear: [
+        "I can sense some worry or fear in what you're sharing. It's brave of you to reach out. What's been frightening you?",
+        "Fear can be overwhelming, but you're safe here. Would you like to talk about what's been making you anxious?",
+        "I notice you might be feeling scared. That's completely understandable - what's been on your mind?"
+      ],
+      joy: [
+        "I can hear the positivity in your message! It's wonderful that you're feeling good. What's been making you happy?",
+        "It sounds like you're in a good mood - that's great to hear! Would you like to share what's been going well?",
+        "I sense some happiness in what you're sharing. It's lovely to hear from someone feeling positive!"
+      ],
+      neutral: [
+        "Thank you for reaching out. I'm here to listen and support you. How are you feeling right now?",
+        "I'm glad you're here. Sometimes it helps just to talk. What's been on your mind?",
+        "I'm here for you. Would you like to share what brought you here today?"
+      ]
+    },
+    ur: {
+      stress: [
+        "مجھے لگ رہا ہے آپ پریشان ہیں۔ آئیے اسے آہستہ آہستہ حل کرتے ہیں۔ کیا بات آپ کو پریشان کر رہی ہے؟",
+        "تناؤ مشکل ہو سکتا ہے، لیکن آپ اکیلے نہیں ہیں۔ کیا آپ بتانا چاہیں گے کہ کیا آپ کو پریشان کر رہا ہے؟"
+      ],
+      sadness: [
+        "مجھے لگ رہا ہے آپ مشکل وقت سے گزر رہے ہیں۔ آپ کے احساسات درست ہیں، اور میں یہاں سننے کے لیے ہوں۔",
+        "لگ رہا ہے آپ اداس ہیں۔ یہ بالکل ٹھیک ہے - کیا آپ بتانا چاہیں گے کہ کیا آپ کو پریشان کر رہا ہے؟"
+      ],
+      neutral: [
+        "آپ کا یہاں آنے کا شکریہ۔ میں یہاں آپ کی بات سننے اور مدد کرنے کے لیے ہوں۔ آپ کیسا محسوس کر رہے ہیں؟",
+        "میں خوش ہوں کہ آپ یہاں ہیں۔ کبھی کبھی بات کرنا مدد کرتا ہے۔ آپ کے دل میں کیا بات ہے؟"
+      ]
+    }
+  };
+
+  const emotionResponses = responses[language as keyof typeof responses] || responses.en;
+  const responseArray = emotionResponses[emotion as keyof typeof emotionResponses] || emotionResponses.neutral;
+  
+  // Select response based on confidence level
+  let responseIndex = 0;
+  if (confidence > 0.8) {
+    responseIndex = 0; // Most confident response
+  } else if (confidence > 0.6) {
+    responseIndex = Math.min(1, responseArray.length - 1);
+  } else {
+    responseIndex = Math.min(2, responseArray.length - 1);
+  }
+  
+  return responseArray[responseIndex] || responseArray[0];
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -377,7 +451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         emotion, 
         response: response,
         detectedEmotion: emotion.emotion,
-        confidence: emotion.score
+        confidence: emotion.confidence
       });
     } catch (error) {
       console.error("Error processing test emotional support request:", error);
@@ -497,9 +571,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { mode, language, history } = req.body;
       let text = req.body.text;
+      let audioPath: string | null = null;
 
       console.log('Processing emotional support request - Mode:', mode, 'Language:', language);
 
+      // Phase 3: Handle voice mode with audio file processing
       if (mode === 'voice' && req.file) {
         try {
           console.log('Processing audio file, size:', req.file.size, 'bytes');
@@ -509,6 +585,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (!validateAudioBuffer(audioBuffer)) {
             throw new Error('Invalid audio file format or size');
           }
+          
+          // Save audio to temp file for emotion detection
+          const tempDir = path.join(process.cwd(), 'temp');
+          if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+          }
+          audioPath = path.join(tempDir, `audio_${Date.now()}.wav`);
+          fs.writeFileSync(audioPath, audioBuffer);
           
           const whisperLanguage = language?.startsWith('ur') ? 'ur' : 'en';
           
@@ -535,13 +619,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('Final processed text:', text);
 
-      // Proceed to emotion/response (placeholders for now)
+      // Phase 3: Advanced Emotion Detection
+      let emotionResult;
+      const detectionLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+      
+      if (mode === 'voice' && audioPath && fs.existsSync(audioPath)) {
+        // Combined text + voice emotion detection
+        console.log('⚡ Phase 3: Running OPTIMIZED combined emotion detection...');
+        const combinedResult = await detectCombinedEmotion(text, audioPath, detectionLanguage);
+        emotionResult = {
+          emotion: combinedResult.combined.emotion,
+          confidence: combinedResult.combined.confidence,
+          text_emotion: combinedResult.text.emotion,
+          voice_emotion: combinedResult.voice.emotion,
+          method: 'combined'
+        };
+        
+        // Clean up temp audio file
+        try {
+          fs.unlinkSync(audioPath);
+        } catch (cleanupError) {
+          console.warn('Failed to clean up temp audio file:', cleanupError);
+        }
+      } else {
+        // Text-only emotion detection
+        console.log('Phase 3: Running text emotion detection...');
+        const textResult = await detectEmotionFromText(text, detectionLanguage);
+        emotionResult = {
+          emotion: textResult.emotion,
+          confidence: textResult.confidence,
+          method: 'text-only'
+        };
+      }
+
+      console.log('Phase 3 Emotion Detection Result:', emotionResult);
+
+      // Generate contextual response based on detected emotion
+      const supportResponse = generateEmotionalSupportResponse(
+        text, 
+        emotionResult.emotion, 
+        emotionResult.confidence,
+        detectionLanguage
+      );
+
       res.json({ 
         transcription: text, 
-        emotion: 'neutral', 
-        response: 'Placeholder response - I understand you\'re reaching out. How can I help you today?',
+        emotion: emotionResult.emotion,
+        confidence: emotionResult.confidence,
+        detectedEmotion: emotionResult.emotion, // For backward compatibility
+        response: supportResponse,
         mode: mode || 'text',
-        language: language || 'en'
+        language: detectionLanguage,
+        emotionDetails: emotionResult
       });
     } catch (error) {
       console.error("Error processing emotional support request:", error);
@@ -706,21 +835,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
 
             // Process emotion detection
-            let finalEmotion = { emotion: 'neutral', score: 0.5 };
+            let finalEmotion = { emotion: 'neutral', confidence: 0.5 };
             try {
               const emotionLanguage = language?.startsWith('ur') ? 'ur' : 'en';
               const textEmotion = await detectEmotionFromText(inputText, emotionLanguage);
               
               if (audio) {
                 try {
+                  // Save audio buffer to temporary file for emotion detection
                   const audioBuffer = Buffer.from(audio, 'base64');
-                  const voiceEmotion = await detectEmotionFromAudio(audioBuffer, emotionLanguage);
-                  finalEmotion = combineEmotions(textEmotion, voiceEmotion);
+                  const tempDir = path.join(process.cwd(), 'temp');
+                  if (!fs.existsSync(tempDir)) {
+                    fs.mkdirSync(tempDir, { recursive: true });
+                  }
+                  const tempAudioPath = path.join(tempDir, `ws_audio_${Date.now()}.wav`);
+                  fs.writeFileSync(tempAudioPath, audioBuffer);
+                  
+                  // Use OPTIMIZED combined emotion detection
+                  const combinedResult = await detectCombinedEmotion(inputText, tempAudioPath, emotionLanguage);
+                  finalEmotion = {
+                    emotion: combinedResult.combined.emotion,
+                    confidence: combinedResult.combined.confidence
+                  };
+                  
+                  // Clean up temp file
+                  try {
+                    fs.unlinkSync(tempAudioPath);
+                  } catch (cleanupError) {
+                    console.warn('Failed to clean up temp audio file:', cleanupError);
+                  }
                 } catch (voiceError) {
-                  finalEmotion = textEmotion;
+                  finalEmotion = {
+                    emotion: textEmotion.emotion,
+                    confidence: textEmotion.confidence
+                  };
                 }
               } else {
-                finalEmotion = textEmotion;
+                finalEmotion = {
+                  emotion: textEmotion.emotion,
+                  confidence: textEmotion.confidence
+                };
               }
             } catch (emotionError) {
               console.warn('WebSocket emotion detection failed:', emotionError);
@@ -782,23 +936,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
 
             // Enhanced emotion detection for voice mode
-            let finalEmotion = { emotion: 'neutral', score: 0.5 };
+            let finalEmotion = { emotion: 'neutral', confidence: 0.5 };
             try {
               const emotionLanguage = language?.startsWith('ur') ? 'ur' : 'en';
               const textEmotion = await detectEmotionFromText(inputText, emotionLanguage);
               
               if (audio) {
                 try {
+                  // Save audio buffer to temporary file for emotion detection
                   const audioBuffer = Buffer.from(audio, 'base64');
-                  const voiceEmotion = await detectEmotionFromAudio(audioBuffer, emotionLanguage);
-                  finalEmotion = combineEmotions(textEmotion, voiceEmotion);
+                  const tempDir = path.join(process.cwd(), 'temp');
+                  if (!fs.existsSync(tempDir)) {
+                    fs.mkdirSync(tempDir, { recursive: true });
+                  }
+                  const tempAudioPath = path.join(tempDir, `ws_voice_audio_${Date.now()}.wav`);
+                  fs.writeFileSync(tempAudioPath, audioBuffer);
+                  
+                  // Use OPTIMIZED combined emotion detection
+                  const combinedResult = await detectCombinedEmotion(inputText, tempAudioPath, emotionLanguage);
+                  finalEmotion = {
+                    emotion: combinedResult.combined.emotion,
+                    confidence: combinedResult.combined.confidence
+                  };
                   console.log('Voice WebSocket: Combined emotion detected:', finalEmotion);
+                  
+                  // Clean up temp file
+                  try {
+                    fs.unlinkSync(tempAudioPath);
+                  } catch (cleanupError) {
+                    console.warn('Failed to clean up temp audio file:', cleanupError);
+                  }
                 } catch (voiceError) {
                   console.warn('Voice WebSocket: Audio emotion detection failed, using text-only');
-                  finalEmotion = textEmotion;
+                  finalEmotion = {
+                    emotion: textEmotion.emotion,
+                    confidence: textEmotion.confidence
+                  };
                 }
               } else {
-                finalEmotion = textEmotion;
+                finalEmotion = {
+                  emotion: textEmotion.emotion,
+                  confidence: textEmotion.confidence
+                };
               }
             } catch (emotionError) {
               console.warn('WebSocket voice emotion detection failed:', emotionError);

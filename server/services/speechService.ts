@@ -23,6 +23,7 @@ export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur'
 import os
 import torch
 import gc
+import sys
 from transformers import pipeline
 
 # Add ffmpeg to PATH for this Python session (prepend to ensure it's found)
@@ -35,7 +36,7 @@ try:
     device = 0 if torch.cuda.is_available() else -1
     torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
     
-    print(f"Using device: {'GPU (CUDA)' if device == 0 else 'CPU'}")
+    print(f"Using device: {'GPU (CUDA)' if device == 0 else 'CPU'}", file=sys.stderr)
     
     # Create pipeline with correct parameters (remove unsupported ones)
     pipe = pipeline(
@@ -45,7 +46,7 @@ try:
         torch_dtype=torch_dtype
     )
     
-    print("Model loaded successfully")
+    print("Model loaded successfully", file=sys.stderr)
     
     # Process audio file
     result = pipe("${tempPath.replace(/\\/g, '\\\\')}")
@@ -59,7 +60,7 @@ try:
     print(result['text'])  # Extract text from result dict
     
 except Exception as e:
-    print(f"Whisper processing failed: {str(e)}")
+    print(f"Whisper processing failed: {str(e)}", file=sys.stderr)
     # Clean up on error
     gc.collect()
     if torch.cuda.is_available():
