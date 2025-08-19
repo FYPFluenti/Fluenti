@@ -98,27 +98,19 @@ class PersistentEmotionDetector:
                         if item["score"] > top_emotion["score"]:
                             top_emotion = item
             
-            # Fast emotion mapping
-            emotion_mapping = {
-                "anger": "anger", "fear": "fear", "joy": "joy", "sadness": "sadness",
-                "surprise": "surprise", "disgust": "disgust", "neutral": "neutral",
-                "nervousness": "stress", "disappointment": "sadness", "excitement": "joy",
-                "annoyance": "anger", "caring": "joy", "approval": "joy"
-            }
+            # Use raw emotion labels directly for better accuracy
+            detected_emotion = top_emotion["label"]
             
-            detected_emotion = emotion_mapping.get(top_emotion["label"], "neutral")
-            
-            # Fast stress detection
-            if any(keyword in text.lower() for keyword in ["stress", "anxiety", "overwhelm"]):
-                if detected_emotion in ["fear", "sadness"]:
-                    detected_emotion = "stress"
+            # Only do minimal mapping for technical labels
+            if detected_emotion in ["neutral", "realization"]:
+                detected_emotion = "neutral"
             
             return {
-                "emotion": detected_emotion,
+                "emotion": detected_emotion,  # Use raw label directly
                 "confidence": float(top_emotion["score"]),
                 "all_scores": emotion_scores,
                 "raw_label": top_emotion["label"],
-                "method": "persistent_model"
+                "method": "persistent_model_raw"
             }
             
         except Exception as e:

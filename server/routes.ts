@@ -511,35 +511,168 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Process text input (no STT needed for chat mode)
       const processedMessage = message.trim();
       
-      // Simple emotion detection for testing (placeholder)
+      // Phase 3: Use OPTIMIZED emotion detection for chat mode
+      console.log('⚡ Chat Mode: Running optimized emotion detection...');
+      console.log('📝 Processing message:', processedMessage);
+      console.log('🌐 Language:', language || 'en');
+      
       let detectedEmotion = 'neutral';
-      const lowerMessage = processedMessage.toLowerCase();
+      let confidence = 0;
+      let emotionMethod = 'fallback';
       
-      if (lowerMessage.includes('sad') || lowerMessage.includes('upset') || lowerMessage.includes('depressed')) {
-        detectedEmotion = 'sad';
-      } else if (lowerMessage.includes('angry') || lowerMessage.includes('mad') || lowerMessage.includes('frustrated')) {
-        detectedEmotion = 'angry';
-      } else if (lowerMessage.includes('anxious') || lowerMessage.includes('worried') || lowerMessage.includes('nervous')) {
-        detectedEmotion = 'anxious';
-      } else if (lowerMessage.includes('happy') || lowerMessage.includes('joy') || lowerMessage.includes('excited')) {
-        detectedEmotion = 'happy';
+      try {
+        console.log('🔄 Calling detectEmotionFromText...');
+        // Set a shorter timeout for chat mode to avoid hanging
+        const emotionPromise = detectEmotionFromText(processedMessage, language || 'en');
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Chat mode timeout (3s)')), 3000)
+        );
+        
+        const emotionResult = await Promise.race([emotionPromise, timeoutPromise]);
+        console.log('📊 Emotion result received:', emotionResult);
+        
+        detectedEmotion = emotionResult.emotion;
+        confidence = emotionResult.confidence;
+        emotionMethod = 'optimized';
+        console.log(`✅ Chat Mode Emotion: ${detectedEmotion} (${confidence.toFixed(3)})`);
+      } catch (error) {
+        console.log('⚠️  Optimized detection failed, using fallback keyword detection');
+        console.log('❌ Error details:', error.message);
+        
+        // Fallback to enhanced keyword detection with raw emotion labels
+        const lowerMessage = processedMessage.toLowerCase();
+        
+        // More specific emotion detection
+        if (lowerMessage.includes('disappoint') || lowerMessage.includes('let down')) {
+          detectedEmotion = 'disappointment';
+          confidence = 0.6;
+        } else if (lowerMessage.includes('grateful') || lowerMessage.includes('thankful')) {
+          detectedEmotion = 'gratitude';
+          confidence = 0.6;
+        } else if (lowerMessage.includes('annoyed') || lowerMessage.includes('irritated')) {
+          detectedEmotion = 'annoyance';
+          confidence = 0.6;
+        } else if (lowerMessage.includes('excited') || lowerMessage.includes('thrilled')) {
+          detectedEmotion = 'excitement';
+          confidence = 0.6;
+        } else if (lowerMessage.includes('nervous') || lowerMessage.includes('worried')) {
+          detectedEmotion = 'nervousness';
+          confidence = 0.6;
+        } else if (lowerMessage.includes('embarrassed') || lowerMessage.includes('ashamed')) {
+          detectedEmotion = 'embarrassment';
+          confidence = 0.6;
+        } else if (lowerMessage.includes('curious') || lowerMessage.includes('wonder')) {
+          detectedEmotion = 'curiosity';
+          confidence = 0.6;
+        } else if (lowerMessage.includes('approve') || lowerMessage.includes('agree')) {
+          detectedEmotion = 'approval';
+          confidence = 0.6;
+        } else if (lowerMessage.includes('caring') || lowerMessage.includes('concern')) {
+          detectedEmotion = 'caring';
+          confidence = 0.6;
+        } else if (lowerMessage.includes('relief') || lowerMessage.includes('relieved')) {
+          detectedEmotion = 'relief';
+          confidence = 0.6;
+        } else if (lowerMessage.includes('sad') || lowerMessage.includes('upset') || lowerMessage.includes('depressed') || lowerMessage.includes('hopeless')) {
+          detectedEmotion = 'sadness';
+          confidence = 0.6;
+        } else if (lowerMessage.includes('angry') || lowerMessage.includes('mad') || lowerMessage.includes('frustrated')) {
+          detectedEmotion = 'anger';
+          confidence = 0.6;
+        } else if (lowerMessage.includes('anxious') || lowerMessage.includes('anxiety') || lowerMessage.includes('fear')) {
+          detectedEmotion = 'anxiety';
+          confidence = 0.6;
+        } else if (lowerMessage.includes('happy') || lowerMessage.includes('joy')) {
+          detectedEmotion = 'joy';
+          confidence = 0.6;
+        }
+        emotionMethod = 'keyword-fallback';
+        console.log(`🔄 Fallback emotion: ${detectedEmotion} (confidence: ${confidence})`);
       }
-      
-      // Generate appropriate response based on emotion
+      // Generate appropriate response based on detected emotion (using raw labels)
       let chatResponse = '';
       switch (detectedEmotion) {
-        case 'sad':
-          chatResponse = "I can hear that you're feeling sad. It's okay to feel this way sometimes. Would you like to tell me more about what's making you feel sad?";
+        // Stress/Anxiety related
+        case 'stress':
+        case 'anxiety':
+        case 'nervousness':
+          chatResponse = "I can sense you might be feeling stressed or anxious. That's completely understandable. Take a deep breath with me. What's been weighing on your mind?";
           break;
-        case 'angry':
-          chatResponse = "I understand you're feeling frustrated or angry. Those feelings are completely valid. What's been causing these feelings?";
+          
+        // Sadness related
+        case 'sadness':
+        case 'disappointment':
+        case 'grief':
+          chatResponse = "I hear that you're going through a difficult time. It's okay to feel sad or disappointed sometimes. Would you like to share what's been troubling you?";
           break;
-        case 'anxious':
-          chatResponse = "I notice you might be feeling anxious. That can be really overwhelming. Let's take this one step at a time. What's been worrying you?";
+          
+        // Anger related
+        case 'anger':
+        case 'annoyance':
+        case 'frustration':
+          chatResponse = "I understand you're feeling frustrated or angry. Those feelings are completely valid. What's been causing these intense feelings?";
           break;
-        case 'happy':
-          chatResponse = "It's wonderful to hear you're feeling positive! I'm glad you're having a good moment. What's been bringing you joy?";
+          
+        // Fear related
+        case 'fear':
+        case 'nervousness':
+          chatResponse = "I notice you might be feeling scared or worried. That can be really overwhelming. Let's take this one step at a time. What's been frightening you?";
           break;
+          
+        // Joy/Positive related
+        case 'joy':
+        case 'excitement':
+        case 'amusement':
+        case 'gratitude':
+        case 'relief':
+        case 'pride':
+        case 'optimism':
+          chatResponse = "It's wonderful to hear you're feeling positive! I'm glad you're having a good moment. What's been bringing you happiness?";
+          break;
+          
+        // Social emotions
+        case 'love':
+        case 'caring':
+        case 'admiration':
+          chatResponse = "I can sense the warmth and care in your words. It's beautiful to see such positive emotions. Tell me more about what's inspiring these feelings.";
+          break;
+          
+        // Approval/Agreement
+        case 'approval':
+        case 'desire':
+          chatResponse = "I can hear that you're feeling positive about something. That's wonderful! What's been going well for you?";
+          break;
+          
+        // Confusion/Curiosity
+        case 'confusion':
+        case 'curiosity':
+        case 'realization':
+          chatResponse = "It sounds like you're processing some thoughts or discoveries. I'm here to help you work through whatever you're thinking about.";
+          break;
+          
+        // Embarrassment/Shame
+        case 'embarrassment':
+        case 'remorse':
+          chatResponse = "I can sense you might be feeling uncomfortable about something. Those feelings are completely normal and valid. Would you like to talk about it?";
+          break;
+          
+        // Surprise
+        case 'surprise':
+          chatResponse = "Something seems to have caught you off guard. Would you like to tell me more about what's been surprising you?";
+          break;
+          
+        // Disgust
+        case 'disgust':
+          chatResponse = "I can sense you're feeling uncomfortable about something. Those feelings are valid. What's been bothering you?";
+          break;
+          
+        // Disapproval
+        case 'disapproval':
+          chatResponse = "I can hear that you disagree with something. It's important to trust your instincts. What's been concerning you?";
+          break;
+          
+        // Neutral/Default
+        case 'neutral':
         default:
           chatResponse = "Thank you for sharing that with me. I'm here to listen and support you. How are you feeling right now?";
       }
@@ -549,12 +682,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: true,
         userMessage: processedMessage,
         detectedEmotion: detectedEmotion,
+        confidence: confidence,
         chatResponse: chatResponse,
         timestamp: new Date().toISOString(),
         sessionId: sessionId || 'test-session',
         language: language || 'en',
         mode: 'chat-text',
-        sttUsed: false  // Confirm no STT was used
+        sttUsed: false,  // Confirm no STT was used
+        emotionMethod: emotionMethod  // Indicate which detection method was used
       });
       
     } catch (error) {
