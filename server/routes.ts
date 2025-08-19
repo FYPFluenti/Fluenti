@@ -852,10 +852,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const wss = new WebSocketServer({ server: httpServer, path: '/ws' });
 
   wss.on('connection', async (ws: WebSocket, req) => {
-    console.log('New WebSocket connection');
+    console.log('🔗 New WebSocket connection from:', req.headers['user-agent']?.substring(0, 50));
     
     // Handle authentication
     let userId = null;
+    let authAttempted = false;
     try {
       // Check query params for token
       const url = new URL(req.url || '', 'http://localhost');
@@ -869,23 +870,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      if (token) {
+      if (token && token.length > 0 && token !== 'null' && token !== 'undefined') {
+        authAttempted = true;
+        console.log('🔑 Attempting WebSocket authentication with token:', token.substring(0, 8) + '...');
+        
         // Verify the token (user ID)
         const user = await mongoStorage.getUser(token);
         if (user) {
           userId = user.id;
-          console.log(`WebSocket authenticated for user: ${userId}`);
+          console.log(`✅ WebSocket authenticated for user: ${userId}`);
           
           // Attach user to WebSocket object for future reference
           (ws as any).user = user;
         } else {
-          console.warn('Invalid WebSocket token, user not found');
-          ws.close(1008, 'Authentication failed');
+          console.warn('❌ Invalid WebSocket token, user not found');
+          ws.close(1008, 'Authentication failed - user not found');
           return;
         }
       } else {
-        console.warn('No token provided for WebSocket connection');
-        // Still allow connection for non-authenticated features
+        console.warn('⚠️ No valid token provided for WebSocket connection');
+        // Still allow connection for non-authenticated features but log it
+        console.log('🔓 Allowing unauthenticated WebSocket connection');
       }
     } catch (error) {
       console.error('WebSocket authentication error:', error);

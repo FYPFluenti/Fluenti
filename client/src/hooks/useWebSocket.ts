@@ -116,7 +116,8 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
       }
       
       // Add token as query parameter if available
-      if (token) {
+      if (token && token.length > 0 && token !== 'null' && token !== 'undefined') {
+        console.log('🔗 Connecting WebSocket with token:', token.substring(0, 8) + '...');
         wsUrl += `?token=${encodeURIComponent(token)}`;
       }
       
