@@ -528,16 +528,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           setTimeout(() => reject(new Error('Chat mode timeout (3s)')), 3000)
         );
         
-        const emotionResult = await Promise.race([emotionPromise, timeoutPromise]);
+        const emotionResult = await Promise.race([emotionPromise, timeoutPromise]) as any;
         console.log('📊 Emotion result received:', emotionResult);
         
-        detectedEmotion = emotionResult.emotion;
-        confidence = emotionResult.confidence;
-        emotionMethod = 'optimized';
-        console.log(`✅ Chat Mode Emotion: ${detectedEmotion} (${confidence.toFixed(3)})`);
-      } catch (error) {
+        if (emotionResult && typeof emotionResult === 'object') {
+          detectedEmotion = emotionResult.emotion || 'neutral';
+          confidence = emotionResult.confidence || 0.5;
+          emotionMethod = 'optimized';
+          console.log(`✅ Chat Mode Emotion: ${detectedEmotion} (${confidence.toFixed(3)})`);
+        } else {
+          throw new Error('Invalid emotion result format');
+        }
+      } catch (error: any) {
         console.log('⚠️  Optimized detection failed, using fallback keyword detection');
-        console.log('❌ Error details:', error.message);
+        console.log('❌ Error details:', error?.message || 'Unknown error');
+        
         
         // Fallback to enhanced keyword detection with raw emotion labels
         const lowerMessage = processedMessage.toLowerCase();
