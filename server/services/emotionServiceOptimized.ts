@@ -113,6 +113,17 @@ class PersistentEmotionServer {
       if (this.requestQueue.length > 0) {
         const { resolve } = this.requestQueue.shift()!;
         resolve(result);
+        
+        // Process next request in queue if any
+        if (this.requestQueue.length > 0) {
+          try {
+            const nextRequest = this.requestQueue[0].request;
+            const jsonRequest = JSON.stringify(nextRequest) + '\n';
+            this.process?.stdin.write(jsonRequest);
+          } catch (error) {
+            console.error('❌ Failed to send next request in queue:', error);
+          }
+        }
       }
     } catch (error) {
       console.error('❌ Failed to parse emotion server response:', error);
@@ -136,13 +147,17 @@ class PersistentEmotionServer {
         return;
       }
 
+      // Add timestamp and unique ID for better tracking
+      const requestId = Date.now() + Math.random();
+      const requestWithId = { ...request, requestId };
+      
       // Add to queue
-      this.requestQueue.push({ request, resolve, reject });
+      this.requestQueue.push({ request: requestWithId, resolve, reject });
 
-      if (this.isReady) {
-        // Send request immediately
+      if (this.isReady && this.requestQueue.length === 1) {
+        // Send request immediately if no other requests in queue
         try {
-          const jsonRequest = JSON.stringify(request) + '\n';
+          const jsonRequest = JSON.stringify(requestWithId) + '\n';
           this.process.stdin.write(jsonRequest);
         } catch (error) {
           // Remove from queue if sending failed
@@ -154,14 +169,14 @@ class PersistentEmotionServer {
         }
       }
       
-      // Set timeout for request
+      // Set timeout for request (increased to 15 seconds)
       setTimeout(() => {
         const index = this.requestQueue.findIndex(item => item.resolve === resolve);
         if (index >= 0) {
           this.requestQueue.splice(index, 1);
           reject(new Error('Emotion detection request timeout'));
         }
-      }, 10000); // 10 second timeout
+      }, 15000); // 15 second timeout
     });
   }
 

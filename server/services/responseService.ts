@@ -122,7 +122,12 @@ async function runLlamaResponse(request: ResponseRequest): Promise<string> {
     
     const pythonProcess = spawn(pythonPath, [scriptPath], {
       stdio: ['pipe', 'pipe', 'pipe'],
-      windowsHide: true
+      windowsHide: true,
+      env: { 
+        ...process.env, 
+        PYTHONPATH: path.join(process.cwd(), '.venv', 'Lib', 'site-packages'),
+        PYTORCH_CUDA_ALLOC_CONF: 'max_split_size_mb:512'  // Limit CUDA memory allocation
+      }
     });
     
     let stdout = '';
@@ -161,11 +166,11 @@ async function runLlamaResponse(request: ResponseRequest): Promise<string> {
     pythonProcess.stdin.write(JSON.stringify(requestData) + '\n');
     pythonProcess.stdin.end();
     
-    // Timeout after 2 minutes for model loading/GPU processing
+    // Timeout after 30 seconds for model loading/processing (reduced from 2 minutes)
     setTimeout(() => {
       pythonProcess.kill();
       reject(new Error('Llama response generation timed out'));
-    }, 120000);
+    }, 30000);
   });
 }
 

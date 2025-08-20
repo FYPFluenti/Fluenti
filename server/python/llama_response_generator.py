@@ -75,49 +75,87 @@ class LlamaResponseGenerator:
                     device_map = None
                     torch_dtype = torch.float32
                 
-                # Load tokenizer - Using an open-source alternative to Llama-2
-                model_name = "microsoft/DialoGPT-large"  # Open alternative for now
-                # TODO: Switch to "meta-llama/Llama-2-7b-chat-hf" when authenticated
+                # Load tokenizer - Using a smaller, more stable model
+                model_name = "microsoft/DialoGPT-medium"  # Smaller model for stability
                 
-                self.tokenizer = AutoTokenizer.from_pretrained(
-                    model_name,
-                    trust_remote_code=True,
-                    cache_dir="E:/Fluenti/models/hf_cache"
-                )
-                
-                # Add padding token if missing
-                if (self.tokenizer is not None and 
-                    hasattr(self.tokenizer, 'pad_token') and 
-                    self.tokenizer.pad_token is None):
-                    if hasattr(self.tokenizer, 'eos_token'):
-                        self.tokenizer.pad_token = self.tokenizer.eos_token
-                
-                # Load model with quantization - Using open alternative with safetensors
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    model_name,
-                    quantization_config=quantization_config,
-                    device_map=device_map,
-                    trust_remote_code=True,
-                    cache_dir="E:/Fluenti/models/hf_cache",
-                    torch_dtype=torch_dtype,
-                    low_cpu_mem_usage=True,
-                    use_safetensors=True  # Force use of safetensors format
-                )
+                try:
+                    self.tokenizer = AutoTokenizer.from_pretrained(
+                        model_name,
+                        trust_remote_code=True,
+                        cache_dir="E:/Fluenti/models/hf_cache"
+                    )
+                    
+                    # Add padding token if missing
+                    if (self.tokenizer is not None and 
+                        hasattr(self.tokenizer, 'pad_token') and 
+                        self.tokenizer.pad_token is None):
+                        if hasattr(self.tokenizer, 'eos_token'):
+                            self.tokenizer.pad_token = self.tokenizer.eos_token
+                    
+                    # Load model with aggressive memory optimization
+                    self.model = AutoModelForCausalLM.from_pretrained(
+                        model_name,
+                        quantization_config=quantization_config,
+                        device_map=device_map,
+                        trust_remote_code=True,
+                        cache_dir="E:/Fluenti/models/hf_cache",
+                        torch_dtype=torch_dtype,
+                        low_cpu_mem_usage=True,
+                        use_safetensors=True,  # Force use of safetensors format
+                        max_memory={0: "3GB"} if self.device == "cuda" else None  # Limit GPU memory
+                    )
+                    
+                except Exception as model_error:
+                    print(f"[DEBUG] ⚠️ GPU loading failed, falling back to CPU: {model_error}", file=sys.stderr)
+                    # Force CPU fallback on any error
+                    self.device = "cpu"
+                    quantization_config = None
+                    device_map = None
+                    torch_dtype = torch.float32
+                    
+                    self.tokenizer = AutoTokenizer.from_pretrained(
+                        model_name,
+                        cache_dir="E:/Fluenti/models/hf_cache"
+                    )
+                    
+                    if (self.tokenizer is not None and 
+                        hasattr(self.tokenizer, 'pad_token') and 
+                        self.tokenizer.pad_token is None):
+                        if hasattr(self.tokenizer, 'eos_token'):
+                            self.tokenizer.pad_token = self.tokenizer.eos_token
+                    
+                    self.model = AutoModelForCausalLM.from_pretrained(
+                        model_name,
+                        cache_dir="E:/Fluenti/models/hf_cache",
+                        torch_dtype=torch_dtype,
+                        low_cpu_mem_usage=True
+                    )
                 
                 # Cache globally for subsequent uses
                 _LLAMA_MODEL_CACHE = self.model
                 _LLAMA_TOKENIZER_CACHE = self.tokenizer
                 
-                print(f"[DEBUG] ✅ DialoGPT model loaded successfully on {self.device.upper()}", file=sys.stderr)
+                print(f"[DEBUG] ✅ DialoGPT-medium model loaded successfully on {self.device.upper()}", file=sys.stderr)
                 
                 # Print GPU memory usage if using CUDA
-                if self.device == "cuda":
-                    memory_allocated = torch.cuda.memory_allocated(0) / 1024**3  # GB
-                    memory_reserved = torch.cuda.memory_reserved(0) / 1024**3   # GB
-                    print(f"[DEBUG] 🎮 GPU Memory - Allocated: {memory_allocated:.2f}GB, Reserved: {memory_reserved:.2f}GB", file=sys.stderr)
+                if self.device == "cuda" and torch.cuda.is_available():
+                    try:
+                        memory_allocated = torch.cuda.memory_allocated(0) / 1024**3  # GB
+                        memory_reserved = torch.cuda.memory_reserved(0) / 1024**3   # GB
+                        print(f"[DEBUG] 🎮 GPU Memory - Allocated: {memory_allocated:.2f}GB, Reserved: {memory_reserved:.2f}GB", file=sys.stderr)
+                        
+                        # Clear unused memory
+                        torch.cuda.empty_cache()
+                        gc.collect()
+                    except Exception as gpu_error:
+                        print(f"[DEBUG] ⚠️ GPU memory check failed: {gpu_error}", file=sys.stderr)
                 
             except Exception as e:
-                print(f"[DEBUG] ❌ Error loading Llama-2 model: {e}", file=sys.stderr)
+                print(f"[DEBUG] ❌ Error loading model: {e}", file=sys.stderr)
+                # Force minimal fallback
+                self.model = None
+                self.tokenizer = None
+                raise RuntimeError(f"Model loading failed: {e}")
                 print("[DEBUG] Falling back to smaller model or manual response", file=sys.stderr)
                 raise e
     
