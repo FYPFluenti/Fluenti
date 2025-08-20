@@ -39,6 +39,11 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
   const [isLoading, setIsLoading] = useState(false);
   const [currentEmotion, setCurrentEmotion] = useState<'happy' | 'sad' | 'neutral' | 'anxious' | 'excited'>('neutral');
   const [isListening, setIsListening] = useState(false);
+  
+  // Phase 4: TTS Audio Management
+  const [currentAudioBase64, setCurrentAudioBase64] = useState<string>('');
+  const [voiceModel, setVoiceModel] = useState<'browser' | 'coqui'>('browser');
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { toast } = useToast();
@@ -233,17 +238,7 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
     setInputMessage('');
     setIsLoading(true);
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: inputMessage,
-      sender: 'user',
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    // Phase 4: Try WebSocket streaming first, fallback to HTTP
     setInputMessage('');
     setIsLoading(true);
 
@@ -270,6 +265,7 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
           type: 'emotion_support_request',
           text: inputMessage,
           language: language === 'urdu' ? 'ur' : 'en',
+          conversationHistory: messages.slice(-10), // Last 10 messages for context
           stream: true
         });
 
@@ -280,9 +276,9 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
       }
     }
 
-    // HTTP fallback for when WebSocket is unavailable - Use test-chat for text-only mode
+    // Phase 4: HTTP fallback using enhanced emotional-support endpoint
     try {
-      const response = await fetch('http://localhost:3000/api/test-chat', {
+      const response = await fetch('http://localhost:3000/api/emotional-support', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -290,7 +286,14 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
         body: JSON.stringify({
           message: inputMessage,
           language: language === 'urdu' ? 'ur' : 'en',
-          sessionId: `chat-session-${Date.now()}`
+          sessionId: `chat-session-${Date.now()}`,
+          conversationHistory: messages.slice(-10).map(msg => ({
+            role: msg.sender === 'user' ? 'user' : 'assistant',
+            content: msg.content,
+            emotion: msg.emotion
+          })),
+          phase: 4, // Request Phase 4 features
+          includeAudio: true // Request TTS audio
         })
       });
 
@@ -305,7 +308,7 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: data.chatResponse || 'I\'m here to help you.',
+        content: data.response || data.chatResponse || 'I\'m here to help you.',
         sender: 'ai',
         timestamp: new Date(),
         emotion: detectedEmotion
@@ -314,16 +317,44 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
       setMessages(prev => [...prev, aiMessage]);
       setIsLoading(false);
 
-      // Show emotion detection toast
+      // Phase 4: Handle TTS audio if available
+      if (data.audioBase64) {
+        try {
+          // Store for avatar lip-sync
+          setCurrentAudioBase64(data.audioBase64);
+          setVoiceModel('coqui');
+          
+          const audioBlob = new Blob([
+            Uint8Array.from(atob(data.audioBase64), c => c.charCodeAt(0))
+          ], { type: 'audio/wav' });
+          
+          const audioUrl = URL.createObjectURL(audioBlob);
+          const audio = new Audio(audioUrl);
+          audio.play().catch(err => console.error('Audio playback failed:', err));
+          
+          // Clean up URL after playing
+          audio.addEventListener('ended', () => {
+            URL.revokeObjectURL(audioUrl);
+            setCurrentAudioBase64(''); // Reset after playing
+          });
+        } catch (audioError) {
+          console.error('TTS audio processing failed:', audioError);
+          setVoiceModel('browser'); // Fallback to browser TTS
+        }
+      } else {
+        setVoiceModel('browser');
+      }
+
+      // Show comprehensive toast with Phase 4 info
       toast({
-        title: `Emotion Detected: ${data.detectedEmotion}`,
-        description: `Mode: ${data.mode || 'chat-text'}`,
+        title: `Emotion: ${data.detectedEmotion || 'neutral'}`,
+        description: `Model: ${data.model || 'DialoGPT'} | TTS: ${data.audioBase64 ? 'Coqui XTTS' : 'Browser'}`,
       });
 
     } catch (error) {
       console.error('Error getting emotional support:', error);
       
-      // Final fallback to local response if both API methods fail
+      // Final fallback to local response
       const detectedEmotion = detectEmotion(inputMessage);
       setCurrentEmotion(detectedEmotion);
       
@@ -346,7 +377,6 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
         variant: "destructive"
       });
     }
-  };
   };
 
   const getEmotionIcon = (emotion?: string) => {
@@ -378,7 +408,10 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
             <ThreeAvatar
               isListening={isListening}
               currentMessage={messages[messages.length - 1]?.sender === 'ai' ? messages[messages.length - 1]?.content : ''}
+              audioBase64={currentAudioBase64}
+              voiceModel={voiceModel}
               language={language}
+              className="w-full"
             />
             
             <div className="mt-4 text-center">

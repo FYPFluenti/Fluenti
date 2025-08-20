@@ -18,6 +18,8 @@ import {
 } from "./services/emotionServiceOptimized";
 // Phase 4: Import response generation functions
 import { analyzeEmotion, generateEmotionalResponse } from "./services/openai";
+// Phase 4: Import new conversational response service with Llama-2 and TTS
+import { generateConversationalResponse, type ConversationHistory } from "./services/responseService";
 import { AuthService } from "./auth";
 
 
@@ -794,24 +796,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('Phase 3 Emotion Detection Result:', emotionResult);
 
-      // Generate contextual response based on detected emotion
-      const supportResponse = generateEmotionalSupportResponse(
-        text, 
-        emotionResult.emotion, 
-        emotionResult.confidence,
-        detectionLanguage
-      );
+      // Phase 4: Parse conversation history for context
+      let conversationHistory: ConversationHistory[] = [];
+      try {
+        if (history) {
+          const parsedHistory = typeof history === 'string' ? JSON.parse(history) : history;
+          conversationHistory = Array.isArray(parsedHistory) ? parsedHistory : [];
+          console.log('Phase 4: Parsed conversation history length:', conversationHistory.length);
+        }
+      } catch (historyError) {
+        console.warn('Phase 4: Failed to parse conversation history:', historyError);
+        conversationHistory = [];
+      }
 
-      res.json({ 
-        transcription: text, 
-        emotion: emotionResult.emotion,
-        confidence: emotionResult.confidence,
-        detectedEmotion: emotionResult.emotion, // For backward compatibility
-        response: supportResponse,
-        mode: mode || 'text',
-        language: detectionLanguage,
-        emotionDetails: emotionResult
-      });
+      // Phase 4: Generate conversational response using Llama-2 + TTS
+      try {
+        console.log('Phase 4: Attempting Llama-2 conversational response generation...');
+        const responseResult = await generateConversationalResponse({
+          text,
+          emotion: emotionResult.emotion,
+          language: detectionLanguage,
+          history: conversationHistory,
+          userContext: {
+            // Add user context if available from session
+            preferences: ['empathetic', 'supportive']
+          }
+        });
+
+        console.log('Phase 4: Llama response generated successfully');
+        console.log('Phase 4: TTS audio available:', !!responseResult.audioBase64);
+
+        res.json({ 
+          transcription: text, 
+          emotion: emotionResult.emotion,
+          confidence: emotionResult.confidence,
+          detectedEmotion: emotionResult.emotion, // For backward compatibility
+          response: responseResult.response,
+          mode: mode || 'text',
+          language: detectionLanguage,
+          emotionDetails: emotionResult,
+          // Phase 4: New fields
+          audioBase64: responseResult.audioBase64, // TTS audio for avatar
+          conversational: true,
+          model: responseResult.metadata?.model,
+          processingTime: responseResult.metadata?.processingTime,
+          historyLength: responseResult.metadata?.historyLength
+        });
+
+      } catch (llamaError) {
+        console.warn('Phase 4: Llama response failed, using fallback:', llamaError);
+        
+        // Fallback to existing response generation
+        const supportResponse = generateEmotionalSupportResponse(
+          text, 
+          emotionResult.emotion, 
+          emotionResult.confidence,
+          detectionLanguage
+        );
+
+        res.json({ 
+          transcription: text, 
+          emotion: emotionResult.emotion,
+          confidence: emotionResult.confidence,
+          detectedEmotion: emotionResult.emotion, // For backward compatibility
+          response: supportResponse,
+          mode: mode || 'text',
+          language: detectionLanguage,
+          emotionDetails: emotionResult,
+          // Phase 4: Indicate fallback was used
+          conversational: false,
+          fallbackUsed: true,
+          error: llamaError instanceof Error ? llamaError.message : 'Llama response failed'
+        });
+      }
     } catch (error) {
       console.error("Error processing emotional support request:", error);
       res.status(500).json({ 
