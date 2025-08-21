@@ -10,12 +10,12 @@ import { extractTokenFromHeader, tokenBasedAuth } from "./middleware";
 import * as speechServiceModule from "./services/speechService";
 const { SpeechService, transcribeAudio } = speechServiceModule;
 import { simpleTranscribeAudio, validateAudioBuffer } from "./services/simpleSpeechService";
-// Phase 3: Import OPTIMIZED emotion detection services
+// Phase 4: Import standard emotion detection services with context extraction
 import { 
   detectEmotionFromText, 
   detectEmotionFromAudio, 
-  detectCombinedEmotion 
-} from "./services/emotionServiceOptimized";
+  combineEmotions as detectCombinedEmotion 
+} from "./services/emotionService";
 // Phase 4: Import response generation functions
 import { analyzeEmotion, generateEmotionalResponse } from "./services/openai";
 // Phase 4: Import new conversational response service with Llama-2 and TTS
@@ -524,10 +524,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         console.log('🔄 Calling detectEmotionFromText...');
-        // Set a shorter timeout for chat mode to avoid hanging
+        // Set a longer timeout for context extraction with spaCy
         const emotionPromise = detectEmotionFromText(processedMessage, language || 'en');
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Chat mode timeout (3s)')), 3000)
+          setTimeout(() => reject(new Error('Chat mode timeout (20s)')), 20000)
         );
         
         const emotionResult = await Promise.race([emotionPromise, timeoutPromise]) as any;
@@ -536,8 +536,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (emotionResult && typeof emotionResult === 'object') {
           detectedEmotion = emotionResult.emotion || 'neutral';
           confidence = emotionResult.confidence || 0.5;
-          emotionMethod = 'optimized';
-          console.log(`✅ Chat Mode Emotion: ${detectedEmotion} (${confidence.toFixed(3)})`);
+          emotionMethod = 'context_enhanced';
+          const context = emotionResult.context || [];
+          console.log(`✅ Chat Mode Emotion: ${detectedEmotion} (${confidence.toFixed(3)}) with context: [${context.join(', ')}]`);
         } else {
           throw new Error('Invalid emotion result format');
         }

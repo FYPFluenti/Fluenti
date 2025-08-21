@@ -12,6 +12,7 @@ interface EmotionResult {
   emotion: string;
   confidence: number;
   all_scores?: Record<string, number>;
+  context?: string[];
   error?: string;
 }
 
@@ -28,32 +29,98 @@ interface CombinedEmotionResult {
 }
 
 export async function detectEmotionFromText(text: string, language: 'en' | 'ur' = 'en'): Promise<EmotionResult> {
-  try {
-    if (!text || text.trim().length === 0) {
-      return { emotion: 'neutral', confidence: 0.5 };
-    }
+  return new Promise((resolve, reject) => {
+    try {
+      if (!text || text.trim().length === 0) {
+        resolve({ emotion: 'neutral', confidence: 0.5, context: [] });
+        return;
+      }
 
-    console.log(`Phase 3 Text Emotion: Processing "${text.substring(0, 50)}..." (${language})`);
+      console.log(`Phase 4 Text Emotion with Context: Processing "${text.substring(0, 50)}..." (${language})`);
 
-    const pythonPath = path.join(process.cwd(), '.venv', 'Scripts', 'python.exe');
-    const scriptPath = path.join(process.cwd(), 'server', 'python', 'emotion_detector.py');
+      // Escape quotes and newlines in the text for Python code
+      const escapedText = text.replace(/"/g, '\\"').replace(/\n/g, '\\n');
+      
+      const pythonCode = `
+from transformers import pipeline
+import spacy
+import sys
 
-    // Check if Python script exists
-    if (!fs.existsSync(scriptPath)) {
-      console.error('Emotion detector script not found, using fallback');
-      return performKeywordBasedEmotionDetection(text, language);
-    }
-
-    const result = await runPythonEmotionDetection(pythonPath, scriptPath, ['text', text, language]);
+try:
+    # Load emotion detection pipeline
+    pipe = pipeline("text-classification", model="SamLowe/roberta-base-go_emotions")
+    result = pipe("${escapedText}")[0]
     
-    console.log(`✅ Phase 3 Text Emotion Result: ${result.emotion} (${result.confidence})`);
-    return result;
+    # Load spaCy model for context extraction
+    nlp = spacy.load("en_core_web_sm")
+    doc = nlp("${escapedText}")
+    
+    # Extract context: entities and important words (nouns, verbs, adjectives)
+    entities = [ent.text for ent in doc.ents]
+    important_words = [token.lemma_ for token in doc if token.pos_ in ['NOUN', 'VERB', 'ADJ'] and not token.is_stop and len(token.text) > 2]
+    context = list(set(entities + important_words))  # Remove duplicates
+    
+    # Format output: emotion,score,context1:context2:context3
+    context_str = ':'.join(context) if context else ''
+    print(f"{result['label']},{result['score']},{context_str}")
+    
+except Exception as e:
+    print(f"neutral,0.5,error:{str(e)}")
+    sys.exit(1)
+      `;
 
-  } catch (error) {
-    console.error('Phase 3 Text Emotion Detection Error:', error);
-    console.log('Falling back to keyword-based emotion detection');
-    return performKeywordBasedEmotionDetection(text, language);
-  }
+      const pythonPath = path.join(process.cwd(), '.venv', 'Scripts', 'python.exe');
+      const python = spawn(pythonPath, ['-c', pythonCode]);
+
+      let output = '';
+      let errorOutput = '';
+
+      python.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      python.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+
+      python.on('close', (code) => {
+        try {
+          if (code !== 0) {
+            console.error('Python emotion detection error:', errorOutput);
+            resolve(performKeywordBasedEmotionDetection(text, language));
+            return;
+          }
+
+          const outputLine = output.trim().split('\n').pop() || '';
+          const [emotion, scoreStr, contextStr] = outputLine.split(',');
+          
+          const score = parseFloat(scoreStr) || 0.5;
+          const context = contextStr ? contextStr.split(':').filter(c => c && c !== 'error') : [];
+          
+          console.log(`✅ Phase 4 Text Emotion Result: ${emotion} (${score}) with context: [${context.join(', ')}]`);
+          
+          resolve({ 
+            emotion: emotion || 'neutral', 
+            confidence: score, 
+            context: context 
+          });
+        } catch (error) {
+          console.error('Error parsing emotion detection result:', error);
+          resolve(performKeywordBasedEmotionDetection(text, language));
+        }
+      });
+
+      python.on('error', (error) => {
+        console.error('Failed to spawn Python process:', error);
+        resolve(performKeywordBasedEmotionDetection(text, language));
+      });
+
+    } catch (error) {
+      console.error('Phase 4 Text Emotion Detection Error:', error);
+      console.log('Falling back to keyword-based emotion detection');
+      resolve(performKeywordBasedEmotionDetection(text, language));
+    }
+  });
 }
 
 export async function detectEmotionFromAudio(audioPath: string): Promise<EmotionResult> {
@@ -206,7 +273,7 @@ async function runPythonEmotionDetection(pythonPath: string, scriptPath: string,
   });
 }
 
-// Phase 3: Keyword-based fallback for when Python/API fails
+// Phase 4: Keyword-based fallback for when Python/API fails (now includes context)
 function performKeywordBasedEmotionDetection(text: string, language: 'en' | 'ur'): EmotionResult {
   const lowercaseText = text.toLowerCase();
   
@@ -234,16 +301,29 @@ function performKeywordBasedEmotionDetection(text: string, language: 'en' | 'ur'
 
   const keywords = language === 'ur' ? urduKeywords : englishKeywords;
   
-  // Check for emotion keywords
+  // Check for emotion keywords and extract basic context
+  const foundKeywords: string[] = [];
+  let detectedEmotion = 'neutral';
+  
   for (const [emotion, wordList] of Object.entries(keywords)) {
     for (const keyword of wordList) {
       if (lowercaseText.includes(keyword)) {
+        foundKeywords.push(keyword);
+        detectedEmotion = emotion;
         console.log(`Keyword-based emotion detected: ${emotion} (found: ${keyword})`);
-        return { emotion, confidence: 0.7 };
+        break;
       }
     }
+    if (detectedEmotion !== 'neutral') break;
   }
 
-  // Default to neutral
-  return { emotion: 'neutral', confidence: 0.5 };
+  // Extract basic context from text (simple word extraction)
+  const words = text.split(/\s+/).filter(word => word.length > 3);
+  const context = foundKeywords.length > 0 ? foundKeywords.concat(words.slice(0, 3)) : words.slice(0, 5);
+  
+  return { 
+    emotion: detectedEmotion, 
+    confidence: detectedEmotion !== 'neutral' ? 0.7 : 0.5,
+    context: context
+  };
 }

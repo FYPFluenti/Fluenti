@@ -116,6 +116,43 @@ class PersistentEmotionDetector:
         except Exception as e:
             return {"emotion": "neutral", "confidence": 0.5, "error": str(e)}
     
+    def detect_text_emotion_with_context(self, text, language="en"):
+        """Text emotion detection with context extraction using spaCy"""
+        try:
+            # First get emotion detection
+            emotion_result = self.detect_text_emotion(text, language)
+            
+            # Add context extraction
+            try:
+                import spacy
+                nlp = spacy.load("en_core_web_sm")
+                doc = nlp(text)
+                
+                # Extract entities and important words
+                entities = [ent.text for ent in doc.ents]
+                important_words = [token.lemma_ for token in doc 
+                                 if token.pos_ in ['NOUN', 'VERB', 'ADJ'] 
+                                 and not token.is_stop 
+                                 and len(token.text) > 2]
+                
+                # Combine and deduplicate context
+                context = list(set(entities + important_words))
+                
+                # Add context to result
+                emotion_result["context"] = context
+                
+            except Exception as context_error:
+                print(f"Context extraction failed: {context_error}", file=sys.stderr)
+                # Fallback: simple word extraction
+                words = text.split()
+                context = [word for word in words if len(word) > 3][:5]
+                emotion_result["context"] = context
+            
+            return emotion_result
+            
+        except Exception as e:
+            return {"emotion": "neutral", "confidence": 0.5, "context": [], "error": str(e)}
+    
     def detect_voice_emotion(self, audio_path):
         """Fast voice emotion detection using spectral analysis"""
         try:
@@ -165,6 +202,11 @@ class PersistentEmotionDetector:
                 text = request.get("text", "")
                 language = request.get("language", "en")
                 return self.detect_text_emotion(text, language)
+                
+            elif mode == "text_with_context":
+                text = request.get("text", "")
+                language = request.get("language", "en")
+                return self.detect_text_emotion_with_context(text, language)
                 
             elif mode == "voice":
                 audio_path = request.get("audio_path", "")

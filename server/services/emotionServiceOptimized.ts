@@ -10,6 +10,7 @@ interface EmotionResult {
   emotion: string;
   confidence: number;
   all_scores?: Record<string, number>;
+  context?: string[];
   error?: string;
   method?: string;
 }
@@ -201,24 +202,24 @@ process.on('SIGTERM', () => emotionServer.shutdown());
 export async function detectEmotionFromText(text: string, language: 'en' | 'ur' = 'en'): Promise<EmotionResult> {
   try {
     if (!text || text.trim().length === 0) {
-      return { emotion: 'neutral', confidence: 0.5 };
+      return { emotion: 'neutral', confidence: 0.5, context: [] };
     }
 
-    console.log(`⚡ Fast Text Emotion: Processing "${text.substring(0, 50)}..." (${language})`);
+    console.log(`⚡ Phase 4 Fast Text Emotion with Context: Processing "${text.substring(0, 50)}..." (${language})`);
 
     const request = {
-      mode: 'text',
+      mode: 'text_with_context',  // New mode for context extraction
       text: text,
       language: language
     };
 
     const result = await emotionServer.sendRequest(request);
     
-    console.log(`✅ Fast Text Emotion: ${result.emotion} (${result.confidence.toFixed(3)})`);
+    console.log(`✅ Phase 4 Fast Text Emotion: ${result.emotion} (${result.confidence.toFixed(3)}) with context: [${result.context?.join(', ') || 'no context'}]`);
     return result;
 
   } catch (error) {
-    console.error('❌ Fast Text Emotion Error:', error);
+    console.error('❌ Phase 4 Fast Text Emotion Error:', error);
     console.log('🔄 Falling back to keyword-based detection');
     return performKeywordBasedEmotionDetection(text, language);
   }
@@ -330,13 +331,31 @@ function performKeywordBasedEmotionDetection(text: string, language: 'en' | 'ur'
   
   const keywords = language === 'ur' ? urduKeywords : englishKeywords;
   
+  // Extract basic context from text (simple word extraction for fallback)
+  const words = text.split(/\s+/).filter(word => word.length > 3);
+  const foundKeywords: string[] = [];
+  let detectedEmotion = 'neutral';
+  
   for (const [emotion, wordList] of Object.entries(keywords)) {
     for (const keyword of wordList) {
       if (lowerText.includes(keyword)) {
-        return { emotion, confidence: 0.7, method: 'keyword_fallback' };
+        foundKeywords.push(keyword);
+        detectedEmotion = emotion;
+        break;
       }
     }
+    if (detectedEmotion !== 'neutral') break;
   }
   
-  return { emotion: 'neutral', confidence: 0.5, method: 'keyword_fallback' };
+  // Create context from found keywords and important words
+  const context = foundKeywords.length > 0 
+    ? foundKeywords.concat(words.slice(0, 3)) 
+    : words.slice(0, 5);
+  
+  return { 
+    emotion: detectedEmotion, 
+    confidence: detectedEmotion !== 'neutral' ? 0.7 : 0.5, 
+    context: context,
+    method: 'keyword_fallback' 
+  };
 }
