@@ -166,11 +166,11 @@ async function runLlamaResponse(request: ResponseRequest): Promise<string> {
     pythonProcess.stdin.write(JSON.stringify(requestData) + '\n');
     pythonProcess.stdin.end();
     
-    // Timeout after 30 seconds for model loading/processing (reduced from 2 minutes)
+    // Timeout after 50 seconds for model loading/processing (reduced from 2 minutes)
     setTimeout(() => {
       pythonProcess.kill();
       reject(new Error('Llama response generation timed out'));
-    }, 30000);
+    }, 50000);
   });
 }
 

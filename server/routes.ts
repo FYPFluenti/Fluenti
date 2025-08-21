@@ -608,7 +608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Set a shorter timeout for chat mode to avoid hanging
         const emotionPromise = detectEmotionFromText(processedMessage, language || 'en');
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Chat mode timeout (10s)')), 10000)
+          setTimeout(() => reject(new Error('Chat mode timeout (18s)')), 18000)
         );
         
         const emotionResult = await Promise.race([emotionPromise, timeoutPromise]) as any;
