@@ -1077,13 +1077,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Combined text + voice emotion detection
         console.log('⚡ Phase 3: Running OPTIMIZED combined emotion detection...');
         const combinedResult = await detectCombinedEmotion(text, audioPath, detectionLanguage);
+        
+        // Also get text emotion with context for voice mode
+        console.log('🔄 Calling detectEmotionFromText for context extraction...');
+        const textWithContext = await detectEmotionFromText(text, detectionLanguage);
+        
         emotionResult = {
           emotion: combinedResult.combined.emotion,
           confidence: combinedResult.combined.confidence,
           text_emotion: combinedResult.text.emotion,
           voice_emotion: combinedResult.voice.emotion,
+          context: textWithContext.context || [],
           method: 'combined'
         };
+        
+        console.log(`📊 Combined emotion with context: ${emotionResult.emotion} (${emotionResult.confidence.toFixed(3)}) - Context: [${emotionResult.context.join(', ') || 'no context'}]`);
         
         // Clean up temp audio file
         try {
@@ -1098,6 +1106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         emotionResult = {
           emotion: textResult.emotion,
           confidence: textResult.confidence,
+          context: textResult.context || [],
           method: 'text-only'
         };
       }
