@@ -10,16 +10,22 @@ import { extractTokenFromHeader, tokenBasedAuth } from "./middleware";
 import * as speechServiceModule from "./services/speechService";
 const { SpeechService, transcribeAudio } = speechServiceModule;
 import { simpleTranscribeAudio, validateAudioBuffer } from "./services/simpleSpeechService";
-// Phase 4: Import standard emotion detection services with context extraction
+// Phase 3: Import OPTIMIZED emotion detection services
 import { 
   detectEmotionFromText, 
   detectEmotionFromAudio, 
-  combineEmotions as detectCombinedEmotion 
-} from "./services/emotionService";
+  detectCombinedEmotion 
+} from "./services/emotionServiceOptimized";
 // Phase 4: Import response generation functions
 import { analyzeEmotion, generateEmotionalResponse } from "./services/openai";
 // Phase 4: Import new conversational response service with Llama-2 and TTS
 import { generateConversationalResponse, type ConversationHistory } from "./services/responseService";
+// Enhanced Phase 4+: Import enhanced conversational therapy AI
+import { 
+  generateEnhancedConversationalResponse, 
+  type EnhancedResponseRequest, 
+  type EnhancedResponseResult 
+} from "./services/enhancedResponseService";
 import { AuthService } from "./auth";
 
 
@@ -43,6 +49,81 @@ interface AuthenticatedRequest extends Request {
     userType?: string;
   };
   isAuthenticated?: () => boolean;
+}
+
+// Enhanced therapeutic response helpers
+function generateIntelligentTherapeuticFallback(
+  text: string, 
+  emotion: string, 
+  language: string, 
+  history: ConversationHistory[]
+): { response: string; techniques: string[] } {
+  
+  const hasHistory = history && history.length > 0;
+  const lastInteraction = hasHistory ? history[history.length - 1] : null;
+  
+  const responses = {
+    en: {
+      anxiety: {
+        response: hasHistory 
+          ? `I can see you're still dealing with anxiety from our previous conversation. These feelings of worry and uncertainty are completely valid, and I want you to acknowledge that reaching out again shows real strength and self-awareness. Let's work together to understand what's triggering these anxious thoughts and explore some grounding techniques that can help you feel more centered and in control. What specific situations or thoughts are causing you the most distress right now, and have you noticed any patterns in when these feelings tend to be strongest?`
+          : `I can sense the anxiety and worry in what you're sharing with me, and I want you to know that these feelings, while uncomfortable, are your mind's way of trying to protect you from perceived threats. What you're experiencing is real and significant, and it takes courage to reach out and talk about these difficult emotions. Let's work together to understand what's driving these anxious thoughts and explore some practical strategies that might help you feel more grounded and secure. Can you tell me what specific situations or thoughts tend to trigger this anxiety most strongly for you?`,
+        techniques: ['emotional_validation', 'anxiety_psychoeducation', 'grounding_techniques', 'cognitive_exploration']
+      },
+      sadness: {
+        response: hasHistory
+          ? `I can feel that the sadness we discussed before is still weighing heavily on you, and I want you to know that grief and difficult emotions don't follow a timeline - they unfold in their own way and their own time. What you're experiencing is a natural response to loss or disappointment, and honoring these feelings rather than rushing through them is actually an important part of the healing process. You don't need to put on a brave face or try to feel better before you're ready. What has this sadness been teaching you about what matters most to you, and how are you taking care of yourself during this difficult time?`
+          : `I can feel the weight of sadness in your words, and I want you to know that it's completely okay to sit with these difficult emotions without trying to fix or change them immediately. Sadness often comes when something meaningful to us has been affected, lost, or changed, and honoring that pain is actually a crucial part of processing and healing. You don't need to rush through this feeling or pretend to be okay when you're not. What would feel most supportive for you right now - would you like to talk about what's underneath this sadness, or would it help to explore some gentle ways to care for yourself during this time?`,
+        techniques: ['grief_support', 'emotional_validation', 'self_compassion', 'meaning_making']
+      },
+      stress: {
+        response: hasHistory
+          ? `I can hear that the stress and pressure we talked about earlier is still affecting you, and I want to acknowledge how exhausting it can be to carry this kind of emotional and mental load day after day. You're managing so much right now, and it makes complete sense that you'd feel overwhelmed - anyone in your situation would be struggling. Remember that asking for support, like you're doing now, is actually a sign of wisdom and strength, not weakness. Let's explore what aspects of this stress feel most manageable right now and identify some small steps that might help you feel more in control. What has been your biggest challenge in managing these feelings since we last spoke?`
+          : `I can really hear the stress and overwhelming pressure you're under right now, and I want you to know that feeling this way is a completely normal response when we're dealing with too much or facing challenging circumstances that feel beyond our control. Stress affects not just our minds but our entire bodies and relationships, and it takes real courage to reach out and talk about it honestly like you're doing. You don't have to carry this burden alone, and there are ways we can work together to help you feel more manageable and grounded. What feels like the most pressing source of stress for you right now, or would it help to talk about what you've already tried to manage these overwhelming feelings?`,
+        techniques: ['stress_psychoeducation', 'problem_solving', 'coping_strategies', 'self_care_planning']
+      },
+      neutral: {
+        response: hasHistory
+          ? `I'm really glad you've come back to continue our conversation, and I appreciate the trust you're showing by sharing your thoughts and experiences with me. Sometimes the most valuable conversations happen when we're not in crisis mode, when we can take time to reflect on our experiences and explore what we're learning about ourselves. Whether you're processing something from our last conversation, dealing with new challenges, or just want to check in and explore your thoughts, I'm here to support you in whatever way feels most helpful. What's been on your mind since we last talked, or is there something specific you'd like to explore together today?`
+          : `I'm really glad you're here and taking this time to connect and share whatever is on your mind with me. Creating space for honest reflection and self-exploration is valuable in itself, whether you're dealing with specific challenges or just wanting someone to listen without judgment. Sometimes the most meaningful conversations start from exactly where you are right now, without needing any particular crisis or problem to address. I'm here to support you in whatever way feels most helpful - whether that's processing recent experiences, exploring feelings, or just having a safe space to think out loud. What's been occupying your thoughts lately, or is there something you've been wanting to understand better about yourself?`,
+        techniques: ['active_listening', 'open_ended_exploration', 'unconditional_positive_regard', 'self_reflection']
+      }
+    },
+    ur: {
+      anxiety: {
+        response: hasHistory
+          ? `میں دیکھ سکتا ہوں کہ آپ ابھی بھی ہماری پچھلی گفتگو کی پریشانی سے نمٹ رہے ہیں۔ یہ فکر اور غیر یقینی صورتحال کے احساسات بالکل درست ہیں، اور میں چاہتا ہوں کہ آپ یہ تسلیم کریں کہ دوبارہ رابطہ کرنا حقیقی طاقت اور خود آگاہی کو ظاہر کرتا ہے۔ آئیے مل کر یہ سمجھنے کی کوشش کرتے ہیں کہ یہ پریشان کن خیالات کیا چیز ابھارتے ہیں اور کچھ ایسی تکنیکوں کو تلاش کرتے ہیں جو آپ کو زیادہ مرکوز اور قابو میں محسوس کرنے میں مدد کر سکیں۔ اس وقت کون سے حالات یا خیالات آپ کو سب سے زیادہ پریشان کر رہے ہیں، اور کیا آپ نے یہ دیکھا ہے کہ یہ احساسات کب سب سے زیادہ قوی ہوتے ہیں؟`
+          : `میں آپ کے اشتراک میں پریشانی اور فکر کو محسوس کر سکتا ہوں، اور میں چاہتا ہوں کہ آپ جان لیں کہ یہ احساسات، اگرچہ تکلیف دہ ہوں، آپ کے ذہن کا آپ کو محفوظ رکھنے کا طریقہ ہے۔ آپ جو کچھ تجربہ کر رہے ہیں وہ حقیقی اور اہم ہے، اور ان مشکل جذبات کے بارے میں بات کرنے کے لیے ہمت درکار ہوتی ہے۔ آئیے مل کر یہ سمجھنے کی کوشش کرتے ہیں کہ یہ پریشان کن خیالات کیا چیز ابھارتے ہیں اور کچھ عملی حکمت عملیوں کو تلاش کرتے ہیں۔ کیا آپ مجھے بتا سکتے ہیں کہ کون سے حالات یا خیالات آپ کو سب سے زیادہ پریشانی میں ڈالتے ہیں؟`,
+        techniques: ['جذباتی توثیق', 'پریشانی کی تعلیم', 'بنیادی تکنیکیں', 'ذہنی تلاش']
+      },
+      sadness: {
+        response: hasHistory
+          ? `میں محسوس کر سکتا ہوں کہ جو اداسی ہم نے پہلے بحث کی تھی وہ اب بھی آپ پر بہت بھاری ہے، اور میں چاہتا ہوں کہ آپ یہ جان لیں کہ غم اور مشکل جذبات کسی ٹائم لائن کے مطابق نہیں چلتے۔ آپ جو تجربہ کر رہے ہیں وہ نقصان یا مایوسی کا فطری ردعمل ہے، اور ان احساسات کا احترام کرنا شفا یابی کا اہم حصہ ہے۔ آپ کو بہادری دکھانے یا تیار ہونے سے پہلے بہتر محسوس کرنے کی ضرورت نہیں۔ اس اداسی نے آپ کو کیا سکھایا ہے کہ آپ کے لیے کیا چیز سب سے اہم ہے، اور آپ اس مشکل وقت میں اپنا خیال کیسے رکھ رہے ہیں؟`
+          : `میں آپ کے الفاظ میں اداسی کا بوجھ محسوس کر سکتا ہوں، اور میں چاہتا ہوں کہ آپ جان لیں کہ فوری طور پر انہیں ٹھیک کرنے یا تبدیل کرنے کی کوشش کے بغیر ان مشکل احساسات کے ساتھ بیٹھنا بالکل ٹھیک ہے۔ اداسی اکثر اس وقت آتی ہے جب ہمارے لیے کوئی اہم چیز متاثر، کھوئی، یا تبدیل ہوئی ہو، اور اس درد کا احترام کرنا درحقیقت عمل اور شفا یابی کا اہم حصہ ہے۔ اس وقت آپ کے لیے کیا سب سے زیادہ مددگار ہوگا - کیا آپ اس اداسی کی تہہ میں جانے کے بارے میں بات کرنا چاہیں گے، یا اس وقت اپنا خیال رکھنے کے کچھ نرم طریقوں کو تلاش کرنا مددگار ہوگا؟`,
+        techniques: ['غم کی مدد', 'جذباتی توثیق', 'خود رحمی', 'معنی کی تلاش']
+      },
+      neutral: {
+        response: hasHistory
+          ? `میں واقعی خوش ہوں کہ آپ ہماری گفتگو جاری رکھنے آئے ہیں، اور میں اس اعتماد کی تعریف کرتا ہوں جو آپ اپنے خیالات اور تجربات شیئر کرکے دکھا رہے ہیں۔ بعض اوقات سب سے قیمتی گفتگو اس وقت ہوتی ہے جب ہم بحران کی حالت میں نہیں ہوتے، جب ہم اپنے تجربات پر غور کرنے اور یہ جاننے کے لیے وقت نکال سکتے ہیں کہ ہم اپنے بارے میں کیا سیکھ رہے ہیں۔ چاہے آپ ہماری آخری گفتگو سے کچھ پروسیس کر رہے ہوں، نئے چیلنجز سے نمٹ رہے ہوں، یا صرف چیک ان کرنا چاہتے ہوں، میں یہاں ہوں۔ آخری بار بات کرنے کے بعد سے آپ کے ذہن میں کیا ہے، یا کوئی خاص بات ہے جسے آپ آج تلاش کرنا چاہیں گے؟`
+          : `میں واقعی خوش ہوں کہ آپ یہاں ہیں اور اپنے ذہن میں جو کچھ بھی ہے اسے میرے ساتھ شیئر کرنے کے لیے وقت نکال رہے ہیں۔ ایماندار غور و فکر اور خود شناسی کے لیے جگہ بنانا خود میں قیمتی ہے، چاہے آپ مخصوص چیلنجز سے نمٹ رہے ہوں یا صرف کوئی ایسا شخص چاہتے ہوں جو بغیر فیصلے کے سنے۔ بعض اوقات سب سے اہم گفتگو بالکل وہیں سے شروع ہوتی ہے جہاں آپ اب ہیں، بغیر کسی خاص بحران یا مسئلے کے۔ میں یہاں ہوں جو بھی طریقہ آپ کے لیے سب سے مددگار محسوس ہو۔ حال ہی میں آپ کے خیالات میں کیا چیز ہے، یا کوئی ایسی بات ہے جسے آپ اپنے بارے میں بہتر سمجھنا چاہتے ہیں؟`,
+        techniques: ['فعال سننا', 'کھلی تلاش', 'غیر مشروط مثبت نظر', 'خود عکاسی']
+      }
+    }
+  };
+  
+  const langResponses = responses[language as keyof typeof responses] || responses.en;
+  const emotionResponse = langResponses[emotion as keyof typeof langResponses] || langResponses.neutral;
+  
+  return {
+    response: emotionResponse.response,
+    techniques: emotionResponse.techniques
+  };
+}
+
+function generateBasicTherapeuticResponse(language: string): string {
+  return language === 'ur' 
+    ? 'میں یہاں آپ کی بات سننے اور مدد کرنے کے لیے ہوں۔ آپ کیسا محسوس کر رہے ہیں؟'
+    : 'I\'m here to listen and support you. How are you feeling right now?';
 }
 
 // Phase 3: Emotional Support Response Generation
@@ -524,10 +605,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       try {
         console.log('🔄 Calling detectEmotionFromText...');
-        // Set a longer timeout for context extraction with spaCy
+        // Set a shorter timeout for chat mode to avoid hanging
         const emotionPromise = detectEmotionFromText(processedMessage, language || 'en');
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Chat mode timeout (20s)')), 20000)
+          setTimeout(() => reject(new Error('Chat mode timeout (3s)')), 3000)
         );
         
         const emotionResult = await Promise.race([emotionPromise, timeoutPromise]) as any;
@@ -536,9 +617,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (emotionResult && typeof emotionResult === 'object') {
           detectedEmotion = emotionResult.emotion || 'neutral';
           confidence = emotionResult.confidence || 0.5;
-          emotionMethod = 'context_enhanced';
-          const context = emotionResult.context || [];
-          console.log(`✅ Chat Mode Emotion: ${detectedEmotion} (${confidence.toFixed(3)}) with context: [${context.join(', ')}]`);
+          emotionMethod = 'optimized';
+          console.log(`✅ Chat Mode Emotion: ${detectedEmotion} (${confidence.toFixed(3)})`);
         } else {
           throw new Error('Invalid emotion result format');
         }
@@ -705,6 +785,233 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Unknown error occurred',
         mode: 'chat-text'
+      });
+    }
+  });
+
+  // Enhanced Emotional Support Endpoint with Advanced Conversational Therapy AI
+  app.post('/api/emotional-support-enhanced', upload.single('audio'), async (req: Request, res: Response) => {
+    try {
+      const { 
+        mode, 
+        language, 
+        history, 
+        sessionId, 
+        userContext,
+        enableAvatar = true,
+        enableTTS = true 
+      } = req.body;
+      
+      let text = req.body.text;
+      let audioPath: string | null = null;
+      
+      console.log('🧠 Enhanced Therapy AI: Processing request');
+      console.log('📊 Mode:', mode, 'Language:', language, 'Avatar:', enableAvatar);
+
+      // Handle voice mode with advanced audio processing
+      if (mode === 'voice' && req.file) {
+        try {
+          console.log('🎙️ Processing audio file:', req.file.size, 'bytes');
+          const audioBuffer = req.file.buffer;
+          
+          if (!validateAudioBuffer(audioBuffer)) {
+            throw new Error('Invalid audio file format or size');
+          }
+          
+          // Save audio for emotion analysis
+          const tempDir = path.join(process.cwd(), 'temp');
+          if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir, { recursive: true });
+          }
+          audioPath = path.join(tempDir, `audio_${Date.now()}.wav`);
+          fs.writeFileSync(audioPath, audioBuffer);
+          
+          const whisperLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+          
+          try {
+            text = await transcribeAudio(audioBuffer, whisperLanguage);
+            console.log('✅ Speech-to-text successful:', text?.length, 'characters');
+          } catch (sttError) {
+            console.warn('⚠️ Primary STT failed, using fallback:', sttError);
+            text = await simpleTranscribeAudio(audioBuffer, whisperLanguage);
+          }
+        } catch (audioError) {
+          console.warn('❌ Audio processing failed:', audioError);
+          text = req.body.text || 'Voice input received but processing failed';
+        }
+      }
+
+      // Ensure we have text to work with
+      if (!text || text.trim().length === 0) {
+        text = mode === 'voice' 
+          ? 'I received your voice message and I\'m here to listen.' 
+          : 'Hello, I\'m here to support you. How are you feeling today?';
+      }
+
+      console.log('📝 Processed text:', text.substring(0, 100) + '...');
+
+      // Enhanced emotion detection with therapeutic context
+      let emotionResult;
+      const detectionLanguage = language?.startsWith('ur') ? 'ur' : 'en';
+      
+      if (mode === 'voice' && audioPath && fs.existsSync(audioPath)) {
+        console.log('🎯 Running combined emotion detection (text + voice)...');
+        try {
+          const combinedResult = await detectCombinedEmotion(text, audioPath, detectionLanguage);
+          emotionResult = {
+            emotion: combinedResult.combined.emotion,
+            confidence: combinedResult.combined.confidence,
+            textEmotion: combinedResult.text.emotion,
+            voiceEmotion: combinedResult.voice.emotion,
+            method: 'combined',
+            rawData: combinedResult
+          };
+        } catch (emotionError) {
+          console.warn('⚠️ Combined emotion detection failed, using text-only:', emotionError);
+          const textResult = await detectEmotionFromText(text, detectionLanguage);
+          emotionResult = {
+            emotion: textResult.emotion,
+            confidence: textResult.confidence,
+            method: 'text-fallback'
+          };
+        }
+        
+        // Clean up temp audio file
+        try {
+          fs.unlinkSync(audioPath);
+        } catch (cleanupError) {
+          console.warn('⚠️ Failed to clean up temp audio file:', cleanupError);
+        }
+      } else {
+        console.log('📊 Running text emotion detection...');
+        const textResult = await detectEmotionFromText(text, detectionLanguage);
+        emotionResult = {
+          emotion: textResult.emotion,
+          confidence: textResult.confidence,
+          method: 'text-only'
+        };
+      }
+
+      console.log('🎭 Emotion detected:', emotionResult.emotion, 'confidence:', emotionResult.confidence);
+
+      // Parse conversation history for context
+      let conversationHistory: ConversationHistory[] = [];
+      try {
+        if (history) {
+          const parsedHistory = typeof history === 'string' ? JSON.parse(history) : history;
+          conversationHistory = Array.isArray(parsedHistory) ? parsedHistory.slice(-10) : []; // Keep last 10 exchanges
+          console.log('💭 Conversation history loaded:', conversationHistory.length, 'items');
+        }
+      } catch (historyError) {
+        console.warn('⚠️ Failed to parse conversation history:', historyError);
+        conversationHistory = [];
+      }
+
+      // Parse user context
+      let parsedUserContext = {};
+      try {
+        if (userContext) {
+          parsedUserContext = typeof userContext === 'string' ? JSON.parse(userContext) : userContext;
+        }
+      } catch (contextError) {
+        console.warn('⚠️ Failed to parse user context:', contextError);
+      }
+
+      // Create enhanced request
+      const enhancedRequest: EnhancedResponseRequest = {
+        text,
+        emotion: emotionResult.emotion,
+        language: detectionLanguage,
+        history: conversationHistory,
+        userContext: parsedUserContext,
+        sessionContext: {
+          sessionId: sessionId || `session_${Date.now()}`,
+          sessionStart: Date.now(),
+          mode: mode || 'text',
+          avatar: enableAvatar
+        }
+      };
+
+      // Generate enhanced therapeutic response
+      try {
+        console.log('🚀 Generating enhanced therapeutic response...');
+        const responseResult: EnhancedResponseResult = await generateEnhancedConversationalResponse(enhancedRequest);
+        
+        console.log('✅ Enhanced response generated successfully');
+        console.log('🎵 TTS available:', !!responseResult.audioBase64);
+        console.log('🧠 Therapeutic techniques:', responseResult.therapeuticTechniques?.join(', '));
+
+        // Prepare response with all enhanced features
+        const fullResponse = {
+          // Core response data
+          transcription: text,
+          response: responseResult.response,
+          emotion: responseResult.emotion,
+          confidence: responseResult.confidence,
+          
+          // Enhanced features
+          contextAnalysis: responseResult.contextAnalysis,
+          therapeuticTechniques: responseResult.therapeuticTechniques,
+          conversationFlow: responseResult.conversationFlow,
+          
+          // Audio/Avatar support
+          audioBase64: enableTTS ? responseResult.audioBase64 : undefined,
+          avatarSupported: enableAvatar,
+          
+          // Metadata
+          mode: mode || 'text',
+          language: detectionLanguage,
+          sessionId: enhancedRequest.sessionContext?.sessionId,
+          emotionDetails: emotionResult,
+          
+          // Processing information
+          processingTime: responseResult.metadata?.processingTime,
+          model: responseResult.metadata?.model,
+          features: responseResult.metadata?.features,
+          historyLength: conversationHistory.length,
+          
+          // Success indicators
+          enhanced: true,
+          conversational: true,
+          therapeutic: true
+        };
+
+        res.json(fullResponse);
+
+      } catch (enhancedError) {
+        console.warn('❌ Enhanced response failed, using intelligent fallback:', enhancedError);
+        
+        // Intelligent fallback with therapeutic principles
+        const fallbackResponse = generateIntelligentTherapeuticFallback(
+          text, 
+          emotionResult.emotion, 
+          detectionLanguage,
+          conversationHistory
+        );
+
+        res.json({
+          transcription: text,
+          response: fallbackResponse.response,
+          emotion: emotionResult.emotion,
+          confidence: emotionResult.confidence,
+          mode: mode || 'text',
+          language: detectionLanguage,
+          emotionDetails: emotionResult,
+          therapeuticTechniques: fallbackResponse.techniques,
+          enhanced: false,
+          conversational: true,
+          therapeutic: true,
+          fallbackUsed: true,
+          fallbackReason: enhancedError instanceof Error ? enhancedError.message : 'Enhanced processing failed'
+        });
+      }
+
+    } catch (error) {
+      console.error("❌ Enhanced emotional support processing failed:", error);
+      res.status(500).json({ 
+        error: 'Enhanced processing failed',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        fallback: generateBasicTherapeuticResponse('en') // Always provide some therapeutic response
       });
     }
   });
