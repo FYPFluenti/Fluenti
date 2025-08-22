@@ -158,27 +158,20 @@ export default function ChildDashboard() {
         <div className="flex-1" />
 
         <div className="relative" onMouseEnter={() => { if (hideTimer.current) clearTimeout(hideTimer.current); setShowUserMenu(true); }} onMouseLeave={() => { hideTimer.current = setTimeout(() => setShowUserMenu(false), 200); }}>
-<<<<<<< Updated upstream
-          <button 
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition"
+          <button
+            className="group w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition"
+            aria-haspopup="menu"
+            aria-expanded={showUserMenu}
             aria-label="User menu"
             title="User menu"
           >
-            <User className="w-7 h-7 text-foreground" aria-hidden="true" />
-=======
- <button
-    className="group w-10 h-10 flex items-center justify-center rounded-full transition" // ← make the button the group
-    aria-haspopup="menu"
-    aria-expanded={showUserMenu}
-  >            <User
-      className={`w-7 h-7 transition-colors duration-150
-        ${
-          showUserMenu
-            ? "--muted-foreground" // active/open state
-            : "--muted-foreground group-hover:text-[--muted-foreground] hover:text-[--muted-foreground]"
-        }`}
-    />
->>>>>>> Stashed changes
+            <User
+              className={`w-7 h-7 transition-colors duration-150 ${
+                showUserMenu
+                  ? "text-muted-foreground"
+                  : "text-muted-foreground group-hover:text-foreground hover:text-foreground"
+              }`}
+            />
           </button>
 
           {showUserMenu && (
