@@ -159,6 +159,7 @@ export default function ChildDashboard() {
 
         <div className="relative" onMouseEnter={() => { if (hideTimer.current) clearTimeout(hideTimer.current); setShowUserMenu(true); }} onMouseLeave={() => { hideTimer.current = setTimeout(() => setShowUserMenu(false), 200); }}>
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
           <button 
             className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition"
             aria-label="User menu"
@@ -166,6 +167,8 @@ export default function ChildDashboard() {
           >
             <User className="w-7 h-7 text-foreground" aria-hidden="true" />
 =======
+=======
+>>>>>>> Stashed changes
  <button
     className="group w-10 h-10 flex items-center justify-center rounded-full transition" // ← make the button the group
     aria-haspopup="menu"
@@ -178,6 +181,9 @@ export default function ChildDashboard() {
             : "--muted-foreground group-hover:text-[--muted-foreground] hover:text-[--muted-foreground]"
         }`}
     />
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
           </button>
 
