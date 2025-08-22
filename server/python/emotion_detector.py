@@ -36,7 +36,13 @@ class EmotionDetector:
         self.voice_model = "fast_spectral"  # Use fast spectral analysis by default
         
         if _DEVICE_CACHE is None:
-            _DEVICE_CACHE = 0 if torch.cuda.is_available() else -1
+            # Force GPU usage if available, otherwise fallback to CPU
+            if torch.cuda.is_available():
+                _DEVICE_CACHE = 0  # Use first GPU
+                print(f"[DEBUG] GPU detected: {torch.cuda.get_device_name(0)}", file=sys.stderr)
+            else:
+                _DEVICE_CACHE = -1  # Use CPU
+                print("[DEBUG] No GPU available, using CPU", file=sys.stderr)
         self.device = _DEVICE_CACHE
         
         print(f"Phase 3 OPTIMIZED Emotion Detection - Using device: {'GPU' if self.device == 0 else 'CPU'}", file=sys.stderr)

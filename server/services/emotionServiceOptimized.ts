@@ -170,14 +170,14 @@ class PersistentEmotionServer {
         }
       }
       
-      // Set timeout for request (increased to 15 seconds)
+      // Set timeout for request (increased to 30 seconds for GPU loading)
       setTimeout(() => {
         const index = this.requestQueue.findIndex(item => item.resolve === resolve);
         if (index >= 0) {
           this.requestQueue.splice(index, 1);
           reject(new Error('Emotion detection request timeout'));
         }
-      }, 15000); // 15 second timeout
+      }, 30000); // 30 second timeout for GPU model loading
     });
   }
 
