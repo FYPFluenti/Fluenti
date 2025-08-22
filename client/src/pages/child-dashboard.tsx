@@ -140,7 +140,6 @@ export default function ChildDashboard() {
 
         <div className="flex-1" />
 
-
         <div 
           className="relative" 
           onMouseEnter={() => { 
@@ -155,25 +154,12 @@ export default function ChildDashboard() {
             className="group w-10 h-10 flex items-center justify-center rounded-full transition"
             aria-haspopup="menu"
             aria-expanded={showUserMenu}
-
-        <div className="relative" onMouseEnter={() => { if (hideTimer.current) clearTimeout(hideTimer.current); setShowUserMenu(true); }} onMouseLeave={() => { hideTimer.current = setTimeout(() => setShowUserMenu(false), 200); }}>
-          <button
-            className="group w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition"
-            aria-haspopup="menu"
-            aria-expanded={showUserMenu}
-            aria-label="User menu"
-            title="User menu"
-
           >
             <User
               className={`w-7 h-7 transition-colors duration-150 ${
                 showUserMenu
                   ? "text-muted-foreground"
-
                   : "text-muted-foreground group-hover:text-muted-foreground"
-
-                  : "text-muted-foreground group-hover:text-foreground hover:text-foreground"
-
               }`}
             />
           </button>
