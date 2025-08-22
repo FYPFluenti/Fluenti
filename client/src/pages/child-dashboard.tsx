@@ -6,6 +6,8 @@ import { LogoutButton } from "@/components/auth/LogoutButton";
 import { motion } from "framer-motion";
 import { Star,ThumbsUp, Clock ,Mic, MicOff} from "lucide-react";
 import DarkModeToggle from "@/components/DarkModeToggle";
+import FluentiLogo from "@/components/FluentiLogo"; // <-- add at top with other imports
+
 
 interface User {
   firstName?: string;
@@ -73,7 +75,42 @@ export default function ChildDashboard() {
     <div className="min-h-screen font-sans flex bg-background text-foreground">
       {/* Sidebar */}
       <aside className="w-20 bg-background flex flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-50 border-r border-border">
-        <div className="w-6 h-6 rounded-full bg-orange-400" />
+      {/* Sidebar brand (logo with hover + tooltip) */}
+<div
+  onMouseEnter={() => setHovered("home")}
+  onMouseLeave={() => setHovered(null)}
+  className="relative group"
+>
+  <button
+    onClick={() => setLocation("/")}
+    aria-label="Go to home"
+    className="w-12 h-12 grid place-items-center rounded-xl transition "
+  >
+    <FluentiLogo
+      // currentColor comes from CSS 'color'; Tailwind's text-* sets that.
+      className={
+        // choose ONE of the two lines below:
+        // A) brightness lift (no extra CSS vars needed)
+        "w-10 h-10 text-[#ff6b1d]   transition-colors duration-150 group-hover:text-[#ff8a4a]"
+
+        // B) or real color swap (requires --brand-orange-light defined)
+        // "w-10 h-10 text-[var(--brand-orange)] transition group-hover:text-[var(--brand-orange-light)]"
+      }
+    />
+  </button>
+
+  {hovered === "home" && (
+    <motion.div
+      initial={{ opacity: 0, x: 5 }}
+      animate={{ opacity: 1, x: 12 }}
+      exit={{ opacity: 0, x: 5 }}
+      className="absolute left-[38px] bottom-1 bg-popover text-popover-foreground px-3 py-1.5 rounded-lg shadow-md border border-border z-10"
+    >
+      home
+    </motion.div>
+  )}
+</div>
+
 
         {/* Sidebar Buttons */}
 {[
@@ -96,11 +133,12 @@ export default function ChildDashboard() {
             : scrollToRef(ref)
       }
       className={`w-10 h-10 flex items-center justify-center rounded-xl transition ${
-        hovered === id ? "bg-muted" : ""
+        hovered === id ? "" : ""
       }`}
       aria-label={label}
     >
-      <Icon className="text-foreground w-7 h-7" />
+      <Icon className="text-foreground w-7 h-7 transition-colors duration-150
+          group-hover:text-[--muted-foreground]" />
     </button>
 
     {hovered === id && (
@@ -120,12 +158,27 @@ export default function ChildDashboard() {
         <div className="flex-1" />
 
         <div className="relative" onMouseEnter={() => { if (hideTimer.current) clearTimeout(hideTimer.current); setShowUserMenu(true); }} onMouseLeave={() => { hideTimer.current = setTimeout(() => setShowUserMenu(false), 200); }}>
+<<<<<<< Updated upstream
           <button 
             className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition"
             aria-label="User menu"
             title="User menu"
           >
             <User className="w-7 h-7 text-foreground" aria-hidden="true" />
+=======
+ <button
+    className="group w-10 h-10 flex items-center justify-center rounded-full transition" // ← make the button the group
+    aria-haspopup="menu"
+    aria-expanded={showUserMenu}
+  >            <User
+      className={`w-7 h-7 transition-colors duration-150
+        ${
+          showUserMenu
+            ? "--muted-foreground" // active/open state
+            : "--muted-foreground group-hover:text-[--muted-foreground] hover:text-[--muted-foreground]"
+        }`}
+    />
+>>>>>>> Stashed changes
           </button>
 
           {showUserMenu && (
@@ -230,7 +283,7 @@ export default function ChildDashboard() {
         <textarea
           value={feedback}
           onChange={(e) => setFeedback(e.target.value)}
-          placeholder="how can we improve calmi?"
+          placeholder="how can we improve fluenti?"
           className="w-full h-32 resize-none rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/70 p-4 focus:outline-none focus:ring-0 focus:border-border shadow-inner"
         />
       </div>
