@@ -4,10 +4,9 @@ import { useLocation } from "wouter";
 import { Gamepad2, LineChart, Smile, User, Settings, SlidersHorizontal, Lock, ArrowRight } from "lucide-react";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { motion } from "framer-motion";
-import { Star,ThumbsUp, Clock ,Mic, MicOff} from "lucide-react";
+import { Star, ThumbsUp, Clock, Mic, MicOff } from "lucide-react";
 import DarkModeToggle from "@/components/DarkModeToggle";
-import FluentiLogo from "@/components/FluentiLogo"; // <-- add at top with other imports
-
+import FluentiLogo from "@/components/FluentiLogo";
 
 interface User {
   firstName?: string;
@@ -29,9 +28,6 @@ export default function ChildDashboard() {
   const [showVoiceUI, setShowVoiceUI] = useState(false);
   const [listening, setListening] = useState(false);
 
-
-
-
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
   const therapyRef = useRef<HTMLDivElement>(null);
@@ -45,12 +41,12 @@ export default function ChildDashboard() {
       ref.current.scrollIntoView({ behavior: "smooth" });
     }
   };
-  const submitFeedback = () => {
-  // TODO: send to your API
-    setShowFeedback(false);
-  setFeedback("");
-};
 
+  const submitFeedback = () => {
+    // TODO: send to your API
+    setShowFeedback(false);
+    setFeedback("");
+  };
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -75,123 +71,107 @@ export default function ChildDashboard() {
     <div className="min-h-screen font-sans flex bg-background text-foreground">
       {/* Sidebar */}
       <aside className="w-20 bg-background flex flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-50 border-r border-border">
-      {/* Sidebar brand (logo with hover + tooltip) */}
-<div
-  onMouseEnter={() => setHovered("home")}
-  onMouseLeave={() => setHovered(null)}
-  className="relative group"
->
-  <button
-    onClick={() => setLocation("/")}
-    aria-label="Go to home"
-    className="w-12 h-12 grid place-items-center rounded-xl transition "
-  >
-    <FluentiLogo
-      // currentColor comes from CSS 'color'; Tailwind's text-* sets that.
-      className={
-        // choose ONE of the two lines below:
-        // A) brightness lift (no extra CSS vars needed)
-        "w-10 h-10 text-[#ff6b1d]   transition-colors duration-150 group-hover:text-[#ff8a4a]"
+        {/* Sidebar brand (logo with hover + tooltip) */}
+        <div
+          onMouseEnter={() => setHovered("home")}
+          onMouseLeave={() => setHovered(null)}
+          className="relative group"
+        >
+          <button
+            onClick={() => setLocation("/")}
+            aria-label="Go to home"
+            className="w-12 h-12 grid place-items-center rounded-xl transition"
+          >
+            <FluentiLogo
+              className="w-10 h-10 text-[#ff6b1d] transition-colors duration-150 group-hover:text-[#ff8a4a]"
+            />
+          </button>
 
-        // B) or real color swap (requires --brand-orange-light defined)
-        // "w-10 h-10 text-[var(--brand-orange)] transition group-hover:text-[var(--brand-orange-light)]"
-      }
-    />
-  </button>
-
-  {hovered === "home" && (
-    <motion.div
-      initial={{ opacity: 0, x: 5 }}
-      animate={{ opacity: 1, x: 12 }}
-      exit={{ opacity: 0, x: 5 }}
-      className="absolute left-[38px] bottom-1 bg-popover text-popover-foreground px-3 py-1.5 rounded-lg shadow-md border border-border z-10"
-    >
-      home
-    </motion.div>
-  )}
-</div>
-
+          {hovered === "home" && (
+            <motion.div
+              initial={{ opacity: 0, x: 5 }}
+              animate={{ opacity: 1, x: 12 }}
+              exit={{ opacity: 0, x: 5 }}
+              className="absolute left-[38px] bottom-1 bg-popover text-popover-foreground px-3 py-1.5 rounded-lg shadow-md border border-border z-10"
+            >
+              home
+            </motion.div>
+          )}
+        </div>
 
         {/* Sidebar Buttons */}
-{[
-  { ref: therapyRef, icon: Gamepad2, label: "games", id: "games", path: "/speech-therapy" },
-  { ref: progressRef, icon: LineChart, label: "progress", id: "progress", path: "/progress-dashboard" },
-  { ref: motivationRef, icon: Smile, label: "feedback", id: "feedback" },
-].map(({ ref, icon: Icon, label, id, path }) => (
-  <div
-    key={id}
-    onMouseEnter={() => setHovered(id)}
-    onMouseLeave={() => setHovered(null)}
-    className="relative group"
-  >
-    <button
-      onClick={() =>
-        id === "feedback"
-          ? setShowFeedback(true)
-          : path
-            ? setLocation(path)
-            : scrollToRef(ref)
-      }
-      className={`w-10 h-10 flex items-center justify-center rounded-xl transition ${
-        hovered === id ? "" : ""
-      }`}
-      aria-label={label}
-    >
-      <Icon className="text-foreground w-7 h-7 transition-colors duration-150
-          group-hover:text-[--muted-foreground]" />
-    </button>
+        {[
+          { ref: therapyRef, icon: Gamepad2, label: "games", id: "games", path: "/speech-therapy" },
+          { ref: progressRef, icon: LineChart, label: "progress", id: "progress", path: "/progress-dashboard" },
+          { ref: motivationRef, icon: Smile, label: "feedback", id: "feedback" },
+        ].map(({ ref, icon: Icon, label, id, path }) => (
+          <div
+            key={id}
+            onMouseEnter={() => setHovered(id)}
+            onMouseLeave={() => setHovered(null)}
+            className="relative group"
+          >
+            <button
+              onClick={() =>
+                id === "feedback"
+                  ? setShowFeedback(true)
+                  : path
+                    ? setLocation(path)
+                    : scrollToRef(ref)
+              }
+              className="w-10 h-10 flex items-center justify-center rounded-xl transition group"
+              aria-label={label}
+            >
+              <Icon className="text-foreground w-7 h-7 transition-colors duration-150 group-hover:text-muted-foreground" />
+            </button>
 
-    {hovered === id && (
-      <motion.div
-        initial={{ opacity: 0, x: 5 }}
-        animate={{ opacity: 1, x: 12 }}
-        exit={{ opacity: 0, x: 5 }}
-        className="absolute left-[38px] bottom-0 bg-popover text-popover-foreground px-4 py-2 rounded-lg shadow-md border border-border z-10 w-30 space-y-1"
-      >
-        {label}
-      </motion.div>
-    )}
-  </div>
-))}
-
+            {hovered === id && (
+              <motion.div
+                initial={{ opacity: 0, x: 5 }}
+                animate={{ opacity: 1, x: 12 }}
+                exit={{ opacity: 0, x: 5 }}
+                className="absolute left-[38px] bottom-0 bg-popover text-popover-foreground px-4 py-2 rounded-lg shadow-md border border-border z-10 w-30 space-y-1"
+              >
+                {label}
+              </motion.div>
+            )}
+          </div>
+        ))}
 
         <div className="flex-1" />
 
-        <div className="relative" onMouseEnter={() => { if (hideTimer.current) clearTimeout(hideTimer.current); setShowUserMenu(true); }} onMouseLeave={() => { hideTimer.current = setTimeout(() => setShowUserMenu(false), 200); }}>
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-          <button 
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition"
-            aria-label="User menu"
-            title="User menu"
+        <div 
+          className="relative" 
+          onMouseEnter={() => { 
+            if (hideTimer.current) clearTimeout(hideTimer.current); 
+            setShowUserMenu(true); 
+          }} 
+          onMouseLeave={() => { 
+            hideTimer.current = setTimeout(() => setShowUserMenu(false), 200); 
+          }}
+        >
+          <button
+            className="group w-10 h-10 flex items-center justify-center rounded-full transition"
+            aria-haspopup="menu"
+            aria-expanded={showUserMenu}
           >
-            <User className="w-7 h-7 text-foreground" aria-hidden="true" />
-=======
-=======
->>>>>>> Stashed changes
- <button
-    className="group w-10 h-10 flex items-center justify-center rounded-full transition" // ← make the button the group
-    aria-haspopup="menu"
-    aria-expanded={showUserMenu}
-  >            <User
-      className={`w-7 h-7 transition-colors duration-150
-        ${
-          showUserMenu
-            ? "--muted-foreground" // active/open state
-            : "--muted-foreground group-hover:text-[--muted-foreground] hover:text-[--muted-foreground]"
-        }`}
-    />
-<<<<<<< Updated upstream
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+            <User
+              className={`w-7 h-7 transition-colors duration-150 ${
+                showUserMenu
+                  ? "text-muted-foreground"
+                  : "text-muted-foreground group-hover:text-muted-foreground"
+              }`}
+            />
           </button>
 
           {showUserMenu && (
             <div className="absolute left-12 bottom-0 w-48 bg-popover border border-border rounded-xl shadow-lg p-4 z-50 space-y-2">
-             <button onClick={() => setLocation("/settings")} className="w-full px-5 py-3 text-sm flex items-center gap-3 hover:bg-muted hover:brightness-90 rounded-lg">
+              <button 
+                onClick={() => setLocation("/settings")} 
+                className="w-full px-5 py-3 text-sm flex items-center gap-3 hover:bg-muted hover:brightness-90 rounded-lg"
+              >
                 <Settings className="w-5 h-5" />
-                <span className=" text-foreground font-medium">Settings</span>
+                <span className="text-foreground font-medium">Settings</span>
               </button>
               <div className="border-t border-border my-1" />
               <LogoutButton className="w-full px-5 py-3 text-base text-left hover:bg-muted hover:brightness-90 text-foreground font-medium flex items-center gap-3 rounded-lg" />
@@ -202,28 +182,31 @@ export default function ChildDashboard() {
 
       {/* Main Content */}
       <main className="ml-20 px-6 pb-24 w-full">
-        <header className="flex justify-between items-center py-6 ">
+        <header className="flex justify-between items-center py-6">
           <div />
           <div className="flex items-center gap-6">
-  <div className="flex items-center gap-2">
-    <span className="text-lg font-semibold">Dark Mode</span>
-    <DarkModeToggle />
-  </div>
-  <button
-    onClick={() => setShowPreferences(!showPreferences)}
-    className="p-2 rounded-full hover:bg-muted transition"
-    aria-label="Toggle preferences"
-    title="Preferences"
-  >
-    <SlidersHorizontal className="w-6 h-6 text-foreground" aria-hidden="true" />
-  </button>
-</div>
-
-         
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-semibold">Dark Mode</span>
+              <DarkModeToggle />
+            </div>
+            <button
+              onClick={() => setShowPreferences(!showPreferences)}
+              className="p-2 rounded-full hover:bg-muted transition"
+              aria-label="Toggle preferences"
+              title="Preferences"
+            >
+              <SlidersHorizontal className="w-6 h-6 text-foreground" aria-hidden="true" />
+            </button>
+          </div>
         </header>
 
         <section ref={therapyRef} className="text-center py-10">
-          <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="max-w-xl mx-auto">
+          <motion.div 
+            initial={{ opacity: 0, y: 40 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            transition={{ duration: 0.5 }} 
+            className="max-w-xl mx-auto"
+          >
             <iframe
               src="https://your-avatar-url.readyplayer.me/avatar"
               allow="camera *; microphone *"
@@ -232,14 +215,20 @@ export default function ChildDashboard() {
             />
             <h2 className="text-2xl font-bold mb-4">Feeling stuck?</h2>
             <div className="space-y-3">
-              <button  onClick={() => setShowVoiceUI(true)} className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all">
+              <button 
+                onClick={() => setShowVoiceUI(true)} 
+                className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all"
+              >
                 <div>
                   <h3 className="text-base font-semibold">voice mode</h3>
                   <p className="text-sm text-muted-foreground">Say Hi to Your Avatar</p>
                 </div>
                 <ArrowRight className="w-5 h-5" />
               </button>
-              <button onClick={() => setShowChatUI(true)} className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all">
+              <button 
+                onClick={() => setShowChatUI(true)} 
+                className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all"
+              >
                 <div>
                   <h3 className="text-base font-semibold">text mode</h3>
                   <p className="text-sm text-muted-foreground">Need a break from talking?</p>
@@ -249,212 +238,186 @@ export default function ChildDashboard() {
             </div>
           </motion.div>
         </section>
-{/* Preferences Modal (triggered on preferences button click) */}
-{showPreferences && (
-  <motion.div
-    initial={{ opacity: 0, scale: 0.95 }}
-    animate={{ opacity: 1, scale: 1 }}
-    exit={{ opacity: 0, scale: 0.95 }}
-    className="fixed top-20 right-10 w-[360px] bg-popover border border-border rounded-xl shadow-xl p-6 space-y-4 z-50"
-  >
-    <div>
-      <h3 className="text-lg font-semibold">Preferences</h3>
-      <p className="text-sm text-muted-foreground">Set how the assistant works for you</p>
-    </div>
 
-    <div className="pt-4 border-t border-border space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h4 className="text-sm font-medium">Language</h4>
-          <p className="text-xs text-muted-foreground">Conversation only</p>
-        </div>
-        <select 
-          className="bg-card text-foreground border border-border rounded-md px-3 py-1 text-sm font-dm-sans focus:outline-none focus:ring-2 focus:ring-primary"
-          aria-label="Select conversation language"
-          title="Select conversation language"
-        >
-          <option value="en">English</option>
-          <option value="ur">Urdu</option>
-        </select>
-      </div>
+        {/* Preferences Modal */}
+        {showPreferences && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="fixed top-20 right-10 w-[360px] bg-popover border border-border rounded-xl shadow-xl p-6 space-y-4 z-50"
+          >
+            <div>
+              <h3 className="text-lg font-semibold">Preferences</h3>
+              <p className="text-sm text-muted-foreground">Set how the assistant works for you</p>
+            </div>
 
-    </div>
-  </motion.div>
-)}
-{showFeedback && (
-  <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-    <div className="w-[500px] max-w-[92vw] rounded-2xl bg-popover border border-border shadow-2xl">
-      {/* Textarea */}
-      <div className="p-6">
-        <textarea
-          value={feedback}
-          onChange={(e) => setFeedback(e.target.value)}
-          placeholder="how can we improve fluenti?"
-          className="w-full h-32 resize-none rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/70 p-4 focus:outline-none focus:ring-0 focus:border-border shadow-inner"
-        />
-      </div>
+            <div className="pt-4 border-t border-border space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-medium">Language</h4>
+                  <p className="text-xs text-muted-foreground">Conversation only</p>
+                </div>
+                <select 
+                  className="bg-card text-foreground border border-border rounded-md px-3 py-1 text-sm font-dm-sans focus:outline-none focus:ring-2 focus:ring-primary"
+                  aria-label="Select conversation language"
+                  title="Select conversation language"
+                >
+                  <option value="en">English</option>
+                  <option value="ur">Urdu</option>
+                </select>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
-      {/* Footer buttons */}
-      <div className="flex items-center justify-between px-6 pb-6">
-        <button
-          onClick={() => { setShowFeedback(false); setFeedback(""); }}
-          className="px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted transition"
-        >
-          cancel
-        </button>
-        <button
-          onClick={submitFeedback}
-          disabled={!feedback.trim()}
-          className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50 transition"
-          style={{ backgroundColor: "hsl(27, 95%, 61%)" }} // soft orange
-        >
-          submit
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-   
-{showChatUI && (
-  <div className="fixed inset-0 bg-background flex flex-col items-center justify-center">
-    {/* Top right close */}
-    <button
-      onClick={() => setShowChatUI(false)}
-      className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
-    >
-      ✕
-    </button>
+        {/* Feedback Modal */}
+        {showFeedback && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="w-[500px] max-w-[92vw] rounded-2xl bg-popover border border-border shadow-2xl">
+              <div className="p-6">
+                <textarea
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  placeholder="how can we improve fluenti?"
+                  className="w-full h-32 resize-none rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/70 p-4 focus:outline-none focus:ring-0 focus:border-border shadow-inner"
+                />
+              </div>
 
-    {/* Sidebar mock */}
-    <div className="absolute left-0 top-0 bottom-0 w-16 flex flex-col items-center py-6 gap-8 bg-background border-r border-border">
-      <span className="w-8 h-8 rounded-full bg-[#F5B82E]" />
-      <Star className="w-6 h-6 text-muted-foreground" />
-      <Clock className="w-6 h-6 text-muted-foreground" />
-      <ThumbsUp className="w-6 h-6 text-muted-foreground" />
-      <User className="w-6 h-6 text-muted-foreground mt-auto" />
-    </div>
-
-    {/* Main Chat Area */}
-    <div className="flex flex-col items-start pl-24 max-w-3xl w-full">
-      {/* Message */}
-      <div className="flex items-start gap-3 mb-6">
-        <span className="inline-block w-8 h-8 rounded-full bg-[#F5B82E]" />
-        <div className="bg-muted/40 text-foreground rounded-xl px-4 py-2 shadow-sm">
-          hey there! what’s on your mind today?
-        </div>
-      </div>
-
-      {/* Input */}
-      <div className="w-full flex items-center gap-3 border border-border rounded-xl bg-card p-3 shadow-sm">
-        <textarea
-          placeholder="type your message..."
-          rows={1}
-          className="flex-1 resize-none bg-transparent outline-none text-foreground placeholder:text-muted-foreground/70"
-        />
-        <button className="w-10 h-10 rounded-full border border-border grid place-items-center text-muted-foreground hover:bg-muted">
-          ✕
-        </button>
-        <button
-          className="w-10 h-10 rounded-full grid place-items-center bg-[#F5B82E]"
-          aria-label="send"
-        >
-          <svg viewBox="0 0 24 24" className="w-5 h-5 text-black">
-            <path fill="currentColor" d="M3 11l18-8-8 18-2-7-8-3z" />
-          </svg>
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-{showVoiceUI && (
-  <div className="fixed inset-0 bg-background flex">
-    {/* Close */}
-    <button
-      onClick={() => { setListening(false); setShowVoiceUI(false); }}
-      className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
-      aria-label="Close voice chat"
-    >
-      ✕
-    </button>
-
-    {/* Sidebar (same as text mode) */}
-    <aside className="w-16 shrink-0 border-r border-border bg-background flex flex-col items-center py-6 gap-8">
-      <span className="w-8 h-8 rounded-full bg-[#F5B82E]" />
-      <Star className="w-6 h-6 text-muted-foreground" />
-      <Clock className="w-6 h-6 text-muted-foreground" />
-      <ThumbsUp className="w-6 h-6 text-muted-foreground" />
-      <User className="w-6 h-6 text-muted-foreground mt-auto" />
-    </aside>
-
-    {/* Main: big centered avatar */}
-    <main className="flex-1 grid place-items-center p-6">
-      <div className="flex flex-col items-center gap-8">
-        {/* Avatar circle */}
-        <div className="relative">
-          {/* neon ring */}
-          <div className="absolute inset-0 -m-3 rounded-full border-4 border-cyan-300/90 blur-[0.3px]" />
-          {/* clip the iframe to a circle */}
-          <div className="relative rounded-full overflow-hidden bg-[#1f2028]
-                          w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80">
-            <iframe
-              src="https://your-avatar-url.readyplayer.me/avatar"
-              allow="camera *; microphone *"
-              className="absolute inset-0 w-full h-full"
-              title="AI Avatar"
-            />
+              <div className="flex items-center justify-between px-6 pb-6">
+                <button
+                  onClick={() => { setShowFeedback(false); setFeedback(""); }}
+                  className="px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted transition"
+                >
+                  cancel
+                </button>
+                <button
+                  onClick={submitFeedback}
+                  disabled={!feedback.trim()}
+                  className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50 transition"
+                  style={{ backgroundColor: "hsl(27, 95%, 61%)" }}
+                >
+                  submit
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Control bar beneath the avatar */}
-        <div className="w-full max-w-lg border border-border rounded-xl bg-card p-4 shadow-sm flex items-center justify-between gap-3">
-          <div className="flex flex-col">
-            <span className="text-sm font-medium">
-              {listening ? "Listening…" : "Ready to talk"}
-            </span>
-            <span className="text-xs text-muted-foreground">
-              {listening ? "Speak to your AI avatar" : "Tap the mic to start"}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-3">
+        {/* Chat UI Modal */}
+        {showChatUI && (
+          <div className="fixed inset-0 bg-background flex flex-col items-center justify-center">
             <button
-              onClick={() => setListening(false)}
-              className="w-10 h-10 rounded-full border border-border grid place-items-center text-muted-foreground hover:bg-muted"
-              aria-label="stop listening"
-              title="stop listening"
+              onClick={() => setShowChatUI(false)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
             >
               ✕
             </button>
-            <button
-              onClick={() => setListening(v => !v)}
-              className="w-12 h-12 rounded-full grid place-items-center bg-[#F5B82E] hover:brightness-95 transition"
-              aria-label="toggle microphone"
-              title="toggle microphone"
-            >
-              {listening ? <Mic className="w-5 h-5 text-black" /> : <MicOff className="w-5 h-5 text-black" />}
-            </button>
+
+            <div className="absolute left-0 top-0 bottom-0 w-16 flex flex-col items-center py-6 gap-8 bg-background border-r border-border">
+              <span className="w-8 h-8 rounded-full bg-[#F5B82E]" />
+              <Star className="w-6 h-6 text-muted-foreground" />
+              <Clock className="w-6 h-6 text-muted-foreground" />
+              <ThumbsUp className="w-6 h-6 text-muted-foreground" />
+              <User className="w-6 h-6 text-muted-foreground mt-auto" />
+            </div>
+
+            <div className="flex flex-col items-start pl-24 max-w-3xl w-full">
+              <div className="flex items-start gap-3 mb-6">
+                <span className="inline-block w-8 h-8 rounded-full bg-[#F5B82E]" />
+                <div className="bg-muted/40 text-foreground rounded-xl px-4 py-2 shadow-sm">
+                  hey there! what's on your mind today?
+                </div>
+              </div>
+
+              <div className="w-full flex items-center gap-3 border border-border rounded-xl bg-card p-3 shadow-sm">
+                <textarea
+                  placeholder="type your message..."
+                  rows={1}
+                  className="flex-1 resize-none bg-transparent outline-none text-foreground placeholder:text-muted-foreground/70"
+                />
+                <button className="w-10 h-10 rounded-full border border-border grid place-items-center text-muted-foreground hover:bg-muted">
+                  ✕
+                </button>
+                <button
+                  className="w-10 h-10 rounded-full grid place-items-center bg-[#F5B82E]"
+                  aria-label="send"
+                >
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 text-black">
+                    <path fill="currentColor" d="M3 11l18-8-8 18-2-7-8-3z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-    </main>
-  </div>
-)}
+        )}
 
+        {/* Voice UI Modal */}
+        {showVoiceUI && (
+          <div className="fixed inset-0 bg-background flex">
+            <button
+              onClick={() => { setListening(false); setShowVoiceUI(false); }}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+              aria-label="Close voice chat"
+            >
+              ✕
+            </button>
 
+            <aside className="w-16 shrink-0 border-r border-border bg-background flex flex-col items-center py-6 gap-8">
+              <span className="w-8 h-8 rounded-full bg-[#F5B82E]" />
+              <Star className="w-6 h-6 text-muted-foreground" />
+              <Clock className="w-6 h-6 text-muted-foreground" />
+              <ThumbsUp className="w-6 h-6 text-muted-foreground" />
+              <User className="w-6 h-6 text-muted-foreground mt-auto" />
+            </aside>
 
-{/* Preferences Button */}
-<button
-  onClick={() => setShowPreferences(!showPreferences)}
-  className="p-2 rounded-full hover:bg-muted transition fixed top-6 right-6 z-50"
-  aria-label="Toggle preferences"
-  title="Preferences"
->
-  <SlidersHorizontal className="w-6 h-6 text-foreground" aria-hidden="true" />
-</button>
+            <main className="flex-1 grid place-items-center p-6">
+              <div className="flex flex-col items-center gap-8">
+                <div className="relative">
+                  <div className="absolute inset-0 -m-3 rounded-full border-4 border-cyan-300/90 blur-[0.3px]" />
+                  <div className="relative rounded-full overflow-hidden bg-[#1f2028] w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80">
+                    <iframe
+                      src="https://your-avatar-url.readyplayer.me/avatar"
+                      allow="camera *; microphone *"
+                      className="absolute inset-0 w-full h-full"
+                      title="AI Avatar"
+                    />
+                  </div>
+                </div>
 
+                <div className="w-full max-w-lg border border-border rounded-xl bg-card p-4 shadow-sm flex items-center justify-between gap-3">
+                  <div className="flex flex-col">
+                    <span className="text-sm font-medium">
+                      {listening ? "Listening…" : "Ready to talk"}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {listening ? "Speak to your AI avatar" : "Tap the mic to start"}
+                    </span>
+                  </div>
 
-
-      
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => setListening(false)}
+                      className="w-10 h-10 rounded-full border border-border grid place-items-center text-muted-foreground hover:bg-muted"
+                      aria-label="stop listening"
+                      title="stop listening"
+                    >
+                      ✕
+                    </button>
+                    <button
+                      onClick={() => setListening(v => !v)}
+                      className="w-12 h-12 rounded-full grid place-items-center bg-[#F5B82E] hover:brightness-95 transition"
+                      aria-label="toggle microphone"
+                      title="toggle microphone"
+                    >
+                      {listening ? <Mic className="w-5 h-5 text-black" /> : <MicOff className="w-5 h-5 text-black" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </main>
+          </div>
+        )}
       </main>
     </div>
   );
