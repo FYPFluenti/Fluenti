@@ -13,6 +13,7 @@ data/db/*
 
 # ML Model Cache - Don't commit large model files
 models/hf_cache/
+models/fluenti_therapeutic_model/
 *.bin
 *.safetensors
 *.pt
