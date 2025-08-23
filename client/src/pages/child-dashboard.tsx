@@ -142,7 +142,7 @@ export default function ChildDashboard() {
             className="group w-10 h-10 flex items-center justify-center rounded-full transition"
             aria-haspopup="menu"
             aria-expanded={showUserMenu}
-            title="User menu"
+            
           >
             <User
               className={`w-7 h-7 transition-colors duration-150 ${
@@ -181,7 +181,7 @@ export default function ChildDashboard() {
               onClick={() => setShowPreferences(!showPreferences)}
               className="p-2 rounded-full hover:bg-muted transition"
               aria-label="Toggle preferences"
-              title="Preferences"
+              
             >
               <SlidersHorizontal className="w-6 h-6 text-foreground" aria-hidden="true" />
             </button>
@@ -199,7 +199,7 @@ export default function ChildDashboard() {
               src="https://your-avatar-url.readyplayer.me/avatar"
               allow="camera *; microphone *"
               className="mx-auto w-40 h-40 sm:w-48 sm:h-48 rounded-full mb-8"
-              title="AI Avatar"
+              
             />
             <h2 className="text-2xl font-bold mb-4">Feeling stuck?</h2>
             <div className="space-y-3">
@@ -247,9 +247,9 @@ export default function ChildDashboard() {
                   <p className="text-xs text-muted-foreground">Conversation only</p>
                 </div>
                 <select 
-                  className="bg-card text-foreground border border-border rounded-md px-3 py-1 text-sm font-dm-sans focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="bg-card text-foreground border border-border rounded-md px-3 py-1 text-sm font-dm-sans focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   aria-label="Select conversation language"
-                  title="Select conversation language"
+                  
                 >
                   <option value="en">English</option>
                   <option value="ur">Urdu</option>
