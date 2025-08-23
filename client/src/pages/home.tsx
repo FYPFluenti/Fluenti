@@ -26,15 +26,7 @@ export default function Home() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Unauthorized",
-        description: "You are logged out. Logging in again...",
-        variant: "destructive",
-      });
-      setTimeout(() => {
-        window.location.href = "/api/login";
-      }, 500);
-      return;
+     
     }
   }, [isAuthenticated, isLoading, toast]);
 
@@ -49,9 +41,94 @@ export default function Home() {
     );
   }
 
-  if (!isAuthenticated || !user) {
-    return null;
-  }
+  // If not authenticated, show landing page
+if (!isAuthenticated) {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {/* Landing Page Header */}
+      <header className="bg-white/80 backdrop-blur shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
+                <MessageCircle className="text-white text-lg" />
+              </div>
+              <span className="text-2xl font-bold text-primary">Fluenti</span>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <Link href="/login">
+                <Button variant="outline">Login</Button>
+              </Link>
+              <Link href="/signup">
+                <Button>Sign Up</Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Landing Page Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center mb-16">
+          <h1 className="text-5xl font-bold text-gray-900 mb-6">
+            Welcome to <span className="text-primary">Fluenti</span>
+          </h1>
+          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+            Your AI-powered speech therapy companion. Improve your communication skills 
+            with personalized exercises, real-time feedback, and emotional support.
+          </p>
+          
+          <div className="flex justify-center space-x-4">
+            <Link href="/signup">
+              <Button size="lg" className="px-8 py-3">
+                Get Started Free
+              </Button>
+            </Link>
+            <Link href="/login">
+              <Button variant="outline" size="lg" className="px-8 py-3">
+                Sign In
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Features Grid */}
+        <div className="grid md:grid-cols-3 gap-8 mb-16">
+          <Card className="text-center p-6">
+            <div className="w-16 h-16 bg-primary rounded-full mx-auto mb-4 flex items-center justify-center">
+              <Mic className="text-white text-2xl" />
+            </div>
+            <h3 className="text-xl font-semibold mb-3">Speech Therapy</h3>
+            <p className="text-gray-600">
+              Interactive exercises designed to improve pronunciation and clarity
+            </p>
+          </Card>
+
+          <Card className="text-center p-6">
+            <div className="w-16 h-16 bg-secondary rounded-full mx-auto mb-4 flex items-center justify-center">
+              <Brain className="text-white text-2xl" />
+            </div>
+            <h3 className="text-xl font-semibold mb-3">AI Support</h3>
+            <p className="text-gray-600">
+              24/7 emotional support and guidance from our AI therapist
+            </p>
+          </Card>
+
+          <Card className="text-center p-6">
+            <div className="w-16 h-16 bg-accent rounded-full mx-auto mb-4 flex items-center justify-center">
+              <BarChart3 className="text-white text-2xl" />
+            </div>
+            <h3 className="text-xl font-semibold mb-3">Progress Tracking</h3>
+            <p className="text-gray-600">
+              Monitor your improvement with detailed analytics and insights
+            </p>
+          </Card>
+        </div>
+      </main>
+    </div>
+  );
+}
 
   const userType = (user as any)?.userType || 'child';
 
@@ -88,12 +165,14 @@ export default function Home() {
                   <p className="text-xs text-gray-500 capitalize">{userType}</p>
                 </div>
               </div>
-              
-              <Button variant="ghost" size="icon">
-                <Settings className="h-4 w-4" />
-              </Button>
-              
-              <LogoutButton variant="ghost" size="icon" />
+             <Link href="/settings">
+    <Button variant="ghost" size="icon">
+      <Settings className="h-4 w-4" />
+    </Button>
+  </Link>
+  
+  <LogoutButton />
+             
             </div>
           </div>
         </div>
@@ -121,6 +200,7 @@ export default function Home() {
           {userType === 'child' && (
             <>
               <Link href="/speech-therapy">
+        
                 <Card className="fluenti-card cursor-pointer hover:scale-105 transition-transform">
                   <CardContent className="p-6 text-center">
                     <div className="w-12 h-12 bg-primary rounded-lg mx-auto mb-4 flex items-center justify-center">
@@ -171,16 +251,17 @@ export default function Home() {
               </CardContent>
             </Card>
           </Link>
-
-          <Card className="fluenti-card">
-            <CardContent className="p-6 text-center">
-              <div className="w-12 h-12 bg-accent rounded-lg mx-auto mb-4 flex items-center justify-center">
-                <Trophy className="text-white" />
-              </div>
+          <Link href="/achievements">
+            <Card className="fluenti-card cursor-pointer hover:scale-105 transition-transform">
+              <CardContent className="p-6 text-center">
+                <div className="w-12 h-12 bg-accent rounded-lg mx-auto mb-4 flex items-center justify-center">
+                  <Trophy className="text-white" />
+                </div>
               <h3 className="font-semibold text-gray-900 mb-2">Achievements</h3>
               <p className="text-sm text-gray-600">View rewards</p>
             </CardContent>
           </Card>
+          </Link>
         </div>
 
         {/* Recent Activity & Stats */}
