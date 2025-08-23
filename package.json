@@ -5,6 +5,8 @@
   "license": "MIT",
   "scripts": {
     "dev": "tsx server/index.ts",
+     "dev:frontend": "vite --port 3000",
+      "dev:backend": "tsx server/index.ts --port 3001",
     "build": "npm run build:frontend && npm run build:backend",
     "build:frontend": "vite build",
     "build:netlify": "node netlify-debug.js && npm run build:frontend",
