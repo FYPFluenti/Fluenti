@@ -154,6 +154,7 @@ export default function ChildDashboard() {
             className="group w-10 h-10 flex items-center justify-center rounded-full transition"
             aria-haspopup="menu"
             aria-expanded={showUserMenu}
+            title="User menu"
           >
             <User
               className={`w-7 h-7 transition-colors duration-150 ${
