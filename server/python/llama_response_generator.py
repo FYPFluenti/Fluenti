@@ -204,15 +204,18 @@ class LlamaResponseGenerator:
                 "response": response,
                 "emotion": emotion,
                 "processing_time": processing_time,
-                "model": "llama-2-7b-chat",
+                "model": "dialo-gpt-medium",
                 "timestamp": datetime.now().isoformat()
             }
             
         except Exception as e:
             print(f"[DEBUG] Error in response generation: {e}", file=sys.stderr)
+            # Extract emotion and user_text for fallback
+            emotion = request_data.get("emotion", "neutral")
+            user_text = request_data.get("text", "")
             return {
                 "error": str(e),
-                "fallback_response": self.generate_fallback_response(request_data)
+                "response": self.get_emotion_specific_fallback(emotion, user_text)
             }
     
     def build_conversation_context(self, user_text, emotion, language, history):
@@ -412,7 +415,11 @@ def main():
         # Read request from stdin
         request_line = sys.stdin.readline().strip()
         if not request_line:
-            print(json.dumps({"error": "No input provided"}))
+            result = {
+                "error": "No input provided",
+                "response": "I'm here to support you. Please tell me how you're feeling."
+            }
+            print(json.dumps(result))
             return
         
         request_data = json.loads(request_line)
@@ -423,14 +430,19 @@ def main():
         # Generate response
         result = generator.generate_response(request_data)
         
+        # Ensure we always have a response field
+        if "response" not in result:
+            result["response"] = result.get("fallback_response", "I understand. Could you tell me more about what you're experiencing?")
+        
         # Output result
         print(json.dumps(result))
         
     except Exception as e:
-        print(json.dumps({
+        error_result = {
             "error": str(e),
-            "fallback_response": "I'm here to support you. Please tell me how you're feeling."
-        }))
+            "response": "I'm here to support you. Please tell me how you're feeling."
+        }
+        print(json.dumps(error_result))
     finally:
         # Clean up GPU memory
         if torch.cuda.is_available():
