@@ -147,8 +147,10 @@ async function runLlamaResponse(request: ResponseRequest): Promise<string> {
           const result = JSON.parse(stdout.trim());
           if (result.response) {
             resolve(result.response);
+          } else if (result.fallback_response) {
+            resolve(result.fallback_response);
           } else {
-            reject(new Error('No response in Python output'));
+            reject(new Error('No valid response in Python output'));
           }
         } catch (parseError) {
           reject(new Error(`Failed to parse Python response: ${parseError}`));
@@ -166,11 +168,11 @@ async function runLlamaResponse(request: ResponseRequest): Promise<string> {
     pythonProcess.stdin.write(JSON.stringify(requestData) + '\n');
     pythonProcess.stdin.end();
     
-    // Timeout after 50 seconds for model loading/processing (reduced from 2 minutes)
+    // Timeout after 90 seconds for model loading/processing (increased for first-time loading)
     setTimeout(() => {
       pythonProcess.kill();
       reject(new Error('Llama response generation timed out'));
-    }, 50000);
+    }, 90000);
   });
 }
 

@@ -92,7 +92,7 @@ except Exception as e:
       const timeout = setTimeout(() => {
         python.kill();
         reject('STT timeout - model loading or processing took too long');
-      }, 30000); // 30 second timeout
+      }, 60000); // 60 second timeout for first-time model loading
       
       python.stdout.on('data', (data) => { output += data.toString(); });
       python.stderr.on('data', (data) => { errorOutput += data.toString(); });
