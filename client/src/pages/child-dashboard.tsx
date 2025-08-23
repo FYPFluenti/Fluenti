@@ -7,6 +7,14 @@ import { motion } from "framer-motion";
 import { Star, ThumbsUp, Clock, Mic, MicOff } from "lucide-react";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import FluentiLogo from "@/components/FluentiLogo";
+import ReadyPlayerAvatar from "@/components/ReadyPlayerAvatar";
+
+// Demo avatars - choose your favorites!
+const avatarUrls = {
+  therapist: "https://models.readyplayer.me/638df8e1c92b456b8d55b56e.glb", // Friendly female
+  child: "https://models.readyplayer.me/638df8e1c92b456b8d55b56e.glb",     // Child-friendly
+  assistant: "https://models.readyplayer.me/638df8e1c92b456b8d55b56e.glb",  // Professional male
+};
 
 interface User {
   firstName?: string;
@@ -195,12 +203,14 @@ export default function ChildDashboard() {
             transition={{ duration: 0.5 }} 
             className="max-w-xl mx-auto"
           >
-            <iframe
-              src="https://your-avatar-url.readyplayer.me/avatar"
-              allow="camera *; microphone *"
-              className="mx-auto w-40 h-40 sm:w-48 sm:h-48 rounded-full mb-8"
-              
-            />
+            <div className="mx-auto mb-8">
+  <ReadyPlayerAvatar 
+  avatarUrl={avatarUrls.therapist}
+  size="large"
+  className="mx-auto mb-8"
+  environment="apartment"
+/>
+</div>
             <h2 className="text-2xl font-bold mb-4">Feeling stuck?</h2>
             <div className="space-y-3">
               <button 
@@ -364,12 +374,14 @@ export default function ChildDashboard() {
                 <div className="relative">
                   <div className="absolute inset-0 -m-3 rounded-full border-4 border-cyan-300/90 blur-[0.3px]" />
                   <div className="relative rounded-full overflow-hidden bg-[#1f2028] w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80">
-                    <iframe
-                      src="https://your-avatar-url.readyplayer.me/avatar"
-                      allow="camera *; microphone *"
-                      className="absolute inset-0 w-full h-full"
-                      title="AI Avatar"
-                    />
+                    <div className="absolute inset-0 w-full h-full">
+<ReadyPlayerAvatar 
+  avatarUrl={avatarUrls.therapist}
+  size="large"
+  className="absolute inset-0 w-full h-full"
+  environment="city"
+/>
+</div>
                   </div>
                 </div>
 
