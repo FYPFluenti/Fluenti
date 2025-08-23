@@ -30,17 +30,7 @@ export default function ChildDashboard() {
 
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const therapyRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
-  const motivationRef = useRef<HTMLDivElement>(null);
-
   const [hovered, setHovered] = useState<string | null>(null);
-
-  const scrollToRef = (ref: React.RefObject<HTMLDivElement>) => {
-    if (ref.current) {
-      ref.current.scrollIntoView({ behavior: "smooth" });
-    }
-  };
 
   const submitFeedback = () => {
     // TODO: send to your API
@@ -68,7 +58,7 @@ export default function ChildDashboard() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen font-sans flex bg-background text-foreground">
+    <div className="h-screen font-sans flex bg-background text-foreground overflow-hidden">
       {/* Sidebar */}
       <aside className="w-20 bg-background flex flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-50 border-r border-border">
         {/* Sidebar brand (logo with hover + tooltip) */}
@@ -101,42 +91,40 @@ export default function ChildDashboard() {
 
         {/* Sidebar Buttons */}
         {[
-          { ref: therapyRef, icon: Gamepad2, label: "games", id: "games", path: "/speech-therapy" },
-          { ref: progressRef, icon: LineChart, label: "progress", id: "progress", path: "/progress-dashboard" },
-          { ref: motivationRef, icon: Smile, label: "feedback", id: "feedback" },
-        ].map(({ ref, icon: Icon, label, id, path }) => (
-          <div
-            key={id}
-            onMouseEnter={() => setHovered(id)}
-            onMouseLeave={() => setHovered(null)}
-            className="relative group"
-          >
-            <button
-              onClick={() =>
-                id === "feedback"
-                  ? setShowFeedback(true)
-                  : path
-                    ? setLocation(path)
-                    : scrollToRef(ref)
-              }
-              className="w-10 h-10 flex items-center justify-center rounded-xl transition group"
-              aria-label={label}
-            >
-              <Icon className="text-foreground w-7 h-7 transition-colors duration-150 group-hover:text-muted-foreground" />
-            </button>
+  { icon: Gamepad2, label: "games", id: "games", path: "/speech-therapy" },
+  { icon: LineChart, label: "progress", id: "progress", path: "/progress-dashboard" },
+  { icon: Smile, label: "feedback", id: "feedback" },
+].map(({ icon: Icon, label, id, path }) => (
+  <div
+    key={id}
+    onMouseEnter={() => setHovered(id)}
+    onMouseLeave={() => setHovered(null)}
+    className="relative group"
+  >
+    <button
+      onClick={() =>
+        id === "feedback"
+          ? setShowFeedback(true)
+          : path && setLocation(path)
+      }
+      className="w-10 h-10 flex items-center justify-center rounded-xl transition group"
+      aria-label={label}
+    >
+      <Icon className="text-foreground w-7 h-7 transition-colors duration-150 group-hover:text-muted-foreground" />
+    </button>
 
-            {hovered === id && (
-              <motion.div
-                initial={{ opacity: 0, x: 5 }}
-                animate={{ opacity: 1, x: 12 }}
-                exit={{ opacity: 0, x: 5 }}
-                className="absolute left-[38px] bottom-0 bg-popover text-popover-foreground px-4 py-2 rounded-lg shadow-md border border-border z-10 w-30 space-y-1"
-              >
-                {label}
-              </motion.div>
-            )}
-          </div>
-        ))}
+    {hovered === id && (
+      <motion.div
+        initial={{ opacity: 0, x: 5 }}
+        animate={{ opacity: 1, x: 12 }}
+        exit={{ opacity: 0, x: 5 }}
+        className="absolute left-[38px] bottom-0 bg-popover text-popover-foreground px-4 py-2 rounded-lg shadow-md border border-border z-10 w-30 space-y-1"
+      >
+        {label}
+      </motion.div>
+    )}
+  </div>
+))}
 
         <div className="flex-1" />
 
@@ -175,15 +163,14 @@ export default function ChildDashboard() {
                 <span className="text-foreground font-medium">Settings</span>
               </button>
               <div className="border-t border-border my-1" />
-              <LogoutButton className="w-full px-5 py-3 text-base text-left hover:bg-muted hover:brightness-90 text-foreground font-medium flex items-center gap-3 rounded-lg" />
-            </div>
+<LogoutButton className="w-full px-5 py-3 text-base text-left hover:bg-gray-200 hover:text-black dark:hover:bg-gray-700 dark:hover:text-white bg-orange-500 text-white font-medium flex items-center gap-3 rounded-lg" />            </div>
           )}
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="ml-20 px-6 pb-24 w-full">
-        <header className="flex justify-between items-center py-6">
+      <main className="ml-20 px-6 w-full h-screen overflow-hidden flex flex-col">
+        <header className="flex justify-between items-center py-6 flex-shrink-0">
           <div />
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
@@ -201,7 +188,7 @@ export default function ChildDashboard() {
           </div>
         </header>
 
-        <section ref={therapyRef} className="text-center py-10">
+        <section className="text-center py-10 flex-1 flex items-center justify-center">
           <motion.div 
             initial={{ opacity: 0, y: 40 }} 
             animate={{ opacity: 1, y: 0 }} 
