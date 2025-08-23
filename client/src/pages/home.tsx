@@ -8,6 +8,7 @@ import { LogoutButton } from "@/components/auth/LogoutButton";
 import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import FluentiLogo from "@/components/FluentiLogo";
+import DarkModeToggle from "@/components/DarkModeToggle";
 import { 
   MessageCircle, 
   Users, 
@@ -22,7 +23,8 @@ import {
   User,
   Gamepad2,
   LineChart,
-  Smile
+  Smile,
+  SlidersHorizontal
 } from "lucide-react";
 
 export default function Home() {
@@ -35,6 +37,7 @@ export default function Home() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [hovered, setHovered] = useState<string | null>(null);
+  const [showPreferences, setShowPreferences] = useState(false);
   
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -43,7 +46,22 @@ export default function Home() {
     setShowFeedback(false);
     setFeedback("");
   };
+useEffect(() => {
+  if (!isLoading && !isAuthenticated) {
+    // Handle redirect if needed
+  }
+}, [isAuthenticated, isLoading, toast]);
 
+if (isLoading) {
+  return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    </div>
+  );
+}
   
   // If not authenticated, show landing page
 if (!isAuthenticated) {
@@ -72,8 +90,8 @@ if (!isAuthenticated) {
         </div>
       </header>
 
-      {/* Landing Page Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+     {/* Landing Page Content */}
+<main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="text-center mb-16">
           <h1 className="text-5xl font-bold text-gray-900 mb-6">
             Welcome to <span className="text-primary">Fluenti</span>
@@ -171,7 +189,7 @@ return (
       {/* Sidebar Buttons */}
       {[
         { icon: Gamepad2, label: "games", id: "games", path: "/speech-therapy" },
-        { icon: LineChart, label: "progress", id: "progress", path: "/progress" },
+        { icon: LineChart, label: "progress", id: "progress", path: "/progress-dashboard" },
         { icon: Smile, label: "feedback", id: "feedback" },
       ].map(({ icon: Icon, label, id, path }) => (
         <div
@@ -248,7 +266,24 @@ return (
     </aside>
 
     {/* Main Content */}
-    <main className="ml-20 px-6 w-full h-screen overflow-hidden flex flex-col">
+    {/* Main Content */}
+<main className="ml-20 px-6 w-full h-screen overflow-hidden flex flex-col">
+  <header className="flex justify-between items-center py-6 flex-shrink-0">
+    <div />
+    <div className="flex items-center gap-6">
+      <div className="flex items-center gap-2">
+        <span className="text-lg font-semibold">Dark Mode</span>
+        <DarkModeToggle />
+      </div>
+      <button
+        onClick={() => setShowPreferences(!showPreferences)}
+        className="p-2 rounded-full hover:bg-muted transition"
+        aria-label="Toggle preferences"
+      >
+        <SlidersHorizontal className="w-6 h-6 text-foreground" aria-hidden="true" />
+      </button>
+    </div>
+  </header>
       {/* Welcome Section */}
       <div className="py-8 flex-shrink-0">
         <h1 className="text-3xl font-bold text-foreground mb-2">
@@ -310,7 +345,7 @@ return (
             </Link>
           )}
 
-          <Link href="/progress">
+          <Link href="/progress-dashboard">
             <Card className="cursor-pointer hover:scale-105 transition-transform">
               <CardContent className="p-6 text-center">
                 <div className="w-12 h-12 bg-indigo-600 rounded-lg mx-auto mb-4 flex items-center justify-center">
@@ -446,6 +481,37 @@ return (
         </Card>
       </div>
     </main>
+{/* Preferences Modal */}
+{showPreferences && (
+  <motion.div
+    initial={{ opacity: 0, scale: 0.95 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.95 }}
+    className="fixed top-20 right-10 w-[360px] bg-popover border border-border rounded-xl shadow-xl p-6 space-y-4 z-50"
+  >
+    <div>
+      <h3 className="text-lg font-semibold">Preferences</h3>
+      <p className="text-sm text-muted-foreground">Set how the assistant works for you</p>
+    </div>
+
+    <div className="pt-4 border-t border-border space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h4 className="text-sm font-medium">Language</h4>
+          <p className="text-xs text-muted-foreground">Conversation only</p>
+        </div>
+        <select 
+          className="bg-card text-foreground border border-border rounded-md px-3 py-1 text-sm font-dm-sans focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 hover:bg-orange-500 hover:text-white hover:border-orange-500 transition-colors"
+          aria-label="Select conversation language"
+        >
+          <option value="en">English</option>
+          <option value="ur">Urdu</option>
+        </select>
+      </div>
+    </div>
+  </motion.div>
+)}
+
 
     {/* Feedback Modal */}
     {showFeedback && (
@@ -479,6 +545,7 @@ return (
         </div>
       </div>
     )}
+    
   </div>
 );
 }
