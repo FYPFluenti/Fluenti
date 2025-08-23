@@ -23,9 +23,12 @@ import { generateConversationalResponse, type ConversationHistory } from "./serv
 // Enhanced Phase 4+: Import enhanced conversational therapy AI
 import { 
   generateEnhancedConversationalResponse, 
+  generateSuperiorTherapeuticResponse,
   type EnhancedResponseRequest, 
   type EnhancedResponseResult 
 } from "./services/enhancedResponseService";
+// Import persistent therapeutic service to initialize the server
+import "./services/therapeuticServicePersistent";
 import { AuthService } from "./auth";
 
 
@@ -494,6 +497,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // NEW: Superior Therapeutic Chat Endpoint with Advanced Quality Metrics
+  app.post('/api/chat/therapeutic-superior', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { sessionId, message, emotions = [], context = [], language = 'en', sessionContext = {} } = req.body;
+      const userId = req.user?.claims?.sub;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      if (!message || !sessionId) {
+        return res.status(400).json({ message: "Message and sessionId are required" });
+      }
+
+      console.log('[Superior Therapeutic API] Processing request for user:', userId);
+      console.log('[Superior Therapeutic API] Message:', message);
+      console.log('[Superior Therapeutic API] Emotions detected:', emotions);
+
+      // Generate superior therapeutic response with quality metrics
+      const therapeuticResult = await generateSuperiorTherapeuticResponse(
+        message,
+        context,
+        emotions,
+        sessionContext,
+        userId
+      );
+
+      // Save user message to session
+      await mongoStorage.addMessageToEmotionalSession(sessionId, {
+        role: 'user',
+        content: message,
+        emotions: emotions,
+        timestamp: new Date().toISOString(),
+        language: language
+      } as any);
+
+      // Save AI response with quality metrics
+      await mongoStorage.addMessageToEmotionalSession(sessionId, {
+        role: 'assistant',
+        content: therapeuticResult.response,
+        model_used: therapeuticResult.model_used,
+        quality: therapeuticResult.quality,
+        confidence: therapeuticResult.confidence,
+        empathy_score: therapeuticResult.empathy_score,
+        therapeutic_level: therapeuticResult.therapeutic_level,
+        emotion_alignment: therapeuticResult.emotion_alignment,
+        context_relevance: therapeuticResult.context_relevance,
+        fallback_used: therapeuticResult.fallback_used,
+        session_insights: therapeuticResult.session_insights,
+        timestamp: therapeuticResult.timestamp
+      } as any);
+
+      console.log('[Superior Therapeutic API] Response generated with quality:', therapeuticResult.quality);
+      console.log('[Superior Therapeutic API] Empathy score:', therapeuticResult.empathy_score);
+
+      // Return comprehensive response with quality indicators
+      res.json({
+        response: therapeuticResult.response,
+        quality_metrics: {
+          overall_quality: therapeuticResult.quality,
+          confidence: therapeuticResult.confidence,
+          empathy_score: therapeuticResult.empathy_score,
+          therapeutic_level: therapeuticResult.therapeutic_level,
+          emotion_alignment: therapeuticResult.emotion_alignment,
+          context_relevance: therapeuticResult.context_relevance
+        },
+        model_info: {
+          model_used: therapeuticResult.model_used,
+          fallback_used: therapeuticResult.fallback_used,
+          timestamp: therapeuticResult.timestamp
+        },
+        session_insights: therapeuticResult.session_insights,
+        status: 'success'
+      });
+
+    } catch (error) {
+      console.error('[Superior Therapeutic API] Error:', error);
+      res.status(500).json({ 
+        message: "Failed to generate superior therapeutic response",
+        error: error instanceof Error ? error.message : 'Unknown error',
+        status: 'error'
+      });
+    }
+  });
+
   // Temporary test endpoint for Phase 1 testing (no auth required)
   app.post('/api/test-emotional-support', async (req: Request, res: Response) => {
     try {
@@ -677,107 +765,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
         emotionMethod = 'keyword-fallback';
         console.log(`🔄 Fallback emotion: ${detectedEmotion} (confidence: ${confidence})`);
       }
-      // Generate appropriate response based on detected emotion (using raw labels)
+      
+      // **UPDATED**: Use Superior Therapeutic Model for response generation
+      console.log('🧠 Generating response using Superior Therapeutic Model...');
+      
       let chatResponse = '';
-      switch (detectedEmotion) {
-        // Stress/Anxiety related
-        case 'stress':
-        case 'anxiety':
-        case 'nervousness':
-          chatResponse = "I can sense you might be feeling stressed or anxious. That's completely understandable. Take a deep breath with me. What's been weighing on your mind?";
-          break;
-          
-        // Sadness related
-        case 'sadness':
-        case 'disappointment':
-        case 'grief':
-          chatResponse = "I hear that you're going through a difficult time. It's okay to feel sad or disappointed sometimes. Would you like to share what's been troubling you?";
-          break;
-          
-        // Anger related
-        case 'anger':
-        case 'annoyance':
-        case 'frustration':
-          chatResponse = "I understand you're feeling frustrated or angry. Those feelings are completely valid. What's been causing these intense feelings?";
-          break;
-          
-        // Fear related
-        case 'fear':
-        case 'nervousness':
-          chatResponse = "I notice you might be feeling scared or worried. That can be really overwhelming. Let's take this one step at a time. What's been frightening you?";
-          break;
-          
-        // Joy/Positive related
-        case 'joy':
-        case 'excitement':
-        case 'amusement':
-        case 'gratitude':
-        case 'relief':
-        case 'pride':
-        case 'optimism':
-          chatResponse = "It's wonderful to hear you're feeling positive! I'm glad you're having a good moment. What's been bringing you happiness?";
-          break;
-          
-        // Social emotions
-        case 'love':
-        case 'caring':
-        case 'admiration':
-          chatResponse = "I can sense the warmth and care in your words. It's beautiful to see such positive emotions. Tell me more about what's inspiring these feelings.";
-          break;
-          
-        // Approval/Agreement
-        case 'approval':
-        case 'desire':
-          chatResponse = "I can hear that you're feeling positive about something. That's wonderful! What's been going well for you?";
-          break;
-          
-        // Confusion/Curiosity
-        case 'confusion':
-        case 'curiosity':
-        case 'realization':
-          chatResponse = "It sounds like you're processing some thoughts or discoveries. I'm here to help you work through whatever you're thinking about.";
-          break;
-          
-        // Embarrassment/Shame
-        case 'embarrassment':
-        case 'remorse':
-          chatResponse = "I can sense you might be feeling uncomfortable about something. Those feelings are completely normal and valid. Would you like to talk about it?";
-          break;
-          
-        // Surprise
-        case 'surprise':
-          chatResponse = "Something seems to have caught you off guard. Would you like to tell me more about what's been surprising you?";
-          break;
-          
-        // Disgust
-        case 'disgust':
-          chatResponse = "I can sense you're feeling uncomfortable about something. Those feelings are valid. What's been bothering you?";
-          break;
-          
-        // Disapproval
-        case 'disapproval':
-          chatResponse = "I can hear that you disagree with something. It's important to trust your instincts. What's been concerning you?";
-          break;
-          
-        // Neutral/Default
-        case 'neutral':
-        default:
-          chatResponse = "Thank you for sharing that with me. I'm here to listen and support you. How are you feeling right now?";
+      let qualityMetrics = {};
+      let modelInfo = {};
+      let sessionInsights = {};
+      
+      try {
+        // Generate superior therapeutic response
+        const therapeuticResult = await generateSuperiorTherapeuticResponse(
+          processedMessage,
+          [], // context (empty for new sessions)
+          [detectedEmotion], // emotions detected
+          { sessionId: sessionId || 'test-session', mode: 'chat-text' },
+          'test-user'
+        );
+        
+        chatResponse = therapeuticResult.response;
+        qualityMetrics = {
+          overall_quality: therapeuticResult.quality,
+          confidence: therapeuticResult.confidence,
+          empathy_score: therapeuticResult.empathy_score,
+          therapeutic_level: therapeuticResult.therapeutic_level,
+          emotion_alignment: therapeuticResult.emotion_alignment,
+          context_relevance: therapeuticResult.context_relevance
+        };
+        modelInfo = {
+          model_used: therapeuticResult.model_used,
+          fallback_used: therapeuticResult.fallback_used,
+          timestamp: therapeuticResult.timestamp
+        };
+        sessionInsights = therapeuticResult.session_insights;
+        
+        console.log('✅ Superior therapeutic response generated successfully');
+        console.log('🎯 Quality score:', therapeuticResult.quality);
+        console.log('❤️ Empathy score:', therapeuticResult.empathy_score);
+        
+      } catch (error) {
+        console.error('❌ Superior therapeutic model failed, using fallback:', error);
+        
+        // Fallback to basic emotion-based responses (original logic)
+        switch (detectedEmotion) {
+          case 'stress':
+          case 'anxiety':
+          case 'nervousness':
+            chatResponse = "I can sense you might be feeling stressed or anxious. That's completely understandable. Take a deep breath with me. What's been weighing on your mind?";
+            break;
+          case 'sadness':
+          case 'disappointment':
+          case 'grief':
+            chatResponse = "I hear that you're going through a difficult time. It's okay to feel sad or disappointed sometimes. Would you like to share what's been troubling you?";
+            break;
+          case 'anger':
+          case 'annoyance':
+          case 'frustration':
+            chatResponse = "I understand you're feeling frustrated or angry. Those feelings are completely valid. What's been causing these intense feelings?";
+            break;
+          default:
+            chatResponse = "Thank you for sharing that with me. I'm here to listen and support you. How are you feeling right now?";
+        }
+        
+        modelInfo = { model_used: 'basic-fallback', fallback_used: true };
       }
       
-      // Return chat response
+      // Return enhanced chat response with therapeutic model data
       res.json({
         success: true,
         userMessage: processedMessage,
         detectedEmotion: detectedEmotion,
         confidence: confidence,
         chatResponse: chatResponse,
+        
+        // **NEW**: Superior therapeutic model information
+        quality_metrics: qualityMetrics,
+        model_info: modelInfo,
+        session_insights: sessionInsights,
+        
+        // Original fields
         timestamp: new Date().toISOString(),
         sessionId: sessionId || 'test-session',
         language: language || 'en',
-        mode: 'chat-text',
-        sttUsed: false,  // Confirm no STT was used
-        emotionMethod: emotionMethod  // Indicate which detection method was used
+        mode: 'chat-text-therapeutic', // Updated mode name
+        sttUsed: false,
+        emotionMethod: emotionMethod
       });
       
     } catch (error) {
@@ -785,6 +858,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Unknown error occurred',
         mode: 'chat-text'
+      });
+    }
+  });
+
+  // Test endpoint for Superior Therapeutic Model (no auth required)
+  app.post('/api/test-superior-therapeutic', async (req: Request, res: Response) => {
+    try {
+      const { message, emotions = [], context = [], language = 'en', sessionContext = {} } = req.body;
+      
+      console.log('\n=== SUPERIOR THERAPEUTIC TEST ===');
+      console.log('Received message:', message);
+      console.log('Emotions:', emotions);
+      console.log('Context length:', context.length);
+      console.log('Language:', language);
+      
+      // Validate input
+      if (!message || message.trim().length === 0) {
+        return res.status(400).json({ 
+          error: 'No message provided',
+          received: message 
+        });
+      }
+
+      // Generate superior therapeutic response
+      const therapeuticResult = await generateSuperiorTherapeuticResponse(
+        message,
+        context,
+        emotions,
+        sessionContext,
+        'test-user'
+      );
+
+      console.log('✅ Superior therapeutic response generated');
+      console.log('Response preview:', therapeuticResult.response.substring(0, 100) + '...');
+      console.log('Quality metrics:', {
+        quality: therapeuticResult.quality,
+        empathy_score: therapeuticResult.empathy_score,
+        therapeutic_level: therapeuticResult.therapeutic_level
+      });
+
+      // Return comprehensive test response
+      res.json({
+        message: 'Superior therapeutic response generated successfully',
+        response: therapeuticResult.response,
+        quality_metrics: {
+          overall_quality: therapeuticResult.quality,
+          confidence: therapeuticResult.confidence,
+          empathy_score: therapeuticResult.empathy_score,
+          therapeutic_level: therapeuticResult.therapeutic_level,
+          emotion_alignment: therapeuticResult.emotion_alignment,
+          context_relevance: therapeuticResult.context_relevance
+        },
+        model_info: {
+          model_used: therapeuticResult.model_used,
+          fallback_used: therapeuticResult.fallback_used,
+          timestamp: therapeuticResult.timestamp
+        },
+        session_insights: therapeuticResult.session_insights,
+        test_info: {
+          endpoint: 'test-superior-therapeutic',
+          input_message_length: message.length,
+          emotions_detected: emotions,
+          context_items: context.length,
+          language: language
+        },
+        status: 'success'
+      });
+
+    } catch (error) {
+      console.error('Superior therapeutic test endpoint error:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
+        mode: 'superior-therapeutic-test',
+        details: {
+          stack: error instanceof Error ? error.stack : undefined,
+          message: error instanceof Error ? error.message : 'Unknown error'
+        }
       });
     }
   });
