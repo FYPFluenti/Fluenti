@@ -7,13 +7,13 @@ import { motion } from "framer-motion";
 import { Star, ThumbsUp, Clock, Mic, MicOff } from "lucide-react";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import FluentiLogo from "@/components/FluentiLogo";
-import ReadyPlayerAvatar from "@/components/ReadyPlayerAvatar";
+import ModelViewerAvatar from "@/components/ModelViewerAvatar";
 
 // Demo avatars - choose your favorites!
 const avatarUrls = {
-  therapist: "https://models.readyplayer.me/638df8e1c92b456b8d55b56e.glb", // Friendly female
-  child: "https://models.readyplayer.me/638df8e1c92b456b8d55b56e.glb",     // Child-friendly
-  assistant: "https://models.readyplayer.me/638df8e1c92b456b8d55b56e.glb",  // Professional male
+  therapist: "https://models.readyplayer.me/68ab4a2c3f2023411197a0fa.glb", // Friendly female
+  professional: "https://models.readyplayer.me/68ab4ab5e05b84c2efb26767.glb",     // Child-friendly
+  casual: "https://models.readyplayer.me/68aa261a75e83eeb00564816.glb",  // Professional male
 };
 
 interface User {
@@ -204,11 +204,12 @@ export default function ChildDashboard() {
             className="max-w-xl mx-auto"
           >
             <div className="mx-auto mb-8">
-  <ReadyPlayerAvatar 
-  avatarUrl={avatarUrls.therapist}
-  size="large"
-  className="mx-auto mb-8"
-  environment="apartment"
+   
+  <ModelViewerAvatar
+    avatarUrl={avatarUrls.therapist}
+    size="large"
+    className="mx-auto mb-8"
+    //animate={true}
 />
 </div>
             <h2 className="text-2xl font-bold mb-4">Feeling stuck?</h2>
@@ -375,11 +376,12 @@ export default function ChildDashboard() {
                   <div className="absolute inset-0 -m-3 rounded-full border-4 border-cyan-300/90 blur-[0.3px]" />
                   <div className="relative rounded-full overflow-hidden bg-[#1f2028] w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80">
                     <div className="absolute inset-0 w-full h-full">
-<ReadyPlayerAvatar 
-  avatarUrl={avatarUrls.therapist}
+
+<ModelViewerAvatar
+  avatarUrl={avatarUrls.professional}
   size="large"
   className="absolute inset-0 w-full h-full"
-  environment="city"
+  //animate={true}
 />
 </div>
                   </div>
