@@ -35,17 +35,15 @@ class EmotionDetector:
         self.text_model = None
         self.voice_model = "fast_spectral"  # Use fast spectral analysis by default
         
-        if _DEVICE_CACHE is None:
-            # Force GPU usage if available, otherwise fallback to CPU
-            if torch.cuda.is_available():
-                _DEVICE_CACHE = 0  # Use first GPU
-                print(f"[DEBUG] GPU detected: {torch.cuda.get_device_name(0)}", file=sys.stderr)
-            else:
-                _DEVICE_CACHE = -1  # Use CPU
-                print("[DEBUG] No GPU available, using CPU", file=sys.stderr)
+        # FORCE CPU for emotion detection (training compatibility)
+        _DEVICE_CACHE = -1  # Force CPU
+        print("[DEBUG] Using CPU (forced for training compatibility)", file=sys.stderr)
+        if torch.cuda.is_available():
+            print(f"[DEBUG] GPU available ({torch.cuda.get_device_name(0)}) but using CPU", file=sys.stderr)
+            
         self.device = _DEVICE_CACHE
         
-        print(f"Phase 3 OPTIMIZED Emotion Detection - Using device: {'GPU' if self.device == 0 else 'CPU'}", file=sys.stderr)
+        print(f"Phase 3 OPTIMIZED Emotion Detection - Using device: CPU", file=sys.stderr)
     
     def load_text_model(self):
         """Load RoBERTa GoEmotions model for text emotion detection - OPTIMIZED"""

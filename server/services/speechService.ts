@@ -32,13 +32,15 @@ if ffmpeg_path not in os.environ.get('PATH', ''):
     os.environ['PATH'] = ffmpeg_path + os.pathsep + os.environ.get('PATH', '')
 
 try:
-    # Check if CUDA is available and use GPU if possible
-    device = 0 if torch.cuda.is_available() else -1
-    torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+    # Force CPU usage for training compatibility
+    device = -1  # Force CPU
+    torch_dtype = torch.float32  # Use float32 for CPU
     
-    print(f"Using device: {'GPU (CUDA)' if device == 0 else 'CPU'}", file=sys.stderr)
+    print(f"Using device: CPU (forced for training compatibility)", file=sys.stderr)
+    if torch.cuda.is_available():
+        print(f"GPU available but using CPU for stability", file=sys.stderr)
     
-    # Create pipeline with correct parameters (remove unsupported ones)
+    # Create pipeline with CPU settings
     pipe = pipeline(
         "automatic-speech-recognition", 
         model="${model}",
@@ -46,7 +48,7 @@ try:
         torch_dtype=torch_dtype
     )
     
-    print("Model loaded successfully", file=sys.stderr)
+    print("Model loaded successfully on CPU", file=sys.stderr)
     
     # Process audio file
     result = pipe("${tempPath.replace(/\\/g, '\\\\')}")

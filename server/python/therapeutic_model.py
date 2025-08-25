@@ -20,8 +20,9 @@ class FluentSuperiorTherapeuticModel:
         self.model = None
         self.tokenizer = None
         self.model_path = model_path
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        print(f"🖥️ Using device: {self.device}", file=sys.stderr)
+        # FORCE CPU for therapeutic model training and inference
+        self.device = torch.device('cpu')
+        print(f"� Using device: {self.device} (forced CPU for training compatibility)", file=sys.stderr)
         print(f"📁 Model path: {self.model_path}", file=sys.stderr)
         
     def load_model(self):
@@ -44,12 +45,12 @@ class FluentSuperiorTherapeuticModel:
                         cache_dir="E:/Fluenti/models/hf_cache"
                     )
                     
-                    # Load base model with aggressive memory optimization for RTX 2050
-                    print(f"⚡ Using CPU-first loading to save GPU memory", file=sys.stderr)
+                    # Load base model with CPU-only configuration
+                    print(f"💻 Using CPU-only loading for training compatibility", file=sys.stderr)
                     base_model = AutoModelForCausalLM.from_pretrained(
                         base_model_name,
-                        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                        device_map=None,  # Load to CPU first
+                        torch_dtype=torch.float32,  # Use float32 for CPU
+                        device_map=None,  # Keep on CPU
                         low_cpu_mem_usage=True,
                         cache_dir="E:/Fluenti/models/hf_cache",
                         use_safetensors=True
@@ -65,12 +66,12 @@ class FluentSuperiorTherapeuticModel:
                     
                 else:
                     print(f"📦 Loading full fine-tuned model", file=sys.stderr)
-                    # Load as full model
+                    # Load as full model on CPU only
                     self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
                     self.model = AutoModelForCausalLM.from_pretrained(
                         self.model_path,
-                        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                        device_map="auto" if torch.cuda.is_available() else None,
+                        torch_dtype=torch.float32,  # Use float32 for CPU
+                        device_map=None,  # No device mapping - stay on CPU
                         low_cpu_mem_usage=True
                     )
                 
@@ -79,13 +80,9 @@ class FluentSuperiorTherapeuticModel:
                     self.tokenizer.pad_token = self.tokenizer.eos_token
                     print(f"🔧 Set pad_token to eos_token", file=sys.stderr)
                 
-                # Move model to device with memory management
-                if torch.cuda.is_available():
-                    print(f"🎮 Moving model to GPU with memory optimization", file=sys.stderr)
-                    self.model = self.model.to(self.device)
-                else:
-                    self.model = self.model.to(self.device)
-                
+                # Move model to CPU (forced)
+                print(f"💻 Moving model to CPU for training compatibility", file=sys.stderr)
+                self.model = self.model.to('cpu')
                 self.model.eval()
                 load_time = time.time() - start_time
                 print(f"✅ Superior model loaded in {load_time:.2f}s", file=sys.stderr)
@@ -141,26 +138,23 @@ class FluentSuperiorTherapeuticModel:
                 prompt, 
                 return_tensors="pt", 
                 truncation=True, 
-                max_length=250,  # Reduced from 300 for memory optimization
+                max_length=400,  # Increased for CPU (no memory constraints)
                 padding=False
-            ).to(self.device)
+            ).to('cpu')  # Force CPU usage
             
             print(f"🔤 Input tokens: {inputs['input_ids'].shape[1]}", file=sys.stderr)
             
-            # Generate with superior quality settings
+            # Generate with CPU-optimized settings
             with torch.no_grad():
-                # Clear cache and optimize memory before generation
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
-                    torch.cuda.synchronize()
+                # CPU doesn't need memory cache clearing
                 
-                # Use smaller batch size and shorter sequences for RTX 2050
+                # Use better quality settings for CPU (no memory limits)
                 outputs = self.model.generate(
                     **inputs,
-                    max_new_tokens=80,     # Reduced from 120 for memory
+                    max_new_tokens=120,    # Increased for CPU
                     temperature=0.7,       # Balanced creativity
                     top_p=0.9,            # High quality filtering
-                    top_k=40,             # Reduced from 50 for memory
+                    top_k=50,             # Increased for better quality
                     do_sample=True,
                     repetition_penalty=1.1,
                     no_repeat_ngram_size=3,
@@ -169,10 +163,6 @@ class FluentSuperiorTherapeuticModel:
                     early_stopping=True,
                     use_cache=True
                 )
-                
-                # Clear cache immediately after generation
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
             
             # Decode response
             full_response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
