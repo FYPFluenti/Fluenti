@@ -30,7 +30,16 @@ class EnhancedEmotionDetector:
     def __init__(self):
         self.processor: Optional[Wav2Vec2Processor] = None
         self.model: Optional[Wav2Vec2ForSequenceClassification] = None
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        # FORCE CPU for IEMOCAP emotion detection (training compatibility)
+        self.device = torch.device("cpu")
+        
+        if torch.cuda.is_available():
+            gpu_name = torch.cuda.get_device_name(0)
+            logger.info(f"GPU available ({gpu_name}) but using CPU for training compatibility")
+        else:
+            logger.info("Using CPU for emotion detection")
+            
+        logger.info(f"IEMOCAP device: {self.device}")
         
         # Comprehensive emotion mapping based on audio characteristics
         # This replaces hardcoded emotions with dynamic analysis

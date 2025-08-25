@@ -34,13 +34,9 @@ class LlamaResponseGenerator:
         self.model: Optional[Any] = None
         self.tokenizer: Optional[Any] = None
         
-        if _DEVICE_CACHE is None:
-            if torch.cuda.is_available():
-                _DEVICE_CACHE = "cuda"
-                print(f"[DEBUG] 🚀 Using GPU: {torch.cuda.get_device_name(0)}", file=sys.stderr)
-            else:
-                _DEVICE_CACHE = "cpu"
-                print("[DEBUG] 💻 Using CPU device", file=sys.stderr)
+        # FORCE CPU for training compatibility
+        _DEVICE_CACHE = "cpu"
+        print("[DEBUG] � Using CPU device (forced for training compatibility)", file=sys.stderr)
         self.device = _DEVICE_CACHE
         
         print(f"Phase 4 Llama: Initializing on {self.device.upper()}", file=sys.stderr)
@@ -60,76 +56,35 @@ class LlamaResponseGenerator:
             try:
                 print("[DEBUG] Loading Llama-2-7b-chat-hf (first time, ~13GB download)...", file=sys.stderr)
                 
-                # 8-bit configuration for RTX 2050 optimization
-                if self.device == "cuda":
-                    quantization_config = BitsAndBytesConfig(
-                        load_in_8bit=True,
-                        llm_int8_threshold=6.0,
-                        llm_int8_has_fp16_weight=False,
-                        llm_int8_enable_fp32_cpu_offload=True
-                    )
-                    device_map = "auto"
-                    torch_dtype = torch.float16
-                else:
-                    quantization_config = None
-                    device_map = None
-                    torch_dtype = torch.float32
+                # Since we're forcing CPU, use CPU settings
+                quantization_config = None
+                device_map = None
+                torch_dtype = torch.float32
                 
-                # Load tokenizer - Using a smaller, more stable model
-                model_name = "microsoft/DialoGPT-medium"  # Smaller model for stability
+                # Load tokenizer - Using DialoGPT-medium for stability on CPU
+                model_name = "microsoft/DialoGPT-medium"
                 
-                try:
-                    self.tokenizer = AutoTokenizer.from_pretrained(
-                        model_name,
-                        trust_remote_code=True,
-                        cache_dir="E:/Fluenti/models/hf_cache"
-                    )
-                    
-                    # Add padding token if missing
-                    if (self.tokenizer is not None and 
-                        hasattr(self.tokenizer, 'pad_token') and 
-                        self.tokenizer.pad_token is None):
-                        if hasattr(self.tokenizer, 'eos_token'):
-                            self.tokenizer.pad_token = self.tokenizer.eos_token
-                    
-                    # Load model with aggressive memory optimization
-                    self.model = AutoModelForCausalLM.from_pretrained(
-                        model_name,
-                        quantization_config=quantization_config,
-                        device_map=device_map,
-                        trust_remote_code=True,
-                        cache_dir="E:/Fluenti/models/hf_cache",
-                        torch_dtype=torch_dtype,
-                        low_cpu_mem_usage=True,
-                        use_safetensors=True,  # Force use of safetensors format
-                        max_memory={0: "3GB"} if self.device == "cuda" else None  # Limit GPU memory
-                    )
-                    
-                except Exception as model_error:
-                    print(f"[DEBUG] ⚠️ GPU loading failed, falling back to CPU: {model_error}", file=sys.stderr)
-                    # Force CPU fallback on any error
-                    self.device = "cpu"
-                    quantization_config = None
-                    device_map = None
-                    torch_dtype = torch.float32
-                    
-                    self.tokenizer = AutoTokenizer.from_pretrained(
-                        model_name,
-                        cache_dir="E:/Fluenti/models/hf_cache"
-                    )
-                    
-                    if (self.tokenizer is not None and 
-                        hasattr(self.tokenizer, 'pad_token') and 
-                        self.tokenizer.pad_token is None):
-                        if hasattr(self.tokenizer, 'eos_token'):
-                            self.tokenizer.pad_token = self.tokenizer.eos_token
-                    
-                    self.model = AutoModelForCausalLM.from_pretrained(
-                        model_name,
-                        cache_dir="E:/Fluenti/models/hf_cache",
-                        torch_dtype=torch_dtype,
-                        low_cpu_mem_usage=True
-                    )
+                print(f"[DEBUG] 💻 Loading on CPU: {model_name}", file=sys.stderr)
+                
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    model_name,
+                    cache_dir="E:/Fluenti/models/hf_cache"
+                )
+                
+                # Add padding token if missing
+                if (self.tokenizer is not None and 
+                    hasattr(self.tokenizer, 'pad_token') and 
+                    self.tokenizer.pad_token is None):
+                    if hasattr(self.tokenizer, 'eos_token'):
+                        self.tokenizer.pad_token = self.tokenizer.eos_token
+                
+                # Load model on CPU
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_name,
+                    cache_dir="E:/Fluenti/models/hf_cache",
+                    torch_dtype=torch_dtype,
+                    low_cpu_mem_usage=True
+                )
                 
                 # Cache globally for subsequent uses
                 _LLAMA_MODEL_CACHE = self.model

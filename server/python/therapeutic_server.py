@@ -23,11 +23,13 @@ class PersistentTherapeuticModel:
         self.model = None
         self.tokenizer = None
         self.model_path = model_path
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        # FORCE CPU for ALL therapeutic model operations - no GPU usage
+        self.device = torch.device('cpu')
         self.model_loaded = False
         self.running = True
         
-        print(f"🚀 Persistent Therapeutic Model Server - Using device: {self.device}", file=sys.stderr)
+        print(f"🚀 Persistent Therapeutic Model Server - CPU-ONLY mode", file=sys.stderr)
+        print(f"💻 Using device: {self.device} (forced CPU for stability and training)", file=sys.stderr)
         print(f"📁 Model path: {self.model_path}", file=sys.stderr)
         
         # Load model at startup
@@ -65,20 +67,17 @@ class PersistentTherapeuticModel:
                     cache_dir="E:/Fluenti/models/hf_cache"
                 )
                 
-                # Load base model with aggressive memory optimization for RTX 2050
-                print(f"⚡ Using aggressive memory optimization for RTX 2050", file=sys.stderr)
+                # Load base model with CPU-only configuration for stability
+                print(f"💻 Using CPU-only configuration for stable training/inference", file=sys.stderr)
                 
-                # Force CPU loading first, then selective GPU transfer
+                # Load base model on CPU only
                 base_model = AutoModelForCausalLM.from_pretrained(
                     base_model_name,
-                    torch_dtype=torch.float16,  # Always use float16 for memory
-                    device_map=None,  # Keep on CPU initially
+                    torch_dtype=torch.float32,  # Use float32 for CPU
+                    device_map=None,  # Keep on CPU
                     low_cpu_mem_usage=True,
                     cache_dir="E:/Fluenti/models/hf_cache",
-                    use_safetensors=True,
-                    # Additional memory optimizations
-                    use_cache=False,  # Disable KV cache during loading
-                    offload_folder="E:/Fluenti/temp",  # Offload to disk if needed
+                    use_safetensors=True
                 )
                 
                 # Load LoRA adapter
@@ -90,13 +89,13 @@ class PersistentTherapeuticModel:
                 )
                 
             else:
-                print(f"📦 Loading full fine-tuned model", file=sys.stderr)
-                # Load as full model
+                print(f"📦 Loading full fine-tuned model on CPU", file=sys.stderr)
+                # Load as full model on CPU only
                 self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
                 self.model = AutoModelForCausalLM.from_pretrained(
                     self.model_path,
-                    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
-                    device_map="auto" if torch.cuda.is_available() else None,
+                    torch_dtype=torch.float32,  # Use float32 for CPU
+                    device_map=None,  # No device mapping - keep on CPU
                     low_cpu_mem_usage=True
                 )
             
@@ -105,19 +104,14 @@ class PersistentTherapeuticModel:
                 self.tokenizer.pad_token = self.tokenizer.eos_token
                 print(f"🔧 Set pad_token to eos_token", file=sys.stderr)
             
-            # Move model to device
-            if torch.cuda.is_available():
-                print(f"🎮 Moving model to GPU...", file=sys.stderr)
-                self.model = self.model.to(self.device)
-            else:
-                self.model = self.model.to(self.device)
-            
+            # Move model to CPU (forced)
+            print(f"💻 Moving model to CPU for training and inference", file=sys.stderr)
+            self.model = self.model.to('cpu')
             self.model.eval()
             
             # Clean up memory after loading
             gc.collect()
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
+            print(f"✅ Model loaded on CPU and ready for training/inference", file=sys.stderr)
             
             load_time = time.time() - start_time
             print(f"✅ Superior therapeutic model loaded in {load_time:.2f}s", file=sys.stderr)
@@ -155,22 +149,22 @@ class PersistentTherapeuticModel:
             # Create the prompt in the format the model was trained on
             prompt = f"{system_prompt}\n\n{conversation_context}User: {user_input}\nTherapist:"
             
-            # Tokenize with optimized settings for RTX 2050
+            # Tokenize with CPU-optimized settings
             inputs = self.tokenizer(
                 prompt, 
                 return_tensors="pt", 
                 truncation=True, 
-                max_length=250,  # Optimized for memory
+                max_length=400,  # Increased for CPU (no memory constraints)
                 padding=False
-            ).to(self.device)
+            ).to('cpu')  # Force CPU usage
             
             print(f"🔤 Input tokens: {inputs['input_ids'].shape[1]}", file=sys.stderr)
             
-            # Generate with superior quality settings
+            # Generate with CPU-optimized settings
             with torch.no_grad():
                 outputs = self.model.generate(
                     **inputs,
-                    max_new_tokens=80,     # Optimized for RTX 2050
+                    max_new_tokens=120,    # Increased for CPU (no memory limit)
                     temperature=0.7,       
                     top_p=0.9,            
                     top_k=40,             
