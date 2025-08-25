@@ -107,12 +107,34 @@ def main():
     for package in additional_packages:
         run_command(f"pip install {package}", f"Install {package}")
     
+    # Install IEMOCAP speech emotion analysis dependencies
+    print("\n🎵 Installing IEMOCAP speech emotion dependencies...")
+    iemocap_packages = [
+        "librosa>=0.9.0",  # Audio feature extraction
+        "torch>=1.13.0",   # Already installed above, but ensuring version
+        "transformers>=4.21.0",  # Already installed, ensuring compatibility
+        "numpy>=1.21.0",   # Already installed
+        "scipy>=1.7.0",    # Signal processing
+        "scikit-learn",    # ML utilities for IEMOCAP
+        "matplotlib",      # Visualization (optional)
+        "seaborn"          # Enhanced visualization (optional)
+    ]
+    
+    for package in iemocap_packages:
+        run_command(f"pip install {package}", f"Install {package} (IEMOCAP)")
+    
+    print("✅ IEMOCAP speech emotion analysis dependencies installed")
+    print("📊 This enables: tone analysis, stress detection, anxiety detection")
+    
     # Test installations
     print("\n5️⃣ Testing installations...")
     test_imports = [
         ("torch", "PyTorch"),
         ("transformers", "Transformers"),
-        ("TTS", "Coqui TTS")
+        ("TTS", "Coqui TTS"),
+        ("librosa", "Librosa (IEMOCAP)"),
+        ("scipy", "SciPy (IEMOCAP)"),
+        ("sklearn", "Scikit-learn (IEMOCAP)")
     ]
     
     for module, name in test_imports:
