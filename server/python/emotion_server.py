@@ -28,11 +28,27 @@ transformers_logging.set_verbosity_error()
 class PersistentEmotionDetector:
     def __init__(self):
         self.text_model = None
-        self.device = 0 if torch.cuda.is_available() else -1
+        self.device = None
         self.model_loaded = False
         self.running = True
         
-        print(f"🚀 Persistent Emotion Server - Using device: {'GPU' if self.device == 0 else 'CPU'}", file=sys.stderr)
+        # Smart GPU detection for RTX 2050 - Try GPU first, fallback to CPU
+        if torch.cuda.is_available():
+            gpu_memory = torch.cuda.get_device_properties(0).total_memory / 1024**3  # GB
+            gpu_name = torch.cuda.get_device_name(0)
+            print(f"🎮 GPU Detected: {gpu_name} ({gpu_memory:.1f}GB)", file=sys.stderr)
+            
+            if gpu_memory <= 4.5:  # RTX 2050 or similar
+                print("🔧 RTX 2050 Detected: Will try GPU first, fallback to CPU if needed", file=sys.stderr)
+                self.device = 0  # Try GPU first
+            else:
+                print("🚀 High-end GPU: Using GPU with full optimization", file=sys.stderr)
+                self.device = 0
+        else:
+            print("💻 No GPU available: Using CPU", file=sys.stderr)
+            self.device = -1
+        
+        print(f"� Persistent Emotion Server - Attempting device: {'GPU' if self.device == 0 else 'CPU'}", file=sys.stderr)
         
         # Load model at startup
         self.load_text_model()
@@ -46,31 +62,99 @@ class PersistentEmotionDetector:
         self.running = False
         
     def load_text_model(self):
-        """Load and cache the RoBERTa model once at startup"""
-        try:
-            print("📥 Loading RoBERTa GoEmotions model (one-time setup)...", file=sys.stderr)
-            
-            with open(os.devnull, 'w') as devnull:
-                import contextlib
-                with contextlib.redirect_stdout(devnull):
-                    self.text_model = pipeline(
-                        "text-classification",
-                        model="SamLowe/roberta-base-go_emotions",
-                        tokenizer="SamLowe/roberta-base-go_emotions",
-                        device=self.device,
-                        return_all_scores=True,
-                        model_kwargs={
-                            "torch_dtype": torch.float16 if self.device == 0 else torch.float32,
-                            "low_cpu_mem_usage": True
-                        }
-                    )
-            
-            self.model_loaded = True
-            print("✅ RoBERTa model loaded and ready for requests", file=sys.stderr)
-            
-        except Exception as e:
-            print(f"❌ Error loading text model: {e}", file=sys.stderr)
-            self.model_loaded = False
+        """Load model with GPU-first strategy, fallback to CPU for RTX 2050"""
+        gpu_attempted = False
+        
+        # Try GPU first if available
+        if self.device == 0:
+            try:
+                print("📥 Loading RoBERTa GoEmotions model on GPU...", file=sys.stderr)
+                print("🎮 RTX 2050 Strategy: Trying GPU with conservative memory settings", file=sys.stderr)
+                
+                # Clear any existing GPU memory
+                torch.cuda.empty_cache()
+                gc.collect()
+                
+                with open(os.devnull, 'w') as devnull:
+                    import contextlib
+                    with contextlib.redirect_stdout(devnull):
+                        self.text_model = pipeline(
+                            "text-classification",
+                            model="SamLowe/roberta-base-go_emotions",
+                            tokenizer="SamLowe/roberta-base-go_emotions",
+                            device=0,  # GPU
+                            return_all_scores=True,
+                            model_kwargs={
+                                "torch_dtype": torch.float16,  # Use FP16 for RTX 2050
+                                "low_cpu_mem_usage": True,
+                                "device_map": None,
+                                "max_memory": {0: "3.2GB"}  # Conservative memory limit
+                            }
+                        )
+                
+                # Test GPU memory usage
+                memory_used = torch.cuda.memory_allocated(0) / 1024**3
+                print(f"🎮 GPU Memory Used: {memory_used:.2f}GB", file=sys.stderr)
+                
+                # Force garbage collection
+                gc.collect()
+                torch.cuda.empty_cache()
+                
+                self.model_loaded = True
+                gpu_attempted = True
+                print("✅ RoBERTa model loaded on GPU successfully!", file=sys.stderr)
+                print(f"🚀 Using GPU acceleration for emotion detection", file=sys.stderr)
+                
+            except Exception as gpu_error:
+                print(f"❌ GPU loading failed: {gpu_error}", file=sys.stderr)
+                print("🔄 Falling back to CPU mode...", file=sys.stderr)
+                gpu_attempted = True
+                
+                # Clear GPU memory after failure
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                gc.collect()
+                
+                # Update device to CPU for fallback
+                self.device = -1
+        
+        # Load on CPU (either by choice or fallback)
+        if not self.model_loaded:
+            try:
+                if gpu_attempted:
+                    print("🔧 RTX 2050 Fallback: Loading model on CPU...", file=sys.stderr)
+                else:
+                    print("📥 Loading RoBERTa GoEmotions model on CPU...", file=sys.stderr)
+                    print("💻 CPU Strategy: Using memory-efficient settings", file=sys.stderr)
+                
+                with open(os.devnull, 'w') as devnull:
+                    import contextlib
+                    with contextlib.redirect_stdout(devnull):
+                        self.text_model = pipeline(
+                            "text-classification",
+                            model="SamLowe/roberta-base-go_emotions",
+                            tokenizer="SamLowe/roberta-base-go_emotions",
+                            device=-1,  # CPU
+                            return_all_scores=True,
+                            model_kwargs={
+                                "torch_dtype": torch.float32,  # Use float32 for CPU
+                                "low_cpu_mem_usage": True,
+                                "device_map": None
+                            }
+                        )
+                
+                # Force garbage collection
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                
+                self.model_loaded = True
+                print("✅ RoBERTa model loaded on CPU successfully!", file=sys.stderr)
+                print(f"💻 Using CPU for emotion detection", file=sys.stderr)
+                
+            except Exception as cpu_error:
+                print(f"❌ CPU loading also failed: {cpu_error}", file=sys.stderr)
+                self.model_loaded = False
     
     def detect_text_emotion(self, text, language="en"):
         """Fast text emotion detection using cached model"""

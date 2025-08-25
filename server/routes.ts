@@ -16,19 +16,21 @@ import {
   detectEmotionFromAudio, 
   detectCombinedEmotion 
 } from "./services/emotionServiceOptimized";
+// IEMOCAP: Import speech-based emotion detection (tone, stress, anxiety)
+import { iemocapService, type CombinedEmotionResult as IEMOCAPCombinedResult } from "./services/emotionServiceIEMOCAP";
 // Phase 4: Import response generation functions
 import { analyzeEmotion, generateEmotionalResponse } from "./services/openai";
-// Phase 4: Import new conversational response service with Llama-2 and TTS
-import { generateConversationalResponse, type ConversationHistory } from "./services/responseService";
-// Enhanced Phase 4+: Import enhanced conversational therapy AI
+// Enhanced Phase 4+: Import enhanced conversational therapy AI (NO LLAMA)
 import { 
-  generateEnhancedConversationalResponse, 
   generateSuperiorTherapeuticResponse,
+  generateEnhancedConversationalResponse,
   type EnhancedResponseRequest, 
-  type EnhancedResponseResult 
+  type EnhancedResponseResult,
+  type ConversationHistory
 } from "./services/enhancedResponseService";
 // Import persistent therapeutic service to initialize the server
 import "./services/therapeuticServicePersistent";
+
 import { AuthService } from "./auth";
 
 
@@ -204,6 +206,16 @@ function generateEmotionalSupportResponse(
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
+  
+  // Initialize IEMOCAP speech emotion service
+  console.log('🎵 Initializing IEMOCAP speech emotion detection...');
+  try {
+    await iemocapService.initialize();
+    console.log('✅ IEMOCAP service initialized successfully');
+  } catch (error) {
+    console.warn('⚠️ IEMOCAP service initialization failed:', error);
+    console.log('📊 Will use GoEmotions text analysis only');
+  }
   
   // Add token extraction middleware for all routes
   app.use(extractTokenFromHeader);
@@ -1000,28 +1012,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('📝 Processed text:', text.substring(0, 100) + '...');
 
-      // Enhanced emotion detection with therapeutic context
+      // Enhanced emotion detection with IEMOCAP speech analysis + GoEmotions text analysis
       let emotionResult;
+      let iemocapResult = null;
       const detectionLanguage = language?.startsWith('ur') ? 'ur' : 'en';
       
       if (mode === 'voice' && audioPath && fs.existsSync(audioPath)) {
-        console.log('🎯 Running combined emotion detection (text + voice)...');
+        console.log('⚡ Phase 3: Running OPTIMIZED combined emotion detection...');
         try {
+          // Step 1: Get GoEmotions + basic voice analysis
           const combinedResult = await detectCombinedEmotion(text, audioPath, detectionLanguage);
-          emotionResult = {
-            emotion: combinedResult.combined.emotion,
-            confidence: combinedResult.combined.confidence,
-            textEmotion: combinedResult.text.emotion,
-            voiceEmotion: combinedResult.voice.emotion,
-            method: 'combined',
-            rawData: combinedResult
-          };
+          
+          console.log('⚡ Fast Combined Emotion: Text + Voice analysis (en)');
+          console.log(`✅ Fast Combined Emotion: ${combinedResult.combined.emotion} (${combinedResult.combined.confidence.toFixed(3)})`);
+          
+          // Step 2: Enhance with IEMOCAP speech analysis (tone, stress, anxiety)
+          console.log('🎵 IEMOCAP: Analyzing speech characteristics...');
+          try {
+            iemocapResult = await iemocapService.combineEmotions(
+              combinedResult.text.emotion,
+              combinedResult.text.confidence || 0.5,
+              audioPath
+            );
+            
+            console.log(`🎯 IEMOCAP Enhanced: ${iemocapResult.primary_emotion} (${iemocapResult.confidence.toFixed(3)})`);
+            console.log(`📊 Speech Analysis - Stress: ${iemocapResult.stress_detected}, Anxiety: ${iemocapResult.anxiety_detected}, Tone: ${iemocapResult.tone_analysis}`);
+            
+            emotionResult = {
+              emotion: iemocapResult.primary_emotion,
+              confidence: iemocapResult.confidence,
+              textEmotion: iemocapResult.text_emotion,
+              voiceEmotion: iemocapResult.speech_emotion,
+              context: combinedResult.text.context || [],
+              method: 'iemocap_enhanced',
+              speechCharacteristics: iemocapResult.speech_characteristics,
+              stressDetected: iemocapResult.stress_detected,
+              anxietyDetected: iemocapResult.anxiety_detected,
+              toneAnalysis: iemocapResult.tone_analysis,
+              rawData: combinedResult
+            };
+          } catch (iemocapError) {
+            console.warn('⚠️ IEMOCAP analysis failed, using standard combined result:', iemocapError);
+            emotionResult = {
+              emotion: combinedResult.combined.emotion,
+              confidence: combinedResult.combined.confidence,
+              textEmotion: combinedResult.text.emotion,
+              voiceEmotion: combinedResult.voice.emotion,
+              context: combinedResult.text.context || [],
+              method: 'combined_fallback',
+              rawData: combinedResult
+            };
+          }
+          
         } catch (emotionError) {
           console.warn('⚠️ Combined emotion detection failed, using text-only:', emotionError);
           const textResult = await detectEmotionFromText(text, detectionLanguage);
           emotionResult = {
             emotion: textResult.emotion,
             confidence: textResult.confidence,
+            context: textResult.context || [],
             method: 'text-fallback'
           };
         }
@@ -1038,11 +1087,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         emotionResult = {
           emotion: textResult.emotion,
           confidence: textResult.confidence,
+          context: textResult.context || [],
           method: 'text-only'
         };
       }
 
-      console.log('🎭 Emotion detected:', emotionResult.emotion, 'confidence:', emotionResult.confidence);
+      console.log(`📊 Combined emotion with context: ${emotionResult.emotion} (${emotionResult.confidence.toFixed(3)}) - Context: ${JSON.stringify(emotionResult.context)}`);
+      
+      // Add IEMOCAP insights to logs
+      if (iemocapResult) {
+        console.log(`🎵 IEMOCAP Insights: Stress=${iemocapResult.stress_detected}, Anxiety=${iemocapResult.anxiety_detected}, Tone=${iemocapResult.tone_analysis}`);
+      }
 
       // Parse conversation history for context
       let conversationHistory: ConversationHistory[] = [];
@@ -1224,24 +1279,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const detectionLanguage = language?.startsWith('ur') ? 'ur' : 'en';
       
       if (mode === 'voice' && audioPath && fs.existsSync(audioPath)) {
-        // Combined text + voice emotion detection
-        console.log('⚡ Phase 3: Running OPTIMIZED combined emotion detection...');
-        const combinedResult = await detectCombinedEmotion(text, audioPath, detectionLanguage);
-        
-        // Also get text emotion with context for voice mode
-        console.log('🔄 Calling detectEmotionFromText for context extraction...');
-        const textWithContext = await detectEmotionFromText(text, detectionLanguage);
-        
-        emotionResult = {
-          emotion: combinedResult.combined.emotion,
-          confidence: combinedResult.combined.confidence,
-          text_emotion: combinedResult.text.emotion,
-          voice_emotion: combinedResult.voice.emotion,
-          context: textWithContext.context || [],
-          method: 'combined'
-        };
-        
-        console.log(`📊 Combined emotion with context: ${emotionResult.emotion} (${emotionResult.confidence.toFixed(3)}) - Context: [${emotionResult.context.join(', ') || 'no context'}]`);
+        // Enhanced IEMOCAP + GoEmotions emotion detection
+        console.log('⚡ Phase 3: Running ENHANCED IEMOCAP + GoEmotions analysis...');
+        try {
+          // Step 1: Get GoEmotions text analysis with context
+          console.log('🔄 Calling detectEmotionFromText for context extraction...');
+          const textWithContext = await detectEmotionFromText(text, detectionLanguage);
+          
+          // Step 2: Get enhanced IEMOCAP speech analysis
+          console.log('🎵 IEMOCAP: Enhanced speech emotion analysis...');
+          const iemocapResult = await iemocapService.combineEmotions(
+            textWithContext.emotion,
+            textWithContext.confidence || 0.5,
+            audioPath
+          );
+          
+          emotionResult = {
+            emotion: iemocapResult.primary_emotion,
+            confidence: iemocapResult.confidence,
+            text_emotion: iemocapResult.text_emotion,
+            speech_emotion: iemocapResult.speech_emotion,
+            context: textWithContext.context || [],
+            method: 'enhanced_iemocap_goemotion',
+            speechCharacteristics: iemocapResult.speech_characteristics,
+            stressDetected: iemocapResult.stress_detected,
+            anxietyDetected: iemocapResult.anxiety_detected,
+            toneAnalysis: iemocapResult.tone_analysis,
+            emotionalIntensity: iemocapResult.speech_characteristics.emotional_intensity
+          };
+          
+          console.log(`📊 Enhanced emotion analysis: ${emotionResult.emotion} (${emotionResult.confidence.toFixed(3)})`);
+          console.log(`🎵 IEMOCAP Insights: Text=${iemocapResult.text_emotion}, Speech=${iemocapResult.speech_emotion}`);
+          console.log(`🎯 Speech Characteristics: Stress=${iemocapResult.stress_detected}, Anxiety=${iemocapResult.anxiety_detected}, Tone=${iemocapResult.tone_analysis}`);
+          
+        } catch (iemocapError) {
+          console.warn('⚠️ Enhanced IEMOCAP analysis failed, using standard detection:', iemocapError);
+          // Fallback to standard combined emotion detection
+          const combinedResult = await detectCombinedEmotion(text, audioPath, detectionLanguage);
+          const textWithContext = await detectEmotionFromText(text, detectionLanguage);
+          
+          emotionResult = {
+            emotion: combinedResult.combined.emotion,
+            confidence: combinedResult.combined.confidence,
+            text_emotion: combinedResult.text.emotion,
+            voice_emotion: combinedResult.voice.emotion,
+            context: textWithContext.context || [],
+            method: 'combined_fallback'
+          };
+        }
         
         // Clean up temp audio file
         try {
@@ -1250,70 +1335,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.warn('Failed to clean up temp audio file:', cleanupError);
         }
       } else {
-        // Text-only emotion detection
-        console.log('Phase 3: Running text emotion detection...');
+        // Text-only emotion detection with GoEmotions
+        console.log('📊 Running enhanced text emotion detection...');
         const textResult = await detectEmotionFromText(text, detectionLanguage);
         emotionResult = {
           emotion: textResult.emotion,
           confidence: textResult.confidence,
           context: textResult.context || [],
-          method: 'text-only'
+          method: 'enhanced_text_only'
         };
       }
 
-      console.log('Phase 3 Emotion Detection Result:', emotionResult);
+      console.log('Enhanced Emotion Detection Result:', emotionResult);
 
-      // Phase 4: Parse conversation history for context
+      // Parse conversation history for context (keeping this for context)
       let conversationHistory: ConversationHistory[] = [];
       try {
         if (history) {
           const parsedHistory = typeof history === 'string' ? JSON.parse(history) : history;
           conversationHistory = Array.isArray(parsedHistory) ? parsedHistory : [];
-          console.log('Phase 4: Parsed conversation history length:', conversationHistory.length);
+          console.log('📚 Parsed conversation history length:', conversationHistory.length);
         }
       } catch (historyError) {
-        console.warn('Phase 4: Failed to parse conversation history:', historyError);
+        console.warn('⚠️ Failed to parse conversation history:', historyError);
         conversationHistory = [];
       }
 
-      // Phase 4: Generate conversational response using Llama-2 + TTS
+      // Generate enhanced therapeutic response (NO LLAMA)
       try {
-        console.log('Phase 4: Attempting Llama-2 conversational response generation...');
-        const responseResult = await generateConversationalResponse({
+        console.log('🧠 Generating enhanced therapeutic response...');
+        const responseResult = await generateSuperiorTherapeuticResponse(
           text,
-          emotion: emotionResult.emotion,
-          language: detectionLanguage,
-          history: conversationHistory,
-          userContext: {
-            // Add user context if available from session
-            preferences: ['empathetic', 'supportive']
-          }
-        });
+          [], // context
+          [emotionResult.emotion], // emotions
+          {}, // sessionContext
+          undefined // userId
+        );
 
-        console.log('Phase 4: Llama response generated successfully');
-        console.log('Phase 4: TTS audio available:', !!responseResult.audioBase64);
+        console.log('✅ Enhanced therapeutic response generated successfully');
+        console.log('🎯 Response quality score:', responseResult.quality || 'N/A');
 
         res.json({ 
+          success: true,
           transcription: text, 
           emotion: emotionResult.emotion,
           confidence: emotionResult.confidence,
-          detectedEmotion: emotionResult.emotion, // For backward compatibility
+          detectedEmotion: emotionResult.emotion,
           response: responseResult.response,
           mode: mode || 'text',
           language: detectionLanguage,
           emotionDetails: emotionResult,
-          // Phase 4: New fields
-          audioBase64: responseResult.audioBase64, // TTS audio for avatar
+          
+          // Enhanced IEMOCAP insights
+          speechAnalysis: emotionResult.speechCharacteristics ? {
+            stressDetected: emotionResult.stressDetected,
+            anxietyDetected: emotionResult.anxietyDetected,
+            toneAnalysis: emotionResult.toneAnalysis,
+            emotionalIntensity: emotionResult.emotionalIntensity,
+            speechCharacteristics: emotionResult.speechCharacteristics
+          } : null,
+          
+          // Response metadata
+          therapeuticQuality: responseResult.quality || 0.8,
+          empathyScore: responseResult.empathy_score || 0.7,
+          responseSource: responseResult.model_used || 'superior_therapeutic',
           conversational: true,
-          model: responseResult.metadata?.model,
-          processingTime: responseResult.metadata?.processingTime,
-          historyLength: responseResult.metadata?.historyLength
+          enhanced: true,
+          model: 'enhanced_iemocap_goemotion',
+          historyLength: conversationHistory.length
         });
 
-      } catch (llamaError) {
-        console.warn('Phase 4: Llama response failed, using fallback:', llamaError);
+      } catch (responseError) {
+        console.warn('⚠️ Enhanced therapeutic response failed, using fallback:', responseError);
         
-        // Fallback to existing response generation
+        // Fallback to simple therapeutic response
         const supportResponse = generateEmotionalSupportResponse(
           text, 
           emotionResult.emotion, 
@@ -1322,18 +1417,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         );
 
         res.json({ 
+          success: true,
           transcription: text, 
           emotion: emotionResult.emotion,
           confidence: emotionResult.confidence,
-          detectedEmotion: emotionResult.emotion, // For backward compatibility
+          detectedEmotion: emotionResult.emotion,
           response: supportResponse,
           mode: mode || 'text',
           language: detectionLanguage,
           emotionDetails: emotionResult,
-          // Phase 4: Indicate fallback was used
+          
+          // Indicate fallback was used
+          therapeuticQuality: 0.6,
+          empathyScore: 0.5,
+          responseSource: 'fallback_therapeutic',
           conversational: false,
+          enhanced: false,
           fallbackUsed: true,
-          error: llamaError instanceof Error ? llamaError.message : 'Llama response failed'
+          model: emotionResult.method,
+          error: responseError instanceof Error ? responseError.message : 'Enhanced response failed'
         });
       }
     } catch (error) {
