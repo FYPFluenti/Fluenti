@@ -23,8 +23,7 @@ export default function Signup() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (isLoading) return; // Prevent multiple submissions
-    
+    if (isLoading) return;
     setIsLoading(true);
     
     try {
@@ -46,7 +45,6 @@ export default function Signup() {
         return;
       }
       
-      // Create new user account
       const response = await apiRequest('POST', '/api/auth/signup', {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -57,25 +55,18 @@ export default function Signup() {
       });
       
       const data = await response.json();
-      console.log('Signup response:', data); // Debug log
       
       if (data.success && data.user) {
-        // Store auth token in localStorage for WebSocket connections and API requests
         if (data.authToken) {
           localStorage.setItem('authToken', data.authToken);
-        } else {
-          // Fallback to user ID if authToken not provided
-          localStorage.setItem('authToken', data.user.id);
         }
         
-        // Trigger storage event to notify useAuth hook
         window.dispatchEvent(new StorageEvent('storage', {
           key: 'authToken',
           newValue: data.authToken || data.user.id,
           oldValue: null
         }));
         
-        // Redirect to the appropriate dashboard based on user's actual type
         switch(data.user.userType) {
           case 'child':
             window.location.href = '/child-dashboard';
@@ -90,7 +81,6 @@ export default function Signup() {
             window.location.href = '/';
         }
       } else {
-        console.error('Signup failed:', data);
         alert(data.message || 'Signup failed');
       }
     } catch (error) {
