@@ -82,25 +82,30 @@ export default function ModelViewerAvatar({
 
       {/* Model Viewer - Face & Shoulders Focus */}
       <div className="w-full h-full rounded-full overflow-hidden bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-900">
-        <model-viewer
-          ref={modelViewerRef}
-          src={avatarUrl}
-          alt="Samaha's 3D Avatar"
-          camera-controls
-          disable-zoom
-          style={{
-            width: '100%',
-            height: '100%',
-            background: 'transparent'
-          }}
-          camera-orbit="0deg 85deg 1.2m"     // ✅ Perfect for face/shoulders
-          camera-target="0m 1.6m 0m"         // ✅ Focus on head area
-          field-of-view="30deg"              // ✅ Zoomed in appropriately
-          min-camera-orbit="auto auto 0.8m"  // ✅ Don't zoom too far
-          max-camera-orbit="auto auto 2m"    // ✅ Don't zoom too close
-          onLoad={handleLoad}
-          onError={handleError}
-        />
+       <model-viewer
+  ref={modelViewerRef}
+  src={avatarUrl}
+  alt="Samaha's 3D Avatar"
+  camera-controls={true}                     // ✅ Manual rotation enabled
+  disable-zoom={true}                        // ✅ No user zoom
+  disable-pan={true}                         // ✅ No panning
+  touch-action="pan-y"                       // ✅ Touch control
+  interaction-prompt="none"
+  style={{
+    width: '100%',
+    height: '100%',
+    background: 'transparent'
+  }}
+  camera-orbit="0deg 90deg 1.1m"            // ✅ Same distance
+  camera-target="0m 1.60m 0m"               // ✅ LOWERED: 1.55m → 1.35m (avatar moves down)
+  field-of-view="30deg"                      // ✅ Same zoom level
+  min-camera-orbit="-45deg 70deg 1.1m"      // ✅ Same limits
+  max-camera-orbit="45deg 110deg 1.1m"      // ✅ Same limits
+  min-field-of-view="30deg"                 // ✅ Lock zoom
+  max-field-of-view="30deg"                 // ✅ Lock zoom
+  onLoad={handleLoad}
+  onError={handleError}
+/>
       </div>
     </div>
   );
