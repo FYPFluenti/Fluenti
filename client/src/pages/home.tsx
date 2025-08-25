@@ -9,6 +9,9 @@ import { Link, useLocation } from "wouter";
 import { motion } from "framer-motion";
 import FluentiLogo from "@/components/FluentiLogo";
 import DarkModeToggle from "@/components/DarkModeToggle";
+import ModelViewerAvatar from "@/components/ModelViewerAvatar";
+import { UserTypeCard } from "@/components/UserTypeCard";
+
 import { 
   MessageCircle, 
   Users, 
@@ -26,6 +29,13 @@ import {
   Smile,
   SlidersHorizontal
 } from "lucide-react";
+
+// Demo avatars - choose your favorites!
+const avatarUrls = {
+  therapist: "https://models.readyplayer.me/68ab4a2c3f2023411197a0fa.glb", // Friendly female
+  professional: "https://models.readyplayer.me/68ab4ab5e05b84c2efb26767.glb",     // Child-friendly
+  casual: "https://models.readyplayer.me/68aa261a75e83eeb00564816.glb",  // Professional male
+};
 
 export default function Home() {
   const { toast } = useToast();
@@ -64,90 +74,90 @@ if (isLoading) {
 }
   
   // If not authenticated, show landing page
+// Enhanced Landing Page Section (replace your current landing content)
 if (!isAuthenticated) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Landing Page Header */}
+      {/* Keep your existing header */}
       <header className="bg-white/80 backdrop-blur shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center">
-                <MessageCircle className="text-white text-lg" />
-              </div>
-              <span className="text-2xl font-bold text-primary">Fluenti</span>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <Link href="/login">
-                <Button variant="outline">Login</Button>
-              </Link>
-              <Link href="/signup">
-                <Button>Sign Up</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
+        {/* Your existing header code */}
       </header>
 
-     {/* Landing Page Content */}
-<main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold text-gray-900 mb-6">
-            Welcome to <span className="text-primary">Fluenti</span>
+      {/* NEW: Hero Section with Samaha */}
+      <section className="relative overflow-hidden py-20">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <h1 className="text-6xl font-bold mb-6">
+            Meet <span className="text-primary">Samaha</span>
           </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Your AI-powered speech therapy companion. Improve your communication skills 
-            with personalized exercises, real-time feedback, and emotional support.
+          <p className="text-2xl text-gray-600 mb-8">
+            Your AI Speech Therapy Companion
           </p>
           
-          <div className="flex justify-center space-x-4">
-            <Link href="/signup">
-              <Button size="lg" className="px-8 py-3">
-                Get Started Free
-              </Button>
-            </Link>
-            <Link href="/login">
-              <Button variant="outline" size="lg" className="px-8 py-3">
-                Sign In
-              </Button>
-            </Link>
+          {/* Samaha Avatar */}
+          <div className="w-48 h-48 mx-auto mb-8">
+            <ModelViewerAvatar 
+              avatarUrl={avatarUrls.therapist}
+              size="large"
+              className="mx-auto"
+            />
+          </div>
+          
+          <p className="text-lg text-gray-600 mb-12 max-w-2xl mx-auto">
+            Start your personalized speech therapy journey with Samaha, 
+            our AI therapist designed to help you communicate with confidence.
+          </p>
+        </div>
+      </section>
+
+      {/* NEW: User Type Selection */}
+      <section className="py-16 bg-white">
+        <div className="max-w-6xl mx-auto px-4">
+          <h2 className="text-4xl font-bold text-center mb-4">Choose Your Journey</h2>
+          <p className="text-xl text-gray-600 text-center mb-12">
+            Fluenti adapts to your unique needs and goals
+          </p>
+          
+          <div className="grid md:grid-cols-3 gap-8">
+            {/* Child Card */}
+            <UserTypeCard
+              type="child"
+              title="For Kids (4-12)"
+              description="Fun, gamified speech therapy"
+              avatar={<ModelViewerAvatar avatarUrl={avatarUrls.therapist} size="medium" />}
+              features={["🎮 Interactive games", "🏆 Rewards system", "👨‍👩‍👧‍👦 Parent tracking"]}
+              ctaText="Start Kids Journey"
+              href="/signup?type=child"
+            />
+            
+            {/* Adult Card */}
+            <UserTypeCard
+              type="adult"
+              title="For Adults (13+)"
+              description="Professional communication skills"
+              avatar={<ModelViewerAvatar avatarUrl={avatarUrls.therapist} size="medium" />}
+              features={["💼 Professional focus", "📊 Detailed analytics", "🧠 Emotional support"]}
+              ctaText="Begin Adult Program"
+              href="/signup?type=adult"
+            />
+            
+            {/* Guardian Card */}
+            <UserTypeCard
+              type="guardian"
+              title="For Parents"
+              description="Monitor and support your child"
+              avatar={<ModelViewerAvatar avatarUrl={avatarUrls.therapist} size="medium" />}
+              features={["👪 Child progress", "📅 Schedule sessions", "📈 Growth insights"]}
+              ctaText="Parent Dashboard"
+              href="/signup?type=guardian"
+            />
           </div>
         </div>
+      </section>
 
-        {/* Features Grid */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          <Card className="text-center p-6">
-            <div className="w-16 h-16 bg-primary rounded-full mx-auto mb-4 flex items-center justify-center">
-              <Mic className="text-white text-2xl" />
-            </div>
-            <h3 className="text-xl font-semibold mb-3">Speech Therapy</h3>
-            <p className="text-gray-600">
-              Interactive exercises designed to improve pronunciation and clarity
-            </p>
-          </Card>
-
-          <Card className="text-center p-6">
-            <div className="w-16 h-16 bg-secondary rounded-full mx-auto mb-4 flex items-center justify-center">
-              <Brain className="text-white text-2xl" />
-            </div>
-            <h3 className="text-xl font-semibold mb-3">AI Support</h3>
-            <p className="text-gray-600">
-              24/7 emotional support and guidance from our AI therapist
-            </p>
-          </Card>
-
-          <Card className="text-center p-6">
-            <div className="w-16 h-16 bg-accent rounded-full mx-auto mb-4 flex items-center justify-center">
-              <BarChart3 className="text-white text-2xl" />
-            </div>
-            <h3 className="text-xl font-semibold mb-3">Progress Tracking</h3>
-            <p className="text-gray-600">
-              Monitor your improvement with detailed analytics and insights
-            </p>
-          </Card>
-        </div>
-      </main>
+      {/* Keep your existing features grid but enhance it */}
+      <section className="py-16 bg-gray-50">
+        {/* Your existing features but with more detail */}
+      </section>
     </div>
   );
 }
