@@ -49,6 +49,7 @@ export default function Home() {
   const [feedback, setFeedback] = useState("");
   const [hovered, setHovered] = useState<string | null>(null);
   const [showPreferences, setShowPreferences] = useState(false);
+  const [showDemo, setShowDemo] = useState(false);
   
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -78,93 +79,129 @@ if (isLoading) {
 // Enhanced Landing Page Section (replace your current landing content)
 // ✅ Fixed version - clean up the landing page section:
 
+// Enhanced homepage inspired by Calmi.so
 if (!isAuthenticated) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-2">
-              <FluentiLogo className="w-10 h-10 text-primary" />
-              <span className="text-2xl font-bold text-primary">Fluenti</span>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <Link href="/login">
-                <Button variant="outline">Login</Button>
-              </Link>
-              <Link href="/signup">
-                <Button>Sign Up</Button>
-              </Link>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      {/* Minimal Header */}
+      <header className="absolute top-0 w-full z-50 bg-white/70 backdrop-blur-md border-b border-white/20">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <FluentiLogo className="w-8 h-8 text-primary" />
+            <span className="text-xl font-bold text-gray-900">Fluenti</span>
+          </div>
+          
+          <div className="flex items-center space-x-3">
+            <Link href="/login">
+              <Button variant="ghost" size="sm" className="text-gray-600">
+                Login
+              </Button>
+            </Link>
+            <Link href="/get-started">
+              <Button size="sm" className="bg-primary hover:bg-primary/90">
+                Get Started
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-20">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <h1 className="text-6xl font-bold mb-6">
-            Meet <span className="text-primary">Samaha</span>
+      {/* Hero Section - Calmi Style */}
+      <section className="relative pt-24 pb-16 overflow-hidden">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          {/* Main Headline */}
+          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+            Meet{" "}
+            <span className="bg-gradient-to-r from-primary via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              Samaha
+            </span>
           </h1>
-          <p className="text-2xl text-gray-600 mb-8">
-            Your AI Speech Therapy Companion
-          </p>
           
-          <div className="w-48 h-48 mx-auto mb-8">
-            <ModelViewerAvatar 
-              avatarUrl={avatarUrls.therapist}
-              size="large"
-              className="mx-auto"
-            />
+          {/* Subtitle */}
+          <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-2xl mx-auto leading-relaxed">
+            Your AI speech therapist, available 24/7 to help you communicate with confidence
+          </p>
+
+          {/* Samaha Avatar - Prominent */}
+          <div className="relative mb-12">
+            <div className="w-64 h-64 md:w-80 md:h-80 mx-auto relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-600/20 rounded-full blur-3xl"></div>
+              <ModelViewerAvatar 
+                avatarUrl={avatarUrls.therapist}
+                size="large"
+                className="relative z-10"
+                
+              />
+            </div>
           </div>
-          
-          <p className="text-lg text-gray-600 mb-12 max-w-2xl mx-auto">
-            Start your personalized speech therapy journey with Samaha, 
-            our AI therapist designed to help you communicate with confidence.
-          </p>
+
+          {/* CTA Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+            <Link href="/get-started">
+              <Button size="lg" className="px-8 py-4 text-lg bg-primary hover:bg-primary/90 shadow-lg">
+                Start Your Journey
+              </Button>
+            </Link>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="px-8 py-4 text-lg border-2 hover:bg-gray-50"
+              onClick={() => {
+                // Demo interaction with Samaha
+                setShowDemo(true);
+              }}
+            >
+              👋 Say Hi to Samaha
+            </Button>
+          </div>
+
+          {/* Social Proof */}
+          <div className="flex items-center justify-center space-x-8 text-sm text-gray-500">
+            <div className="flex items-center space-x-2">
+              <div className="flex -space-x-2">
+                {[1,2,3,4].map(i => (
+                  <div key={i} className="w-8 h-8 rounded-full bg-gray-300 border-2 border-white"></div>
+                ))}
+              </div>
+              <span>Trusted by 10,000+ users</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="flex text-yellow-400">
+                {'★'.repeat(5)}
+              </div>
+              <span>4.9/5 rating</span>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* User Type Selection */}
-      <section className="py-16 bg-white">
-        <div className="max-w-6xl mx-auto px-4">
-          <h2 className="text-4xl font-bold text-center mb-4">Choose Your Journey</h2>
-          <p className="text-xl text-gray-600 text-center mb-12">
-            Fluenti adapts to your unique needs and goals
-          </p>
-          
+      {/* Quick Benefits - Calmi Style */}
+      <section className="py-16 bg-white/50 backdrop-blur">
+        <div className="max-w-6xl mx-auto px-6">
           <div className="grid md:grid-cols-3 gap-8">
-            <UserTypeCard
-              type="child"
-              title="For Kids (4-12)"
-              description="Fun, gamified speech therapy"
-              avatar={<ModelViewerAvatar avatarUrl={avatarUrls.therapist} size="medium" />}
-              features={["🎮 Interactive games", "🏆 Rewards system", "👨‍👩‍👧‍👦 Parent tracking"]}
-              ctaText="Start Kids Journey"
-              href="/signup?type=child"
-            />
+            <div className="text-center p-6">
+              <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-teal-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
+                <Mic className="text-white" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Instant Feedback</h3>
+              <p className="text-gray-600">Real-time pronunciation analysis as you speak</p>
+            </div>
             
-            <UserTypeCard
-              type="adult"
-              title="For Adults (13+)"
-              description="Professional communication skills"
-              avatar={<ModelViewerAvatar avatarUrl={avatarUrls.professional} size="medium" />}
-              features={["💼 Professional focus", "📊 Detailed analytics", "🧠 Emotional support"]}
-              ctaText="Begin Adult Program"
-              href="/signup?type=adult"
-            />
+            <div className="text-center p-6">
+              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
+                <Brain className="text-white" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Personalized AI</h3>
+              <p className="text-gray-600">Adapts to your unique learning style and pace</p>
+            </div>
             
-            <UserTypeCard
-              type="guardian"
-              title="For Parents"
-              description="Monitor and support your child"
-              avatar={<ModelViewerAvatar avatarUrl={avatarUrls.casual} size="medium" />}
-              features={["👪 Child progress", "📅 Schedule sessions", "📈 Growth insights"]}
-              ctaText="Parent Dashboard"
-              href="/signup?type=guardian"
-            />
+            <div className="text-center p-6">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl mx-auto mb-4 flex items-center justify-center">
+                <BarChart3 className="text-white" />
+              </div>
+              <h3 className="text-xl font-semibold mb-2">Track Progress</h3>
+              <p className="text-gray-600">See your improvement with detailed analytics</p>
+            </div>
           </div>
         </div>
       </section>
@@ -288,22 +325,64 @@ return (
     {/* Main Content */}
     {/* Main Content */}
 <main className="ml-20 px-6 w-full h-screen overflow-hidden flex flex-col">
-  <header className="flex justify-between items-center py-6 flex-shrink-0">
-    <div />
-    <div className="flex items-center gap-6">
-      <div className="flex items-center gap-2">
-        <span className="text-lg font-semibold">Dark Mode</span>
-        <DarkModeToggle />
+ {/* Professional Orange Header */}
+{/* Ultra-Professional Header */}
+<header className="fixed top-0 w-full z-50 bg-white/90 backdrop-blur-md border-b border-gray-200/60">
+  <div className="max-w-7xl mx-auto px-6">
+    <div className="flex items-center justify-between h-16">
+      {/* Clean Logo */}
+      <div className="flex items-center space-x-2.5">
+        <FluentiLogo className="w-8 h-8 text-[#ff6b1d]" />
+        <span className="text-xl font-semibold text-gray-900 tracking-tight">
+          Fluenti
+        </span>
       </div>
-      <button
-        onClick={() => setShowPreferences(!showPreferences)}
-        className="p-2 rounded-full hover:bg-muted transition"
-        aria-label="Toggle preferences"
-      >
-        <SlidersHorizontal className="w-6 h-6 text-foreground" aria-hidden="true" />
-      </button>
+      
+      {/* Minimal Navigation */}
+      <nav className="hidden md:flex items-center space-x-1">
+        <a 
+          href="#product" 
+          className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-all duration-150"
+        >
+          Product
+        </a>
+        <a 
+          href="#pricing" 
+          className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-all duration-150"
+        >
+          Pricing
+        </a>
+        <a 
+          href="#about" 
+          className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-all duration-150"
+        >
+          About
+        </a>
+      </nav>
+      
+      {/* Clean Actions */}
+      <div className="flex items-center space-x-3">
+        <Link href="/login">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            className="text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-50 h-9 px-3"
+          >
+            Sign in
+          </Button>
+        </Link>
+        <Link href="/signup">
+          <Button 
+            size="sm"
+            className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white text-sm font-medium h-9 px-4 rounded-md shadow-sm hover:shadow-md transition-all duration-150"
+          >
+            Get started
+          </Button>
+        </Link>
+      </div>
     </div>
-  </header>
+  </div>
+</header>
       {/* Welcome Section */}
       <div className="py-8 flex-shrink-0">
         <h1 className="text-3xl font-bold text-foreground mb-2">
