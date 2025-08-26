@@ -11,6 +11,7 @@ import FluentiLogo from "@/components/FluentiLogo";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import ModelViewerAvatar from "@/components/ModelViewerAvatar";
 import { UserTypeCard } from "@/components/UserTypeCard";
+import FeatureCard from "@/components/FeatureCard";
 
 import { 
   MessageCircle, 
@@ -75,15 +76,33 @@ if (isLoading) {
   
   // If not authenticated, show landing page
 // Enhanced Landing Page Section (replace your current landing content)
+// ✅ Fixed version - clean up the landing page section:
+
 if (!isAuthenticated) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Keep your existing header */}
+      {/* Header */}
       <header className="bg-white/80 backdrop-blur shadow-sm">
-        {/* Your existing header code */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-2">
+              <FluentiLogo className="w-10 h-10 text-primary" />
+              <span className="text-2xl font-bold text-primary">Fluenti</span>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <Link href="/login">
+                <Button variant="outline">Login</Button>
+              </Link>
+              <Link href="/signup">
+                <Button>Sign Up</Button>
+              </Link>
+            </div>
+          </div>
+        </div>
       </header>
 
-      {/* NEW: Hero Section with Samaha */}
+      {/* Hero Section */}
       <section className="relative overflow-hidden py-20">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <h1 className="text-6xl font-bold mb-6">
@@ -93,7 +112,6 @@ if (!isAuthenticated) {
             Your AI Speech Therapy Companion
           </p>
           
-          {/* Samaha Avatar */}
           <div className="w-48 h-48 mx-auto mb-8">
             <ModelViewerAvatar 
               avatarUrl={avatarUrls.therapist}
@@ -109,7 +127,7 @@ if (!isAuthenticated) {
         </div>
       </section>
 
-      {/* NEW: User Type Selection */}
+      {/* User Type Selection */}
       <section className="py-16 bg-white">
         <div className="max-w-6xl mx-auto px-4">
           <h2 className="text-4xl font-bold text-center mb-4">Choose Your Journey</h2>
@@ -118,7 +136,6 @@ if (!isAuthenticated) {
           </p>
           
           <div className="grid md:grid-cols-3 gap-8">
-            {/* Child Card */}
             <UserTypeCard
               type="child"
               title="For Kids (4-12)"
@@ -129,23 +146,21 @@ if (!isAuthenticated) {
               href="/signup?type=child"
             />
             
-            {/* Adult Card */}
             <UserTypeCard
               type="adult"
               title="For Adults (13+)"
               description="Professional communication skills"
-              avatar={<ModelViewerAvatar avatarUrl={avatarUrls.therapist} size="medium" />}
+              avatar={<ModelViewerAvatar avatarUrl={avatarUrls.professional} size="medium" />}
               features={["💼 Professional focus", "📊 Detailed analytics", "🧠 Emotional support"]}
               ctaText="Begin Adult Program"
               href="/signup?type=adult"
             />
             
-            {/* Guardian Card */}
             <UserTypeCard
               type="guardian"
               title="For Parents"
               description="Monitor and support your child"
-              avatar={<ModelViewerAvatar avatarUrl={avatarUrls.therapist} size="medium" />}
+              avatar={<ModelViewerAvatar avatarUrl={avatarUrls.casual} size="medium" />}
               features={["👪 Child progress", "📅 Schedule sessions", "📈 Growth insights"]}
               ctaText="Parent Dashboard"
               href="/signup?type=guardian"
@@ -153,16 +168,11 @@ if (!isAuthenticated) {
           </div>
         </div>
       </section>
-
-      {/* Keep your existing features grid but enhance it */}
-      <section className="py-16 bg-gray-50">
-        {/* Your existing features but with more detail */}
-      </section>
     </div>
   );
 }
 
-  const userType = (user as any)?.userType || 'child';
+const userType = (user as any)?.userType || 'child';
 
 return (
   <div className="h-screen font-sans flex bg-background text-foreground overflow-hidden">
