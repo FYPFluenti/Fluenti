@@ -12,6 +12,7 @@ import DarkModeToggle from "@/components/DarkModeToggle";
 import ModelViewerAvatar from "@/components/ModelViewerAvatar";
 import { UserTypeCard } from "@/components/UserTypeCard";
 import FeatureCard from "@/components/FeatureCard";
+import Spline from '@splinetool/react-spline';
 
 import { 
   MessageCircle, 
@@ -80,13 +81,7 @@ export default function Home() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-white relative">
-        {/* ✅ FIXED: Cleaned up animated background */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none -z-10">
-          <div className="absolute -top-40 -left-40 w-96 h-96 bg-gradient-to-br from-[#ff6b1d]/20 via-[#ff8a4a]/10 to-transparent rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute top-1/2 -right-32 w-80 h-80 bg-gradient-to-l from-[#ff8a4a]/15 via-[#ffb74d]/8 to-transparent rounded-full blur-3xl animate-bounce"></div>
-          <div className="absolute -bottom-32 left-1/3 w-72 h-72 bg-gradient-to-t from-[#ff6b1d]/12 via-[#ff8a4a]/6 to-transparent rounded-full blur-3xl animate-ping"></div>
-        </div>
-
+       
         {/* Header */}
         <header className="fixed top-0 w-full z-50 bg-white">
           <div className="max-w-7xl mx-auto px-5 py-4"> 
@@ -158,34 +153,84 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Right Side - Avatar */}
-              <div className="flex justify-center lg:justify-end">
-                <div className="relative">
-                  {/* Orange Background Shape */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#ff6b1d]/10 to-[#ff8a4a]/5 rounded-[3rem] transform rotate-3"></div>
-                  <div className="absolute inset-2 bg-gradient-to-br from-[#ff6b1d]/5 to-[#ff8a4a]/10 rounded-[3rem] transform -rotate-2"></div>
-                  
-                  {/* Avatar Container */}
-                  <div className="relative bg-white rounded-[3rem] p-8 shadow-2xl shadow-[#ff6b1d]/10 border border-gray-100">
-                    <div className="w-80 h-80 lg:w-96 lg:h-96">
-                      <ModelViewerAvatar 
-                        avatarUrl={avatarUrls.therapist}
-                        size="large"
-                        className="w-full h-full"
-                      />
-                    </div>
-                    
-                    {/* Floating Name Tag */}
-                    <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white rounded-full px-4 py-2 shadow-lg border border-gray-200">
-                      <p className="text-sm font-medium text-gray-900">meet samaha</p>
-                    </div>
-                  </div>
+             {/* Right Side - Enhanced Spline 3D Avatar */}
+<div className="flex justify-center lg:justify-end">
+  <div className="relative">
+    {/* Orange Background Shape */}
+    <div className="absolute inset-0 bg-gradient-to-br from-[#ff6b1d]/10 to-[#ff8a4a]/5 rounded-[3rem] transform rotate-3"></div>
+    <div className="absolute inset-2 bg-gradient-to-br from-[#ff6b1d]/5 to-[#ff8a4a]/10 rounded-[3rem] transform -rotate-2"></div>
+    
+    {/* Spline 3D Container */}
+    <div className="relative bg-white rounded-[3rem] p-8 shadow-2xl shadow-[#ff6b1d]/10 border border-gray-100 overflow-hidden">
+      <div className="w-80 h-80 lg:w-96 lg:h-96 relative">
+        
+        {/* Spline 3D Model with Error Boundary */}
+        <div className="w-full h-full relative">
+          <Spline 
+            scene="https://prod.spline.design/NKxj87myxipVSVjM/scene.splinecode"
+            className="w-full h-full absolute inset-0 z-20"
+            style={{
+              width: '100%',
+              height: '100%',
+              borderRadius: '1.5rem'
+            }}
+            onLoad={() => {
+              console.log('✅ Spline model loaded successfully!');
+              const loadingEl = document.getElementById('spline-loading-enhanced');
+              if (loadingEl) {
+                loadingEl.style.opacity = '0';
+                setTimeout(() => loadingEl.style.display = 'none', 500);
+              }
+            }}
+            onError={(error) => {
+              console.error('❌ Spline model failed to load:', error);
+              const loadingEl = document.getElementById('spline-loading-enhanced');
+              const fallbackEl = document.getElementById('spline-fallback');
+              if (loadingEl) loadingEl.style.display = 'none';
+              if (fallbackEl) fallbackEl.style.display = 'flex';
+            }}
+          />
+        </div>
+        
+        {/* Loading State */}
+        <div 
+          id="spline-loading-enhanced"
+          className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-[1.5rem] z-10 transition-opacity duration-500"
+        >
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff6b1d] mx-auto mb-4"></div>
+            <p className="text-gray-600 text-sm font-medium">Loading 3D Samaha...</p>
+            <p className="text-gray-400 text-xs mt-1">Bringing your AI therapist to life! ✨</p>
+          </div>
+        </div>
+        
+        {/* Fallback State */}
+        <div 
+          id="spline-fallback"
+          className="absolute inset-0 hidden items-center justify-center bg-gradient-to-br from-[#ff6b1d]/5 to-[#ff8a4a]/5 rounded-[1.5rem] z-10"
+        >
+          <div className="text-center">
+            <div className="w-20 h-20 bg-gradient-to-br from-[#ff6b1d] to-[#ff8a4a] rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <span className="text-3xl">🤖</span>
+            </div>
+            <p className="text-gray-700 text-sm font-medium">Hi! I'm Samaha</p>
+            <p className="text-gray-500 text-xs mt-1">Your AI Speech Therapist</p>
+          </div>
+        </div>
+        
+      </div>
+      
+      {/* Floating Name Tag */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white rounded-full px-4 py-2 shadow-lg border border-gray-200 z-30">
+        <p className="text-sm font-medium text-gray-900">meet samaha</p>
+      </div>
+    </div>
 
-                  {/* Floating Elements */}
-                  <div className="absolute -top-4 -right-4 w-12 h-12 bg-[#ff6b1d] rounded-full opacity-20 animate-pulse"></div>
-                  <div className="absolute -bottom-8 -left-8 w-8 h-8 bg-[#ff8a4a] rounded-full opacity-30 animate-pulse delay-1000"></div>
-                </div>
-              </div>
+    {/* Floating Elements */}
+    <div className="absolute -top-4 -right-4 w-12 h-12 bg-[#ff6b1d] rounded-full opacity-20 animate-pulse"></div>
+    <div className="absolute -bottom-8 -left-8 w-8 h-8 bg-[#ff8a4a] rounded-full opacity-30 animate-pulse delay-1000"></div>
+  </div>
+</div>
             </div>
           </div>
         </section>
