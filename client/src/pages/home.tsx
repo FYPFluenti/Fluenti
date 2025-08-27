@@ -153,30 +153,32 @@ export default function Home() {
                 </div>
               </div>
 
-             {/* Right Side - Enhanced Spline 3D Avatar */}
+            {/* Right Side - Enlarged Spline 3D Avatar (No Box) */}
 <div className="flex justify-center lg:justify-end">
   <div className="relative">
-    {/* Orange Background Shape */}
+    {/* Orange Background Shape - Now Behind 3D Model */}
     <div className="absolute inset-0 bg-gradient-to-br from-[#ff6b1d]/10 to-[#ff8a4a]/5 rounded-[3rem] transform rotate-3"></div>
     <div className="absolute inset-2 bg-gradient-to-br from-[#ff6b1d]/5 to-[#ff8a4a]/10 rounded-[3rem] transform -rotate-2"></div>
     
-    {/* Spline 3D Container */}
-    <div className="relative bg-white rounded-[3rem] p-8 shadow-2xl shadow-[#ff6b1d]/10 border border-gray-100 overflow-hidden">
-      <div className="w-80 h-80 lg:w-96 lg:h-96 relative">
+    {/* Enlarged 3D Model Container (No White Box) */}
+    <div className="relative">
+      {/* ENLARGED SIZE: Increased from w-80 h-80 lg:w-96 lg:h-96 to w-96 h-96 lg:w-[28rem] lg:h-[28rem] */}
+      {/* POSITIONED LEFT: Added -ml-8 lg:-ml-12 */}
+      <div className="w-96 h-96 lg:w-[28rem] lg:h-[28rem] relative -ml-8 lg:-ml-12">
         
-        {/* Spline 3D Model with Error Boundary */}
+        {/* Spline 3D Model - Direct Integration */}
         <div className="w-full h-full relative">
           <Spline 
             scene="https://prod.spline.design/NKxj87myxipVSVjM/scene.splinecode"
-            className="w-full h-full absolute inset-0 z-20"
+            className="w-full h-full"
             style={{
               width: '100%',
               height: '100%',
-              borderRadius: '1.5rem'
+              borderRadius: '0' // REMOVED BORDER RADIUS
             }}
             onLoad={() => {
               console.log('✅ Spline model loaded successfully!');
-              const loadingEl = document.getElementById('spline-loading-enhanced');
+              const loadingEl = document.getElementById('spline-loading-enlarged');
               if (loadingEl) {
                 loadingEl.style.opacity = '0';
                 setTimeout(() => loadingEl.style.display = 'none', 500);
@@ -184,32 +186,32 @@ export default function Home() {
             }}
             onError={(error) => {
               console.error('❌ Spline model failed to load:', error);
-              const loadingEl = document.getElementById('spline-loading-enhanced');
-              const fallbackEl = document.getElementById('spline-fallback');
+              const loadingEl = document.getElementById('spline-loading-enlarged');
+              const fallbackEl = document.getElementById('spline-fallback-enlarged');
               if (loadingEl) loadingEl.style.display = 'none';
               if (fallbackEl) fallbackEl.style.display = 'flex';
             }}
           />
         </div>
         
-        {/* Loading State */}
+        {/* Loading State - No Box Styling */}
         <div 
-          id="spline-loading-enhanced"
-          className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-[1.5rem] z-10 transition-opacity duration-500"
+          id="spline-loading-enlarged"
+          className="absolute inset-0 flex items-center justify-center bg-transparent z-10 transition-opacity duration-500"
         >
-          <div className="text-center">
+          <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff6b1d] mx-auto mb-4"></div>
             <p className="text-gray-600 text-sm font-medium">Loading 3D Samaha...</p>
-            <p className="text-gray-400 text-xs mt-1">Bringing your AI therapist to life! ✨</p>
+            <p className="text-gray-400 text-xs mt-1">Your AI therapist is coming to life! ✨</p>
           </div>
         </div>
         
-        {/* Fallback State */}
+        {/* Fallback State - No Box Styling */}
         <div 
-          id="spline-fallback"
-          className="absolute inset-0 hidden items-center justify-center bg-gradient-to-br from-[#ff6b1d]/5 to-[#ff8a4a]/5 rounded-[1.5rem] z-10"
+          id="spline-fallback-enlarged"
+          className="absolute inset-0 hidden items-center justify-center bg-transparent z-10"
         >
-          <div className="text-center">
+          <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
             <div className="w-20 h-20 bg-gradient-to-br from-[#ff6b1d] to-[#ff8a4a] rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
               <span className="text-3xl">🤖</span>
             </div>
@@ -220,15 +222,15 @@ export default function Home() {
         
       </div>
       
-      {/* Floating Name Tag */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white rounded-full px-4 py-2 shadow-lg border border-gray-200 z-30">
+      {/* Floating Name Tag - Repositioned for Larger Model */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-white rounded-full px-4 py-2 shadow-lg border border-gray-200 z-30">
         <p className="text-sm font-medium text-gray-900">meet samaha</p>
       </div>
     </div>
 
-    {/* Floating Elements */}
-    <div className="absolute -top-4 -right-4 w-12 h-12 bg-[#ff6b1d] rounded-full opacity-20 animate-pulse"></div>
-    <div className="absolute -bottom-8 -left-8 w-8 h-8 bg-[#ff8a4a] rounded-full opacity-30 animate-pulse delay-1000"></div>
+    {/* Floating Elements - Adjusted for Larger Size */}
+    <div className="absolute -top-6 -right-6 w-12 h-12 bg-[#ff6b1d] rounded-full opacity-20 animate-pulse"></div>
+    <div className="absolute -bottom-12 -left-12 w-8 h-8 bg-[#ff8a4a] rounded-full opacity-30 animate-pulse delay-1000"></div>
   </div>
 </div>
             </div>
