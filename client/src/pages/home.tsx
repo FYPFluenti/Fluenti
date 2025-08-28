@@ -85,7 +85,7 @@ export default function Home() {
   {/* FIXED: 3D Background - Only Behind Hero Section */}
   <div className="absolute inset-0 w-full h-screen z-0"> {/* CHANGED: fixed → absolute, h-full → h-screen */}
     <Spline 
-      scene="https://prod.spline.design/KzXnfvHqew4EwlxJ/scene.splinecode"
+      scene="https://prod.spline.design/d1ABYikBmZ80miSz/scene.splinecode"
       className="w-full h-full"
       style={{
         width: '100%',
@@ -94,14 +94,14 @@ export default function Home() {
         top: 0,
         left: 0,
         pointerEvents: 'none', // Prevents interaction interference
-        opacity: 5.0,
+        opacity: 0.8,
         filter: 'none' //
       }}
     />
   </div>
        
   {/* Header*/}
-  <header className="realtive top-0 w-full z-50  bg-white/2">
+  <header className="absolute top-0 w-full z-50  bg-white/2">
     <div className="max-w-7xl mx-auto px-5 py-4"> 
       <div className="flex items-center justify-between h-24 pt-6">
         {/* Logo */}
