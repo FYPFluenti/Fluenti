@@ -80,240 +80,254 @@ export default function Home() {
   // ✅ FIXED: Landing page for non-authenticated users
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-white relative">
+<div className="min-h-screen bg-white relative overflow-hidden">
+  
+  {/* FIXED: 3D Background - Only Behind Hero Section */}
+  <div className="absolute inset-0 w-full h-screen z-0"> {/* CHANGED: fixed → absolute, h-full → h-screen */}
+    <Spline 
+      scene="https://prod.spline.design/dty8cAPKlhp7bzdD/scene.splinecode"
+      className="w-full h-full"
+      style={{
+        width: '100%',
+        height: '100%',
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        pointerEvents: 'none', // Prevents interaction interference
+        opacity: 5.0,
+        filter: 'none' //
+      }}
+    />
+  </div>
        
-        {/* Header */}
-        <header className="fixed top-0 w-full z-50 bg-white">
-          <div className="max-w-7xl mx-auto px-5 py-4"> 
-            <div className="flex items-center justify-between h-24 pt-6">
-              {/* Logo */}
-              <div className="flex items-center space-x-2">
-                <div className="relative group">
-                  <FluentiLogo className="w-14 h-14 text-[#ff6b1d] transition-transform duration-300 group-hover:scale-110" />
-                  <div className="absolute inset-0 bg-[#ff6b1d]/20 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </div>
-                <span className="text-4xl font-bold text-gray-900 tracking-tight">fluenti</span>
-              </div>
-              
-              {/* Actions */}
-              <div className="flex items-center space-x-3">
-                <Link href="/login">
-                  <Button 
-                    variant="ghost"
-                    className="text-base font-medium text-gray-700 hover:text-gray-900 h-11 px-6 rounded-xl hover:bg-gray-50 transition-all duration-200"
-                  >
-                    log in
-                  </Button>
-                </Link>
-                <Link href="/signup">
-                  <Button 
-                    className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white text-base font-medium h-11 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
-                  >
-                    sign up
-                  </Button>
-                </Link>
-              </div>
-            </div>
+  {/* Header*/}
+  <header className="realtive top-0 w-full z-50  bg-white/2">
+    <div className="max-w-7xl mx-auto px-5 py-4"> 
+      <div className="flex items-center justify-between h-24 pt-6">
+        {/* Logo */}
+        <div className="flex items-center space-x-2">
+          <div className="relative group">
+            <FluentiLogo className="w-14 h-14 text-[#ff6b1d] transition-transform duration-300 group-hover:scale-110" />
+            <div className="absolute inset-0 bg-[#ff6b1d]/20 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </div>
-        </header>
-
-        {/* Hero Section */}
-        <section className="pt-24 min-h-screen flex items-center">
-          <div className="max-w-7xl mx-auto px-6 w-full">
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
-              {/* Left Side - Text Content */}
-              <div className="space-y-8">
-                <div className="space-y-6">
-                  <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight tracking-tight">
-                    it's not therapy.
-                    <br />
-                    it's just{" "}
-                    <span className="text-[#ff6b1d]">fluenti.</span>
-                  </h1>
-                  
-                  <p className="text-xl text-gray-600 leading-relaxed max-w-lg">
-                    your ai speech therapist built to help you communicate 
-                    with confidence and clarity.
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <Link href="/signup">
-                    <Button 
-                      size="lg"
-                      className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-8 py-3 text-lg rounded-lg font-medium"
-                    >
-                      start speaking — it's free
-                    </Button>
-                  </Link>
-                  
-                  <p className="text-sm text-gray-500">
-                    loved by 10,000+ people
-                  </p>
-                </div>
-              </div>
-
-            {/* Right Side - Enlarged Spline 3D Avatar (No Box) */}
-<div className="flex justify-center lg:justify-end">
-  <div className="relative">
-    {/* Orange Background Shape - Now Behind 3D Model */}
-    <div className="absolute inset-0 bg-gradient-to-br from-[#ff6b1d]/10 to-[#ff8a4a]/5 rounded-[3rem] transform rotate-3"></div>
-    <div className="absolute inset-2 bg-gradient-to-br from-[#ff6b1d]/5 to-[#ff8a4a]/10 rounded-[3rem] transform -rotate-2"></div>
-    
-    {/* Enlarged 3D Model Container (No White Box) */}
-    <div className="relative">
-      {/* ENLARGED SIZE: Increased from w-80 h-80 lg:w-96 lg:h-96 to w-96 h-96 lg:w-[28rem] lg:h-[28rem] */}
-      {/* POSITIONED LEFT: Added -ml-8 lg:-ml-12 */}
-      <div className="w-96 h-96 lg:w-[28rem] lg:h-[28rem] relative -ml-8 lg:-ml-12">
-        
-        {/* Spline 3D Model - Direct Integration */}
-        <div className="w-full h-full relative">
-          <Spline 
-            scene="https://prod.spline.design/NKxj87myxipVSVjM/scene.splinecode"
-            className="w-full h-full"
-            style={{
-              width: '100%',
-              height: '100%',
-              borderRadius: '0' // REMOVED BORDER RADIUS
-            }}
-            onLoad={() => {
-              console.log('✅ Spline model loaded successfully!');
-              const loadingEl = document.getElementById('spline-loading-enlarged');
-              if (loadingEl) {
-                loadingEl.style.opacity = '0';
-                setTimeout(() => loadingEl.style.display = 'none', 500);
-              }
-            }}
-            onError={(error) => {
-              console.error('❌ Spline model failed to load:', error);
-              const loadingEl = document.getElementById('spline-loading-enlarged');
-              const fallbackEl = document.getElementById('spline-fallback-enlarged');
-              if (loadingEl) loadingEl.style.display = 'none';
-              if (fallbackEl) fallbackEl.style.display = 'flex';
-            }}
-          />
+          <span className="text-4xl font-bold text-gray-900 tracking-tight">fluenti</span>
         </div>
         
-        {/* Loading State - No Box Styling */}
-        <div 
-          id="spline-loading-enlarged"
-          className="absolute inset-0 flex items-center justify-center bg-transparent z-10 transition-opacity duration-500"
-        >
-          <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff6b1d] mx-auto mb-4"></div>
-            <p className="text-gray-600 text-sm font-medium">Loading 3D Samaha...</p>
-            <p className="text-gray-400 text-xs mt-1">Your AI therapist is coming to life! ✨</p>
-          </div>
+        {/* Actions */}
+        <div className="flex items-center space-x-3">
+          <Link href="/login">
+            <Button 
+              variant="ghost"
+              className="text-base font-medium text-gray-700 hover:text-gray-900 h-11 px-6 rounded-xl hover:bg-gray-50 transition-all duration-200"
+            >
+              log in
+            </Button>
+          </Link>
+          <Link href="/signup">
+            <Button 
+              className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white text-base font-medium h-11 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
+            >
+              sign up
+            </Button>
+          </Link>
         </div>
-        
-        {/* Fallback State - No Box Styling */}
-        <div 
-          id="spline-fallback-enlarged"
-          className="absolute inset-0 hidden items-center justify-center bg-transparent z-10"
-        >
-          <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
-            <div className="w-20 h-20 bg-gradient-to-br from-[#ff6b1d] to-[#ff8a4a] rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-              <span className="text-3xl">🤖</span>
-            </div>
-            <p className="text-gray-700 text-sm font-medium">Hi! I'm Samaha</p>
-            <p className="text-gray-500 text-xs mt-1">Your AI Speech Therapist</p>
-          </div>
-        </div>
-        
-      </div>
-      
-      {/* Floating Name Tag - Repositioned for Larger Model */}
-      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-white rounded-full px-4 py-2 shadow-lg border border-gray-200 z-30">
-        <p className="text-sm font-medium text-gray-900">meet samaha</p>
       </div>
     </div>
+  </header>
 
-    {/* Floating Elements - Adjusted for Larger Size */}
-    <div className="absolute -top-6 -right-6 w-12 h-12 bg-[#ff6b1d] rounded-full opacity-20 animate-pulse"></div>
-    <div className="absolute -bottom-12 -left-12 w-8 h-8 bg-[#ff8a4a] rounded-full opacity-30 animate-pulse delay-1000"></div>
-  </div>
-</div>
-            </div>
-          </div>
-        </section>
-
-        {/* Features Section */}
-        <section className="py-24 bg-gray-50">
-          <div className="max-w-6xl mx-auto px-6">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                how fluenti works
-              </h2>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                professional speech therapy powered by ai technology
-              </p>
-            </div>
+  {/* Hero Section - NO CHANGES */}
+  <section className="pt-24 min-h-screen flex items-center relative z-10"> {/* ADDED: relative z-10 */}
+    <div className="max-w-7xl mx-auto px-6 w-full">
+      <div className="grid lg:grid-cols-2 gap-16 items-center">
+        {/* Left Side - Text Content */}
+        <div className="space-y-8">
+          <div className="space-y-6">
+            <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight tracking-tight">
+              it's not therapy.
+              <br />
+              it's just{" "}
+              <span className="text-[#ff6b1d]">fluenti.</span>
+            </h1>
             
-            <div className="grid md:grid-cols-3 gap-12">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200">
-                  <Mic className="w-8 h-8 text-[#ff6b1d]" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  real-time feedback
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  instant pronunciation analysis as you speak with advanced voice recognition
-                </p>
-              </div>
-              
-              <div className="text-center">
-                <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200">
-                  <Brain className="w-8 h-8 text-[#ff6b1d]" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  personalized ai
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  adapts to your unique learning style and speech patterns for optimal results
-                </p>
-              </div>
-              
-              <div className="text-center">
-                <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200">
-                  <BarChart3 className="w-8 h-8 text-[#ff6b1d]" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  track progress
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  detailed analytics show your improvement journey with clear insights
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* CTA Section */}
-        <section className="py-24">
-          <div className="max-w-4xl mx-auto px-6 text-center">
-            <h2 className="text-4xl font-bold text-gray-900 mb-6">
-              ready to speak with confidence?
-            </h2>
-            <p className="text-xl text-gray-600 mb-10">
-              join thousands improving their communication with fluenti
+            <p className="text-xl text-gray-600 leading-relaxed max-w-lg">
+              your ai speech therapist built to help you communicate 
+              with confidence and clarity.
             </p>
-            
+          </div>
+
+          <div className="space-y-4">
             <Link href="/signup">
               <Button 
                 size="lg"
-                className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-8 py-4 text-lg rounded-lg font-medium shadow-lg hover:shadow-xl transition-all"
+                className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-8 py-3 text-lg rounded-lg font-medium"
               >
-                start your free trial
+                start speaking — it's free
               </Button>
             </Link>
             
-            <p className="text-sm text-gray-500 mt-4">
-              no credit card required • 7-day free trial
+            <p className="text-sm text-gray-500">
+              loved by 10,000+ people
             </p>
           </div>
-        </section>
+        </div>
+
+        {/* Right Side - YOUR SPLINE 3D AVATAR (UNCHANGED) */}
+        <div className="flex justify-center lg:justify-end">
+          <div className="relative">
+            
+            
+            {/* Enlarged 3D Model Container (No White Box) */}
+            <div className="relative">
+              {/* ENLARGED SIZE: Increased from w-80 h-80 lg:w-96 lg:h-96 to w-96 h-96 lg:w-[28rem] lg:h-[28rem] */}
+              {/* POSITIONED LEFT: Added -ml-8 lg:-ml-12 */}
+              <div className="w-96 h-96 lg:w-[28rem] lg:h-[28rem] relative -ml-8 lg:-ml-12">
+                
+                {/* Spline 3D Model - Direct Integration */}
+                <div className="w-full h-full relative">
+                  <Spline 
+                    scene="https://prod.spline.design/NKxj87myxipVSVjM/scene.splinecode"
+                    className="w-full h-full"
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      borderRadius: '0' // REMOVED BORDER RADIUS
+                    }}
+                    onLoad={() => {
+                      console.log('✅ Spline model loaded successfully!');
+                      const loadingEl = document.getElementById('spline-loading-enlarged');
+                      if (loadingEl) {
+                        loadingEl.style.opacity = '0';
+                        setTimeout(() => loadingEl.style.display = 'none', 500);
+                      }
+                    }}
+                    onError={(error) => {
+                      console.error('❌ Spline model failed to load:', error);
+                      const loadingEl = document.getElementById('spline-loading-enlarged');
+                      const fallbackEl = document.getElementById('spline-fallback-enlarged');
+                      if (loadingEl) loadingEl.style.display = 'none';
+                      if (fallbackEl) fallbackEl.style.display = 'flex';
+                    }}
+                  />
+                </div>
+                
+                {/* Loading State - No Box Styling */}
+                <div 
+                  id="spline-loading-enlarged"
+                  className="absolute inset-0 flex items-center justify-center bg-transparent z-10 transition-opacity duration-500"
+                >
+                  <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#ff6b1d] mx-auto mb-4"></div>
+                    <p className="text-gray-600 text-sm font-medium">Loading...</p>
+                    <p className="text-gray-400 text-xs mt-1">Your AI therapist is coming to life!</p>
+                  </div>
+                </div>
+                
+                {/* Fallback State - No Box Styling */}
+                <div 
+                  id="spline-fallback-enlarged"
+                  className="absolute inset-0 hidden items-center justify-center bg-transparent z-10"
+                >
+                  <div className="text-center bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
+                    <div className="w-20 h-20 bg-gradient-to-br from-[#ff6b1d] to-[#ff8a4a] rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                      <span className="text-3xl"></span>
+                    </div>
+                    <p className="text-gray-700 text-sm font-medium">Hi!</p>
+                    <p className="text-gray-500 text-xs mt-1">Your AI Speech Therapist</p>
+                  </div>
+                </div>
+                
+              </div>
+              
+              {/* Floating Name Tag - Repositioned for Larger Model */}
+              <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-white rounded-full px-4 py-2 shadow-lg border border-gray-200 z-30">
+                <p className="text-sm font-medium text-gray-900">meet samaha</p>
+              </div>
+            </div>
+
+            
+          </div>
+        </div>
       </div>
+    </div>
+  </section>
+
+  {/* Features Section - ADDED z-index */}
+  <section className="py-24 bg-gray-50 relative z-10"> {/* ADDED: relative z-10 */}
+    <div className="max-w-6xl mx-auto px-6">
+      <div className="text-center mb-16">
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          how fluenti works
+        </h2>
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          professional speech therapy powered by ai technology
+        </p>
+      </div>
+      
+      <div className="grid md:grid-cols-3 gap-12">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200">
+            <Mic className="w-8 h-8 text-[#ff6b1d]" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+            real-time feedback
+          </h3>
+          <p className="text-gray-600 leading-relaxed">
+            instant pronunciation analysis as you speak with advanced voice recognition
+          </p>
+        </div>
+        
+        <div className="text-center">
+          <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200">
+            <Brain className="w-8 h-8 text-[#ff6b1d]" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+            personalized ai
+          </h3>
+          <p className="text-gray-600 leading-relaxed">
+            adapts to your unique learning style and speech patterns for optimal results
+          </p>
+        </div>
+        
+        <div className="text-center">
+          <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200">
+            <BarChart3 className="w-8 h-8 text-[#ff6b1d]" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+            track progress
+          </h3>
+          <p className="text-gray-600 leading-relaxed">
+            detailed analytics show your improvement journey with clear insights
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* CTA Section - ADDED z-index */}
+  <section className="py-24 relative z-10"> {/* ADDED: relative z-10 */}
+    <div className="max-w-4xl mx-auto px-6 text-center">
+      <h2 className="text-4xl font-bold text-gray-900 mb-6">
+        ready to speak with confidence?
+      </h2>
+      <p className="text-xl text-gray-600 mb-10">
+        join thousands improving their communication with fluenti
+      </p>
+      
+      <Link href="/signup">
+        <Button 
+          size="lg"
+          className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-8 py-4 text-lg rounded-lg font-medium shadow-lg hover:shadow-xl transition-all"
+        >
+          start your free trial
+        </Button>
+      </Link>
+      
+      <p className="text-sm text-gray-500 mt-4">
+        no credit card required • 7-day free trial
+      </p>
+    </div>
+  </section>
+</div> 
     );
   }
 
