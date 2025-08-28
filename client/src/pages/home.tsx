@@ -85,7 +85,7 @@ export default function Home() {
   {/* FIXED: 3D Background - Only Behind Hero Section */}
   <div className="absolute inset-0 w-full h-screen z-0"> {/* CHANGED: fixed → absolute, h-full → h-screen */}
     <Spline 
-      scene="https://prod.spline.design/dty8cAPKlhp7bzdD/scene.splinecode"
+      scene="https://prod.spline.design/KzXnfvHqew4EwlxJ/scene.splinecode"
       className="w-full h-full"
       style={{
         width: '100%',
