@@ -240,7 +240,7 @@ export default function Home() {
               
               {/* Floating Name Tag - Repositioned for Larger Model */}
               <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 bg-white rounded-full px-4 py-2 shadow-lg border border-gray-200 z-30">
-                <p className="text-sm font-medium text-gray-900">meet samaha</p>
+                <p className="text-sm font-medium text-gray-900"></p>
               </div>
             </div>
 
@@ -679,9 +679,92 @@ export default function Home() {
       </p>
     </div>
   </section>
+  {/* Simple Footer - Clean Design */}
+<footer className="bg-gray-50 relative z-10">
+
+  
+  {/* Footer Links */}
+  <div className="border-t border-gray-200 py-12">
+    <div className="max-w-7xl mx-auto px-6">
+      <div className="grid md:grid-cols-4 gap-12 items-start">
+        
+        {/* Brand */}
+        <div className="flex items-center space-x-1">
+          <div className="relative group">
+            <FluentiLogo className="w-9 h-9 text-[#ff6b1d] transition-transform duration-300 group-hover:scale-110" />
+            <div className="absolute inset-0 bg-[#ff6b1d]/20 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          </div>
+          <span className="text-xl font-bold text-gray-900">fluenti</span>
+        </div>
+        
+        {/* Socials */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">socials</h3>
+          <ul className="space-y-3">
+            <li>
+              <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                instagram
+              </a>
+            </li>
+            <li>
+              <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                tiktok
+              </a>
+            </li>
+            <li>
+              <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                x (twitter)
+              </a>
+            </li>
+            <li>
+              <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
+                linkedin
+              </a>
+            </li>
+          </ul>
+        </div>
+        
+        {/* Legal */}
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 mb-4">legal</h3>
+          <ul className="space-y-3">
+            <li>
+              <Link href="/privacy" className="text-gray-600 hover:text-gray-900 transition-colors">
+                privacy policy
+              </Link>
+            </li>
+            <li>
+              <Link href="/terms" className="text-gray-600 hover:text-gray-900 transition-colors">
+                terms of service
+              </Link>
+            </li>
+            <li>
+              <Link href="/ai-disclaimer" className="text-gray-600 hover:text-gray-900 transition-colors">
+                ai disclaimer
+              </Link>
+            </li>
+          </ul>
+        </div>
+        
+        {/* Copyright */}
+        <div className="text-right">
+          <p className="text-gray-600 text-sm leading-relaxed">
+            © 2025 fluenti inc
+            <br />
+            by samaha munir & fluenti team
+          </p>
+        </div>
+        
+      </div>
+    </div>
+  </div>
+  
+</footer>
 </div> 
     );
   }
+
+  
 
   // ✅ FIXED: Dashboard for authenticated users (removed duplicate header)
   const userType = (user as any)?.userType || 'child';
