@@ -251,6 +251,8 @@ export default function Home() {
     </div>
   </section>
 
+  
+
   {/* Features Section - ADDED z-index */}
   <section className="py-24 bg-gray-50 relative z-10"> {/* ADDED: relative z-10 */}
     <div className="max-w-6xl mx-auto px-6">
@@ -303,6 +305,79 @@ export default function Home() {
     </div>
   </section>
 
+  {/* Testimonials Section */}
+<section className="py-24 bg-white relative z-10">
+  <div className="max-w-6xl mx-auto px-6">
+    <div className="text-center mb-16">
+      <h2 className="text-3xl font-bold text-gray-900 mb-4">
+        what our users are saying
+      </h2>
+      <p className="text-lg text-gray-600">
+        real stories from real people improving their speech
+      </p>
+    </div>
+    
+    <div className="grid md:grid-cols-3 gap-8">
+      <div className="bg-gray-50 rounded-2xl p-8">
+        <div className="flex items-center mb-4">
+          <div className="w-12 h-12 bg-[#ff6b1d] rounded-full flex items-center justify-center text-white font-bold">
+            S
+          </div>
+          <div className="ml-4">
+            <h4 className="font-semibold">Sarah M.</h4>
+            <p className="text-sm text-gray-500">Parent</p>
+          </div>
+        </div>
+        <p className="text-gray-700 mb-4">
+          "My 8-year-old son's pronunciation improved dramatically in just 3 weeks. 
+          The AI makes practice fun and engaging!"
+        </p>
+        <div className="flex text-yellow-400">
+          ⭐⭐⭐⭐⭐
+        </div>
+      </div>
+      
+      <div className="bg-gray-50 rounded-2xl p-8">
+        <div className="flex items-center mb-4">
+          <div className="w-12 h-12 bg-[#ff6b1d] rounded-full flex items-center justify-center text-white font-bold">
+            A
+          </div>
+          <div className="ml-4">
+            <h4 className="font-semibold">Ahmed K.</h4>
+            <p className="text-sm text-gray-500">Adult learner</p>
+          </div>
+        </div>
+        <p className="text-gray-700 mb-4">
+          "As someone learning English, Fluenti helped me gain confidence in speaking. 
+          The real-time feedback is incredible."
+        </p>
+        <div className="flex text-yellow-400">
+          ⭐⭐⭐⭐⭐
+        </div>
+      </div>
+      
+      <div className="bg-gray-50 rounded-2xl p-8">
+        <div className="flex items-center mb-4">
+          <div className="w-12 h-12 bg-[#ff6b1d] rounded-full flex items-center justify-center text-white font-bold">
+            L
+          </div>
+          <div className="ml-4">
+            <h4 className="font-semibold">Dr. Lisa Chen</h4>
+            <p className="text-sm text-gray-500">Speech Therapist</p>
+          </div>
+        </div>
+        <p className="text-gray-700 mb-4">
+          "I recommend Fluenti to my patients' families. It's like having 
+          a speech therapist available 24/7."
+        </p>
+        <div className="flex text-yellow-400">
+          ⭐⭐⭐⭐⭐
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
 {/* Stats Section */}
 <section className="py-24 bg-[#ff6b1d] text-white relative z-10">
   <div className="max-w-6xl mx-auto px-6">
@@ -336,28 +411,40 @@ export default function Home() {
   </div>
 </section>
 
-  {/* Professional FAQ Section with Dropdowns */}
-<section className="py-24 bg-gray-50 relative z-10">
+{/* Professional FAQ Section - Enhanced Design */}
+<section className="py-24 bg-white relative z-10">
   <div className="max-w-4xl mx-auto px-6">
-    <div className="text-center mb-16">
-      <h2 className="text-3xl font-bold text-gray-900 mb-4">
+    
+    {/* Header with Increased Distance */}
+    <div className="text-center mb-32"> 
+      <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 tracking-tight">
         frequently asked questions
       </h2>
-      <p className="text-lg text-gray-600">
-        everything you need to know about fluenti
-      </p>
     </div>
     
-    <div className="space-y-4">
+    {/* FAQ Items */}
+    <div className="space-y-6"> 
+      
       {/* FAQ Item 1 */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="border-b border-gray-200 pb-6"> 
         <button 
-          className="w-full px-8 py-6 text-left flex items-center justify-between hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#ff6b1d]/20"
+          className="w-full flex items-center justify-between text-left group focus:outline-none"
           onClick={() => {
-            const content = document.getElementById('faq-1');
-            const icon = document.getElementById('icon-1');
-            if (content?.classList.contains('hidden')) {
-              content.classList.remove('hidden');
+            const content = document.getElementById('faq-content-1');
+            const icon = document.getElementById('faq-icon-1');
+            const isHidden = content?.classList.contains('hidden');
+            
+            // Close all other FAQs
+            document.querySelectorAll('[id^="faq-content-"]').forEach(el => {
+              if (el.id !== 'faq-content-1') el.classList.add('hidden');
+            });
+            document.querySelectorAll('[id^="faq-icon-"]').forEach(el => {
+              if (el.id !== 'faq-icon-1') el.classList.remove('rotate-180');
+            });
+            
+            // Toggle current FAQ
+            if (isHidden) {
+              content?.classList.remove('hidden');
               icon?.classList.add('rotate-180');
             } else {
               content?.classList.add('hidden');
@@ -365,47 +452,44 @@ export default function Home() {
             }
           }}
         >
-          <h3 className="text-xl font-semibold text-gray-900 pr-4">
-            How does AI speech therapy work?
+          <h3 className="text-xl font-semibold text-gray-900 pr-8 transition-all duration-200 group-hover:underline group-hover:text-[#ff6b1d] underline-offset-4"> 
+            how does ai speech therapy work?
           </h3>
-          <div id="icon-1" className="flex-shrink-0 w-6 h-6 text-[#ff6b1d] transform transition-transform duration-200">
+          <div id="faq-icon-1" className="flex-shrink-0 w-6 h-6 text-gray-400 transform transition-transform duration-300 group-hover:text-gray-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
         </button>
-        <div id="faq-1" className="hidden px-8 pb-6">
-          <div className="pt-4 border-t border-gray-100">
-            <p className="text-gray-700 leading-relaxed text-lg">
-              Our <span className="font-semibold text-gray-900">advanced AI technology</span> analyzes your speech patterns in real-time using cutting-edge machine learning algorithms. The system provides:
-            </p>
-            <ul className="mt-4 space-y-2 text-gray-700">
-              <li className="flex items-start">
-                <span className="w-2 h-2 bg-[#ff6b1d] rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                <span><strong>Instant pronunciation feedback</strong> with detailed phonetic analysis</span>
-              </li>
-              <li className="flex items-start">
-                <span className="w-2 h-2 bg-[#ff6b1d] rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                <span><strong>Adaptive learning paths</strong> that evolve based on your progress</span>
-              </li>
-              <li className="flex items-start">
-                <span className="w-2 h-2 bg-[#ff6b1d] rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                <span><strong>Personalized exercises</strong> targeting your specific speech challenges</span>
-              </li>
-            </ul>
-          </div>
+        
+        <div id="faq-content-1" className="hidden mt-6 pl-0"> 
+          <p className="text-lg text-gray-700 leading-relaxed">
+            fluenti uses advanced ai models to analyze your speech patterns in real-time. you simply speak to the app, and it 
+            responds with instant feedback on pronunciation, pace, and clarity, helping you improve your communication skills faster.
+          </p>
         </div>
       </div>
 
       {/* FAQ Item 2 */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="border-b border-gray-200 pb-6">
         <button 
-          className="w-full px-8 py-6 text-left flex items-center justify-between hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#ff6b1d]/20"
+          className="w-full flex items-center justify-between text-left group focus:outline-none"
           onClick={() => {
-            const content = document.getElementById('faq-2');
-            const icon = document.getElementById('icon-2');
-            if (content?.classList.contains('hidden')) {
-              content.classList.remove('hidden');
+            const content = document.getElementById('faq-content-2');
+            const icon = document.getElementById('faq-icon-2');
+            const isHidden = content?.classList.contains('hidden');
+            
+            // Close all other FAQs
+            document.querySelectorAll('[id^="faq-content-"]').forEach(el => {
+              if (el.id !== 'faq-content-2') el.classList.add('hidden');
+            });
+            document.querySelectorAll('[id^="faq-icon-"]').forEach(el => {
+              if (el.id !== 'faq-icon-2') el.classList.remove('rotate-180');
+            });
+            
+            // Toggle current FAQ
+            if (isHidden) {
+              content?.classList.remove('hidden');
               icon?.classList.add('rotate-180');
             } else {
               content?.classList.add('hidden');
@@ -413,54 +497,44 @@ export default function Home() {
             }
           }}
         >
-          <h3 className="text-xl font-semibold text-gray-900 pr-4">
-            Is Fluenti suitable for children?
+          <h3 className="text-xl font-semibold text-gray-900 pr-8 transition-all duration-200 group-hover:underline group-hover:text-[#ff6b1d] underline-offset-4">
+            is fluenti suitable for children?
           </h3>
-          <div id="icon-2" className="flex-shrink-0 w-6 h-6 text-[#ff6b1d] transform transition-transform duration-200">
+          <div id="faq-icon-2" className="flex-shrink-0 w-6 h-6 text-gray-400 transform transition-transform duration-300 group-hover:text-gray-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
         </button>
-        <div id="faq-2" className="hidden px-8 pb-6">
-          <div className="pt-4 border-t border-gray-100">
-            <p className="text-gray-700 leading-relaxed text-lg">
-              <span className="font-bold text-2xl text-[#ff6b1d]">Absolutely!</span> Fluenti is <span className="font-bold text-xl text-gray-900">specifically designed for all ages</span>, with specialized features for children:
-            </p>
-            <div className="mt-4 grid md:grid-cols-2 gap-4">
-              <div className="bg-[#ff6b1d]/5 rounded-xl p-4">
-                <h4 className="font-semibold text-gray-900 mb-2">👶 Ages 4-8</h4>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  <li>• Interactive games and stories</li>
-                  <li>• Colorful, engaging interface</li>
-                  <li>• Reward-based learning</li>
-                </ul>
-              </div>
-              <div className="bg-[#ff6b1d]/5 rounded-xl p-4">
-                <h4 className="font-semibold text-gray-900 mb-2">🧒 Ages 9-16</h4>
-                <ul className="text-sm text-gray-700 space-y-1">
-                  <li>• Goal-oriented challenges</li>
-                  <li>• Progress tracking dashboards</li>
-                  <li>• Peer comparison features</li>
-                </ul>
-              </div>
-            </div>
-            <p className="mt-4 text-gray-700">
-              Our <span className="font-semibold">child-safe environment</span> ensures a secure, encouraging space for young learners to build confidence in their communication skills.
-            </p>
-          </div>
+        
+        <div id="faq-content-2" className="hidden mt-6 pl-0">
+          <p className="text-lg text-gray-700 leading-relaxed">
+            absolutely! fluenti is designed for all ages, with special kid-friendly interfaces, games, and activities that make 
+            speech therapy fun and engaging for children aged 4 and up. our child-safe environment ensures secure learning.
+          </p>
         </div>
       </div>
 
       {/* FAQ Item 3 */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="border-b border-gray-200 pb-6">
         <button 
-          className="w-full px-8 py-6 text-left flex items-center justify-between hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#ff6b1d]/20"
+          className="w-full flex items-center justify-between text-left group focus:outline-none"
           onClick={() => {
-            const content = document.getElementById('faq-3');
-            const icon = document.getElementById('icon-3');
-            if (content?.classList.contains('hidden')) {
-              content.classList.remove('hidden');
+            const content = document.getElementById('faq-content-3');
+            const icon = document.getElementById('faq-icon-3');
+            const isHidden = content?.classList.contains('hidden');
+            
+            // Close all other FAQs
+            document.querySelectorAll('[id^="faq-content-"]').forEach(el => {
+              if (el.id !== 'faq-content-3') el.classList.add('hidden');
+            });
+            document.querySelectorAll('[id^="faq-icon-"]').forEach(el => {
+              if (el.id !== 'faq-icon-3') el.classList.remove('rotate-180');
+            });
+            
+            // Toggle current FAQ
+            if (isHidden) {
+              content?.classList.remove('hidden');
               icon?.classList.add('rotate-180');
             } else {
               content?.classList.add('hidden');
@@ -468,62 +542,44 @@ export default function Home() {
             }
           }}
         >
-          <h3 className="text-xl font-semibold text-gray-900 pr-4">
-            Can it replace traditional speech therapy?
+          <h3 className="text-xl font-semibold text-gray-900 pr-8 transition-all duration-200 group-hover:underline group-hover:text-[#ff6b1d] underline-offset-4">
+            is fluenti a replacement for traditional speech therapy?
           </h3>
-          <div id="icon-3" className="flex-shrink-0 w-6 h-6 text-[#ff6b1d] transform transition-transform duration-200">
+          <div id="faq-icon-3" className="flex-shrink-0 w-6 h-6 text-gray-400 transform transition-transform duration-300 group-hover:text-gray-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
         </button>
-        <div id="faq-3" className="hidden px-8 pb-6">
-          <div className="pt-4 border-t border-gray-100">
-            <p className="text-gray-700 leading-relaxed text-lg">
-              Fluenti is designed as a <span className="font-bold text-xl text-gray-900">powerful complement to traditional therapy</span>, not a replacement. Here's how it enhances professional care:
-            </p>
-            <div className="mt-6 space-y-4">
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-[#ff6b1d] rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-sm font-bold">1</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">Between Sessions</h4>
-                  <p className="text-gray-600">Provides continuous practice and reinforcement of techniques learned with your therapist</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-[#ff6b1d] rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-sm font-bold">2</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">Progress Acceleration</h4>
-                  <p className="text-gray-600">Studies show up to <strong>3x faster improvement</strong> when used alongside professional therapy</p>
-                </div>
-              </div>
-              <div className="flex items-start space-x-4">
-                <div className="w-8 h-8 bg-[#ff6b1d] rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-sm font-bold">3</span>
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">Detailed Reporting</h4>
-                  <p className="text-gray-600">Generates comprehensive progress reports for your speech-language pathologist</p>
-                </div>
-              </div>
-            </div>
-          </div>
+        
+        <div id="faq-content-3" className="hidden mt-6 pl-0">
+          <p className="text-lg text-gray-700 leading-relaxed">
+            fluenti is designed to complement traditional therapy, not replace it. it provides convenient practice between sessions 
+            and can significantly accelerate progress when used alongside professional speech-language pathologist care.
+          </p>
         </div>
       </div>
 
       {/* FAQ Item 4 */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="border-b border-gray-200 pb-6">
         <button 
-          className="w-full px-8 py-6 text-left flex items-center justify-between hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#ff6b1d]/20"
+          className="w-full flex items-center justify-between text-left group focus:outline-none"
           onClick={() => {
-            const content = document.getElementById('faq-4');
-            const icon = document.getElementById('icon-4');
-            if (content?.classList.contains('hidden')) {
-              content.classList.remove('hidden');
+            const content = document.getElementById('faq-content-4');
+            const icon = document.getElementById('faq-icon-4');
+            const isHidden = content?.classList.contains('hidden');
+            
+            // Close all other FAQs
+            document.querySelectorAll('[id^="faq-content-"]').forEach(el => {
+              if (el.id !== 'faq-content-4') el.classList.add('hidden');
+            });
+            document.querySelectorAll('[id^="faq-icon-"]').forEach(el => {
+              if (el.id !== 'faq-icon-4') el.classList.remove('rotate-180');
+            });
+            
+            // Toggle current FAQ
+            if (isHidden) {
+              content?.classList.remove('hidden');
               icon?.classList.add('rotate-180');
             } else {
               content?.classList.add('hidden');
@@ -531,79 +587,44 @@ export default function Home() {
             }
           }}
         >
-          <h3 className="text-xl font-semibold text-gray-900 pr-4">
-            What speech conditions does Fluenti help with?
+          <h3 className="text-xl font-semibold text-gray-900 pr-8 transition-all duration-200 group-hover:underline group-hover:text-[#ff6b1d] underline-offset-4">
+            is my speech data secure and confidential?
           </h3>
-          <div id="icon-4" className="flex-shrink-0 w-6 h-6 text-[#ff6b1d] transform transition-transform duration-200">
+          <div id="faq-icon-4" className="flex-shrink-0 w-6 h-6 text-gray-400 transform transition-transform duration-300 group-hover:text-gray-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
         </button>
-        <div id="faq-4" className="hidden px-8 pb-6">
-          <div className="pt-4 border-t border-gray-100">
-            <p className="text-gray-700 leading-relaxed text-lg mb-4">
-              Fluenti supports a <span className="font-bold text-xl text-gray-900">comprehensive range of speech and language challenges</span>:
-            </p>
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <span className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-2"></span>
-                  Articulation Disorders
-                </h4>
-                <ul className="text-gray-600 text-sm space-y-1 ml-4">
-                  <li>• Pronunciation difficulties</li>
-                  <li>• Sound substitutions</li>
-                  <li>• Speech clarity issues</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <span className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-2"></span>
-                  Language Development
-                </h4>
-                <ul className="text-gray-600 text-sm space-y-1 ml-4">
-                  <li>• Vocabulary building</li>
-                  <li>• Sentence structure</li>
-                  <li>• Communication confidence</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <span className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-2"></span>
-                  Fluency Disorders
-                </h4>
-                <ul className="text-gray-600 text-sm space-y-1 ml-4">
-                  <li>• Stuttering support</li>
-                  <li>• Rhythm and pace</li>
-                  <li>• Breathing techniques</li>
-                </ul>
-              </div>
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
-                  <span className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-2"></span>
-                  Accent Modification
-                </h4>
-                <ul className="text-gray-600 text-sm space-y-1 ml-4">
-                  <li>• English pronunciation</li>
-                  <li>• Professional communication</li>
-                  <li>• Confidence building</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+        
+        <div id="faq-content-4" className="hidden mt-6 pl-0">
+          <p className="text-lg text-gray-700 leading-relaxed">
+            absolutely. your privacy is our priority. we use end-to-end encryption, follow HIPAA compliance standards, 
+            and never share your data with third parties without explicit consent. all processing is secure and confidential.
+          </p>
         </div>
       </div>
 
       {/* FAQ Item 5 */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="border-b border-gray-200 pb-6">
         <button 
-          className="w-full px-8 py-6 text-left flex items-center justify-between hover:bg-gray-50 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#ff6b1d]/20"
+          className="w-full flex items-center justify-between text-left group focus:outline-none"
           onClick={() => {
-            const content = document.getElementById('faq-5');
-            const icon = document.getElementById('icon-5');
-            if (content?.classList.contains('hidden')) {
-              content.classList.remove('hidden');
+            const content = document.getElementById('faq-content-5');
+            const icon = document.getElementById('faq-icon-5');
+            const isHidden = content?.classList.contains('hidden');
+            
+            // Close all other FAQs
+            document.querySelectorAll('[id^="faq-content-"]').forEach(el => {
+              if (el.id !== 'faq-content-5') el.classList.add('hidden');
+            });
+            document.querySelectorAll('[id^="faq-icon-"]').forEach(el => {
+              if (el.id !== 'faq-icon-5') el.classList.remove('rotate-180');
+            });
+            
+            // Toggle current FAQ
+            if (isHidden) {
+              content?.classList.remove('hidden');
               icon?.classList.add('rotate-180');
             } else {
               content?.classList.add('hidden');
@@ -611,53 +632,29 @@ export default function Home() {
             }
           }}
         >
-          <h3 className="text-xl font-semibold text-gray-900 pr-4">
-            How secure is my speech data?
+          <h3 className="text-xl font-semibold text-gray-900 pr-8 transition-all duration-200 group-hover:underline group-hover:text-[#ff6b1d] underline-offset-4">
+            does fluenti support multiple languages?
           </h3>
-          <div id="icon-5" className="flex-shrink-0 w-6 h-6 text-[#ff6b1d] transform transition-transform duration-200">
+          <div id="faq-icon-5" className="flex-shrink-0 w-6 h-6 text-gray-400 transform transition-transform duration-300 group-hover:text-gray-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
             </svg>
           </div>
         </button>
-        <div id="faq-5" className="hidden px-8 pb-6">
-          <div className="pt-4 border-t border-gray-100">
-            <p className="text-gray-700 leading-relaxed text-lg mb-4">
-              Your privacy and security are <span className="font-bold text-xl text-gray-900">our absolute priority</span>. We implement industry-leading security measures:
-            </p>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs">✓</span>
-                </div>
-                <span className="text-gray-700"><strong>End-to-end encryption</strong> for all voice data</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs">✓</span>
-                </div>
-                <span className="text-gray-700"><strong>HIPAA compliant</strong> data handling and storage</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs">✓</span>
-                </div>
-                <span className="text-gray-700"><strong>No data sharing</strong> with third parties without consent</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs">✓</span>
-                </div>
-                <span className="text-gray-700"><strong>Local processing</strong> where possible to minimize data transmission</span>
-              </div>
-            </div>
-          </div>
+        
+        <div id="faq-content-5" className="hidden mt-6 pl-0">
+          <p className="text-lg text-gray-700 leading-relaxed">
+            yes! fluenti supports multiple languages including english, urdu, arabic, and spanish. our ai adapts to different 
+            accents and dialects, making it perfect for diverse learners and accent modification goals.
+          </p>
         </div>
       </div>
+
+      
+
     </div>
   </div>
 </section>
-
   {/* CTA Section - ADDED z-index */}
   <section className="py-24 relative z-10"> {/* ADDED: relative z-10 */}
     <div className="max-w-4xl mx-auto px-6 text-center">
