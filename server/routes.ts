@@ -220,6 +220,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add token extraction middleware for all routes
   app.use(extractTokenFromHeader);
 
+  // MongoDB health check endpoint
+  app.get('/api/health/mongodb', async (req: Request, res: Response) => {
+    try {
+      const status = await mongoStorage.getConnectionStatus();
+      res.json({
+        status: status.connected ? 'connected' : 'disconnected',
+        details: status,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Auth routes
   app.get('/api/auth/user', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {

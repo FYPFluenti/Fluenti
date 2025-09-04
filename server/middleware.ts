@@ -21,7 +21,11 @@ export async function extractTokenFromHeader(req: Request, res: Response, next: 
             };
           }
         } catch (error) {
-          console.error('Token validation error:', error);
+          // Only log error if it's not a connection issue (to avoid spam)
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          if (!errorMessage.includes('MongoDB') && !errorMessage.includes('connection')) {
+            console.error('Token validation error:', error);
+          }
         }
       }
     }

@@ -143,248 +143,224 @@ export const mongoStorage = {
       return user;
     }, null); // Return null if MongoDB is not available
   },
+      console.error('Error getting user:', error);
+      throw error;
+    }
+  },
 
   async getUserByEmail(email: string) {
-    return this._safeExecute(async () => {
-      const user = await User.findOne({ email });
+    try {
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
+      const user = await User.findOne({ email: email });
       return user;
-    }, null);
+    } catch (error) {
+      console.error('Error getting user by email:', error);
+      throw error;
+    }
   },
 
   async updateUser(userId: string, updates: any) {
-    return this._safeExecute(async () => {
+    try {
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
       const user = await User.findOneAndUpdate(
         { id: userId },
-        { 
-          ...updates, 
-          updatedAt: new Date() 
-        },
+        { ...updates, updatedAt: new Date() },
         { new: true }
       );
       return user;
-    });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
   },
 
-  // Speech session operations
+  // Speech therapy operations
   async createSpeechSession(sessionData: {
     userId: string;
     sessionType: 'assessment' | 'exercise' | 'practice';
     exerciseData?: any;
   }) {
-    return this._safeExecute(async () => {
-      const sessionId = nanoid();
+    try {
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
       const session = new SpeechSession({
-        sessionId,
-        ...sessionData,
-        createdAt: new Date()
+        id: nanoid(),
+        ...sessionData
       });
       await session.save();
       return session;
-    });
-  },
-
-  async updateSpeechSession(sessionId: string, updates: any) {
-    return this._safeExecute(async () => {
-      const session = await SpeechSession.findOneAndUpdate(
-        { sessionId },
-        { 
-          ...updates, 
-          updatedAt: new Date() 
-        },
-        { new: true }
-      );
-      return session;
-    });
+    } catch (error) {
+      console.error('Error creating speech session:', error);
+      throw error;
+    }
   },
 
   async getSpeechSession(sessionId: string) {
-    return this._safeExecute(async () => {
-      const session = await SpeechSession.findOne({ sessionId });
+    try {
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
+      const session = await SpeechSession.findOne({ id: sessionId });
       return session;
-    }, null);
+    } catch (error) {
+      console.error('Error getting speech session:', error);
+      throw error;
+    }
   },
 
-  async getUserSpeechSessions(userId: string, limit = 10) {
-    return this._safeExecute(async () => {
+  async updateSpeechSession(sessionId: string, updates: any) {
+    try {
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
+      const session = await SpeechSession.findOneAndUpdate(
+        { id: sessionId },
+        { ...updates, updatedAt: new Date() },
+        { new: true }
+      );
+      return session;
+    } catch (error) {
+      console.error('Error updating speech session:', error);
+      throw error;
+    }
+  },
+
+  async getSpeechSessions(userId: string, limit = 10) {
+    try {
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
       const sessions = await SpeechSession.find({ userId })
         .sort({ createdAt: -1 })
         .limit(limit);
       return sessions;
-    }, []);
+    } catch (error) {
+      console.error('Error getting speech sessions:', error);
+      throw error;
+    }
   },
 
-  // Speech record operations
   async createSpeechRecord(recordData: {
     sessionId: string;
     userId: string;
-    transcription: string;
-    audioPath?: string;
-    accuracy?: number;
+    wordAttempted: string;
+    userPronunciation?: string;
+    accuracyScore?: number;
     feedback?: string;
-    exerciseType?: string;
+    audioUrl?: string;
   }) {
-    return this._safeExecute(async () => {
-      const recordId = nanoid();
+    try {
       const record = new SpeechRecord({
-        recordId,
-        ...recordData,
-        createdAt: new Date()
+        id: nanoid(),
+        ...recordData
       });
       await record.save();
       return record;
-    });
-  },
-
-  async getSpeechRecord(recordId: string) {
-    return this._safeExecute(async () => {
-      const record = await SpeechRecord.findOne({ recordId });
-      return record;
-    }, null);
-  },
-
-  async getUserSpeechRecords(userId: string, limit = 20) {
-    return this._safeExecute(async () => {
-      const records = await SpeechRecord.find({ userId })
-        .sort({ createdAt: -1 })
-        .limit(limit);
-      return records;
-    }, []);
+    } catch (error) {
+      console.error('Error creating speech record:', error);
+      throw error;
+    }
   },
 
   // User progress operations
-  async updateUserProgress(userId: string, progressData: {
-    exerciseType: string;
-    score?: number;
-    accuracy?: number;
-    completionTime?: number;
-    difficulties?: string[];
-  }) {
-    return this._safeExecute(async () => {
+  async getUserProgress(userId: string) {
+    try {
+      // Ensure DB connection before proceeding
+      await this._ensureConnected();
+      
+      let progress = await UserProgress.findOne({ userId });
+      if (!progress) {
+        progress = new UserProgress({
+          id: nanoid(),
+          userId,
+          totalSessions: 0,
+          totalWords: 0,
+          averageAccuracy: 0,
+          streakDays: 0,
+          skillLevels: {},
+          achievements: []
+        });
+        await progress.save();
+      }
+      return progress;
+    } catch (error) {
+      console.error('Error getting user progress:', error);
+      throw error;
+    }
+  },
+
+  async updateUserProgress(userId: string, updates: any) {
+    try {
       const progress = await UserProgress.findOneAndUpdate(
-        { userId, exerciseType: progressData.exerciseType },
-        {
-          $inc: { totalAttempts: 1 },
-          $push: {
-            scores: progressData.score || 0,
-            accuracies: progressData.accuracy || 0,
-            completionTimes: progressData.completionTime || 0
-          },
-          $set: {
-            lastAttempt: new Date(),
-            ...(progressData.difficulties && { lastDifficulties: progressData.difficulties })
-          }
-        },
+        { userId },
+        { ...updates, updatedAt: new Date() },
         { upsert: true, new: true }
       );
       return progress;
-    });
+    } catch (error) {
+      console.error('Error updating user progress:', error);
+      throw error;
+    }
   },
 
-  async getUserProgress(userId: string) {
-    return this._safeExecute(async () => {
-      const progress = await UserProgress.find({ userId });
-      return progress;
-    }, []);
-  },
-
-  // Emotional session operations
+  // Emotional support operations
   async createEmotionalSession(sessionData: {
     userId: string;
-    sessionType?: 'chat' | 'assessment' | 'crisis';
-    emotion?: string;
-    response?: string;
-    confidence?: number;
+    sessionType: 'chat' | 'assessment' | 'crisis';
+    emotionalState?: string;
   }) {
-    return this._safeExecute(async () => {
-      const sessionId = nanoid();
+    try {
       const session = new EmotionalSession({
-        id: sessionId,
-        userId: sessionData.userId,
-        sessionType: sessionData.sessionType || 'chat',
-        messages: [],
-        emotionalState: sessionData.emotion,
-        riskLevel: 'low',
-        createdAt: new Date()
+        id: nanoid(),
+        ...sessionData,
+        messages: []
       });
       await session.save();
       return session;
-    });
-  },
-
-  async getUserEmotionalSessions(userId: string, limit = 10) {
-    return this._safeExecute(async () => {
-      const sessions = await EmotionalSession.find({ userId })
-        .sort({ createdAt: -1 })
-        .limit(limit);
-      return sessions;
-    }, []);
+    } catch (error) {
+      console.error('Error creating emotional session:', error);
+      throw error;
+    }
   },
 
   async addMessageToEmotionalSession(sessionId: string, message: {
     role: 'user' | 'assistant';
     content: string;
   }) {
-    return this._safeExecute(async () => {
-      const session = await EmotionalSession.findOne({ id: sessionId });
-      if (!session) {
-        throw new Error('Session not found');
-      }
-      
-      session.messages.push({
-        role: message.role,
-        content: message.content,
-        timestamp: new Date()
-      });
-      
-      await session.save();
-      return session;
-    });
-  },
-
-  async getEmotionalSession(sessionId: string) {
-    return this._safeExecute(async () => {
-      const session = await EmotionalSession.findOne({ id: sessionId });
-      return session;
-    });
-  },
-
-  // Alias for compatibility with routes.ts
-  async getEmotionalSessions(userId: string, limit = 10) {
-    return this.getUserEmotionalSessions(userId, limit);
-  },
-
-  // Helper methods for testing and development
-  async clearAllData() {
-    return this._safeExecute(async () => {
-      if (process.env.NODE_ENV !== 'development') {
-        throw new Error('clearAllData can only be used in development');
-      }
-      
-      await User.deleteMany({});
-      await SpeechSession.deleteMany({});
-      await SpeechRecord.deleteMany({});
-      await UserProgress.deleteMany({});
-      await EmotionalSession.deleteMany({});
-      
-      console.log('All development data cleared');
-    });
-  },
-
-  async getConnectionStatus() {
     try {
-      const connected = await this._ensureConnected(5000);
-      return {
-        connected: connected && isMongoConnected(),
-        readyState: (require('mongoose') as any).connection?.readyState || 0,
-        host: (require('mongoose') as any).connection?.host || 'unknown',
-        name: (require('mongoose') as any).connection?.name || 'unknown'
-      };
+      const session = await EmotionalSession.findOneAndUpdate(
+        { id: sessionId },
+        { 
+          $push: { 
+            messages: { 
+              ...message, 
+              timestamp: new Date() 
+            } 
+          } 
+        },
+        { new: true }
+      );
+      return session;
     } catch (error) {
-      return {
-        connected: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        readyState: 0
-      };
+      console.error('Error adding message to emotional session:', error);
+      throw error;
+    }
+  },
+
+  async getEmotionalSessions(userId: string, limit = 10) {
+    try {
+      const sessions = await EmotionalSession.find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(limit);
+      return sessions;
+    } catch (error) {
+      console.error('Error getting emotional sessions:', error);
+      throw error;
     }
   }
 };

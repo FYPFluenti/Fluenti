@@ -290,7 +290,6 @@ export const mongoStorage = {
   // Emotional session operations
   async createEmotionalSession(sessionData: {
     userId: string;
-    sessionType?: 'chat' | 'assessment' | 'crisis';
     emotion?: string;
     response?: string;
     confidence?: number;
@@ -298,12 +297,8 @@ export const mongoStorage = {
     return this._safeExecute(async () => {
       const sessionId = nanoid();
       const session = new EmotionalSession({
-        id: sessionId,
-        userId: sessionData.userId,
-        sessionType: sessionData.sessionType || 'chat',
-        messages: [],
-        emotionalState: sessionData.emotion,
-        riskLevel: 'low',
+        sessionId,
+        ...sessionData,
         createdAt: new Date()
       });
       await session.save();
@@ -318,39 +313,6 @@ export const mongoStorage = {
         .limit(limit);
       return sessions;
     }, []);
-  },
-
-  async addMessageToEmotionalSession(sessionId: string, message: {
-    role: 'user' | 'assistant';
-    content: string;
-  }) {
-    return this._safeExecute(async () => {
-      const session = await EmotionalSession.findOne({ id: sessionId });
-      if (!session) {
-        throw new Error('Session not found');
-      }
-      
-      session.messages.push({
-        role: message.role,
-        content: message.content,
-        timestamp: new Date()
-      });
-      
-      await session.save();
-      return session;
-    });
-  },
-
-  async getEmotionalSession(sessionId: string) {
-    return this._safeExecute(async () => {
-      const session = await EmotionalSession.findOne({ id: sessionId });
-      return session;
-    });
-  },
-
-  // Alias for compatibility with routes.ts
-  async getEmotionalSessions(userId: string, limit = 10) {
-    return this.getUserEmotionalSessions(userId, limit);
   },
 
   // Helper methods for testing and development
