@@ -238,15 +238,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  // Simple emotional support endpoint without authentication
+  // Simple emotional support endpoint without authentication - STT and TTS only
   app.post('/api/emotional-support', upload.single('audio'), async (req: Request, res: Response) => {
     try {
       const { mode, language } = req.body;
       let text = req.body.text;
 
-      console.log('Processing emotional support request - Mode:', mode, 'Language:', language);
+      console.log('Processing request - Mode:', mode, 'Language:', language);
 
-      // Handle voice mode with basic audio processing
+      // Handle voice mode with audio processing (STT only)
       if (mode === 'voice' && req.file) {
         try {
           console.log('Processing audio file, size:', req.file.size, 'bytes');
@@ -260,7 +260,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const whisperLanguage = language?.startsWith('ur') ? 'ur' : 'en';
           
           try {
-            // Try fast STT first (OpenAI API or lightweight fallback)
+            // Try fast STT first (lightweight fallback)
             console.log('Attempting fast STT...');
             text = await fastTranscribeAudio(audioBuffer, whisperLanguage);
             console.log('Fast STT successful:', text?.length, 'characters');
@@ -282,34 +282,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Ensure we have some text to work with
       if (!text || text.trim().length === 0) {
-        text = mode === 'voice' ? 'I received your voice message' : 'Hello, how are you feeling?';
+        text = mode === 'voice' ? 'No speech detected' : 'No input provided';
       }
 
-      console.log('Final processed text:', text);
+      console.log('Final transcribed text:', text);
 
-      // Simple response without emotion detection
-      const supportResponse = language === 'ur' 
-        ? 'میں یہاں آپ کی بات سننے اور مدد کرنے کے لیے ہوں۔ آپ کیسا محسوس کر رہے ہیں؟'
-        : 'Thank you for sharing with me. I\'m here to listen and support you. How can I help you today?';
-
-      // Generate TTS audio if requested (for voice mode)
+      // For voice mode, generate TTS for the transcribed text (echo back what was said)
       let audioBase64: string | undefined;
       const requestTTS = req.body.requestTTS === 'true' || mode === 'voice';
       
-      if (requestTTS) {
+      if (requestTTS && text) {
         try {
-          console.log('Generating TTS audio for response...');
-          const ttsResult = await generateTTSAudio(supportResponse, language === 'ur' ? 'ur' : 'en');
+          console.log('Generating TTS audio for transcribed text...');
+          const ttsResult = await generateTTSAudio(text, language === 'ur' ? 'ur' : 'en');
           
           if (ttsResult.error) {
-            console.warn('TTS generation failed, using browser fallback:', ttsResult.error);
-            audioBase64 = undefined; // Client will use browser TTS
+            console.warn('TTS generation failed:', ttsResult.error);
+            audioBase64 = undefined;
           } else {
             audioBase64 = ttsResult.audioBase64;
             console.log('TTS audio generated successfully');
           }
         } catch (ttsError) {
-          console.warn('TTS error, falling back to browser TTS:', ttsError);
+          console.warn('TTS error:', ttsError);
           audioBase64 = undefined;
         }
       }
@@ -317,7 +312,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         success: true,
         transcription: text, 
-        response: supportResponse,
         mode: mode || 'text',
         language: language || 'en',
         audioBase64: audioBase64,
@@ -325,7 +319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
     } catch (error) {
-      console.error("Error processing emotional support request:", error);
+      console.error("Error processing request:", error);
       res.status(500).json({ 
         error: 'Processing failed',
         details: error instanceof Error ? error.message : 'Unknown error'
@@ -333,25 +327,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple test endpoint for development
+  // Simple test endpoint for development - echo only
   app.post('/api/test-chat', async (req: Request, res: Response) => {
     try {
       const { message, language } = req.body;
-      const response = language === 'ur' 
-        ? 'یہ ایک ٹیسٹ جواب ہے۔'
-        : 'This is a test response.';
       
       res.json({ 
         success: true,
-        message: response
+        received_message: message,
+        language: language || 'en',
+        echo: `Received: ${message}`
       });
     } catch (error) {
       console.error("Test chat error:", error);
       res.status(500).json({ error: 'Test endpoint failed' });
     }
   });
-
-
 
   // Create HTTP server
   const httpServer = createServer(app);
