@@ -10,7 +10,7 @@ import { extractTokenFromHeader, tokenBasedAuth } from "./middleware";
 import * as speechServiceModule from "./services/speechService";
 const { SpeechService, transcribeAudio } = speechServiceModule;
 import { simpleTranscribeAudio, validateAudioBuffer } from "./services/simpleSpeechService";
-import { generateTTSAudio, generateBrowserTTS } from "./services/ttsService";
+import { generateTTSAudio } from "./services/ttsService";
 import { fastTranscribeAudio } from "./services/fastSTTService";
 import { AuthService } from "./auth";
 

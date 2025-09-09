@@ -1,5 +1,5 @@
 import { mongoStorage } from "../mongoStorage";
-import { generateSpeechFeedback, generatePersonalizedExercises } from "./openai";
+import { generateSpeechFeedback } from "./openai";
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -155,14 +155,6 @@ except Exception as e:
   });
 }
 
-export interface SpeechAssessmentResult {
-  overallScore: number;
-  strengths: string[];
-  improvementAreas: string[];
-  recommendedLevel: number;
-  exercises: any[];
-}
-
 export class SpeechService {
   static async createSession(userId: string, sessionType: 'assessment' | 'exercise' | 'practice') {
     const session = await mongoStorage.createSpeechSession({
@@ -264,26 +256,4 @@ export class SpeechService {
     }
   }
 
-  static async conductAssessment(userId: string, responses: any[]): Promise<SpeechAssessmentResult> {
-    // Simple assessment logic for now
-    const totalScore = responses.reduce((sum: number, response: any) => sum + (response.accuracy || 0), 0);
-    const averageScore = responses.length > 0 ? totalScore / responses.length : 0;
-
-    // Determine user level based on average score
-    const userLevel = Math.floor(averageScore / 20) + 1;
-
-    const result: SpeechAssessmentResult = {
-      overallScore: averageScore,
-      strengths: averageScore > 80 ? ['Good pronunciation', 'Clear articulation'] : ['Effort and practice'],
-      improvementAreas: averageScore < 70 ? ['Pronunciation accuracy', 'Speech clarity'] : [],
-      recommendedLevel: userLevel,
-      exercises: await generatePersonalizedExercises(userLevel, 'english', averageScore),
-    };
-
-    // Save assessment session
-    await this.createSession(userId, 'assessment');
-    await this.updateUserProgress(userId, averageScore);
-
-    return result;
-  }
 }
