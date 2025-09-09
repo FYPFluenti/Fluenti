@@ -13,8 +13,8 @@ export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur'
       fs.writeFileSync(tempPath, audioBuffer);
 
       // Use the smallest possible models to avoid memory issues
-      // For both languages, use tiny model to conserve memory
-      const model = 'openai/whisper-tiny';
+      // Use base model for better accuracy but still fast loading
+      const model = language === 'ur' ? 'openai/whisper-base' : 'openai/whisper-base';
       
       // Ensure ffmpeg is available in Python environment
       const ffmpegPath = path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'WinGet', 'Packages', 'Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe', 'ffmpeg-7.1.1-full_build', 'bin');
@@ -104,11 +104,11 @@ except Exception as e:
       let output = '';
       let errorOutput = '';
       
-      // Set a timeout to prevent hanging
+      // Set a timeout to prevent hanging - increased for first-time model loading
       const timeout = setTimeout(() => {
         python.kill();
         reject('STT timeout - model loading or processing took too long');
-      }, 60000); // 60 second timeout for first-time model loading
+      }, 180000); // 3 minute timeout for first-time model loading
       
       python.stdout.on('data', (data) => { output += data.toString(); });
       python.stderr.on('data', (data) => { errorOutput += data.toString(); });
