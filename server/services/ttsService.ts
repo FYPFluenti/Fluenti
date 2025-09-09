@@ -108,14 +108,4 @@ export async function generateTTSAudio(text: string, language: 'en' | 'ur' = 'en
   });
 }
 
-/**
- * Browser TTS fallback - returns instructions for client-side TTS
- */
-export function generateBrowserTTS(text: string, language: 'en' | 'ur' = 'en'): TTSResult {
-  return {
-    text,
-    language,
-    model: 'browser_fallback',
-    error: undefined // No error, just fallback
-  };
-}
+
