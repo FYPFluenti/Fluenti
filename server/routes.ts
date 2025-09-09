@@ -10,6 +10,7 @@ import { extractTokenFromHeader, tokenBasedAuth } from "./middleware";
 import * as speechServiceModule from "./services/speechService";
 const { SpeechService, transcribeAudio } = speechServiceModule;
 import { simpleTranscribeAudio, validateAudioBuffer } from "./services/simpleSpeechService";
+import { generateTTSAudio, generateBrowserTTS } from "./services/ttsService";
 import { AuthService } from "./auth";
 
 
@@ -422,12 +423,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? 'میں یہاں آپ کی بات سننے اور مدد کرنے کے لیے ہوں۔ آپ کیسا محسوس کر رہے ہیں؟'
         : 'Thank you for sharing with me. I\'m here to listen and support you. How can I help you today?';
 
+      // Generate TTS audio if requested (for voice mode)
+      let audioBase64: string | undefined;
+      const requestTTS = req.body.requestTTS === 'true' || mode === 'voice';
+      
+      if (requestTTS) {
+        try {
+          console.log('Generating TTS audio for response...');
+          const ttsResult = await generateTTSAudio(supportResponse, language === 'ur' ? 'ur' : 'en');
+          
+          if (ttsResult.error) {
+            console.warn('TTS generation failed, using browser fallback:', ttsResult.error);
+            audioBase64 = undefined; // Client will use browser TTS
+          } else {
+            audioBase64 = ttsResult.audioBase64;
+            console.log('TTS audio generated successfully');
+          }
+        } catch (ttsError) {
+          console.warn('TTS error, falling back to browser TTS:', ttsError);
+          audioBase64 = undefined;
+        }
+      }
+
       res.json({ 
         success: true,
         transcription: text, 
         response: supportResponse,
         mode: mode || 'text',
-        language: language || 'en'
+        language: language || 'en',
+        audioBase64: audioBase64,
+        hasTTS: !!audioBase64
       });
 
     } catch (error) {

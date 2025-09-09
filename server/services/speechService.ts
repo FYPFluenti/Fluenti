@@ -25,6 +25,12 @@ import torch
 import gc
 import sys
 from transformers import pipeline
+import locale
+
+# Set UTF-8 encoding for output
+import codecs
+sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
+sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
 
 # Add ffmpeg to PATH for this Python session (prepend to ensure it's found)
 ffmpeg_path = r"${ffmpegPath.replace(/\\/g, '\\\\')}"
@@ -36,9 +42,9 @@ try:
     device = -1  # Force CPU
     torch_dtype = torch.float32  # Use float32 for CPU
     
-    print(f"Using device: CPU (forced for training compatibility)", file=sys.stderr)
+    print("Using device: CPU (forced for training compatibility)", file=sys.stderr)
     if torch.cuda.is_available():
-        print(f"GPU available but using CPU for stability", file=sys.stderr)
+        print("GPU available but using CPU for stability", file=sys.stderr)
     
     # Create pipeline with CPU settings
     pipe = pipeline(
@@ -59,29 +65,37 @@ try:
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
     
-    print(result['text'])  # Extract text from result dict
+    # Output the transcription with proper encoding handling
+    transcription = result.get('text', '').strip()
+    if transcription:
+        print(transcription)
+    else:
+        print("No speech detected")
     
 except Exception as e:
-    print(f"Whisper processing failed: {str(e)}", file=sys.stderr)
+    error_msg = str(e).replace('"', "'")
+    print(f"Whisper processing failed: {error_msg}", file=sys.stderr)
     # Clean up on error
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
     # Return error message that will be caught by the fallback system
-    raise Exception(f"Model processing error: {str(e)}")
+    raise Exception(f"Model processing error: {error_msg}")
       `;
 
       // Use virtual environment Python
       const venvPython = path.join(process.cwd(), '.venv', 'Scripts', 'python.exe');
       
-      // Set environment for spawned process with GPU optimization
+      // Set environment for spawned process with proper Unicode support
       const env = { 
         ...process.env,
         PYTHONPATH: path.join(process.cwd(), '.venv', 'Lib', 'site-packages'),
         PYTORCH_CUDA_ALLOC_CONF: 'max_split_size_mb:128',
-        OMP_NUM_THREADS: '2',  // Allow a bit more threading for GPU
-        CUDA_VISIBLE_DEVICES: '0',  // Ensure we use the first GPU
-        HF_HUB_DISABLE_SYMLINKS_WARNING: '1'  // Disable symlink warnings
+        OMP_NUM_THREADS: '2',
+        CUDA_VISIBLE_DEVICES: '0',
+        HF_HUB_DISABLE_SYMLINKS_WARNING: '1',
+        PYTHONIOENCODING: 'utf-8',  // Force UTF-8 encoding
+        PYTHONLEGACYWINDOWSSTDIO: '1'  // Enable legacy Windows stdio handling
       };
       
       // Spawn Python process using virtual environment
