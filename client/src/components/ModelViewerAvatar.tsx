@@ -13,6 +13,9 @@ interface ModelViewerAvatarProps {
   avatarUrl: string;
   size?: 'small' | 'medium' | 'large';
   className?: string;
+   autoRotate?: boolean;      
+  cameraControls?: boolean;  
+  fullBody?: boolean; 
   
 }
 
@@ -20,6 +23,9 @@ export default function ModelViewerAvatar({
   avatarUrl, 
   size = 'medium', 
   className = '',
+   autoRotate = false,       
+  cameraControls = true,     
+  fullBody = false,
   
 }: ModelViewerAvatarProps) {
   const [isLoading, setIsLoading] = useState(true);
@@ -86,7 +92,8 @@ export default function ModelViewerAvatar({
   ref={modelViewerRef}
   src={avatarUrl}
   alt="Samaha's 3D Avatar"
-  camera-controls={true}                     // ✅ Manual rotation enabled
+  camera-controls={true}  
+  auto-rotate={autoRotate ? true : undefined}                   // ✅ Manual rotation enabled
   disable-zoom={true}                        // ✅ No user zoom
   disable-pan={true}                         // ✅ No panning
   touch-action="pan-y"                       // ✅ Touch control
