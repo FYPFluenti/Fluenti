@@ -182,11 +182,10 @@ export class SpeechService {
       const record = await mongoStorage.createSpeechRecord({
         sessionId,
         userId: session.userId,
-        wordAttempted: word,
-        userPronunciation: userTranscription,
-        accuracyScore: feedback.accuracy,
+        transcription: userTranscription,
+        accuracy: feedback.accuracy,
         feedback: feedback.feedback,
-        audioUrl: userAudio,
+        audioPath: userAudio,
       });
 
       // Update session progress
@@ -215,18 +214,11 @@ export class SpeechService {
 
   static async updateUserProgress(userId: string, sessionScore: number) {
     try {
-      const progress = await mongoStorage.getUserProgress(userId);
-      
-      const totalSessions = (progress.totalSessions || 0) + 1;
-      const totalWords = (progress.totalWords || 0) + 1;
-      const currentAvg = progress.averageAccuracy || 0;
-      const newAverage = ((currentAvg * (totalSessions - 1)) + sessionScore) / totalSessions;
-      
       await mongoStorage.updateUserProgress(userId, {
-        totalSessions,
-        totalWords,
-        averageAccuracy: newAverage,
-        lastSessionDate: new Date(),
+        exerciseType: 'speech_practice',
+        score: sessionScore,
+        accuracy: sessionScore,
+        completionTime: 0, // Could be calculated if needed
       });
     } catch (error) {
       console.error('Error updating user progress:', error);
@@ -235,17 +227,22 @@ export class SpeechService {
 
   static async getUserProgress(userId: string) {
     try {
-      const progress = await mongoStorage.getUserProgress(userId);
-      const sessions = await mongoStorage.getSpeechSessions(userId, 10);
+      const progressArray = await mongoStorage.getUserProgress(userId);
+      const sessions = await mongoStorage.getUserSpeechSessions(userId, 10);
+      
+      // Calculate aggregated progress from the array
+      const speechProgress = progressArray.find(p => p.exerciseType === 'speech_practice');
       
       return {
-        totalSessions: progress.totalSessions || 0,
-        totalWords: progress.totalWords || 0,
-        averageAccuracy: progress.averageAccuracy || 0,
-        streakDays: progress.streakDays || 0,
+        totalSessions: speechProgress?.totalAttempts || 0,
+        totalWords: speechProgress?.totalAttempts || 0, // Using attempts as proxy for words
+        averageAccuracy: speechProgress?.accuracies?.length > 0 
+          ? speechProgress.accuracies.reduce((a: number, b: number) => a + b, 0) / speechProgress.accuracies.length 
+          : 0,
+        streakDays: 0, // This would need to be calculated based on session dates
         recentSessions: sessions,
-        skillLevels: progress.skillLevels || {},
-        achievements: progress.achievements || [],
+        skillLevels: {}, // Could be expanded later
+        achievements: [], // Could be expanded later
       };
     } catch (error) {
       console.error('Error getting user progress:', error);
