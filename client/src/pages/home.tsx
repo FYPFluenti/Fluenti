@@ -308,264 +308,91 @@ export default function Home() {
     </div>
   </section>
 
-  {/* 3. AI THERAPISTS SECTION - Show who will help them */}
-  <section className="py-20 bg-white relative z-10">
-    <div className="max-w-6xl mx-auto px-6">
-      
-      {/* Section Header */}
-      <div className="text-center mb-16">
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">
-          meet your ai therapists
-        </h2>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          personalized ai speech therapy, tailored to your unique needs
-        </p>
-      </div>
-      
-      {/* Therapists Stack */}
-      <div className="space-y-16">
-        
-        {/* Luna - Pediatric Specialist */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200 hover:border-[#ff6b1d] transition-all duration-300">
-          <div className="grid lg:grid-cols-2 min-h-[450px]">
-            
-            {/* Full Body Avatar Side */}
-            <div className="relative bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-6">
-              <div className="relative w-full h-full max-w-xs">
-                <ModelViewerAvatar
-                  avatarUrl={avatarUrls.therapist}
-                  size="medium"
-                  className="w-full h-full min-h-[350px] object-contain"
-                />
-                
-                {/* Online Status */}
-                <div className="absolute top-4 right-4 flex items-center space-x-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full shadow-md">
-                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs font-medium text-gray-700">Online</span>
-                </div>
-                
-                {/* Interaction Hint */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full shadow-md">
-                  <span className="text-xs text-gray-600">Drag to rotate</span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Content Side */}
-            <div className="p-8 lg:p-10 flex flex-col justify-center">
-              <div className="space-y-6">
-                
-                {/* Header */}
-                <div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-2">Luna</h3>
-                  <p className="text-lg text-[#ff6b1d] font-semibold mb-3">Pediatric Speech Specialist</p>
-                  <div className="w-16 h-1 bg-[#ff6b1d] rounded-full"></div>
-                </div>
-                
-                {/* Description */}
-                <p className="text-base text-gray-600 leading-relaxed">
-                  Makes speech therapy feel like playtime. Luna specializes in helping children 
-                  overcome speech challenges through fun, interactive games and storytelling.
-                </p>
-                
-                {/* Expertise Grid */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Specializes In</h4>
-                    <div className="space-y-1 text-sm text-gray-600">
-                      <p>Articulation disorders</p>
-                      <p>Childhood stuttering</p>
-                      <p>Speech delays</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Perfect For</h4>
-                    <div className="space-y-1 text-sm text-gray-600">
-                      <p>Ages 4-16</p>
-                      <p>Visual learners</p>
-                      <p>Building confidence</p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Personality Tags */}
-                <div className="flex flex-wrap gap-2">
-                  <span className="bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-sm font-medium">
-                    Patient & Encouraging
-                  </span>
-                  <span className="bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-sm font-medium">
-                    Creative & Fun
-                  </span>
-                </div>
-                
-              </div>
-            </div>
-            
-          </div>
-        </div>
-        
-        {/* Victor - Executive Coach */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200 hover:border-[#ff6b1d] transition-all duration-300">
-          <div className="grid lg:grid-cols-2 min-h-[450px]">
-            
-            {/* Content Side - Left for variety */}
-            <div className="p-8 lg:p-10 flex flex-col justify-center order-2 lg:order-1">
-              <div className="space-y-6">
-                
-                {/* Header */}
-                <div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-2">Victor</h3>
-                  <p className="text-lg text-blue-600 font-semibold mb-3">Executive Communication Coach</p>
-                  <div className="w-16 h-1 bg-blue-600 rounded-full"></div>
-                </div>
-                
-                {/* Description */}
-                <p className="text-base text-gray-600 leading-relaxed">
-                  Transforms professional communication and builds executive presence. Victor 
-                  specializes in accent refinement and presentation skills for professionals.
-                </p>
-                
-                {/* Expertise Grid */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Specializes In</h4>
-                    <div className="space-y-1 text-sm text-gray-600">
-                      <p>Accent modification</p>
-                      <p>Business communication</p>
-                      <p>Presentation skills</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Perfect For</h4>
-                    <div className="space-y-1 text-sm text-gray-600">
-                      <p>Working professionals</p>
-                      <p>Corporate training</p>
-                      <p>Leadership roles</p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Personality Tags */}
-                <div className="flex flex-wrap gap-2">
-                  <span className="bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-sm font-medium">
-                    Professional & Structured
-                  </span>
-                  <span className="bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-sm font-medium">
-                    Results-Driven
-                  </span>
-                </div>
-                
-              </div>
-            </div>
-            
-            {/* Full Body Avatar Side */}
-            <div className="relative bg-gradient-to-br from-blue-50 to-gray-100 flex items-center justify-center p-6 order-1 lg:order-2">
-              <div className="relative w-full h-full max-w-xs">
-                <ModelViewerAvatar
-                  avatarUrl={avatarUrls.professional}
-                  size="medium"
-                  className="w-full h-full min-h-[350px] object-contain"
-                />
-                
-                {/* Online Status */}
-                <div className="absolute top-4 right-4 flex items-center space-x-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full shadow-md">
-                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs font-medium text-gray-700">Online</span>
-                </div>
-                
-                {/* Interaction Hint */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full shadow-md">
-                  <span className="text-xs text-gray-600">Drag to rotate</span>
-                </div>
-              </div>
-            </div>
-            
-          </div>
-        </div>
-        
-        {/* Serena - Confidence Builder */}
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200 hover:border-[#ff6b1d] transition-all duration-300">
-          <div className="grid lg:grid-cols-2 min-h-[450px]">
-            
-            {/* Full Body Avatar Side */}
-            <div className="relative bg-gradient-to-br from-purple-50 to-gray-100 flex items-center justify-center p-6">
-              <div className="relative w-full h-full max-w-xs">
-                <ModelViewerAvatar
-                  avatarUrl={avatarUrls.casual}
-                  size="medium"
-                  className="w-full h-full min-h-[350px] object-contain"
-                />
-                
-                {/* Online Status */}
-                <div className="absolute top-4 right-4 flex items-center space-x-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full shadow-md">
-                  <div className="w-1.5 h-1.5 bg-purple-500 rounded-full animate-pulse"></div>
-                  <span className="text-xs font-medium text-gray-700">Online</span>
-                </div>
-                
-                {/* Interaction Hint */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full shadow-md">
-                  <span className="text-xs text-gray-600">Drag to rotate</span>
-                </div>
-              </div>
-            </div>
-            
-            {/* Content Side */}
-            <div className="p-8 lg:p-10 flex flex-col justify-center">
-              <div className="space-y-6">
-                
-                {/* Header */}
-                <div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-2">Serena</h3>
-                  <p className="text-lg text-purple-600 font-semibold mb-3">Confidence & Fluency Coach</p>
-                  <div className="w-16 h-1 bg-purple-600 rounded-full"></div>
-                </div>
-                
-                {/* Description */}
-                <p className="text-base text-gray-600 leading-relaxed">
-                  Creates a safe, supportive environment for breakthrough growth. Serena 
-                  specializes in stuttering therapy and helping people discover their authentic voice.
-                </p>
-                
-                {/* Expertise Grid */}
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Specializes In</h4>
-                    <div className="space-y-1 text-sm text-gray-600">
-                      <p>Stuttering therapy</p>
-                      <p>Fluency disorders</p>
-                      <p>Speech anxiety</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-gray-900 uppercase tracking-wide">Perfect For</h4>
-                    <div className="space-y-1 text-sm text-gray-600">
-                      <p>All age groups</p>
-                      <p>Social anxiety</p>
-                      <p>Building confidence</p>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Personality Tags */}
-                <div className="flex flex-wrap gap-2">
-                  <span className="bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-sm font-medium">
-                    Calm & Supportive
-                  </span>
-                  <span className="bg-gray-100 text-gray-700 px-4 py-2 rounded-full text-sm font-medium">
-                    Empathetic & Gentle
-                  </span>
-                </div>
-                
-              </div>
-            </div>
-            
-          </div>
-        </div>
-        
-      </div>
-      
+  {/* AI Therapists Section – Simple, Supportive, Minimal UI */}
+<section className="py-16 bg-white relative z-10">
+  <div className="max-w-4xl mx-auto px-6">
+    
+    {/* Section Header */}
+    <div className="text-center mb-10">
+      <h2 className="text-3xl font-extrabold text-gray-900 mb-3">
+        Meet Your AI Therapy Companions
+      </h2>
+      <p className="text-lg text-gray-600 max-w-xl mx-auto">
+        You're not alone on your journey—choose from our caring AI companions, each here to guide and support you through every step of your speech journey.
+      </p>
     </div>
-  </section>
+    
+    {/* Avatars Row */}
+    <div className="grid md:grid-cols-3 gap-8">
+      {/* Luna */}
+      <div className="flex flex-col items-center text-center bg-gray-50 rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="w-full flex justify-center">
+          <ModelViewerAvatar
+            avatarUrl={avatarUrls.therapist}
+            size="small"
+            className="w-32 h-48 object-contain"
+            autoRotate={true}
+            cameraControls={false}
+          />
+        </div>
+        <div className="mt-4">
+          <h3 className="font-semibold text-gray-900 text-lg">Luna</h3>
+          <p className="text-sm text-gray-600 mt-1 mb-2">Gentle Encourager</p>
+          <p className="text-gray-500 text-sm">
+            Brings warmth, playfulness, and gentle encouragement—ideal for building confidence in every session.
+          </p>
+        </div>
+      </div>
+      
+      {/* Victor */}
+      <div className="flex flex-col items-center text-center bg-gray-50 rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="w-full flex justify-center">
+          <ModelViewerAvatar
+            avatarUrl={avatarUrls.professional}
+            size="small"
+            className="w-32 h-48 object-contain"
+            autoRotate={true}
+            cameraControls={false}
+          />
+        </div>
+        <div className="mt-4">
+          <h3 className="font-semibold text-gray-900 text-lg">Victor</h3>
+          <p className="text-sm text-gray-600 mt-1 mb-2">Steady Motivator</p>
+          <p className="text-gray-500 text-sm">
+            Guides you with calm reassurance and steady motivation—perfect for adults and professionals seeking progress.
+          </p>
+        </div>
+      </div>
+      
+      {/* Serena */}
+      <div className="flex flex-col items-center text-center bg-gray-50 rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="w-full flex justify-center">
+          <ModelViewerAvatar
+            avatarUrl={avatarUrls.casual}
+            size="small"
+            className="w-32 h-48 object-contain"
+            autoRotate={true}
+            cameraControls={false}
+          />
+        </div>
+        <div className="mt-4">
+          <h3 className="font-semibold text-gray-900 text-lg">Serena</h3>
+          <p className="text-sm text-gray-600 mt-1 mb-2">Empathetic Listener</p>
+          <p className="text-gray-500 text-sm">
+            Offers a safe, supportive space—listens with empathy and helps you grow at your own pace.
+          </p>
+        </div>
+      </div>
+    </div>
+    
+    {/* Subtle Supportive Note */}
+    <div className="text-center mt-10">
+      <p className="text-sm text-gray-400">
+        Every AI companion is designed to make your speech journey feel welcoming, positive, and uniquely yours.
+      </p>
+    </div>
+  </div>
+</section>
 
   {/* 4. STATS SECTION - Show credibility and results */}
   <section className="py-24 bg-[#ff6b1d] text-white relative z-10">
