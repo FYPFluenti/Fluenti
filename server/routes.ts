@@ -11,6 +11,7 @@ import * as speechServiceModule from "./services/speechService";
 const { SpeechService, transcribeAudio } = speechServiceModule;
 import { simpleTranscribeAudio, validateAudioBuffer } from "./services/simpleSpeechService";
 import { generateTTSAudio, generateBrowserTTS } from "./services/ttsService";
+import { fastTranscribeAudio } from "./services/fastSTTService";
 import { AuthService } from "./auth";
 
 
@@ -43,23 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add token extraction middleware for all routes
   app.use(extractTokenFromHeader);
 
-  // MongoDB health check endpoint
-  app.get('/api/health/mongodb', async (req: Request, res: Response) => {
-    try {
-      const status = await mongoStorage.getConnectionStatus();
-      res.json({
-        status: status.connected ? 'connected' : 'disconnected',
-        details: status,
-        timestamp: new Date().toISOString()
-      });
-    } catch (error) {
-      res.status(500).json({
-        status: 'error',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        timestamp: new Date().toISOString()
-      });
-    }
-  });
+
 
   // Auth routes
   app.get('/api/auth/user', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -191,27 +176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(400).json({ success: false, message: error.message });
       }
     });
-    
-    // Session information endpoint
-    app.get('/api/auth/session', (req: AuthenticatedRequest, res: Response) => {
-      res.json({
-        session: req.session,
-        user: req.user,
-        isAuthenticated: req.isAuthenticated ? req.isAuthenticated() : false
-      });
-    });
-    
-    // Logout endpoint
-    app.get('/api/logout', (req: AuthenticatedRequest, res: Response) => {
-      if (req.session) {
-        req.session.destroy((err: any) => {
-          if (err) {
-            console.error('Session destruction error:', err);
-          }
-        });
-      }
-      res.json({ success: true, message: 'Logged out successfully' });
-    });
+
   }
 
   // Speech therapy routes
@@ -252,22 +217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/speech/assessment', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-      
-      const { assessmentResults } = req.body;
-      
-      const result = await SpeechService.conductAssessment(userId, assessmentResults);
-      res.json(result);
-    } catch (error) {
-      console.error("Error conducting assessment:", error);
-      res.status(500).json({ message: "Failed to conduct assessment" });
-    }
-  });
+
 
   app.get('/api/speech/progress', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -284,98 +234,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Emotional support routes
-  app.post('/api/chat/session', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-      
-      const session = await mongoStorage.createEmotionalSession({ 
-        userId, 
-        sessionType: 'chat' 
-      });
-      res.json(session);
-    } catch (error) {
-      console.error("Error creating chat session:", error);
-      res.status(500).json({ message: "Failed to create chat session" });
-    }
-  });
 
-  app.post('/api/chat/message', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { sessionId, message } = req.body;
-      
-      // Save user message
-      await mongoStorage.addMessageToEmotionalSession(sessionId, {
-        role: 'user',
-        content: message
-      });
-      
-      // Simple response without emotion analysis
-      const simpleResponse = 'I understand you might be going through something difficult. Would you like to talk about it?';
-      
-      // Save AI response
-      await mongoStorage.addMessageToEmotionalSession(sessionId, {
-        role: 'assistant',
-        content: simpleResponse
-      });
-      
-      res.json({
-        response: simpleResponse,
-        status: 'success'
-      });
-    } catch (error) {
-      console.error("Error processing chat message:", error);
-      res.status(500).json({ message: "Failed to process message" });
-    }
-  });
 
-  app.get('/api/chat/messages/:sessionId', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { sessionId } = req.params;
-      const userId = req.user?.claims?.sub;
-      if (!userId) {
-        return res.status(401).json({ message: "User not authenticated" });
-      }
-      
-      const session = await mongoStorage.getEmotionalSessions(userId, 1);
-      const messages = session.length > 0 ? session[0].messages : [];
-      res.json(messages); // Return in chronological order
-    } catch (error) {
-      console.error("Error fetching chat messages:", error);
-      res.status(500).json({ message: "Failed to fetch messages" });
-    }
-  });
 
-  // NEW: Superior Therapeutic Chat Endpoint with Advanced Quality Metrics
-  // Test endpoint for Urdu text transmission
-  app.post('/api/test-urdu', async (req: Request, res: Response) => {
-    try {
-      const { text } = req.body;
-      console.log('\n=== URDU TEST ENDPOINT ===');
-      console.log('Received text:', text);
-      console.log('Text length:', text ? text.length : 0);
-      console.log('Has Urdu regex test:', text ? /[\u0600-\u06FF\u0750-\u077F]/.test(text) : false);
-      console.log('Contains پریشان:', text ? text.includes('پریشان') : false);
-      console.log('Contains اداس:', text ? text.includes('اداس') : false);
-      console.log('Character codes:', text ? [...text].map(c => c.charCodeAt(0)).slice(0, 10) : []);
-      
-      res.json({
-        received: text,
-        length: text ? text.length : 0,
-        hasUrdu: text ? /[\u0600-\u06FF\u0750-\u077F]/.test(text) : false,
-        keywords: {
-          pareshan: text ? text.includes('پریشان') : false,
-          udas: text ? text.includes('اداس') : false
-        }
-      });
-    } catch (error) {
-      console.error('Test endpoint error:', error);
-      res.status(500).json({ error: error instanceof Error ? error.message : 'Unknown error occurred' });
-    }
-  });
 
   // Simple emotional support endpoint without authentication
   app.post('/api/emotional-support', upload.single('audio'), async (req: Request, res: Response) => {
@@ -399,11 +260,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const whisperLanguage = language?.startsWith('ur') ? 'ur' : 'en';
           
           try {
-            text = await transcribeAudio(audioBuffer, whisperLanguage);
-            console.log('Transcription successful:', text?.length, 'characters');
-          } catch (sttError) {
-            console.warn('Primary STT failed, using fallback:', sttError);
-            text = await simpleTranscribeAudio(audioBuffer, whisperLanguage);
+            // Try fast STT first (OpenAI API or lightweight fallback)
+            console.log('Attempting fast STT...');
+            text = await fastTranscribeAudio(audioBuffer, whisperLanguage);
+            console.log('Fast STT successful:', text?.length, 'characters');
+          } catch (fastSTTError) {
+            console.warn('Fast STT failed, trying local Whisper:', fastSTTError);
+            try {
+              text = await transcribeAudio(audioBuffer, whisperLanguage);
+              console.log('Local Whisper successful:', text?.length, 'characters');
+            } catch (sttError) {
+              console.warn('All STT methods failed, using fallback:', sttError);
+              text = await simpleTranscribeAudio(audioBuffer, whisperLanguage);
+            }
           }
         } catch (audioError) {
           console.warn('Audio processing failed:', audioError);
@@ -464,29 +333,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Guardian dashboard routes (TODO: Implement with MongoDB)
-  app.get('/api/guardian/children', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+  // Simple test endpoint for development
+  app.post('/api/test-chat', async (req: Request, res: Response) => {
     try {
-      // const guardianId = req.user?.claims?.sub;
-      // const children = await mongoStorage.getGuardianChildren(guardianId);
-      res.json([]); // Temporary: return empty array
+      const { message, language } = req.body;
+      const response = language === 'ur' 
+        ? 'یہ ایک ٹیسٹ جواب ہے۔'
+        : 'This is a test response.';
+      
+      res.json({ 
+        success: true,
+        message: response
+      });
     } catch (error) {
-      console.error("Error fetching guardian children:", error);
-      res.status(500).json({ message: "Failed to fetch children" });
+      console.error("Test chat error:", error);
+      res.status(500).json({ error: 'Test endpoint failed' });
     }
   });
 
-  app.post('/api/guardian/add-child', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      // const guardianId = req.user?.claims?.sub;
-      // const { childId, relationship } = req.body;
-      // const guardianship = await mongoStorage.createGuardianship(guardianId, childId, relationship);
-      res.json({ message: "Guardian functionality coming soon" }); // Temporary
-    } catch (error) {
-      console.error("Error adding child:", error);
-      res.status(500).json({ message: "Failed to add child" });
-    }
-  });
+
 
   // Create HTTP server
   const httpServer = createServer(app);
