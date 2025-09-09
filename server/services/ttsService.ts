@@ -16,6 +16,8 @@ export interface TTSResult {
 export async function generateTTSAudio(text: string, language: 'en' | 'ur' = 'en'): Promise<TTSResult> {
   return new Promise((resolve, reject) => {
     try {
+      console.log(`[TTS] Converting text to speech: "${text}" (${text.length} chars, ${language})`);
+      
       // Use virtual environment Python
       const venvPython = path.join(process.cwd(), '.venv', 'Scripts', 'python.exe');
       const ttsScript = path.join(process.cwd(), 'server', 'python', 'tts_generator.py');
@@ -52,13 +54,15 @@ export async function generateTTSAudio(text: string, language: 'en' | 'ur' = 'en
 
       python.stderr.on('data', (data) => {
         errorOutput += data.toString();
+        console.log('[TTS Debug]:', data.toString().trim());
       });
 
       python.on('close', (code) => {
         clearTimeout(timeout);
 
         if (code !== 0) {
-          console.error('Python TTS error:', errorOutput);
+          console.error('[TTS] Python process failed with code:', code);
+          console.error('[TTS] Error output:', errorOutput);
           resolve({
             error: `TTS failed: ${errorOutput.substring(0, 200)}...`,
             text,
@@ -67,6 +71,7 @@ export async function generateTTSAudio(text: string, language: 'en' | 'ur' = 'en
         } else {
           try {
             const result = JSON.parse(output.trim());
+            console.log(`[TTS] Audio generated successfully (${result.processing_time}ms, model: ${result.model})`);
             resolve({
               audioBase64: result.audioBase64,
               error: result.error,
@@ -76,6 +81,7 @@ export async function generateTTSAudio(text: string, language: 'en' | 'ur' = 'en
               model: result.model
             });
           } catch (parseError) {
+            console.error('[TTS] Failed to parse response:', parseError);
             resolve({
               error: 'Failed to parse TTS response',
               text,
@@ -87,6 +93,7 @@ export async function generateTTSAudio(text: string, language: 'en' | 'ur' = 'en
 
       python.on('error', (err) => {
         clearTimeout(timeout);
+        console.error('[TTS] Process error:', err);
         resolve({
           error: `TTS process error: ${err.message}`,
           text,
@@ -99,6 +106,7 @@ export async function generateTTSAudio(text: string, language: 'en' | 'ur' = 'en
       python.stdin.end();
 
     } catch (err) {
+      console.error('[TTS] Setup error:', err);
       resolve({
         error: `TTS setup error: ${err instanceof Error ? err.message : 'Unknown error'}`,
         text,

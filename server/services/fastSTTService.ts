@@ -3,23 +3,22 @@ import path from 'path';
 import fs from 'fs';
 
 /**
- * Fast STT service using OpenAI Whisper API instead of local model
- * Falls back to local model if API is not available
+ * Fast STT service using Whisper Tiny for actual transcription
+ * Optimized for speed and accuracy with proper audio handling
  */
 export async function fastTranscribeAudio(audioBuffer: Buffer, language: 'en' | 'ur' = 'en'): Promise<string> {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
-      // Save buffer to temp WAV file
-      const tempPath = path.join(process.cwd(), 'temp_audio_fast.wav');
-      fs.writeFileSync(tempPath, audioBuffer);
+      // Create temporary WAV file
+      const tempPath = path.join(process.cwd(), `temp_audio_${Date.now()}.wav`);
+      await fs.promises.writeFile(tempPath, audioBuffer);
 
-      // Create a simple Python script that uses OpenAI API first, then falls back
+      // Create Python script using Whisper Tiny
       const pythonCode = `
-import os
 import sys
-import json
-import tempfile
-from datetime import datetime
+import os
+import warnings
+warnings.filterwarnings("ignore")
 
 # Set UTF-8 encoding for output
 import codecs
@@ -27,68 +26,45 @@ sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
 sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
 
 try:
-    # First try OpenAI Whisper API (fastest option)
-    try:
-        import openai
+    print("Loading Whisper Tiny model...", file=sys.stderr)
+    
+    # Import required libraries
+    import whisper
+    import torch
+    
+    # Load Whisper Tiny model (fastest option)
+    model = whisper.load_model("tiny", device="cpu")
+    print("Whisper Tiny loaded successfully", file=sys.stderr)
+    
+    # Transcribe the audio
+    audio_path = "${tempPath.replace(/\\/g, '\\\\')}"
+    print(f"Transcribing audio file: {audio_path}", file=sys.stderr)
+    
+    result = model.transcribe(
+        audio_path, 
+        language="${language === 'ur' ? 'ur' : 'en'}"
+    )
+    
+    transcribed_text = result["text"].strip()
+    print(f"Transcription completed: '{transcribed_text}' ({len(transcribed_text)} chars)", file=sys.stderr)
+    
+    if transcribed_text:
+        print(transcribed_text)
+    else:
+        print("No speech detected")
         
-        # Check if OpenAI API key is available
-        api_key = os.environ.get('OPENAI_API_KEY')
-        if api_key and len(api_key) > 10:
-            print("Attempting OpenAI Whisper API...", file=sys.stderr)
-            
-            client = openai.OpenAI(api_key=api_key)
-            
-            with open("${tempPath.replace(/\\/g, '\\\\')}", "rb") as audio_file:
-                transcript = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file,
-                    language="${language === 'ur' ? 'ur' : 'en'}"
-                )
-            
-            print(transcript.text)
-            sys.exit(0)
-    except Exception as api_error:
-        print(f"OpenAI API failed: {api_error}", file=sys.stderr)
-    
-    # Fallback to lightweight local transcription
-    print("Using fallback transcription method...", file=sys.stderr)
-    
-    # Simple speech detection without heavy models
-    import wave
-    import struct
-    
-    try:
-        with wave.open("${tempPath.replace(/\\/g, '\\\\')}", 'rb') as wav_file:
-            frames = wav_file.getnframes()
-            sample_rate = wav_file.getframerate()
-            duration = frames / float(sample_rate)
-            
-            print(f"Audio detected: {duration:.1f} seconds", file=sys.stderr)
-            
-            # Simple heuristic: if audio is longer than 0.5 seconds, assume speech
-            if duration > 0.5:
-                timestamp = datetime.now().strftime("%I:%M:%S %p")
-                if "${language}" == "ur":
-                    print(f"آڈیو پیغام موصول ہوا {timestamp} پر")
-                else:
-                    print(f"Audio message received at {timestamp}")
-            else:
-                print("No speech detected")
-    except Exception as wav_error:
-        print(f"Audio processing error: {wav_error}", file=sys.stderr)
-        timestamp = datetime.now().strftime("%I:%M:%S %p")
-        if "${language}" == "ur":
-            print(f"آڈیو پیغام موصول ہوا {timestamp} پر")
-        else:
-            print(f"Voice input received at {timestamp}")
-
+except ImportError as import_error:
+    print(f"Missing dependencies: {import_error}", file=sys.stderr)
+    print("Please install: pip install openai-whisper torch", file=sys.stderr)
+    print("Audio processing unavailable")
 except Exception as e:
-    print(f"Transcription failed: {str(e)}", file=sys.stderr)
+    print(f"Transcription error: {str(e)}", file=sys.stderr)
+    from datetime import datetime
     timestamp = datetime.now().strftime("%I:%M:%S %p")
     if "${language}" == "ur":
         print(f"آڈیو پیغام موصول ہوا {timestamp} پر")
     else:
-        print(f"Audio message received at {timestamp}")
+        print(f"Voice input received at {timestamp}")
       `;
 
       // Use virtual environment Python
@@ -99,8 +75,7 @@ except Exception as e:
         ...process.env,
         PYTHONPATH: path.join(process.cwd(), '.venv', 'Lib', 'site-packages'),
         PYTHONIOENCODING: 'utf-8',
-        PYTHONLEGACYWINDOWSSTDIO: '1',
-        OPENAI_API_KEY: process.env.OPENAI_API_KEY || '' // Pass OpenAI key if available
+        PYTHONLEGACYWINDOWSSTDIO: '1'
       };
 
       // Spawn Python process
@@ -109,14 +84,20 @@ except Exception as e:
       let output = '';
       let errorOutput = '';
 
-      // Much shorter timeout for this optimized version
+      // Timeout for Whisper Tiny (should be fast)
       const timeout = setTimeout(() => {
         python.kill();
-        reject('Fast STT timeout');
-      }, 15000); // 15 second timeout
+        reject('Whisper Tiny transcription timeout');
+      }, 45000); // 45 second timeout for first-time model download
 
-      python.stdout.on('data', (data) => { output += data.toString(); });
-      python.stderr.on('data', (data) => { errorOutput += data.toString(); });
+      python.stdout.on('data', (data) => { 
+        output += data.toString(); 
+        console.log('[Whisper Tiny Stdout]:', data.toString().trim());
+      });
+      python.stderr.on('data', (data) => { 
+        errorOutput += data.toString(); 
+        console.log('[Whisper Tiny Debug]:', data.toString().trim());
+      });
 
       python.on('close', (code) => {
         clearTimeout(timeout);
@@ -131,20 +112,22 @@ except Exception as e:
         }
 
         if (code !== 0) {
-          console.error('Fast STT error:', errorOutput);
-          reject(`Fast STT failed: ${errorOutput.substring(0, 200)}...`);
+          console.error('[Whisper Tiny] Process failed with code:', code);
+          console.error('[Whisper Tiny] Error output:', errorOutput);
+          reject(`Whisper Tiny failed: ${errorOutput.substring(0, 200)}...`);
         } else {
           const transcription = output.trim();
+          console.log(`[Whisper Tiny] Final Result: "${transcription}" (${transcription.length} chars, code: ${code})`);
           resolve(transcription || 'No speech detected');
         }
       });
 
       python.on('error', (err) => {
         clearTimeout(timeout);
-        reject(`Fast STT process error: ${err.message}`);
+        reject(`Whisper Tiny process error: ${err.message}`);
       });
     } catch (err) {
-      reject(`Fast STT setup error: ${err instanceof Error ? err.message : 'Unknown error'}`);
+      reject(`Whisper Tiny setup error: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   });
 }
