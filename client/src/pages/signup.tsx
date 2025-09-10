@@ -1,12 +1,10 @@
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageCircle, ArrowLeft } from "lucide-react";
-import { Link } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "wouter";
+import { Eye, EyeOff, Mail, Lock, User, AlertCircle, CheckCircle } from "lucide-react";
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -18,37 +16,71 @@ export default function Signup() {
     userType: "",
     language: ""
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
+  const { isAuthenticated } = useAuth();
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      setLocation('/');
+    }
+  }, [isAuthenticated, setLocation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (isLoading) return;
+    
     setIsLoading(true);
+    setError("");
+    setSuccess("");
     
     try {
-      if (formData.password !== formData.confirmPassword) {
-        alert("Passwords don't match!");
-        setIsLoading(false);
+      // Validation
+      if (!formData.firstName?.trim() || !formData.lastName?.trim()) {
+        setError("Please enter your first and last name");
         return;
       }
-      
+
+      if (!formData.email?.trim()) {
+        setError("Please enter your email address");
+        return;
+      }
+
+      if (!formData.email.includes('@')) {
+        setError("Please enter a valid email address");
+        return;
+      }
+
       if (!formData.userType) {
-        alert("Please select your role!");
-        setIsLoading(false);
+        setError("Please select your role");
         return;
       }
-      
+
       if (!formData.language) {
-        alert("Please select your preferred language!");
-        setIsLoading(false);
+        setError("Please select your preferred language");
+        return;
+      }
+
+      if (formData.password.length < 6) {
+        setError("Password must be at least 6 characters long");
+        return;
+      }
+
+      if (formData.password !== formData.confirmPassword) {
+        setError("Passwords don't match");
         return;
       }
       
       const response = await apiRequest('POST', '/api/auth/signup', {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
         password: formData.password,
         userType: formData.userType,
         language: formData.language
@@ -57,35 +89,33 @@ export default function Signup() {
       const data = await response.json();
       
       if (data.success && data.user) {
-        if (data.authToken) {
-          localStorage.setItem('authToken', data.authToken);
-        }
+        setSuccess("Account created successfully! Redirecting...");
         
+        // Store auth token
+        const authToken = data.authToken || data.user.id;
+        localStorage.setItem('authToken', authToken);
+        
+        // Trigger auth state update
         window.dispatchEvent(new StorageEvent('storage', {
           key: 'authToken',
-          newValue: data.authToken || data.user.id,
-          oldValue: null
+          newValue: authToken,
         }));
         
-        switch(data.user.userType) {
-          case 'child':
-            window.location.href = '/child-dashboard';
-            break;
-          case 'adult':
-            window.location.href = '/adult-dashboard';
-            break;
-          case 'guardian':
-            window.location.href = '/guardian-dashboard';
-            break;
-          default:
-            window.location.href = '/';
-        }
+        // Clear and refresh queries
+        queryClient.clear();
+        await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+        
+        // Redirect to home - it handles user type routing
+        setTimeout(() => {
+          setLocation('/');
+        }, 1000);
+        
       } else {
-        alert(data.message || 'Signup failed');
+        setError(data.message || 'Signup failed. Please try again.');
       }
     } catch (error) {
       console.error('Signup error:', error);
-      alert('Network error occurred. Please try again.');
+      setError('Unable to connect to server. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -96,153 +126,369 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen fluenti-gradient-primary relative overflow-hidden">
-      {/* Floating Elements */}
-      <div className="absolute top-20 left-10 w-20 h-20 bg-white/10 rounded-full fluenti-float"></div>
-      <div className="absolute top-32 right-16 w-16 h-16 bg-white/10 rounded-full fluenti-float" style={{animationDelay: '1s'}}></div>
-      <div className="absolute bottom-20 left-1/4 w-12 h-12 bg-white/10 rounded-full fluenti-float" style={{animationDelay: '2s'}}></div>
-      
-      <div className="flex items-center justify-center p-4 relative z-10 min-h-screen">
-        <div className="w-full max-w-md animate-slide-up">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <Link href="/">
-              <button className="fluenti-button-outline mb-4 hover-lift">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Home
-              </button>
-            </Link>
-            <div className="flex items-center justify-center space-x-2 mb-4 hover-lift">
-              <div className="w-12 h-12 fluenti-gradient-warm rounded-xl flex items-center justify-center shadow-lg fluenti-pulse">
-                <MessageCircle className="text-white text-xl" />
-              </div>
-              <span className="text-3xl font-bold text-gradient-warm">Fluenti</span>
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Left Side - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden" style={{ backgroundColor: 'rgba(211, 211, 211, 0.3)' }}>
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.2)_1px,transparent_1px)] bg-[length:30px_30px]"></div>
+        </div>
+        
+        {/* Content */}
+        <div className="relative z-10 flex flex-col justify-center items-start px-16 text-slate-800">
+          <div className="mb-8">
+            <h1 className="text-5xl font-bold tracking-tight mb-4">fluenti</h1>
+            <div className="w-20 h-1 bg-orange-400 rounded-full"></div>
+          </div>
+          
+          <h2 className="text-3xl font-light leading-relaxed mb-6 max-w-md">
+            Join thousands improving their communication
+          </h2>
+          
+          <p className="text-xl text-slate-600 leading-relaxed max-w-lg">
+            Create your account and start your personalized speech therapy journey with AI-powered tools and expert guidance.
+          </p>
+          
+          <div className="mt-12 space-y-4 text-slate-600">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+              <span>Free to Get Started</span>
             </div>
-            <h1 className="text-3xl font-bold text-white mb-2 animate-fade-in">Join Fluenti</h1>
-            <p className="text-blue-100 text-lg animate-fade-in" style={{animationDelay: '0.1s'}}>Start your personalized speech therapy journey</p>
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+              <span>Personalized Learning Path</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+              <span>Progress Tracking</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 bg-orange-400 rounded-full"></div>
+              <span>Multiple Language Support</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Side - Signup Form */}
+      <div className="flex-1 flex flex-col justify-center py-12 px-6 sm:px-12 lg:px-20">
+        <div className="mx-auto w-full max-w-md">
+          {/* Mobile Logo */}
+          <div className="lg:hidden text-center mb-12">
+            <h1 className="text-4xl font-bold text-slate-900 mb-2">fluenti</h1>
+            <div className="w-16 h-1 bg-orange-400 mx-auto rounded-full"></div>
           </div>
 
+          {/* Header */}
+          <div className="mb-10">
+            <h2 className="text-3xl font-bold text-slate-900 mb-2">
+              Create your account
+            </h2>
+            <p className="text-slate-600 text-lg">
+              Start your speech therapy journey today
+            </p>
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          )}
+
+          {/* Success Display */}
+          {success && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+              <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+              <p className="text-sm text-green-700">{success}</p>
+            </div>
+          )}
+
           {/* Signup Form */}
-          <div className="fluenti-card fluenti-card-interactive animate-scale-in" style={{animationDelay: '0.2s'}}>
-            <div className="p-6">
-              <div className="mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-2">Create Account</h2>
-                <p className="text-gray-600">Fill in your details to get started</p>
-              </div>
-              <form onSubmit={handleSubmit}>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label htmlFor="firstName" className="text-sm font-medium text-gray-700">First Name</label>
-                      <input
-                        id="firstName"
-                        placeholder="John"
-                        value={formData.firstName}
-                        onChange={(e) => handleInputChange('firstName', e.target.value)}
-                        required
-                        className="fluenti-input"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="lastName" className="text-sm font-medium text-gray-700">Last Name</label>
-                      <input
-                        id="lastName"
-                        placeholder="Doe"
-                        value={formData.lastName}
-                        onChange={(e) => handleInputChange('lastName', e.target.value)}
-                        required
-                        className="fluenti-input"
-                      />
-                    </div>
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            {/* Name Fields */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="firstName" className="block text-sm font-semibold text-slate-700 mb-2">
+                  First Name
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-slate-400" />
                   </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="email" className="text-sm font-medium text-gray-700">Email</label>
-                    <input
-                      id="email"
-                      type="email"
-                      placeholder="john@example.com"
-                      value={formData.email}
-                      onChange={(e) => handleInputChange('email', e.target.value)}
-                      required
-                      className="fluenti-input"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="userType" className="text-sm font-medium text-gray-700">I am a...</label>
-                    <select 
-                      id="userType"
-                      value={formData.userType} 
-                      onChange={(e) => handleInputChange('userType', e.target.value)}
-                      className="fluenti-input"
-                      aria-label="Select your role"
-                      required
-                    >
-                      <option value="">Select your role</option>
-                      <option value="child">Child (under 18)</option>
-                      <option value="adult">Adult</option>
-                      <option value="guardian">Parent/Guardian</option>
-                    </select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label htmlFor="language" className="text-sm font-medium text-gray-700">Preferred Language</label>
-                    <select 
-                      value={formData.language} 
-                      onChange={(e) => handleInputChange('language', e.target.value)}
-                      className="fluenti-input"
-                      aria-label="Select your preferred language"
-                      required
-                    >
-                      <option value="">Select language</option>
-                      <option value="english">English</option>
-                      <option value="urdu">Urdu</option>
-                      <option value="both">Both</option>
-                    </select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="password" className="text-sm font-medium text-gray-700">Password</label>
-                    <input
-                      id="password"
-                      type="password"
-                      placeholder="Create a password"
-                      value={formData.password}
-                      onChange={(e) => handleInputChange('password', e.target.value)}
-                      required
-                      className="fluenti-input"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">Confirm Password</label>
-                    <input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="Confirm your password"
-                      value={formData.confirmPassword}
-                      onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                      required
-                      className="fluenti-input"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full fluenti-button-primary text-lg mt-6"
+                  <input
+                    id="firstName"
+                    type="text"
+                    required
+                    value={formData.firstName}
+                    onChange={(e) => handleInputChange('firstName', e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg 
+                             placeholder-slate-400 text-slate-900
+                             focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+                             transition duration-200 text-sm"
+                    placeholder="John"
                     disabled={isLoading}
-                  >
-                    {isLoading ? "Creating Account..." : "Create Account"}
-                  </button>
+                  />
                 </div>
-              </form>
-              <div className="mt-6 text-center text-sm text-gray-600">
-                Already have an account?{" "}
-                <Link href="/login" className="text-primary hover:text-primary-dark font-medium hover:underline transition-colors duration-300">
-                  Sign in here
-                </Link>
               </div>
+
+              <div>
+                <label htmlFor="lastName" className="block text-sm font-semibold text-slate-700 mb-2">
+                  Last Name
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <User className="h-5 w-5 text-slate-400" />
+                  </div>
+                  <input
+                    id="lastName"
+                    type="text"
+                    required
+                    value={formData.lastName}
+                    onChange={(e) => handleInputChange('lastName', e.target.value)}
+                    className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg 
+                             placeholder-slate-400 text-slate-900
+                             focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+                             transition duration-200 text-sm"
+                    placeholder="Doe"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Email Field */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-semibold text-slate-700 mb-2">
+                Email Address
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Mail className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  className="block w-full pl-10 pr-3 py-3 border border-slate-300 rounded-lg 
+                           placeholder-slate-400 text-slate-900
+                           focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+                           transition duration-200 text-sm"
+                  placeholder="john@example.com"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            {/* User Type */}
+            <div>
+              <label htmlFor="userType" className="block text-sm font-semibold text-slate-700 mb-2">
+                I am a...
+              </label>
+              <select 
+                id="userType"
+                value={formData.userType} 
+                onChange={(e) => handleInputChange('userType', e.target.value)}
+                className="block w-full px-3 py-3 border border-slate-300 rounded-lg 
+                         text-slate-900 bg-white
+                         focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+                         transition duration-200 text-sm"
+                required
+                disabled={isLoading}
+              >
+                <option value="">Select your role</option>
+                <option value="child">Child (under 18)</option>
+                <option value="adult">Adult</option>
+                <option value="guardian">Parent/Guardian</option>
+              </select>
+            </div>
+
+            {/* Language */}
+            <div>
+              <label htmlFor="language" className="block text-sm font-semibold text-slate-700 mb-2">
+                Preferred Language
+              </label>
+              <select 
+                id="language"
+                value={formData.language} 
+                onChange={(e) => handleInputChange('language', e.target.value)}
+                className="block w-full px-3 py-3 border border-slate-300 rounded-lg 
+                         text-slate-900 bg-white
+                         focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+                         transition duration-200 text-sm"
+                required
+                disabled={isLoading}
+              >
+                <option value="">Select language</option>
+                <option value="english">English</option>
+                <option value="urdu">Urdu</option>
+                <option value="both">Both</option>
+              </select>
+            </div>
+
+            {/* Password Field */}
+            <div>
+              <label htmlFor="password" className="block text-sm font-semibold text-slate-700 mb-2">
+                Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={formData.password}
+                  onChange={(e) => handleInputChange('password', e.target.value)}
+                  className="block w-full pl-10 pr-10 py-3 border border-slate-300 rounded-lg 
+                           placeholder-slate-400 text-slate-900
+                           focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+                           transition duration-200 text-sm"
+                  placeholder="Create a password"
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm Password Field */}
+            <div>
+              <label htmlFor="confirmPassword" className="block text-sm font-semibold text-slate-700 mb-2">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Lock className="h-5 w-5 text-slate-400" />
+                </div>
+                <input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  value={formData.confirmPassword}
+                  onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                  className="block w-full pl-10 pr-10 py-3 border border-slate-300 rounded-lg 
+                           placeholder-slate-400 text-slate-900
+                           focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
+                           transition duration-200 text-sm"
+                  placeholder="Confirm your password"
+                  disabled={isLoading}
+                />
+                <button
+                  type="button"
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  disabled={isLoading}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                  ) : (
+                    <Eye className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Terms */}
+            <div className="flex items-center">
+              <input
+                id="terms"
+                type="checkbox"
+                required
+                className="h-4 w-4 text-orange-600 focus:ring-orange-500 border-slate-300 rounded"
+              />
+              <label htmlFor="terms" className="ml-2 block text-sm text-slate-700">
+                I agree to the{' '}
+                <Link href="/terms" className="text-orange-600 hover:text-orange-500 font-medium">
+                  Terms of Service
+                </Link>
+                {' '}and{' '}
+                <Link href="/privacy" className="text-orange-600 hover:text-orange-500 font-medium">
+                  Privacy Policy
+                </Link>
+              </label>
+            </div>
+
+            {/* Submit Button */}
+            <div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="group relative w-full flex justify-center py-3 px-4 border border-transparent 
+                         text-sm font-semibold rounded-lg text-white 
+                         bg-orange-600 hover:bg-orange-700 
+                         focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500
+                         disabled:opacity-50 disabled:cursor-not-allowed
+                         transition duration-200"
+              >
+                {isLoading ? (
+                  <div className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Creating Account...
+                  </div>
+                ) : (
+                  'Create Account'
+                )}
+              </button>
+            </div>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-gray-50 text-slate-500">Already have an account?</span>
+              </div>
+            </div>
+
+            {/* Sign In Link */}
+            <div className="text-center">
+              <Link
+                href="/login"
+                className="w-full flex justify-center py-3 px-4 border border-slate-300 
+                         text-sm font-semibold rounded-lg text-slate-700 bg-white
+                         hover:bg-slate-50 hover:border-slate-400
+                         focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500
+                         transition duration-200"
+              >
+                Sign in to existing account
+              </Link>
+            </div>
+          </form>
+
+          {/* Footer */}
+          <div className="mt-12 text-center">
+            <p className="text-xs text-slate-500">
+              By creating an account, you agree to our terms and privacy policy
+            </p>
+            <div className="mt-4 flex justify-center space-x-6">
+              <Link href="/privacy" className="text-xs text-slate-400 hover:text-slate-600">
+                Privacy Policy
+              </Link>
+              <Link href="/terms" className="text-xs text-slate-400 hover:text-slate-600">
+                Terms of Service
+              </Link>
+              <Link href="/help" className="text-xs text-slate-400 hover:text-slate-600">
+                Help
+              </Link>
             </div>
           </div>
         </div>
