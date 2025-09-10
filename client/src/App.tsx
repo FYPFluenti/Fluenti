@@ -28,6 +28,11 @@ function DashboardRedirect() {
   const { user } = useAuth();
   const userType = (user as any)?.userType;
   
+  // For development, default to child dashboard
+  if (!user || !userType) {
+    return <Redirect to="/child-dashboard" />;
+  }
+  
   switch (userType) {
     case 'child':
       return <Redirect to="/child-dashboard" />;
@@ -36,7 +41,7 @@ function DashboardRedirect() {
     case 'guardian':
       return <Redirect to="/guardian-dashboard" />;
     default:
-      return <Redirect to="/adult-dashboard" />;
+      return <Redirect to="/child-dashboard" />;
   }
 }
 
@@ -56,82 +61,44 @@ function Router() {
 
   return (
     <Switch>
-      {/* Public routes - always accessible */}
+      {/* Public routes */}
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
       <Route path="/logout" component={Logout} />
       
+      {/* Homepage - always accessible */}
+      <Route path="/" component={Home} />
+      
       {/* Protected routes - only when authenticated */}
       {isAuthenticated ? (
         <>
-          {/* Root redirect to appropriate dashboard */}
-          <Route path="/" component={DashboardRedirect} />
+          {/* Dashboard redirect route */}
+          <Route path="/dashboard" component={DashboardRedirect} />
           
           {/* Role-specific dashboards */}
-          <Route path="/adult-dashboard">
-            <RoleBasedComponent allowedRoles={['adult']}>
-              <AdultDashboard />
-            </RoleBasedComponent>
-          </Route>
+          <Route path="/child-dashboard" component={ChildDashboard} />
+          <Route path="/adult-dashboard" component={AdultDashboard} />
+          <Route path="/guardian-dashboard" component={GuardianDashboard} />
           
-          <Route path="/adult-insights">
-            <RoleBasedComponent allowedRoles={['adult']}>
-              <AdultInsights />
-            </RoleBasedComponent>
-          </Route>
-          
-          <Route path="/adult-history">
-            <RoleBasedComponent allowedRoles={['adult']}>
-              <AdultHistory />
-            </RoleBasedComponent>
-          </Route>
-          
-          <Route path="/child-dashboard">
-            <RoleBasedComponent allowedRoles={['child']}>
-              <ChildDashboard />
-            </RoleBasedComponent>
-          </Route>
-          
-          <Route path="/guardian-dashboard">
-            <RoleBasedComponent allowedRoles={['guardian']}>
-              <GuardianDashboard />
-            </RoleBasedComponent>
-          </Route>
-          
-          {/* Speech therapy - available to all but with different interfaces */}
+          {/* Other protected routes */}
           <Route path="/speech-therapy" component={SpeechTherapy} />
-          
-          {/* Emotional support - available to all */}
+          <Route path="/progress-dashboard" component={ProgressDashboard} />
+          <Route path="/settings" component={Settings} />
+          <Route path="/achievements" component={Achievements} />
+          <Route path="/assessment" component={Assessment} />
           <Route path="/emotional-support" component={EmotionalSupport} />
           <Route path="/emotional-support-voice" component={EmotionalSupportVoice} />
           
-          {/* Progress tracking - different views for different roles */}
-          <Route path="/progress-dashboard" component={ProgressDashboard} />
-
-          {/* Achievements page */}
-          <Route path="/achievements" component={Achievements} />
-
-          {/* Assessment - available to all but different content */}
-          <Route path="/assessment" component={Assessment} />
-
-          <Route path="/settings">
-            <RoleBasedComponent allowedRoles={['child']}>
-              <Settings />
-            </RoleBasedComponent>
-          </Route>
-
-          {/* Legacy home route - redirect to appropriate dashboard */}
-          <Route path="/home" component={DashboardRedirect} />
+          {/* Fallback for authenticated users */}
+          <Route component={NotFound} />
         </>
       ) : (
         <>
-          {/* When not authenticated, show landing page for root */}
-          <Route path="/" component={Landing} />
+          {/* Public landing page for non-authenticated users */}
+          <Route path="/home" component={Landing} />
+          <Route component={NotFound} />
         </>
       )}
-      
-      {/* Catch-all for 404 */}
-      <Route component={NotFound} />
     </Switch>
   );
 }
