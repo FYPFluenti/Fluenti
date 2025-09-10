@@ -7,6 +7,14 @@ import { motion } from "framer-motion";
 import { Star, ThumbsUp, Clock, Mic, MicOff } from "lucide-react";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import FluentiLogo from "@/components/FluentiLogo";
+import ModelViewerAvatar from "@/components/ModelViewerAvatar";
+
+// Demo avatars - choose your favorites!
+const avatarUrls = {
+  therapist: "https://models.readyplayer.me/68ab4a2c3f2023411197a0fa.glb", // Friendly female
+  professional: "https://models.readyplayer.me/68ab4ab5e05b84c2efb26767.glb",     // Child-friendly
+  casual: "https://models.readyplayer.me/68aa261a75e83eeb00564816.glb",  // Professional male
+};
 
 interface User {
   firstName?: string;
@@ -30,17 +38,7 @@ export default function ChildDashboard() {
 
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
-  const therapyRef = useRef<HTMLDivElement>(null);
-  const progressRef = useRef<HTMLDivElement>(null);
-  const motivationRef = useRef<HTMLDivElement>(null);
-
   const [hovered, setHovered] = useState<string | null>(null);
-
-  const scrollToRef = (ref: React.RefObject<HTMLDivElement>) => {
-    if (ref.current) {
-      ref.current.scrollIntoView({ behavior: "smooth" });
-    }
-  };
 
   const submitFeedback = () => {
     // TODO: send to your API
@@ -68,7 +66,7 @@ export default function ChildDashboard() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen font-sans flex bg-background text-foreground">
+    <div className="h-screen font-sans flex bg-background text-foreground overflow-hidden">
       {/* Sidebar */}
       <aside className="w-20 bg-background flex flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-50 border-r border-border">
         {/* Sidebar brand (logo with hover + tooltip) */}
@@ -101,42 +99,40 @@ export default function ChildDashboard() {
 
         {/* Sidebar Buttons */}
         {[
-          { ref: therapyRef, icon: Gamepad2, label: "games", id: "games", path: "/speech-therapy" },
-          { ref: progressRef, icon: LineChart, label: "progress", id: "progress", path: "/progress-dashboard" },
-          { ref: motivationRef, icon: Smile, label: "feedback", id: "feedback" },
-        ].map(({ ref, icon: Icon, label, id, path }) => (
-          <div
-            key={id}
-            onMouseEnter={() => setHovered(id)}
-            onMouseLeave={() => setHovered(null)}
-            className="relative group"
-          >
-            <button
-              onClick={() =>
-                id === "feedback"
-                  ? setShowFeedback(true)
-                  : path
-                    ? setLocation(path)
-                    : scrollToRef(ref)
-              }
-              className="w-10 h-10 flex items-center justify-center rounded-xl transition group"
-              aria-label={label}
-            >
-              <Icon className="text-foreground w-7 h-7 transition-colors duration-150 group-hover:text-muted-foreground" />
-            </button>
+  { icon: Gamepad2, label: "games", id: "games", path: "/speech-therapy" },
+  { icon: LineChart, label: "progress", id: "progress", path: "/progress-dashboard" },
+  { icon: Smile, label: "feedback", id: "feedback" },
+].map(({ icon: Icon, label, id, path }) => (
+  <div
+    key={id}
+    onMouseEnter={() => setHovered(id)}
+    onMouseLeave={() => setHovered(null)}
+    className="relative group"
+  >
+    <button
+      onClick={() =>
+        id === "feedback"
+          ? setShowFeedback(true)
+          : path && setLocation(path)
+      }
+      className="w-10 h-10 flex items-center justify-center rounded-xl transition group"
+      aria-label={label}
+    >
+      <Icon className="text-foreground w-7 h-7 transition-colors duration-150 group-hover:text-muted-foreground" />
+    </button>
 
-            {hovered === id && (
-              <motion.div
-                initial={{ opacity: 0, x: 5 }}
-                animate={{ opacity: 1, x: 12 }}
-                exit={{ opacity: 0, x: 5 }}
-                className="absolute left-[38px] bottom-0 bg-popover text-popover-foreground px-4 py-2 rounded-lg shadow-md border border-border z-10 w-30 space-y-1"
-              >
-                {label}
-              </motion.div>
-            )}
-          </div>
-        ))}
+    {hovered === id && (
+      <motion.div
+        initial={{ opacity: 0, x: 5 }}
+        animate={{ opacity: 1, x: 12 }}
+        exit={{ opacity: 0, x: 5 }}
+        className="absolute left-[38px] bottom-0 bg-popover text-popover-foreground px-4 py-2 rounded-lg shadow-md border border-border z-10 w-30 space-y-1"
+      >
+        {label}
+      </motion.div>
+    )}
+  </div>
+))}
 
         <div className="flex-1" />
 
@@ -154,7 +150,7 @@ export default function ChildDashboard() {
             className="group w-10 h-10 flex items-center justify-center rounded-full transition"
             aria-haspopup="menu"
             aria-expanded={showUserMenu}
-            title="User menu"
+            
           >
             <User
               className={`w-7 h-7 transition-colors duration-150 ${
@@ -175,15 +171,14 @@ export default function ChildDashboard() {
                 <span className="text-foreground font-medium">Settings</span>
               </button>
               <div className="border-t border-border my-1" />
-              <LogoutButton className="w-full px-5 py-3 text-base text-left hover:bg-muted hover:brightness-90 text-foreground font-medium flex items-center gap-3 rounded-lg" />
-            </div>
+<LogoutButton className="w-full px-5 py-3 text-base text-left hover:bg-gray-200 hover:text-black dark:hover:bg-gray-700 dark:hover:text-white bg-orange-500 text-white font-medium flex items-center gap-3 rounded-lg" />            </div>
           )}
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="ml-20 px-6 pb-24 w-full">
-        <header className="flex justify-between items-center py-6">
+      <main className="ml-20 px-6 w-full h-screen overflow-hidden flex flex-col">
+        <header className="flex justify-between items-center py-6 flex-shrink-0">
           <div />
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
@@ -194,26 +189,29 @@ export default function ChildDashboard() {
               onClick={() => setShowPreferences(!showPreferences)}
               className="p-2 rounded-full hover:bg-muted transition"
               aria-label="Toggle preferences"
-              title="Preferences"
+              
             >
               <SlidersHorizontal className="w-6 h-6 text-foreground" aria-hidden="true" />
             </button>
           </div>
         </header>
 
-        <section ref={therapyRef} className="text-center py-10">
+        <section className="text-center py-10 flex-1 flex items-center justify-center">
           <motion.div 
             initial={{ opacity: 0, y: 40 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ duration: 0.5 }} 
             className="max-w-xl mx-auto"
           >
-            <iframe
-              src="https://your-avatar-url.readyplayer.me/avatar"
-              allow="camera *; microphone *"
-              className="mx-auto w-40 h-40 sm:w-48 sm:h-48 rounded-full mb-8"
-              title="AI Avatar"
-            />
+            <div className="mx-auto mb-8">
+   
+  <ModelViewerAvatar
+    avatarUrl={avatarUrls.therapist}
+    size="large"
+    className="mx-auto mb-8"
+    //animate={true}
+/>
+</div>
             <h2 className="text-2xl font-bold mb-4">Feeling stuck?</h2>
             <div className="space-y-3">
               <button 
@@ -260,9 +258,9 @@ export default function ChildDashboard() {
                   <p className="text-xs text-muted-foreground">Conversation only</p>
                 </div>
                 <select 
-                  className="bg-card text-foreground border border-border rounded-md px-3 py-1 text-sm font-dm-sans focus:outline-none focus:ring-2 focus:ring-primary"
+                  className="bg-card text-foreground border border-border rounded-md px-3 py-1 text-sm font-dm-sans focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
                   aria-label="Select conversation language"
-                  title="Select conversation language"
+                  
                 >
                   <option value="en">English</option>
                   <option value="ur">Urdu</option>
@@ -377,12 +375,15 @@ export default function ChildDashboard() {
                 <div className="relative">
                   <div className="absolute inset-0 -m-3 rounded-full border-4 border-cyan-300/90 blur-[0.3px]" />
                   <div className="relative rounded-full overflow-hidden bg-[#1f2028] w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80">
-                    <iframe
-                      src="https://your-avatar-url.readyplayer.me/avatar"
-                      allow="camera *; microphone *"
-                      className="absolute inset-0 w-full h-full"
-                      title="AI Avatar"
-                    />
+                    <div className="absolute inset-0 w-full h-full">
+
+<ModelViewerAvatar
+  avatarUrl={avatarUrls.professional}
+  size="large"
+  className="absolute inset-0 w-full h-full"
+  //animate={true}
+/>
+</div>
                   </div>
                 </div>
 
