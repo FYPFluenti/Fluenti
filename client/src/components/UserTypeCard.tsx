@@ -1,10 +1,8 @@
-import React from 'react'
-// Add these imports at the top:
+import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 
-// components/UserTypeCard.tsx
 interface UserTypeCardProps {
   type: 'child' | 'adult' | 'guardian';
   title: string;
