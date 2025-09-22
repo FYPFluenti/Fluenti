@@ -93,17 +93,24 @@ except ImportError:
     print("Warning: DataLoader datasets not found, using empty list")
     datasets = []
 
-# Storage class placeholder
-class Storage:
-    def get_conversation_history(self, user_id: str, session_id: str, limit: int = 10):
-        return []
+# Import real MongoDBStorage instead of placeholder
+try:
+    from MongoDBStorage import storage
+    print("✅ Successfully imported real MongoDBStorage")
+except ImportError:
+    print("⚠️ Warning: MongoDBStorage not found, using fallback placeholder")
+    # Fallback Storage class placeholder
+    class Storage:
+        def get_conversation_history(self, user_id: str, session_id: str, limit: int = 10):
+            return []
+        
+        def save_conversation(self, **kwargs):
+            pass
     
-    def save_conversation(self, **kwargs):
-        pass
+    storage = Storage()
 
 # Create global instances (these should be injected in a real application)
 crisis_detector = CrisisDetector()
-storage = Storage()
 
 @dataclass
 class SessionMemory:
