@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple, Union
 import random
 
-import gradio as gr
 from datasets import load_dataset, Dataset, DatasetDict, IterableDataset, IterableDatasetDict
 import nltk
 
@@ -85,8 +84,9 @@ class DataLoader:
         datasets = []
         
         # Get HF token for authenticated requests
-        hf_token = os.getenv('HUGGINGFACE_API_KEY')
-
+        hf_token = get_api_key('huggingface', required=False)
+        
+     
         try:
             print("Loading focused mental health datasets...")
 
@@ -306,6 +306,11 @@ class DataLoader:
         print(f"Created {len(therapeutic_conversations)} enhanced therapeutic conversation examples")
         return therapeutic_conversations
 
-# Load the enhanced datasets
-datasets = DataLoader.load_mental_health_datasets()
-print("Enhanced mental health knowledge base ready!")
+# Load the enhanced datasets safely
+try:
+    datasets = DataLoader.load_mental_health_datasets()
+    print("Enhanced mental health knowledge base ready!")
+except Exception as e:
+    print(f"Warning: Could not load datasets: {e}")
+    datasets = []
+    print("Using empty dataset list as fallback")
