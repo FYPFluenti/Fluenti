@@ -395,7 +395,10 @@ class CrisisDetector:
             crisis_score *= (1.0 - (help_seeking_score * 0.6))
 
         # Apply time-of-day considerations
-        if self.current_user['time_of_day'] in ['night', 'early_morning']:
+        from datetime import datetime
+        current_hour = datetime.now().hour
+        time_of_day = self._classify_time_of_day(current_hour)
+        if time_of_day in ['night', 'early_morning']:
             crisis_score *= 1.1  # Slightly higher concern during vulnerable hours
 
         # Determine level based on score
