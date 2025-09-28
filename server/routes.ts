@@ -327,8 +327,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Simple test endpoint for development - echo only
-  app.post('/api/test-chat', async (req: Request, res: Response) => {
+ 
+  app.post('/api/emotional-support-chat', async (req: Request, res: Response) => {
     try {
       const { message, language } = req.body;
       
