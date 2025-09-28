@@ -339,8 +339,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         echo: `Received: ${message}`
       });
     } catch (error) {
-      console.error("Test chat error:", error);
-      res.status(500).json({ error: 'Test endpoint failed' });
+      console.error("chat error:", error);
+      res.status(500).json({ error: 'endpoint failed' });
     }
   });
 
