@@ -330,17 +330,184 @@ export async function registerRoutes(app: Express): Promise<Server> {
  
   app.post('/api/emotional-support-chat', async (req: Request, res: Response) => {
     try {
-      const { message, language } = req.body;
+      const { message, language, sessionId, userId } = req.body;
       
+      if (!message || !message.trim()) {
+        return res.status(400).json({ 
+          error: 'Message is required',
+          success: false 
+        });
+      }
+
+      console.log('🤖 Processing emotional support chat request:', {
+        message: message.substring(0, 50) + '...',
+        language: language || 'en',
+        sessionId: sessionId || 'new',
+        userId: userId || 'anonymous'
+      });
+
+      // Call Python therapy service
+      const pythonServiceResponse = await fetch('http://localhost:5001/api/therapy/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: message.trim(),
+          sessionId: sessionId,
+          userId: userId || `user_${Date.now()}`,
+          language: language || 'en'
+        })
+      });
+
+      if (!pythonServiceResponse.ok) {
+        throw new Error(`Python service error: ${pythonServiceResponse.status}`);
+      }
+
+      const therapyResponse = await pythonServiceResponse.json();
+      
+      // Return response in format expected by frontend
       res.json({ 
         success: true,
-        received_message: message,
-        language: language || 'en',
-        echo: `Received: ${message}`
+        chatResponse: therapyResponse.response,
+        sessionId: therapyResponse.sessionId,
+        userId: therapyResponse.userId,
+        sessionKey: therapyResponse.sessionKey,
+        crisisLevel: therapyResponse.crisisLevel,
+        isCrisis: therapyResponse.isCrisis,
+        newSession: therapyResponse.newSession,
+        language: language || 'en'
       });
+      
     } catch (error) {
-      console.error("chat error:", error);
-      res.status(500).json({ error: 'endpoint failed' });
+      console.error("❌ Emotional support chat error:", error);
+      
+      // Provide fallback response with crisis resources
+      res.status(500).json({ 
+        success: false,
+        error: 'Therapy service temporarily unavailable',
+        chatResponse: `I apologize, but I'm having technical difficulties right now. Please try again in a moment.
+
+If you're in immediate crisis, please contact:
+• **988** - Suicide & Crisis Lifeline (call or text, 24/7)
+• **911** - Emergency Services
+
+Your wellbeing is important. Please don't hesitate to reach out for professional help if needed.`,
+        fallback: true
+      });
+    }
+  });
+
+  // Start therapy session endpoint
+  app.post('/api/therapy/start-session', async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.body;
+
+      console.log('🆕 Starting new therapy session for user:', userId);
+
+      const pythonServiceResponse = await fetch('http://localhost:5001/api/therapy/start-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userId || `user_${Date.now()}`
+        })
+      });
+
+      if (!pythonServiceResponse.ok) {
+        throw new Error(`Python service error: ${pythonServiceResponse.status}`);
+      }
+
+      const sessionData = await pythonServiceResponse.json();
+      
+      res.json({
+        success: true,
+        ...sessionData
+      });
+      
+    } catch (error) {
+      console.error("❌ Error starting therapy session:", error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to start therapy session',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get session summary endpoint  
+  app.post('/api/therapy/session-summary', async (req: Request, res: Response) => {
+    try {
+      const { sessionKey } = req.body;
+
+      if (!sessionKey) {
+        return res.status(400).json({ 
+          error: 'Session key is required',
+          success: false 
+        });
+      }
+
+      console.log('📋 Getting session summary for:', sessionKey);
+
+      const pythonServiceResponse = await fetch('http://localhost:5001/api/therapy/session-summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionKey: sessionKey
+        })
+      });
+
+      if (!pythonServiceResponse.ok) {
+        throw new Error(`Python service error: ${pythonServiceResponse.status}`);
+      }
+
+      const summaryData = await pythonServiceResponse.json();
+      
+      res.json({
+        success: true,
+        ...summaryData
+      });
+      
+    } catch (error) {
+      console.error("❌ Error getting session summary:", error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to get session summary',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Therapy service health check
+  app.get('/api/therapy/health', async (req: Request, res: Response) => {
+    try {
+      const pythonServiceResponse = await fetch('http://localhost:5001/health');
+      
+      if (!pythonServiceResponse.ok) {
+        throw new Error(`Python service health check failed: ${pythonServiceResponse.status}`);
+      }
+
+      const healthData = await pythonServiceResponse.json();
+      
+      res.json({
+        success: true,
+        nodejs_service: 'healthy',
+        python_service: healthData,
+        timestamp: new Date().toISOString()
+      });
+      
+    } catch (error) {
+      console.error("❌ Therapy service health check failed:", error);
+      res.status(503).json({ 
+        success: false,
+        nodejs_service: 'healthy',
+        python_service: 'unhealthy',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString()
+      });
     }
   });
 

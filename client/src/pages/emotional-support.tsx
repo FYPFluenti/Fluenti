@@ -1,12 +1,47 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertTriangle, Heart, MessageCircle } from 'lucide-react';
+
+interface Message {
+  id: string;
+  user: string;
+  ai: string;
+  timestamp: Date;
+  crisisLevel?: string;
+  isCrisis?: boolean;
+}
+
+interface SessionData {
+  sessionId?: string;
+  userId?: string;
+  sessionKey?: string;
+}
 
 const EmotionalSupportChat = () => {
-  const language = localStorage.getItem('language') || 'en';  // From dashboard
-  const [messages, setMessages] = useState<{ id: string; user: string; ai: string; timestamp: Date }[]>([]);
+  const language = localStorage.getItem('language') || 'en';
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [sessionData, setSessionData] = useState<SessionData>({});
+  const [serviceStatus, setServiceStatus] = useState<'unknown' | 'healthy' | 'unhealthy'>('unknown');
+
+  // Check service health on component mount
+  useEffect(() => {
+    checkServiceHealth();
+  }, []);
+
+  const checkServiceHealth = async () => {
+    try {
+      const res = await fetch('http://localhost:3000/api/therapy/health');
+      const data = await res.json();
+      setServiceStatus(data.success && data.python_service?.status === 'healthy' ? 'healthy' : 'unhealthy');
+    } catch (error) {
+      console.error('Health check failed:', error);
+      setServiceStatus('unhealthy');
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -22,28 +57,68 @@ const EmotionalSupportChat = () => {
         body: JSON.stringify({
           message: userMessage,
           language: language,
-          sessionId: `support-session-${Date.now()}`
+          sessionId: sessionData.sessionId,
+          userId: sessionData.userId,
+          sessionKey: sessionData.sessionKey
         })
       });
+      
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status}`);
+      }
+      
       const data = await res.json();
       
-      // Add new message
-      const newMessage = {
+      // Update session data if new session or session data returned
+      if (data.sessionId || data.userId || data.sessionKey) {
+        setSessionData({
+          sessionId: data.sessionId || sessionData.sessionId,
+          userId: data.userId || sessionData.userId,
+          sessionKey: data.sessionKey || sessionData.sessionKey
+        });
+      }
+      
+      // Add new message with crisis information
+      const newMessage: Message = {
         id: Date.now().toString(),
         user: userMessage,
-        ai: data.chatResponse || "I understand. Can you tell me more?",
-        timestamp: new Date()
+        ai: data.chatResponse || data.response || "I understand. Can you tell me more?",
+        timestamp: new Date(),
+        crisisLevel: data.crisisLevel,
+        isCrisis: data.isCrisis
       };
       
       setMessages(prev => [...prev, newMessage]);
+      
+      // Show welcome message if it's a new session
+      if (data.newSession && data.welcomeMessage && data.welcomeMessage !== data.chatResponse) {
+        const welcomeMessage: Message = {
+          id: (Date.now() - 1).toString(),
+          user: '',
+          ai: data.welcomeMessage,
+          timestamp: new Date(),
+          crisisLevel: 'none',
+          isCrisis: false
+        };
+        setMessages(prev => [welcomeMessage, ...prev.slice(-1)]);
+      }
+      
     } catch (error) {
       console.error('Error:', error);
-      // Add error message
-      const errorMessage = {
+      // Add error message with crisis resources
+      const errorMessage: Message = {
         id: Date.now().toString(),
         user: userMessage,
-        ai: "Sorry, I'm having trouble responding right now. Please try again.",
-        timestamp: new Date()
+        ai: `I'm sorry, I'm having trouble responding right now. Please try again.
+
+If you're in immediate crisis, please contact:
+• **988** - Suicide & Crisis Lifeline (call or text, 24/7)
+• **911** - Emergency Services
+
+Your wellbeing is important.`,
+        timestamp: new Date(),
+        crisisLevel: 'none',
+        isCrisis: false
       };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -56,36 +131,92 @@ const EmotionalSupportChat = () => {
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold mb-2">Chat Mode</h1>
-          <p className="text-muted-foreground">
-            Language: {language === 'ur' ? 'اردو' : 'English'}
-          </p>
+          <div className="flex items-center gap-3 mb-4">
+            <Heart className="w-6 h-6 text-red-500" />
+            <h1 className="text-2xl font-bold">Emotional Support Chat</h1>
+          </div>
+          
+          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+            <span>Language: {language === 'ur' ? 'اردو' : 'English'}</span>
+            <span className="flex items-center gap-1">
+              <div className={`w-2 h-2 rounded-full ${
+                serviceStatus === 'healthy' ? 'bg-green-500' : 
+                serviceStatus === 'unhealthy' ? 'bg-red-500' : 'bg-yellow-500'
+              }`} />
+              Service: {serviceStatus === 'healthy' ? 'Online' : serviceStatus === 'unhealthy' ? 'Offline' : 'Checking...'}
+            </span>
+            {sessionData.sessionId && (
+              <span>Session: {sessionData.sessionId.slice(-8)}</span>
+            )}
+          </div>
         </div>
+
+        {/* Service Status Alert */}
+        {serviceStatus === 'unhealthy' && (
+          <Alert className="mb-4 border-red-200 bg-red-50">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              The therapy service is currently unavailable. If you're in crisis, please contact:
+              <br />
+              <strong>988</strong> - Suicide & Crisis Lifeline or <strong>911</strong> - Emergency Services
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Chat Messages */}
         <div className="flex-1 border rounded-lg p-4 mb-4 min-h-[400px] max-h-[600px] overflow-y-auto bg-muted/20">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
-              <p>Start a conversation by typing a message below.</p>
+              <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">Welcome to Emotional Support</h3>
+              <p>This is a safe space where you can share your thoughts and feelings.</p>
+              <p className="text-sm mt-2">Start a conversation by typing a message below.</p>
             </div>
           ) : (
             <div className="space-y-4">
               {messages.map((message) => (
                 <div key={message.id} className="space-y-2">
                   {/* User message */}
-                  <div className="flex justify-end">
-                    <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg max-w-[80%]">
-                      <p>{message.user}</p>
+                  {message.user && (
+                    <div className="flex justify-end">
+                      <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg max-w-[80%]">
+                        <p className="whitespace-pre-wrap">{message.user}</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   
                   {/* AI response */}
                   <div className="flex justify-start">
-                    <div className="bg-muted px-4 py-2 rounded-lg max-w-[80%]">
-                      <p>{message.ai}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {message.timestamp.toLocaleTimeString()}
-                      </p>
+                    <div className={`px-4 py-2 rounded-lg max-w-[80%] ${
+                      message.isCrisis 
+                        ? 'bg-red-50 border border-red-200' 
+                        : 'bg-muted'
+                    }`}>
+                      {/* Crisis alert */}
+                      {message.isCrisis && (
+                        <div className="flex items-center gap-2 mb-2 text-red-600">
+                          <AlertTriangle className="w-4 h-4" />
+                          <span className="text-xs font-medium">URGENT SUPPORT NEEDED</span>
+                        </div>
+                      )}
+                      
+                      <div className="whitespace-pre-wrap">{message.ai}</div>
+                      
+                      <div className="flex items-center gap-2 mt-2">
+                        <p className="text-xs text-muted-foreground">
+                          {message.timestamp.toLocaleTimeString()}
+                        </p>
+                        {message.crisisLevel && message.crisisLevel !== 'none' && (
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            message.crisisLevel === 'critical' ? 'bg-red-100 text-red-800' :
+                            message.crisisLevel === 'high' ? 'bg-orange-100 text-orange-800' :
+                            message.crisisLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-blue-100 text-blue-800'
+                          }`}>
+                            {message.crisisLevel}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -95,21 +226,28 @@ const EmotionalSupportChat = () => {
         </div>
 
         {/* Input */}
-        <div className="flex gap-2">
-          <Input 
-            value={input} 
-            onChange={(e) => setInput(e.target.value)} 
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()} 
-            placeholder={language === 'ur' ? 'اپنا پیغام یہاں لکھیں...' : 'Type your message here...'}
-            disabled={isLoading}
-            className="flex-1"
-          />
-          <Button 
-            onClick={handleSend} 
-            disabled={!input.trim() || isLoading}
-          >
-            {isLoading ? 'Sending...' : 'Send'}
-          </Button>
+        <div className="space-y-2">
+          {/* Crisis Resources Banner */}
+          <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded text-center">
+            <strong>Crisis Resources:</strong> 988 (Suicide & Crisis Lifeline) • 911 (Emergency)
+          </div>
+          
+          <div className="flex gap-2">
+            <Input 
+              value={input} 
+              onChange={(e) => setInput(e.target.value)} 
+              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()} 
+              placeholder={language === 'ur' ? 'اپنا پیغام یہاں لکھیں...' : 'Share what\'s on your mind...'}
+              disabled={isLoading || serviceStatus === 'unhealthy'}
+              className="flex-1"
+            />
+            <Button 
+              onClick={handleSend} 
+              disabled={!input.trim() || isLoading || serviceStatus === 'unhealthy'}
+            >
+              {isLoading ? 'Sending...' : 'Send'}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
