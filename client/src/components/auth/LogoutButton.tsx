@@ -56,3 +56,6 @@ export function LogoutButton({
     </Button>
   );
 }
+
+// Also export as default for compatibility
+export default LogoutButton;
