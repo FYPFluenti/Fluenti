@@ -302,7 +302,7 @@ export default function Signup() {
                 <option value="">Select your role</option>
                 <option value="child">Child (under 18)</option>
                 <option value="adult">Adult</option>
-                <option value="guardian">Parent/Guardian</option>
+                
               </select>
             </div>
 

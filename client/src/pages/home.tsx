@@ -57,17 +57,37 @@ export default function Home() {
   
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
+  // ✅ STEP 1: Redirect authenticated users to appropriate dashboard
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user) {
+      const userType = (user as any)?.userType;
+      console.log('User type detected:', userType); // For debugging
+      
+      switch (userType) {
+        case 'child':
+          console.log('Redirecting to child dashboard');
+          setLocation('/child-dashboard');
+          break;
+        case 'adult':
+          console.log('Redirecting to adult dashboard');
+          setLocation('/adult-dashboard');
+          break;
+        case 'guardian':
+          console.log('Redirecting to guardian dashboard');
+          setLocation('/guardian-dashboard');
+          break;
+        default:
+          console.log('Unknown user type, redirecting to child dashboard');
+          setLocation('/child-dashboard');
+      }
+    }
+  }, [isAuthenticated, isLoading, user, setLocation]);
+
   // Feedback submit function
   const submitFeedback = () => {
     setShowFeedback(false);
     setFeedback("");
   };
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      // Handle redirect if needed
-    }
-  }, [isAuthenticated, isLoading, toast]);
 
   if (isLoading) {
     return (
@@ -1236,4 +1256,4 @@ export default function Home() {
       )}
     </div>
   );
-}
+} 
