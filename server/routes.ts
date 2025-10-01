@@ -28,7 +28,7 @@ import {
   type EnhancedResponseResult 
 } from "./services/enhancedResponseService";
 // Import persistent therapeutic service to initialize the server
-import "./services/therapeuticServicePersistent";
+// import "./services/therapeuticServicePersistent"; // Temporarily disabled - Python env not ready
 import { AuthService } from "./auth";
 
 
