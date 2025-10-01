@@ -10,7 +10,7 @@ import { extractTokenFromHeader, tokenBasedAuth } from "./middleware";
 import * as speechServiceModule from "./services/speechService";
 const { SpeechService, transcribeAudio } = speechServiceModule;
 import { simpleTranscribeAudio, validateAudioBuffer } from "./services/simpleSpeechService";
-import { generateTTSAudio } from "./services/ttsService";
+import { generateSmartTTS } from "./services/enhancedTTSService";
 import { fastTranscribeAudio } from "./services/fastSTTService";
 import { AuthService } from "./auth";
 
@@ -238,15 +238,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
 
-  // Simple emotional support endpoint without authentication - STT and TTS only
+  // Enhanced emotional support endpoint with therapy service integration
   app.post('/api/emotional-support', upload.single('audio'), async (req: Request, res: Response) => {
     try {
-      const { mode, language } = req.body;
+      const { mode, language, sessionId, userId, history } = req.body;
       let text = req.body.text;
 
-      console.log('Processing request - Mode:', mode, 'Language:', language);
+      console.log('🎙️ Processing emotional support request - Mode:', mode, 'Language:', language);
 
-      // Handle voice mode with audio processing (STT only)
+      // Handle voice mode with audio processing (STT)
       if (mode === 'voice' && req.file) {
         try {
           console.log('Processing audio file, size:', req.file.size, 'bytes');
@@ -287,42 +287,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log('Final transcribed text:', text);
 
-      // For voice mode, generate TTS for the transcribed text (echo back what was said)
+      // **NEW: Get therapy response from Python service (same as chat integration)**
+      let therapyResponse = null;
+      let finalResponse = text; // fallback to transcribed text
+      let crisisLevel = 'none';
+      let isCrisis = false;
+
+      if (text && text.trim() !== 'No speech detected' && text.trim() !== 'No input provided') {
+        try {
+          console.log('🤖 Sending to therapy service:', text.substring(0, 50) + '...');
+
+          // Call Python therapy service (same as emotional-support-chat)
+          const pythonServiceResponse = await fetch('http://localhost:5001/api/therapy/chat', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              message: text.trim(),
+              sessionId: sessionId,
+              userId: userId || `voice_user_${Date.now()}`,
+              language: language || 'en'
+            })
+          });
+
+          if (pythonServiceResponse.ok) {
+            therapyResponse = await pythonServiceResponse.json();
+            finalResponse = therapyResponse.response;
+            crisisLevel = therapyResponse.crisisLevel || 'none';
+            isCrisis = therapyResponse.isCrisis || false;
+            console.log('✅ Therapy service response received');
+          } else {
+            console.warn('⚠️ Therapy service unavailable, using fallback');
+            finalResponse = "I'm here to listen and support you. How are you feeling today?";
+          }
+        } catch (therapyError) {
+          console.error('❌ Therapy service error:', therapyError);
+          finalResponse = "I'm here to support you. Please tell me how you're feeling.";
+        }
+      }
+
+      // Generate TTS for the therapy response (not just transcription echo)
       let audioBase64: string | undefined;
       const requestTTS = req.body.requestTTS === 'true' || mode === 'voice';
       
-      if (requestTTS && text) {
+      if (requestTTS && finalResponse) {
         try {
-          console.log('Generating TTS audio for transcribed text...');
-          const ttsResult = await generateTTSAudio(text, language === 'ur' ? 'ur' : 'en');
+          console.log('🔊 Generating enhanced human-like TTS audio for therapy response...');
+          
+          // Use Smart TTS with fallback chain: Edge TTS (free) -> ElevenLabs -> OpenAI -> Windows SAPI
+          const ttsResult = await generateSmartTTS(
+            finalResponse, 
+            language === 'ur' ? 'ur' : 'en',
+            'edge_tts' // Prefer Edge TTS for free high-quality neural voices
+          );
           
           if (ttsResult.error) {
-            console.warn('TTS generation failed:', ttsResult.error);
+            console.warn(`TTS generation failed with ${ttsResult.model}:`, ttsResult.error);
             audioBase64 = undefined;
           } else {
             audioBase64 = ttsResult.audioBase64;
-            console.log('TTS audio generated successfully');
+            console.log(`🎉 Human-like TTS audio generated successfully using ${ttsResult.model} (${ttsResult.quality} quality, ${ttsResult.processing_time}ms)`);
           }
         } catch (ttsError) {
-          console.warn('TTS error:', ttsError);
+          console.warn('Enhanced TTS error:', ttsError);
           audioBase64 = undefined;
         }
       }
 
+      // Return enhanced response with therapy integration
       res.json({ 
         success: true,
         transcription: text, 
+        response: finalResponse, // Therapy response instead of echo
+        emotion: therapyResponse?.emotion || 'neutral',
         mode: mode || 'text',
         language: language || 'en',
         audioBase64: audioBase64,
-        hasTTS: !!audioBase64
+        hasTTS: !!audioBase64,
+        // **NEW: Add therapy service fields (same as chat)**
+        sessionId: therapyResponse?.sessionId,
+        userId: therapyResponse?.userId,
+        sessionKey: therapyResponse?.sessionKey,
+        crisisLevel: crisisLevel,
+        isCrisis: isCrisis,
+        newSession: therapyResponse?.newSession || false
       });
 
     } catch (error) {
-      console.error("Error processing request:", error);
+      console.error("❌ Error processing emotional support request:", error);
+      
+      // Enhanced error response with crisis resources (same as chat)
       res.status(500).json({ 
+        success: false,
         error: 'Processing failed',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        response: `I apologize, but I'm having technical difficulties right now. Please try again in a moment.
+
+If you're in immediate crisis, please contact:
+• **988** - Suicide & Crisis Lifeline (call or text, 24/7)
+• **911** - Emergency Services
+
+Your wellbeing is important. Please don't hesitate to reach out for professional help if needed.`,
+        details: error instanceof Error ? error.message : 'Unknown error',
+        fallback: true
       });
     }
   });

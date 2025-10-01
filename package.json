@@ -57,6 +57,7 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/fluent-ffmpeg": "^2.1.27",
     "@types/memoizee": "^0.4.12",
+    "@types/node-fetch": "^2.6.13",
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.16",
     "bcryptjs": "^3.0.2",
