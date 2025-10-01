@@ -41,9 +41,13 @@ export default function ChildDashboard() {
   const [hovered, setHovered] = useState<string | null>(null);
 
   const submitFeedback = () => {
-    // TODO: send to your API
+    
     setShowFeedback(false);
     setFeedback("");
+      toast({
+      title: "Feedback submitted!",
+      description: "Thank you for helping us make Fluenti better!",
+    });
   };
 
   useEffect(() => {
@@ -76,7 +80,7 @@ export default function ChildDashboard() {
           className="relative group"
         >
           <button
-            onClick={() => setLocation("/")}
+            onClick={() => setLocation("/child-dashboard")}
             aria-label="Go to home"
             className="w-12 h-12 grid place-items-center rounded-xl transition"
           >
