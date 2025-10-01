@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { ThreeAvatar } from '@/components/ui/three-avatar';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition_simple';
+import { Mic, MicOff, Waves, Heart, Brain, Shield } from 'lucide-react';
 
 const EmotionalSupportVoice = () => {
   const language = localStorage.getItem('language') || 'en';
@@ -85,62 +86,145 @@ const EmotionalSupportVoice = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col">
-      <div className="flex-1 p-4">
-        <ThreeAvatar 
-          isListening={isRecording}
-          currentMessage={response}
-          language={supportLanguage}
-          audioBase64={audioBase64}
-          voiceModel={audioBase64 ? 'coqui' : 'browser'}
-          enableLipSync={true}
-        />
+    <div className="h-screen bg-gradient-to-br from-slate-800 via-slate-900 to-black flex flex-col relative overflow-hidden">
+      {/* Background Gradient Effects */}
+      <div className="absolute inset-0 bg-gradient-to-br from-cyan-900/20 via-blue-900/10 to-purple-900/20"></div>
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl"></div>
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+
+      {/* Service Status - Top Right */}
+      <div className="absolute top-6 right-6 z-20">
+        <div className={`flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-md border transition-all duration-300 ${
+          serviceStatus === 'online' 
+            ? 'bg-emerald-500/20 border-emerald-400/30 text-emerald-300' 
+            : serviceStatus === 'offline' 
+            ? 'bg-red-500/20 border-red-400/30 text-red-300'
+            : 'bg-amber-500/20 border-amber-400/30 text-amber-300'
+        }`}>
+          <div className={`w-2 h-2 rounded-full ${
+            serviceStatus === 'online' ? 'bg-emerald-400' :
+            serviceStatus === 'offline' ? 'bg-red-400' :
+            'bg-amber-400 animate-pulse'
+          }`}></div>
+          <span className="text-sm font-medium">
+            {serviceStatus === 'checking' ? 'Connecting...' : serviceStatus}
+          </span>
+        </div>
       </div>
-      
-      
-      <div className="p-4 bg-gray-100">
-        <div className="max-w-md mx-auto">
-          {/* Service Status Indicator */}
-          <div className="mb-3 text-center">
-            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-              serviceStatus === 'online' ? 'bg-green-100 text-green-800' :
-              serviceStatus === 'offline' ? 'bg-red-100 text-red-800' :
-              'bg-yellow-100 text-yellow-800'
-            }`}>
-              <span className={`w-2 h-2 rounded-full mr-1 ${
-                serviceStatus === 'online' ? 'bg-green-400' :
-                serviceStatus === 'offline' ? 'bg-red-400' :
-                'bg-yellow-400 animate-pulse'
-              }`}></span>
-              Therapy Service: {serviceStatus === 'checking' ? 'Connecting...' : serviceStatus}
-            </span>
+
+      {/* Main Content - Centered Avatar */}
+      <div className="flex-1 flex items-center justify-center relative z-10">
+        <div className="relative">
+          {/* Circular Avatar Border with Glow */}
+          <div className={`absolute inset-0 rounded-full transition-all duration-1000 ${
+            isRecording 
+              ? 'ring-4 ring-red-400/50 shadow-2xl shadow-red-500/30' 
+              : 'ring-4 ring-cyan-400/50 shadow-2xl shadow-cyan-500/30'
+          }`}>
+            <div className={`absolute inset-0 rounded-full animate-pulse ${
+              isRecording ? 'bg-red-400/20' : 'bg-cyan-400/20'
+            }`}></div>
           </div>
-          
-          <Button 
-            onClick={() => isRecording ? stopRecording(handleRecordStop) : startRecording()}
-            className={`w-full ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}
-            size="lg"
-            disabled={serviceStatus === 'offline'}
-          >
-            {isRecording ? 'Stop Speaking' : 'Start Speaking'}
-          </Button>
-          
+
+          {/* Avatar Container - Circular */}
+          <div className="relative w-80 h-80 rounded-full overflow-hidden bg-slate-800/50 backdrop-blur-sm border border-white/10">
+            <ThreeAvatar 
+              isListening={isRecording}
+              currentMessage={response}
+              language={supportLanguage}
+              audioBase64={audioBase64}
+              voiceModel={audioBase64 ? 'coqui' : 'browser'}
+              enableLipSync={true}
+            />
+          </div>
+
+          {/* Recording Pulse Animation */}
+          {isRecording && (
+            <div className="absolute inset-0 rounded-full">
+              <div className="absolute inset-0 rounded-full border-2 border-red-400 animate-ping opacity-20"></div>
+              <div className="absolute inset-4 rounded-full border-2 border-red-400 animate-ping opacity-40 animation-delay-150"></div>
+              <div className="absolute inset-8 rounded-full border-2 border-red-400 animate-ping opacity-60 animation-delay-300"></div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom Control Panel */}
+      <div className="absolute bottom-0 left-0 right-0 z-20">
+        <div className="flex flex-col items-center pb-8 px-6">
+          {/* Status Message */}
+          <div className="mb-6 text-center">
+            <h2 className="text-white text-xl font-medium mb-2">
+              {isRecording ? 'Listening...' : 'Ready to talk'}
+            </h2>
+            <p className="text-slate-300 text-sm">
+              {isRecording ? 'Speak naturally, I\'m here to help' : 'Tap the mic to start'}
+            </p>
+          </div>
+
+          {/* Floating Control Card */}
+          <div className="bg-slate-800/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl max-w-md w-full">
+            {/* Main Voice Button */}
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <p className="text-white font-medium">Voice Session</p>
+                <p className="text-slate-400 text-sm">
+                  {serviceStatus === 'online' ? 'AI Therapist ready' : 'Service unavailable'}
+                </p>
+              </div>
+              
+              {/* Mic Button - Circular like the design */}
+              <button 
+                onClick={() => isRecording ? stopRecording(handleRecordStop) : startRecording()}
+                disabled={serviceStatus === 'offline'}
+                className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  isRecording 
+                    ? 'bg-red-500 hover:bg-red-600 shadow-lg shadow-red-500/30' 
+                    : 'bg-amber-500 hover:bg-amber-600 shadow-lg shadow-amber-500/30'
+                }`}
+              >
+                {isRecording ? (
+                  <MicOff className="h-6 w-6 text-white" />
+                ) : (
+                  <Mic className="h-6 w-6 text-white" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* AI Response Floating Card */}
           {response && (
-            <div className="mt-4 p-3 bg-white rounded-lg shadow">
-              <p className="text-sm text-gray-600">AI Therapist:</p>
-              <p className="text-gray-800">{response}</p>
-              {emotion && (
-                <p className="text-xs text-blue-600 mt-1">Detected emotion: {emotion}</p>
-              )}
+            <div className="mt-4 bg-slate-800/80 backdrop-blur-xl border border-white/10 rounded-2xl p-4 shadow-2xl max-w-md w-full">
+              <div className="flex items-start gap-3">
+                <div className="bg-cyan-500/20 p-2 rounded-lg">
+                  <Brain className="h-4 w-4 text-cyan-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-cyan-300 text-sm font-medium mb-1">AI Therapist</p>
+                  <p className="text-white text-sm leading-relaxed">{response}</p>
+                  {emotion && (
+                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-white/10">
+                      <Heart className="h-3 w-3 text-pink-400" />
+                      <p className="text-pink-300 text-xs">Emotion: {emotion}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           )}
 
+          {/* Service Offline Warning */}
           {serviceStatus === 'offline' && (
-            <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-              <p className="text-yellow-800 text-sm">
-                ⚠️ Therapy service is offline. Please ensure the Python service is running.
-                <br />
-                <span className="text-xs">If you're in crisis, please contact 988 or 911.</span>
+            <div className="mt-4 bg-red-900/30 backdrop-blur-xl border border-red-500/30 rounded-2xl p-4 shadow-2xl max-w-md w-full">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="h-4 w-4 text-red-400" />
+                <p className="text-red-300 font-medium text-sm">Service Unavailable</p>
+              </div>
+              <p className="text-red-200 text-xs mb-2">
+                The therapy service is offline. Please check the connection.
+              </p>
+              <p className="text-red-100 text-xs">
+                Crisis support: 988 (Suicide & Crisis Lifeline) or 911
               </p>
             </div>
           )}
