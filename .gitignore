@@ -4,12 +4,28 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Environment variables - Never commit these!
 .env
 .env.local
 .env.production
 .env.development
+
+# Python virtual environment - Large files, don't commit
+.venv/
+venv/
+env/
+*.pyc
+__pycache__/
+
+# Database files
 data/db/*
 !data/db/.gitkeep
+
+# Temporary audio files
+temp/*.wav
+temp/*.mp3
+
 
 # ML Model Cache - Don't commit large model files
 models/hf_cache/
