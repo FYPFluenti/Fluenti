@@ -1,3 +1,9 @@
+---
+noteId: "a3060f209ec311f0b419f7ce4a621d14"
+tags: []
+
+---
+
 # Emotional Therapy Service Integration
 
 This directory contains the emotional therapy service that provides AI-powered mental health support through HTTP endpoints.
