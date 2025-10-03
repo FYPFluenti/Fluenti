@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 const UserSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   email: { type: String, required: true, unique: true },
-  password: { type: String, required: true }, // Added password field
+  password: { type: String, required: false }, // Made optional for OAuth users
   firstName: { type: String, required: true },
   lastName: { type: String, required: true },
   profileImageUrl: { type: String },
@@ -18,9 +18,46 @@ const UserSchema = new mongoose.Schema({
     enum: ['english', 'urdu', 'both'], 
     default: 'english' 
   },
+  // OAuth fields
+  googleId: { type: String, unique: true, sparse: true },
+  facebookId: { type: String, unique: true, sparse: true },
+  signupMethod: { 
+    type: String, 
+    enum: ['email', 'google', 'facebook'], 
+    default: 'email' 
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
+
+// Add password hashing middleware
+import bcrypt from 'bcryptjs';
+
+UserSchema.pre('save', async function(next) {
+  if (!this.isModified('password') || !this.password) return next();
+  
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error instanceof Error ? error : new Error('Password hashing failed'));
+  }
+});
+
+// Add password comparison method
+UserSchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+  if (!this.password) return false;
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Add method to get public user data
+UserSchema.methods.toPublic = function() {
+  const userObject = this.toObject();
+  delete userObject.password;
+  delete userObject.__v;
+  return userObject;
+};
 
 // Session Schema (for express-session)
 const SessionSchema = new mongoose.Schema({

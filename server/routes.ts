@@ -10,8 +10,30 @@ import { extractTokenFromHeader, tokenBasedAuth } from "./middleware";
 import * as speechServiceModule from "./services/speechService";
 const { SpeechService, transcribeAudio } = speechServiceModule;
 import { simpleTranscribeAudio, validateAudioBuffer } from "./services/simpleSpeechService";
+
+// Phase 3: Import OPTIMIZED emotion detection services
+import { 
+  detectEmotionFromText, 
+  detectEmotionFromAudio, 
+  detectCombinedEmotion 
+} from "./services/emotionServiceOptimized";
+// Phase 4: Import response generation functions
+import { analyzeEmotion, generateEmotionalResponse } from "./services/openai";
+// Phase 4: Import new conversational response service with Llama-2 and TTS
+import { generateConversationalResponse, type ConversationHistory } from "./services/responseService";
+// Enhanced Phase 4+: Import enhanced conversational therapy AI
+import { 
+  generateEnhancedConversationalResponse, 
+  generateSuperiorTherapeuticResponse,
+  type EnhancedResponseRequest, 
+  type EnhancedResponseResult 
+} from "./services/enhancedResponseService";
+// Import persistent therapeutic service to initialize the server
+// import "./services/therapeuticServicePersistent"; // Temporarily disabled - Python env not ready
+
 import { generateTTSAudio } from "./services/ttsService";
 import { fastTranscribeAudio } from "./services/fastSTTService";
+
 import { AuthService } from "./auth";
 
 
