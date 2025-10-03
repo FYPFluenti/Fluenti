@@ -1,729 +1,492 @@
-import { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import React, { useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
-import { isUnauthorizedError } from "@/lib/authUtils";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { ThreeAvatar } from "@/components/ui/three-avatar";
-import { SpeechExercise } from "@/components/speech/speech-exercise";
-import { InitialAssessment } from "@/components/assessment/initial-assessment";
-import { RoleBasedComponent, UserTypeGuard } from "@/components/auth/RoleBasedComponent";
-import { RoleBasedHeader } from "@/components/navigation/RoleBasedHeader";
-import { Link, useLocation } from "wouter";
 import { 
-  MessageCircle, 
-  Users, 
-  Home, 
-  ArrowLeft, 
-  Play, 
+  Gamepad2, 
+  LineChart, 
+  Smile, 
+  User, 
+  Settings,
   Trophy,
-  Target,
+  Star,
   Clock,
   Volume2,
-  BookOpen,
-  CheckCircle,
-  Mic,
-  Star,
+  VolumeX,
+  Play,
+  Pause,
+  RotateCcw,
+  Crown,
   Zap,
+  Target,
   Award,
   Sparkles
-} from "lucide-react";
+} from 'lucide-react';
 
-interface Exercise {
-  id: string;
-  type: string;
-  difficulty: number;
-  word: string;
-  phonetic: string;
-  sentence: string;
-  language: 'english' | 'urdu';
-}
+// Your components imports - fixed paths
+import FluentiLogo from '@/components/FluentiLogo';
+import { LogoutButton } from '@/components/auth/LogoutButton';
 
-interface SessionData {
-  id: string;
-  exercises: Exercise[];
-  currentExerciseIndex: number;
-  completedExercises: number;
-  totalAccuracy: number;
-}
-
-export default function SpeechTherapy() {
+export default function SpeechTherapyPage() {
   const { toast } = useToast();
-  const { user, isAuthenticated, isLoading } = useAuth();
-  const queryClient = useQueryClient();
-  const [, setLocation] = useLocation();
-  
-  const [currentSession, setCurrentSession] = useState<SessionData | null>(null);
-  const [isAvatarActive, setIsAvatarActive] = useState(true);
-  const [avatarMessage, setAvatarMessage] = useState("Welcome! Let's start your speech therapy session. I'm here to help you improve your pronunciation.");
-  const [avatarEmotion, setAvatarEmotion] = useState('encouraging');
-
-  // Create new session mutation - ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
-  const createSessionMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/speech/session', {
-        sessionType: 'exercise'
-      });
-      return response.json();
-    },
-    onSuccess: (session) => {
-      // Generate sample exercises (in production, these would come from AI)
-      const exercises: Exercise[] = [
-        {
-          id: '1',
-          type: 'pronunciation',
-          difficulty: 1,
-          word: 'HELLO',
-          phonetic: '/həˈloʊ/',
-          sentence: 'Hello, how are you today?',
-          language: 'english'
-        },
-        {
-          id: '2',
-          type: 'pronunciation',
-          difficulty: 1,
-          word: 'WORLD',
-          phonetic: '/wɜːrld/',
-          sentence: 'Welcome to our world of learning.',
-          language: 'english'
-        },
-        {
-          id: '3',
-          type: 'pronunciation',
-          difficulty: 2,
-          word: 'BEAUTIFUL',
-          phonetic: '/ˈbjuːtɪfəl/',
-          sentence: 'What a beautiful day it is!',
-          language: 'english'
-        }
-      ];
-
-      setCurrentSession({
-        id: session.id,
-        exercises,
-        currentExerciseIndex: 0,
-        completedExercises: 0,
-        totalAccuracy: 0
-      });
-
-      setAvatarMessage("Great! I've prepared some exercises for you. Let's start with the first word.");
-      setAvatarEmotion('happy');
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Authentication Required",
-          description: "Please log in to access speech therapy sessions.",
-          variant: "destructive",
-        });
-        // Redirect to frontend login page, not API endpoint
-        setTimeout(() => {
-          setLocation('/login');
-        }, 1000);
-        return;
-      }
-      toast({
-        title: "Session Error",
-        description: "Failed to start speech therapy session. Please try logging in again.",
-        variant: "destructive",
-      });
-    },
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState("");
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
+  const [selectedGame, setSelectedGame] = useState<any>(null);
+  const [gameInProgress, setGameInProgress] = useState(false);
+  const [userStats, setUserStats] = useState({
+    level: 12,
+    xp: 2450,
+    stars: 156,
+    streak: 7
   });
 
-  // Record speech attempt mutation - ALL HOOKS MUST BE CALLED BEFORE ANY CONDITIONAL RETURNS
-  const recordSpeechMutation = useMutation({
-    mutationFn: async (data: {
-      sessionId: string;
-      word: string;
-      phonetic: string;
-      userTranscription: string;
-      language: 'english' | 'urdu';
-    }) => {
-      const response = await apiRequest('POST', '/api/speech/record', data);
-      return response.json();
-    },
-    onSuccess: (result) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/speech/progress'] });
-      
-      if (result.feedback.accuracy >= 85) {
-        setAvatarMessage("Excellent pronunciation! You're doing amazing!");
-        setAvatarEmotion('excited');
-      } else if (result.feedback.accuracy >= 70) {
-        setAvatarMessage("Good job! You're improving with each attempt.");
-        setAvatarEmotion('encouraging');
-      } else {
-        setAvatarMessage("Keep practicing! Remember to speak slowly and clearly.");
-        setAvatarEmotion('calm');
-      }
-    },
-    onError: (error) => {
-      if (isUnauthorizedError(error as Error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
-      toast({
-        title: "Error",
-        description: "Failed to record speech attempt. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Check authentication - useEffect MUST be called before conditional returns
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      toast({
-        title: "Authentication Required",
-        description: "Please log in to access speech therapy sessions.",
-        variant: "destructive",
-      });
-      setLocation('/login');
-      return;
-    }
-  }, [isAuthenticated, isLoading, setLocation, toast]);
+  const setLocation = (path: string) => {
+    // Your navigation logic here
+    window.location.href = path;
+  };
 
-  // Handle exercise completion
-  const handleExerciseComplete = (result: { accuracy: number; attempts: number }) => {
-    if (!currentSession) return;
-
-    const newTotalAccuracy = (currentSession.totalAccuracy * currentSession.completedExercises + result.accuracy) / (currentSession.completedExercises + 1);
-    
-    setCurrentSession({
-      ...currentSession,
-      completedExercises: currentSession.completedExercises + 1,
-      totalAccuracy: newTotalAccuracy
-    });
-
-    // Record the speech attempt
-    const currentExercise = currentSession.exercises[currentSession.currentExerciseIndex];
-    recordSpeechMutation.mutate({
-      sessionId: currentSession.id,
-      word: currentExercise.word,
-      phonetic: currentExercise.phonetic,
-      userTranscription: currentExercise.word, // In real implementation, this would be the actual transcription
-      language: currentExercise.language
+    // Feedback submit function
+  const submitFeedback = () => {
+    setShowFeedback(false);
+    setFeedback("");
+    toast({
+      title: "Feedback submitted!",
+      description: "Thank you for helping us make Fluenti better!",
     });
   };
 
-  const handleNextExercise = () => {
-    if (!currentSession) return;
+  const games = [
+    {
+      id: 1,
+      title: "Phonics Adventure Quest",
+      description: "Embark on a magical journey through the kingdom of sounds!",
+      emoji: "🏰",
+      difficulty: "Easy",
+      duration: "15 min",
+      stars: 3,
+      xpReward: 50,
+      color: "from-purple-400 to-pink-500",
+      unlocked: true,
+      category: "Phonics"
+    },
+    {
+      id: 2,
+      title: "Word Building Workshop",
+      description: "Construct amazing words with your syllable toolkit!",
+      emoji: "🔧",
+      difficulty: "Medium", 
+      duration: "20 min",
+      stars: 2,
+      xpReward: 75,
+      color: "from-blue-400 to-cyan-500",
+      unlocked: true,
+      category: "Vocabulary"
+    },
+    {
+      id: 3,
+      title: "Rhythm & Rhyme Studio",
+      description: "Create beautiful music with speech patterns and beats!",
+      emoji: "🎵",
+      difficulty: "Medium",
+      duration: "18 min", 
+      stars: 3,
+      xpReward: 80,
+      color: "from-green-400 to-teal-500",
+      unlocked: true,
+      category: "Rhythm"
+    },
+    {
+      id: 4,
+      title: "Articulation Arcade",
+      description: "Master pronunciation in this exciting arcade adventure!",
+      emoji: "🕹️",
+      difficulty: "Hard",
+      duration: "25 min",
+      stars: 1,
+      xpReward: 100,
+      color: "from-orange-400 to-red-500", 
+      unlocked: userStats.level >= 10,
+      category: "Articulation"
+    },
+    {
+      id: 5,
+      title: "Story Theater",
+      description: "Become the star of your own interactive storytelling show!",
+      emoji: "🎭",
+      difficulty: "Hard",
+      duration: "30 min",
+      stars: 0,
+      xpReward: 120,
+      color: "from-indigo-400 to-purple-600",
+      unlocked: userStats.level >= 15,
+      category: "Storytelling"
+    },
+    {
+      id: 6,
+      title: "Sound Safari Explorer",
+      description: "Discover amazing animals and practice their sounds!",
+      emoji: "🦁",
+      difficulty: "Easy",
+      duration: "12 min",
+      stars: 3,
+      xpReward: 45,
+      color: "from-yellow-400 to-orange-500",
+      unlocked: true,
+      category: "Animal Sounds"
+    }
+  ];
 
-    if (currentSession.currentExerciseIndex < currentSession.exercises.length - 1) {
-      setCurrentSession({
-        ...currentSession,
-        currentExerciseIndex: currentSession.currentExerciseIndex + 1
-      });
-      setAvatarMessage("Well done! Let's move on to the next word.");
-      setAvatarEmotion('encouraging');
-    } else {
-      // Session completed
-      const finalAccuracy = currentSession.totalAccuracy;
-      if (finalAccuracy >= 85) {
-        setAvatarMessage("Fantastic work! You've completed the session with excellent results!");
-        setAvatarEmotion('excited');
-      } else {
-        setAvatarMessage("Great effort! Keep practicing and you'll continue to improve.");
-        setAvatarEmotion('encouraging');
-      }
+  const getDifficultyColor = (difficulty: string) => {
+    switch(difficulty) {
+      case 'Easy': return 'text-green-600 bg-green-100';
+      case 'Medium': return 'text-yellow-600 bg-yellow-100'; 
+      case 'Hard': return 'text-red-600 bg-red-100';
+      default: return 'text-gray-600 bg-gray-100';
     }
   };
 
-  const handleAvatarSpeak = () => {
-    if (currentSession && avatarMessage) {
-      if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(avatarMessage);
-        utterance.rate = 0.9;
-        utterance.pitch = 1.1;
-        speechSynthesis.speak(utterance);
-      }
-    }
+  const startGame = (game: any) => {
+    if (!game.unlocked) return;
+    setSelectedGame(game);
+    setGameInProgress(true);
   };
-
-  // CONDITIONAL RETURNS MUST BE AFTER ALL HOOKS
-  // Show loading while checking authentication
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-          <div className="text-xl font-medium text-blue-600 animate-pulse">Loading your session...</div>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render anything if not authenticated (will redirect)
-  if (!isAuthenticated || !user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center max-w-md mx-auto p-8">
-          <div className="w-20 h-20 bg-gradient-to-br from-red-100 to-orange-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg">
-            <MessageCircle className="w-10 h-10 text-red-600" />
-          </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Authentication Required</h2>
-          <p className="text-lg text-gray-600 mb-8 leading-relaxed">Please log in to access your personalized speech therapy sessions and track your progress.</p>
-          <div className="space-y-4">
-            <Link href="/login">
-              <Button className="fluenti-button-primary w-full text-lg py-6">
-                <MessageCircle className="w-5 h-5 mr-2" />
-                Go to Login
-              </Button>
-            </Link>
-            <Link href="/">
-              <Button variant="outline" className="w-full text-lg py-6 border-2 border-gray-300 hover:border-blue-300">
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                Back to Home
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const isSessionCompleted = currentSession && 
-    currentSession.currentExerciseIndex >= currentSession.exercises.length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 relative overflow-hidden">
-      {/* Enhanced Floating Elements */}
-      <div className="absolute top-10 left-10 w-20 h-20 bg-gradient-to-br from-blue-300/30 to-purple-300/30 rounded-full fluenti-float shadow-lg"></div>
-      <div className="absolute top-20 right-20 w-16 h-16 bg-gradient-to-br from-purple-300/30 to-pink-300/30 rounded-full fluenti-float shadow-lg" style={{animationDelay: '1s'}}></div>
-      <div className="absolute bottom-20 left-1/4 w-24 h-24 bg-gradient-to-br from-pink-300/30 to-blue-300/30 rounded-full fluenti-float shadow-lg" style={{animationDelay: '2s'}}></div>
-      <div className="absolute top-1/3 right-10 w-12 h-12 bg-gradient-to-br from-yellow-300/30 to-orange-300/30 rounded-full fluenti-float shadow-lg" style={{animationDelay: '3s'}}></div>
-      
-      {/* Role-based Header */}
-      <RoleBasedHeader />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+      {/* Your Sidebar */}
+      <aside className="w-20 bg-background flex flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-50 border-r border-border">
+        {/* Sidebar brand (logo with hover + tooltip) */}
+        <div
+          onMouseEnter={() => setHovered("home")}
+          onMouseLeave={() => setHovered(null)}
+          className="relative group"
+        >
+          <button
+            onClick={() => setLocation("/child-dashboard")}
+            aria-label="Go to home"
+            className="w-12 h-12 grid place-items-center rounded-xl transition"
+          >
+            <FluentiLogo
+              className="w-10 h-10 text-[#ff6b1d] transition-colors duration-150 group-hover:text-[#ff8a4a]"
+            />
+          </button>
+
+          {hovered === "home" && (
+            <motion.div
+              initial={{ opacity: 0, x: 5 }}
+              animate={{ opacity: 1, x: 12 }}
+              exit={{ opacity: 0, x: 5 }}
+              className="absolute left-[38px] bottom-1 bg-popover text-popover-foreground px-3 py-1.5 rounded-lg shadow-md border border-border z-10"
+            >
+              home
+            </motion.div>
+          )}
+        </div>
+
+        {/* Sidebar Buttons */}
+        {[
+          { icon: Gamepad2, label: "games", id: "games", path: "/speech-therapy" },
+          { icon: LineChart, label: "progress", id: "progress", path: "/progress-dashboard" },
+          { icon: Smile, label: "feedback", id: "feedback" },
+        ].map(({ icon: Icon, label, id, path }) => (
+          <div
+            key={id}
+            onMouseEnter={() => setHovered(id)}
+            onMouseLeave={() => setHovered(null)}
+            className="relative group"
+          >
+            <button
+              onClick={() =>
+                id === "feedback"
+                  ? setShowFeedback(true)
+                  : path && setLocation(path)
+              }
+              className="w-10 h-10 flex items-center justify-center rounded-xl transition group"
+              aria-label={label}
+            >
+              <Icon className="text-foreground w-7 h-7 transition-colors duration-150 group-hover:text-muted-foreground" />
+            </button>
+
+            {hovered === id && (
+              <motion.div
+                initial={{ opacity: 0, x: 5 }}
+                animate={{ opacity: 1, x: 12 }}
+                exit={{ opacity: 0, x: 5 }}
+                className="absolute left-[38px] bottom-0 bg-popover text-popover-foreground px-4 py-2 rounded-lg shadow-md border border-border z-10 w-30 space-y-1"
+              >
+                {label}
+              </motion.div>
+            )}
+          </div>
+        ))}
+
+        <div className="flex-1" />
+
+        <div 
+          className="relative" 
+          onMouseEnter={() => { 
+            if (hideTimer.current) clearTimeout(hideTimer.current); 
+            setShowUserMenu(true); 
+          }} 
+          onMouseLeave={() => { 
+            hideTimer.current = setTimeout(() => setShowUserMenu(false), 200); 
+          }}
+        >
+          <button
+            className="group w-10 h-10 flex items-center justify-center rounded-full transition"
+            aria-haspopup="menu"
+            aria-expanded={showUserMenu}
+          >
+            <User
+              className={`w-7 h-7 transition-colors duration-150 ${
+                showUserMenu
+                  ? "text-muted-foreground"
+                  : "text-muted-foreground group-hover:text-muted-foreground"
+              }`}
+            />
+          </button>
+
+          {showUserMenu && (
+            <div className="absolute left-12 bottom-0 w-48 bg-popover border border-border rounded-xl shadow-lg p-4 z-50 space-y-2">
+              <button 
+                onClick={() => setLocation("/settings")} 
+                className="w-full px-5 py-3 text-sm flex items-center gap-3 hover:bg-muted hover:brightness-90 rounded-lg"
+              >
+                <Settings className="w-5 h-5" />
+                <span className="text-foreground font-medium">Settings</span>
+              </button>
+              <div className="border-t border-border my-1" />
+              <LogoutButton className="w-full px-5 py-3 text-base text-left hover:bg-gray-200 hover:text-black dark:hover:bg-gray-700 dark:hover:text-white bg-orange-500 text-white font-medium flex items-center gap-3 rounded-lg" />            
+            </div>
+          )}
+        </div>
+      </aside>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 relative z-10">
-        {!currentSession ? (
-          /* Enhanced Welcome Screen */
-          <div className="text-center max-w-5xl mx-auto animate-slide-up">
-            <div className="mb-12">
-              <UserTypeGuard userType="child">
-                <div className="flex justify-center items-center mb-6">
-                  <div className="flex space-x-2">
-                    <Sparkles className="w-12 h-12 text-purple-500 animate-bounce" />
-                    <Star className="w-12 h-12 text-yellow-500 animate-pulse" />
-                    <Sparkles className="w-12 h-12 text-pink-500 animate-bounce" style={{animationDelay: '0.5s'}} />
-                  </div>
-                </div>
-                <h1 className="text-6xl font-bold mb-6">
-                  <span className="text-gradient-warm">🎮 Speech Games Time! 🎮</span>
-                </h1>
-                <p className="text-2xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
-                  Let's play super fun games while learning to speak like a champion! Your magical AI buddy is here to help you become the best speaker ever! 🌟✨
-                </p>
-              </UserTypeGuard>
-
-              <UserTypeGuard userType="adult">
-                <div className="flex justify-center items-center mb-6">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
-                    <Mic className="w-8 h-8 text-white" />
-                  </div>
-                </div>
-                <h1 className="text-5xl font-bold mb-6">
-                  <span className="text-gradient-primary">AI-Powered Speech Therapy</span>
-                </h1>
-                <p className="text-xl text-gray-600 leading-relaxed max-w-3xl mx-auto">
-                  Experience personalized pronunciation training with your AI speech therapist. Get real-time feedback, track your progress, and improve your communication skills with cutting-edge technology.
-                </p>
-              </UserTypeGuard>
-
-              <UserTypeGuard userType="guardian">
-                <div className="flex justify-center items-center mb-6">
-                  <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center shadow-lg">
-                    <BookOpen className="w-8 h-8 text-white" />
-                  </div>
-                </div>
-                <h1 className="text-5xl font-bold text-green-700 mb-6">
-                  Professional Speech Therapy Tools
-                </h1>
-                <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-                  Access comprehensive therapeutic tools and exercises. Monitor speech development progress with advanced AI insights and support guided therapeutic sessions.
-                </p>
-              </UserTypeGuard>
+      <main className="ml-20 p-8">
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+                Speech Adventure Center 🎮
+              </h1>
+              <p className="text-lg text-muted-foreground">
+                Choose your next gaming adventure and level up your speech skills!
+              </p>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-12 mb-12">
-              {/* Enhanced Avatar Preview */}
-              <div className="relative">
-                <div className="bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 rounded-3xl p-8 shadow-2xl border border-white/50 backdrop-blur-sm">
-                  <div className="absolute -top-4 -right-4 w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full animate-ping"></div>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-white" />
-                  </div>
-                  <ThreeAvatar />
-                  <div className="mt-6 text-center">
-                    <UserTypeGuard userType="child">
-                      <p className="text-lg font-medium text-purple-600">🤖 Your AI Speech Buddy</p>
-                    </UserTypeGuard>
-                    <UserTypeGuard userType="adult">
-                      <p className="text-lg font-medium text-blue-600">AI Speech Therapist</p>
-                    </UserTypeGuard>
-                    <UserTypeGuard userType="guardian">
-                      <p className="text-lg font-medium text-green-600">Therapeutic AI Assistant</p>
-                    </UserTypeGuard>
-                  </div>
+            {/* Sound Toggle */}
+            <button
+              onClick={() => setSoundEnabled(!soundEnabled)}
+              className={`p-3 rounded-xl transition-all ${
+                soundEnabled 
+                  ? 'bg-green-100 text-green-600 hover:bg-green-200' 
+                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+              }`}
+            >
+              {soundEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
+            </button>
+          </div>
+
+          {/* Stats Dashboard */}
+          <div className="grid grid-cols-4 gap-6 mb-8">
+            <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-6 rounded-2xl text-white">
+              <div className="flex items-center gap-3">
+                <Crown className="w-8 h-8" />
+                <div>
+                  <p className="text-purple-100 text-sm">Current Level</p>
+                  <p className="text-2xl font-bold">{userStats.level}</p>
                 </div>
-              </div>
-
-              {/* Enhanced Session Info */}
-              <div className="space-y-6 text-left">
-                <Card className="fluenti-card shadow-xl border-0 bg-gradient-to-br from-white to-blue-50">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center space-x-3 text-xl">
-                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                        <Target className="w-5 h-5 text-white" />
-                      </div>
-                      <span>Learning Objectives</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center space-x-4 p-3 bg-white/60 rounded-xl">
-                      <div className="w-3 h-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"></div>
-                      <span className="font-medium">Crystal-clear pronunciation</span>
-                    </div>
-                    <div className="flex items-center space-x-4 p-3 bg-white/60 rounded-xl">
-                      <div className="w-3 h-3 bg-gradient-to-r from-purple-500 to-pink-600 rounded-full"></div>
-                      <span className="font-medium">Perfect phonetic accuracy</span>
-                    </div>
-                    <div className="flex items-center space-x-4 p-3 bg-white/60 rounded-xl">
-                      <div className="w-3 h-3 bg-gradient-to-r from-pink-500 to-orange-600 rounded-full"></div>
-                      <span className="font-medium">Enhanced voice clarity</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="fluenti-card shadow-xl border-0 bg-gradient-to-br from-white to-purple-50">
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center space-x-3 text-xl">
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
-                        <Clock className="w-5 h-5 text-white" />
-                      </div>
-                      <span>Session Overview</span>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex justify-between items-center p-3 bg-white/60 rounded-xl">
-                      <span className="text-gray-600 font-medium">Duration:</span>
-                      <Badge className="bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 px-4 py-1">15-20 min</Badge>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-white/60 rounded-xl">
-                      <span className="text-gray-600 font-medium">Exercises:</span>
-                      <Badge className="bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0 px-4 py-1">3 words</Badge>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-white/60 rounded-xl">
-                      <span className="text-gray-600 font-medium">Difficulty:</span>
-                      <Badge className="bg-gradient-to-r from-emerald-500 to-green-600 text-white border-0 px-4 py-1">
-                        <Star className="w-3 h-3 mr-1" />
-                        Beginner
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="fluenti-card shadow-xl border-0 bg-gradient-to-br from-white to-yellow-50">
-                  <CardContent className="p-6 text-center">
-                    <div className="flex justify-center items-center space-x-2 mb-3">
-                      <Trophy className="w-6 h-6 text-yellow-600" />
-                      <span className="font-bold text-lg text-yellow-700">Rewards System</span>
-                    </div>
-                    <p className="text-gray-600">
-                      Earn stars, unlock achievements, and track your speaking journey!
-                    </p>
-                  </CardContent>
-                </Card>
               </div>
             </div>
 
-            <div className="relative">
-              <Button
-                className="fluenti-button-primary text-2xl px-16 py-8 shadow-2xl hover:shadow-3xl transform hover:scale-105 transition-all duration-300 relative overflow-hidden"
-                onClick={() => {
-                  if (!user) {
-                    toast({
-                      title: "Please Log In First",
-                      description: "You need to be logged in to start speech therapy sessions.",
-                      variant: "destructive",
-                    });
-                    setTimeout(() => {
-                      setLocation('/login');
-                    }, 1500);
-                    return;
-                  }
-                  createSessionMutation.mutate();
-                }}
-                disabled={createSessionMutation.isPending || !user}
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
-                {createSessionMutation.isPending ? (
-                  <>
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>
-                    <UserTypeGuard userType="child">
-                      🎮 Starting Magical Game...
-                    </UserTypeGuard>
-                    <UserTypeGuard userType="adult">
-                      🤖 Initializing AI Session...
-                    </UserTypeGuard>
-                    <UserTypeGuard userType="guardian">
-                      🔧 Loading Professional Tools...
-                    </UserTypeGuard>
-                  </>
-                ) : (
-                  <>
-                    <UserTypeGuard userType="child">
-                      <Zap className="mr-3 w-6 h-6" />
-                      🎮 Let's Play & Learn!
-                    </UserTypeGuard>
-                    <UserTypeGuard userType="adult">
-                      <Play className="mr-3 w-6 h-6" />
-                      Start AI Speech Therapy
-                    </UserTypeGuard>
-                    <UserTypeGuard userType="guardian">
-                      <BookOpen className="mr-3 w-6 h-6" />
-                      Access Therapy Tools
-                    </UserTypeGuard>
-                  </>
+            <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 rounded-2xl text-white">
+              <div className="flex items-center gap-3">
+                <Zap className="w-8 h-8" />
+                <div>
+                  <p className="text-orange-100 text-sm">Experience Points</p>
+                  <p className="text-2xl font-bold">{userStats.xp.toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-yellow-500 to-orange-500 p-6 rounded-2xl text-white">
+              <div className="flex items-center gap-3">
+                <Star className="w-8 h-8" />
+                <div>
+                  <p className="text-yellow-100 text-sm">Stars Collected</p>
+                  <p className="text-2xl font-bold">{userStats.stars}</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-gradient-to-r from-green-500 to-teal-500 p-6 rounded-2xl text-white">
+              <div className="flex items-center gap-3">
+                <Target className="w-8 h-8" />
+                <div>
+                  <p className="text-green-100 text-sm">Daily Streak</p>
+                  <p className="text-2xl font-bold">{userStats.streak} days</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Games Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {games.map((game) => (
+            <motion.div
+              key={game.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: game.id * 0.1 }}
+              className={`relative overflow-hidden rounded-2xl cursor-pointer transform transition-all duration-300 hover:scale-105 ${
+                game.unlocked 
+                  ? 'hover:shadow-2xl' 
+                  : 'opacity-50 cursor-not-allowed'
+              }`}
+              onClick={() => startGame(game)}
+            >
+              {/* Game Card Background */}
+              <div className={`bg-gradient-to-br ${game.color} p-6 text-white relative`}>
+                {/* Lock Overlay for Locked Games */}
+                {!game.unlocked && (
+                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                    <div className="text-center">
+                      <Crown className="w-12 h-12 mx-auto mb-2 text-yellow-300" />
+                      <p className="text-sm font-medium">Unlock at Level {game.id * 3}</p>
+                    </div>
+                  </div>
                 )}
-              </Button>
-            </div>
-          </div>
-        ) : isSessionCompleted ? (
-          /* Enhanced Session Completed */
-          <div className="text-center max-w-5xl mx-auto">
-            <div className="mb-12">
-              <div className="relative mb-8">
-                <div className="w-32 h-32 bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl animate-pulse">
-                  <Trophy className="text-white text-6xl" />
-                </div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full animate-bounce">
-                  <Sparkles className="w-4 h-4 text-white m-2" />
-                </div>
-              </div>
-              
-              <UserTypeGuard userType="child">
-                <h1 className="text-6xl font-bold text-purple-600 mb-6 animate-bounce">
-                  🏆 SUPER AMAZING JOB! 🎉✨
-                </h1>
-                <p className="text-2xl text-gray-600 leading-relaxed">
-                  WOW! You're officially a Speech Champion! You completed all the magical speech games and you're becoming a super duper speaker! 🌟🚀
-                </p>
-              </UserTypeGuard>
 
-              <UserTypeGuard userType="adult">
-                <h1 className="text-5xl font-bold text-gray-900 mb-6">
-                  🎯 Session Completed Successfully! 🎉
-                </h1>
-                <p className="text-xl text-gray-600">
-                  Excellent work! You've successfully completed your AI-powered speech therapy session with remarkable progress.
-                </p>
-              </UserTypeGuard>
+                {/* Game Emoji */}
+                <div className="text-6xl mb-4 text-center">{game.emoji}</div>
 
-              <UserTypeGuard userType="guardian">
-                <h1 className="text-5xl font-bold text-green-700 mb-6">
-                  ✅ Therapeutic Session Complete! 🎯
-                </h1>
-                <p className="text-xl text-gray-600">
-                  Professional speech therapy session completed successfully. Comprehensive progress data and therapeutic insights are now available for review.
-                </p>
-              </UserTypeGuard>
-            </div>
+                {/* Game Info */}
+                <div className="space-y-3">
+                  <h3 className="text-xl font-bold text-center">{game.title}</h3>
+                  <p className="text-sm opacity-90 text-center leading-relaxed">
+                    {game.description}
+                  </p>
 
-            <div className="grid md:grid-cols-3 gap-8 mb-12">
-              <Card className="fluenti-card text-center shadow-2xl border-0 bg-gradient-to-br from-blue-50 to-blue-100 transform hover:scale-105 transition-all duration-300">
-                <CardContent className="p-8">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Target className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="text-4xl font-bold text-blue-600 mb-2">
-                    {Math.round(currentSession.totalAccuracy)}%
-                  </div>
-                  <div className="text-gray-600 font-medium">Overall Accuracy</div>
-                  <div className="mt-3">
-                    {currentSession.totalAccuracy >= 85 ? (
-                      <Badge className="bg-green-100 text-green-700 border-green-200">Excellent!</Badge>
-                    ) : currentSession.totalAccuracy >= 70 ? (
-                      <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Good!</Badge>
-                    ) : (
-                      <Badge className="bg-blue-100 text-blue-700 border-blue-200">Keep Going!</Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="fluenti-card text-center shadow-2xl border-0 bg-gradient-to-br from-purple-50 to-purple-100 transform hover:scale-105 transition-all duration-300">
-                <CardContent className="p-8">
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <BookOpen className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="text-4xl font-bold text-purple-600 mb-2">
-                    {currentSession.completedExercises}
-                  </div>
-                  <div className="text-gray-600 font-medium">Words Mastered</div>
-                  <div className="mt-3">
-                    <Badge className="bg-purple-100 text-purple-700 border-purple-200">Complete!</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-              
-              <Card className="fluenti-card text-center shadow-2xl border-0 bg-gradient-to-br from-yellow-50 to-yellow-100 transform hover:scale-105 transition-all duration-300">
-                <CardContent className="p-8">
-                  <div className="w-16 h-16 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Star className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="text-4xl font-bold text-yellow-600 mb-2">
-                    +{Math.floor(currentSession.totalAccuracy / 10)}
-                  </div>
-                  <div className="text-gray-600 font-medium">Stars Earned</div>
-                  <div className="mt-3">
-                    <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200">Reward!</Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="space-y-6">
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <Link href="/progress">
-                  <Button className="fluenti-button-primary text-lg px-8 py-4 shadow-xl hover:shadow-2xl transform hover:scale-105 transition-all duration-300">
-                    <Trophy className="mr-2 w-5 h-5" />
-                    View Progress Dashboard
-                  </Button>
-                </Link>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setCurrentSession(null);
-                    setAvatarMessage("Welcome back! Ready for another amazing session?");
-                    setAvatarEmotion('encouraging');
-                  }}
-                  className="border-2 border-blue-500 text-blue-600 hover:bg-blue-500 hover:text-white text-lg px-8 py-4 shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300"
-                >
-                  <Play className="mr-2 w-5 h-5" />
-                  Start New Session
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          /* Enhanced Active Session */
-          <div className="grid lg:grid-cols-2 gap-12">
-            {/* Avatar Section */}
-            <div className="space-y-6">
-              <div className="bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 rounded-3xl p-6 shadow-2xl border border-white/50">
-                <ThreeAvatar />
-                <div className="mt-4 text-center">
-                  <Button
-                    variant="outline"
-                    onClick={handleAvatarSpeak}
-                    className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                  >
-                    <Volume2 className="w-4 h-4 mr-2" />
-                    Hear Message
-                  </Button>
-                </div>
-              </div>
-
-              {/* Enhanced Session Progress */}
-              <Card className="fluenti-card shadow-xl border-0 bg-gradient-to-br from-white to-blue-50">
-                <CardHeader className="pb-4">
-                  <CardTitle className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                      <Target className="w-5 h-5 text-white" />
+                  {/* Game Stats */}
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      <span>{game.duration}</span>
                     </div>
-                    <span>Session Progress</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div className="flex justify-between text-sm text-gray-600">
-                      <span className="font-medium">Exercise {currentSession.currentExerciseIndex + 1} of {currentSession.exercises.length}</span>
-                      <span className="font-medium">{Math.round((currentSession.completedExercises / currentSession.exercises.length) * 100)}% Complete</span>
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4" />
+                      <span>+{game.xpReward} XP</span>
                     </div>
-                    <div className="relative">
-                      <Progress 
-                        value={(currentSession.completedExercises / currentSession.exercises.length) * 100} 
-                        className="h-3 bg-gray-200"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full opacity-20 animate-pulse"></div>
-                    </div>
-                    
-                    {currentSession.completedExercises > 0 && (
-                      <div className="pt-4 border-t border-gray-200">
-                        <div className="flex justify-between items-center p-3 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl">
-                          <span className="text-gray-600 font-medium">Average Accuracy:</span>
-                          <div className="flex items-center space-x-2">
-                            <span className="font-bold text-lg text-blue-600">
-                              {Math.round(currentSession.totalAccuracy)}%
-                            </span>
-                            {currentSession.totalAccuracy >= 85 && (
-                              <Star className="w-5 h-5 text-yellow-500" />
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                  </div>
 
-                    <div className="grid grid-cols-3 gap-3">
-                      {currentSession.exercises.map((_, index) => (
-                        <div
-                          key={index}
-                          className={`h-2 rounded-full transition-all duration-300 ${
-                            index < currentSession.completedExercises
-                              ? 'bg-gradient-to-r from-green-400 to-emerald-500'
-                              : index === currentSession.currentExerciseIndex
-                              ? 'bg-gradient-to-r from-blue-400 to-purple-500 animate-pulse'
-                              : 'bg-gray-200'
+                  {/* Difficulty Badge */}
+                  <div className="flex items-center justify-between">
+                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(game.difficulty)}`}>
+                      {game.difficulty}
+                    </span>
+
+                    {/* Star Rating */}
+                    <div className="flex items-center gap-1">
+                      {[...Array(3)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`w-4 h-4 ${
+                            i < game.stars 
+                              ? 'text-yellow-300 fill-yellow-300' 
+                              : 'text-white/30'
                           }`}
                         />
                       ))}
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
 
-            {/* Enhanced Exercise Section */}
-            <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-6">
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold text-gray-900">Current Exercise</h2>
-                  <Badge className="bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0 px-4 py-2">
-                    Word {currentSession.currentExerciseIndex + 1}
-                  </Badge>
+                  {/* Category Tag */}
+                  <div className="text-center">
+                    <span className="inline-block bg-white/20 px-3 py-1 rounded-full text-xs font-medium">
+                      {game.category}
+                    </span>
+                  </div>
+
+                  {/* Play Button */}
+                  {game.unlocked && (
+                    <button className="w-full bg-white/20 hover:bg-white/30 text-white font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 group">
+                      <Play className="w-5 h-5 group-hover:scale-110 transition-transform" />
+                      Start Adventure
+                    </button>
+                  )}
                 </div>
-                <div className="h-1 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full"></div>
               </div>
-              
-              <SpeechExercise
-                language={currentSession.exercises[currentSession.currentExerciseIndex].language}
-                exerciseType="exercise"
-                sessionId={currentSession.id}
-                onComplete={(results) => {
-                  // Extract accuracy from results and call handleExerciseComplete
-                  const accuracy = results.averageAccuracy || 0;
-                  const attempts = results.totalAttempts || 1;
-                  handleExerciseComplete({ accuracy, attempts });
-                  handleNextExercise();
-                }}
-              />
+            </motion.div>
+          ))}
+        </div>
+
+        {/* Achievement Celebration */}
+        <motion.div
+          initial={{ opacity: 0, y: 50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.8 }}
+          className="mt-12 bg-gradient-to-r from-purple-600 to-pink-600 p-8 rounded-2xl text-white text-center"
+        >
+          <div className="flex items-center justify-center gap-4 mb-4">
+            <Award className="w-12 h-12 text-yellow-300" />
+            <Sparkles className="w-8 h-8 text-yellow-300" />
+          </div>
+          <h2 className="text-2xl font-bold mb-2">Keep Up the Amazing Work! 🌟</h2>
+          <p className="text-purple-100 mb-4">
+            You're on a {userStats.streak}-day streak! Complete one more game today to keep it going!
+          </p>
+          <div className="bg-white/20 rounded-full h-3 mb-4">
+            <div 
+              className="bg-yellow-300 h-3 rounded-full transition-all duration-500"
+              style={{ width: `${(userStats.xp % 100)}%` }}
+            ></div>
+          </div>
+          <p className="text-sm text-purple-100">
+            {100 - (userStats.xp % 100)} XP until next level!
+          </p>
+        </motion.div>
+      </main>
+
+       {/* Feedback Modal */}
+        {showFeedback && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="w-[500px] max-w-[92vw] rounded-2xl bg-popover border border-border shadow-2xl">
+              <div className="p-6">
+                <textarea
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  placeholder="how can we improve fluenti?"
+                  className="w-full h-32 resize-none rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/70 p-4 focus:outline-none focus:ring-0 focus:border-border shadow-inner"
+                />
+              </div>
+
+              <div className="flex items-center justify-between px-6 pb-6">
+                <button
+                  onClick={() => { setShowFeedback(false); setFeedback(""); }}
+                  className="px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted transition"
+                >
+                  cancel
+                </button>
+                <button
+                  onClick={submitFeedback}
+                  disabled={!feedback.trim()}
+                  className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50 transition"
+                  style={{ backgroundColor: "hsl(27, 95%, 61%)" }}
+                >
+                  submit
+                </button>
+              </div>
             </div>
           </div>
         )}
-      </main>
+
     </div>
   );
 }

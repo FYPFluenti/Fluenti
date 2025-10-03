@@ -11,7 +11,9 @@ import * as speechServiceModule from "./services/speechService";
 const { SpeechService, transcribeAudio } = speechServiceModule;
 import { simpleTranscribeAudio, validateAudioBuffer } from "./services/simpleSpeechService";
 import { generateSmartTTS } from "./services/enhancedTTSService";
+import { generateTTSAudio } from "./services/ttsService";
 import { fastTranscribeAudio } from "./services/fastSTTService";
+
 import { AuthService } from "./auth";
 
 
