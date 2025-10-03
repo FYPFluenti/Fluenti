@@ -1,5 +1,5 @@
 import { mongoStorage } from "../mongoStorage";
-import { generateSpeechFeedback, generatePersonalizedExercises } from "./openai";
+import { generateSpeechFeedback } from "./openai";
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -13,8 +13,8 @@ export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur'
       fs.writeFileSync(tempPath, audioBuffer);
 
       // Use the smallest possible models to avoid memory issues
-      // For both languages, use tiny model to conserve memory
-      const model = 'openai/whisper-tiny';
+      // Use base model for better accuracy but still fast loading
+      const model = language === 'ur' ? 'openai/whisper-base' : 'openai/whisper-base';
       
       // Ensure ffmpeg is available in Python environment
       const ffmpegPath = path.join(process.env.LOCALAPPDATA || '', 'Microsoft', 'WinGet', 'Packages', 'Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe', 'ffmpeg-7.1.1-full_build', 'bin');
@@ -25,6 +25,12 @@ import torch
 import gc
 import sys
 from transformers import pipeline
+import locale
+
+# Set UTF-8 encoding for output
+import codecs
+sys.stdout = codecs.getwriter('utf-8')(sys.stdout.detach())
+sys.stderr = codecs.getwriter('utf-8')(sys.stderr.detach())
 
 # Add ffmpeg to PATH for this Python session (prepend to ensure it's found)
 ffmpeg_path = r"${ffmpegPath.replace(/\\/g, '\\\\')}"
@@ -32,13 +38,15 @@ if ffmpeg_path not in os.environ.get('PATH', ''):
     os.environ['PATH'] = ffmpeg_path + os.pathsep + os.environ.get('PATH', '')
 
 try:
-    # Check if CUDA is available and use GPU if possible
-    device = 0 if torch.cuda.is_available() else -1
-    torch_dtype = torch.float16 if torch.cuda.is_available() else torch.float32
+    # Force CPU usage for training compatibility
+    device = -1  # Force CPU
+    torch_dtype = torch.float32  # Use float32 for CPU
     
-    print(f"Using device: {'GPU (CUDA)' if device == 0 else 'CPU'}", file=sys.stderr)
+    print("Using device: CPU (forced for training compatibility)", file=sys.stderr)
+    if torch.cuda.is_available():
+        print("GPU available but using CPU for stability", file=sys.stderr)
     
-    # Create pipeline with correct parameters (remove unsupported ones)
+    # Create pipeline with CPU settings
     pipe = pipeline(
         "automatic-speech-recognition", 
         model="${model}",
@@ -46,7 +54,7 @@ try:
         torch_dtype=torch_dtype
     )
     
-    print("Model loaded successfully", file=sys.stderr)
+    print("Model loaded successfully on CPU", file=sys.stderr)
     
     # Process audio file
     result = pipe("${tempPath.replace(/\\/g, '\\\\')}")
@@ -57,29 +65,37 @@ try:
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
     
-    print(result['text'])  # Extract text from result dict
+    # Output the transcription with proper encoding handling
+    transcription = result.get('text', '').strip()
+    if transcription:
+        print(transcription)
+    else:
+        print("No speech detected")
     
 except Exception as e:
-    print(f"Whisper processing failed: {str(e)}", file=sys.stderr)
+    error_msg = str(e).replace('"', "'")
+    print(f"Whisper processing failed: {error_msg}", file=sys.stderr)
     # Clean up on error
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
     # Return error message that will be caught by the fallback system
-    raise Exception(f"Model processing error: {str(e)}")
+    raise Exception(f"Model processing error: {error_msg}")
       `;
 
       // Use virtual environment Python
       const venvPython = path.join(process.cwd(), '.venv', 'Scripts', 'python.exe');
       
-      // Set environment for spawned process with GPU optimization
+      // Set environment for spawned process with proper Unicode support
       const env = { 
         ...process.env,
         PYTHONPATH: path.join(process.cwd(), '.venv', 'Lib', 'site-packages'),
         PYTORCH_CUDA_ALLOC_CONF: 'max_split_size_mb:128',
-        OMP_NUM_THREADS: '2',  // Allow a bit more threading for GPU
-        CUDA_VISIBLE_DEVICES: '0',  // Ensure we use the first GPU
-        HF_HUB_DISABLE_SYMLINKS_WARNING: '1'  // Disable symlink warnings
+        OMP_NUM_THREADS: '2',
+        CUDA_VISIBLE_DEVICES: '0',
+        HF_HUB_DISABLE_SYMLINKS_WARNING: '1',
+        PYTHONIOENCODING: 'utf-8',  // Force UTF-8 encoding
+        PYTHONLEGACYWINDOWSSTDIO: '1'  // Enable legacy Windows stdio handling
       };
       
       // Spawn Python process using virtual environment
@@ -88,11 +104,11 @@ except Exception as e:
       let output = '';
       let errorOutput = '';
       
-      // Set a timeout to prevent hanging
+      // Set a timeout to prevent hanging - increased for first-time model loading
       const timeout = setTimeout(() => {
         python.kill();
         reject('STT timeout - model loading or processing took too long');
-      }, 60000); // 60 second timeout for first-time model loading
+      }, 180000); // 3 minute timeout for first-time model loading
       
       python.stdout.on('data', (data) => { output += data.toString(); });
       python.stderr.on('data', (data) => { errorOutput += data.toString(); });
@@ -139,14 +155,6 @@ except Exception as e:
   });
 }
 
-export interface SpeechAssessmentResult {
-  overallScore: number;
-  strengths: string[];
-  improvementAreas: string[];
-  recommendedLevel: number;
-  exercises: any[];
-}
-
 export class SpeechService {
   static async createSession(userId: string, sessionType: 'assessment' | 'exercise' | 'practice') {
     const session = await mongoStorage.createSpeechSession({
@@ -180,11 +188,10 @@ export class SpeechService {
       const record = await mongoStorage.createSpeechRecord({
         sessionId,
         userId: session.userId,
-        wordAttempted: word,
-        userPronunciation: userTranscription,
-        accuracyScore: feedback.accuracy,
+        transcription: userTranscription,
+        accuracy: feedback.accuracy,
         feedback: feedback.feedback,
-        audioUrl: userAudio,
+        audioPath: userAudio,
       });
 
       // Update session progress
@@ -213,18 +220,11 @@ export class SpeechService {
 
   static async updateUserProgress(userId: string, sessionScore: number) {
     try {
-      const progress = await mongoStorage.getUserProgress(userId);
-      
-      const totalSessions = (progress.totalSessions || 0) + 1;
-      const totalWords = (progress.totalWords || 0) + 1;
-      const currentAvg = progress.averageAccuracy || 0;
-      const newAverage = ((currentAvg * (totalSessions - 1)) + sessionScore) / totalSessions;
-      
       await mongoStorage.updateUserProgress(userId, {
-        totalSessions,
-        totalWords,
-        averageAccuracy: newAverage,
-        lastSessionDate: new Date(),
+        exerciseType: 'speech_practice',
+        score: sessionScore,
+        accuracy: sessionScore,
+        completionTime: 0, // Could be calculated if needed
       });
     } catch (error) {
       console.error('Error updating user progress:', error);
@@ -233,17 +233,22 @@ export class SpeechService {
 
   static async getUserProgress(userId: string) {
     try {
-      const progress = await mongoStorage.getUserProgress(userId);
-      const sessions = await mongoStorage.getSpeechSessions(userId, 10);
+      const progressArray = await mongoStorage.getUserProgress(userId);
+      const sessions = await mongoStorage.getUserSpeechSessions(userId, 10);
+      
+      // Calculate aggregated progress from the array
+      const speechProgress = progressArray.find(p => p.exerciseType === 'speech_practice');
       
       return {
-        totalSessions: progress.totalSessions || 0,
-        totalWords: progress.totalWords || 0,
-        averageAccuracy: progress.averageAccuracy || 0,
-        streakDays: progress.streakDays || 0,
+        totalSessions: speechProgress?.totalAttempts || 0,
+        totalWords: speechProgress?.totalAttempts || 0, // Using attempts as proxy for words
+        averageAccuracy: speechProgress?.accuracies?.length > 0 
+          ? speechProgress.accuracies.reduce((a: number, b: number) => a + b, 0) / speechProgress.accuracies.length 
+          : 0,
+        streakDays: 0, // This would need to be calculated based on session dates
         recentSessions: sessions,
-        skillLevels: progress.skillLevels || {},
-        achievements: progress.achievements || [],
+        skillLevels: {}, // Could be expanded later
+        achievements: [], // Could be expanded later
       };
     } catch (error) {
       console.error('Error getting user progress:', error);
@@ -251,26 +256,4 @@ export class SpeechService {
     }
   }
 
-  static async conductAssessment(userId: string, responses: any[]): Promise<SpeechAssessmentResult> {
-    // Simple assessment logic for now
-    const totalScore = responses.reduce((sum: number, response: any) => sum + (response.accuracy || 0), 0);
-    const averageScore = responses.length > 0 ? totalScore / responses.length : 0;
-
-    // Determine user level based on average score
-    const userLevel = Math.floor(averageScore / 20) + 1;
-
-    const result: SpeechAssessmentResult = {
-      overallScore: averageScore,
-      strengths: averageScore > 80 ? ['Good pronunciation', 'Clear articulation'] : ['Effort and practice'],
-      improvementAreas: averageScore < 70 ? ['Pronunciation accuracy', 'Speech clarity'] : [],
-      recommendedLevel: userLevel,
-      exercises: await generatePersonalizedExercises(userLevel, 'english', averageScore),
-    };
-
-    // Save assessment session
-    await this.createSession(userId, 'assessment');
-    await this.updateUserProgress(userId, averageScore);
-
-    return result;
-  }
 }

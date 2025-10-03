@@ -1,0 +1,327 @@
+import sys
+import os
+import json
+from typing import Dict, Any, Optional
+import traceback
+from datetime import datetime
+
+# Load environment variables
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # Load variables from .env file
+except ImportError:
+    print("⚠️ python-dotenv not available, using system environment variables only")
+
+# Check for Flask dependencies first
+try:
+    from flask import Flask, request, jsonify
+    from flask_cors import CORS
+except ImportError as e:
+    print(f"❌ Flask dependencies not installed: {e}")
+    print("💡 Install with: pip install flask flask-cors")
+    print("🛑 Cannot start therapy service without Flask")
+    sys.exit(1)
+
+# Add the current directory to Python path to import the therapy module
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+# Import the therapy bot components
+try:
+    from emotional_therapy import therapy_bot, interface, TherapyInterface, CrisisLevel
+    print("✅ Successfully imported therapy components")
+    
+    # Type checking for imported components
+    if therapy_bot is None:
+        print("⚠️ therapy_bot is None - limited functionality")
+    if TherapyInterface is None:
+        print("⚠️ TherapyInterface is None - cannot create sessions")
+    if CrisisLevel is None:
+        print("⚠️ CrisisLevel is None - crisis detection unavailable")
+        
+except ImportError as e:
+    print(f"❌ Error importing therapy components: {e}")
+    therapy_bot = None
+    interface = None
+    TherapyInterface = None
+    CrisisLevel = None
+
+app = Flask(__name__)
+CORS(app)  # Enable CORS for frontend communication
+
+# Store active sessions
+active_sessions: Dict[str, Any] = {}
+
+@app.route('/health', methods=['GET'])
+def health_check():
+    """Health check endpoint"""
+    return jsonify({
+        'status': 'healthy',
+        'therapy_bot_available': therapy_bot is not None,
+        'interface_available': interface is not None
+    })
+
+@app.route('/api/therapy/start-session', methods=['POST'])
+def start_therapy_session():
+    """Start a new therapy session"""
+    try:
+        if not therapy_bot or not TherapyInterface:
+            return jsonify({
+                'error': 'Therapy bot not available',
+                'available_resources': {
+                    '988': 'Suicide & Crisis Lifeline',
+                    '911': 'Emergency Services'
+                }
+            }), 503
+
+        data = request.json or {}
+        user_id = data.get('userId', f"user_{len(active_sessions) + 1}")
+        
+        # Create new interface for this session
+        session_interface = TherapyInterface(therapy_bot)
+        welcome_message = session_interface.start_session(user_id)
+        
+        # Store session
+        session_key = f"{user_id}_{session_interface.current_session_id}"
+        
+        # Safe handling of session_start_time
+        created_at = datetime.now().isoformat()
+        if session_interface.session_start_time is not None:
+            created_at = session_interface.session_start_time.isoformat()
+            
+        active_sessions[session_key] = {
+            'interface': session_interface,
+            'user_id': user_id,
+            'session_id': session_interface.current_session_id,
+            'created_at': created_at
+        }
+        
+        return jsonify({
+            'success': True,
+            'sessionId': session_interface.current_session_id,
+            'userId': user_id,
+            'welcomeMessage': welcome_message,
+            'sessionKey': session_key
+        })
+        
+    except Exception as e:
+        print(f"❌ Error starting session: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to start therapy session',
+            'details': str(e)
+        }), 500
+
+@app.route('/api/therapy/chat', methods=['POST'])
+def therapy_chat():
+    """Handle therapy chat messages"""
+    try:
+        if not therapy_bot:
+            return jsonify({
+                'error': 'Therapy bot not available',
+                'response': "I'm currently unavailable. If you're in crisis, please contact 988 (Suicide & Crisis Lifeline) or 911 (Emergency Services)."
+            }), 503
+
+        data = request.json or {}
+        message = data.get('message', '').strip()
+        session_key = data.get('sessionKey')
+        user_id = data.get('userId')
+        session_id = data.get('sessionId')
+
+        if not message:
+            return jsonify({
+                'error': 'Message is required'
+            }), 400
+
+        # Try to get existing session
+        session_interface = None
+        
+        if session_key and session_key in active_sessions:
+            session_interface = active_sessions[session_key]['interface']
+        elif user_id and session_id:
+            # Try to find session by user_id and session_id
+            for key, session in active_sessions.items():
+                if session['user_id'] == user_id and session['session_id'] == session_id:
+                    session_interface = session['interface']
+                    session_key = key
+                    break
+        
+        # If no session found, create a new one
+        if not session_interface:
+            if not user_id:
+                user_id = f"user_{len(active_sessions) + 1}"
+            
+            # Type-safe session creation
+            if TherapyInterface is None or therapy_bot is None:
+                return jsonify({
+                    'error': 'Therapy service not properly initialized',
+                    'response': "I'm currently unavailable. If you're in crisis, please contact 988 (Suicide & Crisis Lifeline) or 911 (Emergency Services)."
+                }), 503
+            
+            session_interface = TherapyInterface(therapy_bot)
+            welcome_message = session_interface.start_session(user_id)
+            
+            session_key = f"{user_id}_{session_interface.current_session_id}"
+            
+            # Safe handling of session_start_time
+            created_at = datetime.now().isoformat()
+            if session_interface.session_start_time is not None:
+                created_at = session_interface.session_start_time.isoformat()
+                
+            active_sessions[session_key] = {
+                'interface': session_interface,
+                'user_id': user_id,
+                'session_id': session_interface.current_session_id,
+                'created_at': created_at
+            }
+            
+            # Return both welcome and response to user message
+            response = session_interface.send_message(message)
+            return jsonify({
+                'success': True,
+                'response': response,
+                'welcomeMessage': welcome_message,
+                'sessionKey': session_key,
+                'sessionId': session_interface.current_session_id,
+                'userId': user_id,
+                'newSession': True
+            })
+
+        # Send message to existing session
+        response = session_interface.send_message(message)
+        
+        # Check if response indicates crisis level
+        crisis_level = session_interface.last_crisis_level
+        is_crisis = crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL] if CrisisLevel else False
+        
+        return jsonify({
+            'success': True,
+            'response': response,
+            'sessionKey': session_key,
+            'sessionId': session_interface.current_session_id,
+            'userId': user_id,
+            'crisisLevel': crisis_level.value if crisis_level else 'none',
+            'isCrisis': is_crisis,
+            'newSession': False
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in therapy chat: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to process message',
+            'response': "I encountered a technical issue. Please try again. If you're in crisis, please contact 988 (Suicide & Crisis Lifeline) or 911 (Emergency Services).",
+            'details': str(e)
+        }), 500
+
+@app.route('/api/therapy/session-summary', methods=['POST'])
+def get_session_summary():
+    """Get session summary"""
+    try:
+        data = request.json or {}
+        session_key = data.get('sessionKey')
+        
+        if not session_key or session_key not in active_sessions:
+            return jsonify({
+                'error': 'Session not found'
+            }), 404
+            
+        session_interface = active_sessions[session_key]['interface']
+        summary = session_interface.get_session_summary()
+        
+        return jsonify({
+            'success': True,
+            'summary': summary,
+            'sessionKey': session_key
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting session summary: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to get session summary',
+            'details': str(e)
+        }), 500
+
+@app.route('/api/therapy/sessions', methods=['GET'])
+def list_active_sessions():
+    """List all active sessions (for debugging)"""
+    try:
+        sessions_info = []
+        for key, session in active_sessions.items():
+            sessions_info.append({
+                'sessionKey': key,
+                'userId': session['user_id'],
+                'sessionId': session['session_id'],
+                'createdAt': session['created_at'],
+                'messageCount': session['interface'].conversation_count,
+                'crisisLevel': session['interface'].last_crisis_level.value if session['interface'].last_crisis_level else 'none'
+            })
+        
+        return jsonify({
+            'success': True,
+            'activeSessions': len(active_sessions),
+            'sessions': sessions_info
+        })
+        
+    except Exception as e:
+        print(f"❌ Error listing sessions: {e}")
+        return jsonify({
+            'error': 'Failed to list sessions',
+            'details': str(e)
+        }), 500
+
+@app.errorhandler(404)
+def not_found(error):
+    return jsonify({
+        'error': 'Endpoint not found',
+        'available_endpoints': [
+            'GET /health',
+            'POST /api/therapy/start-session',
+            'POST /api/therapy/chat',
+            'POST /api/therapy/session-summary',
+            'GET /api/therapy/sessions'
+        ]
+    }), 404
+
+@app.errorhandler(500)
+def internal_error(error):
+    return jsonify({
+        'error': 'Internal server error',
+        'message': 'Something went wrong on the server'
+    }), 500
+
+if __name__ == '__main__':
+    print("🚀 Starting Emotional Therapy Service...")
+    print("📋 Available endpoints:")
+    print("  GET  /health                      - Health check")
+    print("  POST /api/therapy/start-session   - Start new session")
+    print("  POST /api/therapy/chat            - Send message")
+    print("  POST /api/therapy/session-summary - Get session summary")
+    print("  GET  /api/therapy/sessions        - List active sessions")
+    print()
+    
+    if therapy_bot:
+        print("✅ Therapy bot loaded successfully")
+    else:
+        print("❌ Therapy bot failed to load - service will have limited functionality")
+    
+    print("\n🌟 Starting Flask server on http://localhost:5001")
+    print("🔗 Frontend can now connect to this service")
+    print("💡 Press Ctrl+C to stop the service")
+    print("=" * 60)
+    
+    try:
+        # Run Flask app
+        app.run(
+            host='0.0.0.0',
+            port=5001,
+            debug=False,  # Disabled to prevent auto-restarts and improve performance
+            threaded=True,
+            use_reloader=False  # Explicitly disable the reloader
+        )
+    except KeyboardInterrupt:
+        print("\n🛑 Service stopped by user")
+        print("👋 Thank you for using the Emotional Therapy Service!")
+    except Exception as e:
+        print(f"\n❌ Service error: {e}")
+        print("💡 Check the error messages above for troubleshooting")
