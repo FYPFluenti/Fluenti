@@ -2,8 +2,17 @@ import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import type { Express } from "express";
+import { connectDB } from "./db/connect";
+import authRoutes from "./routes/auth";
+
 
 const app = express();
+
+ connectDB();
+  
+  // Register auth routes
+  app.use("/api/auth", authRoutes);
 
 // Explicit UTF-8 support for Urdu text
 app.use(express.json({ limit: '10mb' }));

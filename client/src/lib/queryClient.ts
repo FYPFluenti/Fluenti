@@ -26,6 +26,13 @@ const API_BASE_URL = import.meta.env.PROD
   ? 'https://fluentiai-backend.onrender.com' 
   : 'http://localhost:3000';
 
+// WebSocket configuration - moved to a function to get token when needed
+const getWebSocketUrl = () => {
+  const WS_PORT = import.meta.env.VITE_WS_PORT || '3000';
+  const token = localStorage.getItem('authToken') || 'anonymous';
+  return `ws://localhost:${WS_PORT}/?token=${token}`;
+};
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     const text = (await res.text()) || res.statusText;
@@ -40,36 +47,6 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
-  // Ensure URL is absolute by prepending API_BASE_URL if it's relative
-  const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
-  
-  // Include auth token in headers if available
-  const headers: Record<string, string> = {};
-  if (data) {
-    headers["Content-Type"] = "application/json";
-  }
-  
-  // Add auth token from localStorage if available
-  const authToken = localStorage.getItem('authToken');
-  if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
-  }
-  
-  const res = await fetch(fullUrl, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
-
-  await throwIfResNotOk(res);
-  return res;
-}
 
 type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
@@ -109,6 +86,31 @@ export const getQueryFn: <T>(options: {
       throw error;
     }
   };
+
+// API request function for direct HTTP calls
+export const apiRequest = async (method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, data?: any): Promise<Response> => {
+  const token = localStorage.getItem('authToken');
+  
+  const config: RequestInit = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token && { Authorization: `Bearer ${token}` }),
+    },
+  };
+
+  if (data && (method === 'POST' || method === 'PUT')) {
+    config.body = JSON.stringify(data);
+  }
+
+  const response = await fetch(`${API_BASE_URL}${url}`, config);
+  
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
+  }
+  
+  return response;
+};
 
 export const queryClient = new QueryClient({
   defaultOptions: {
