@@ -1,4 +1,4 @@
-import connectDB from "./mongodb";
+import connectDB, { isMongoConnected, waitForConnection } from "./mongodb";
 import { User, SpeechSession, SpeechRecord, UserProgress, EmotionalSession } from "./models";
 import { nanoid } from "nanoid";
 
@@ -6,18 +6,80 @@ import { nanoid } from "nanoid";
 let dbConnection = connectDB();
 
 export const mongoStorage = {
-  // Ensure DB is connected before any operation
-  _ensureConnected: async () => {
+  // Enhanced DB connection checker with timeout
+  _ensureConnected: async (timeoutMs = 15000) => {
     try {
+      // Check if already connected
+      if (isMongoConnected()) {
+        return true;
+      }
+      
+      // Try to establish connection
+      console.log('🔄 Ensuring MongoDB connection...');
       await dbConnection;
+      
+      // Wait for actual connection with timeout
+      const connected = await waitForConnection(timeoutMs);
+      
+      if (!connected) {
+        throw new Error(`MongoDB connection timeout after ${timeoutMs}ms`);
+      }
+      
+      console.log('✅ MongoDB connection verified');
+      return true;
     } catch (error) {
-      console.error("Failed to connect to MongoDB:", error);
-      // Retry connection
-      dbConnection = connectDB();
-      await dbConnection;
+      console.error("❌ Failed to connect to MongoDB:", error);
+      
+      // In development, allow operations without MongoDB
+      if (process.env.NODE_ENV === 'development') {
+        console.log('⚠️  Continuing without MongoDB (development mode)');
+        return false;
+      }
+      
+      // Retry connection once
+      try {
+        console.log('🔄 Retrying MongoDB connection...');
+        dbConnection = connectDB();
+        await dbConnection;
+        
+        const retryConnected = await waitForConnection(5000);
+        if (retryConnected) {
+          console.log('✅ MongoDB reconnected successfully');
+          return true;
+        }
+      } catch (retryError) {
+        console.error("❌ MongoDB retry failed:", retryError);
+      }
+      
+      throw error;
     }
   },
-  // User operations
+
+  // Helper to safely execute MongoDB operations with fallback
+  async _safeExecute<T>(operation: () => Promise<T>, fallback?: T): Promise<T> {
+    try {
+      const connected = await this._ensureConnected(10000);
+      
+      if (!connected && process.env.NODE_ENV === 'development') {
+        console.log('⚠️  MongoDB not available, using fallback');
+        if (fallback !== undefined) return fallback;
+        throw new Error('MongoDB not available and no fallback provided');
+      }
+      
+      return await operation();
+    } catch (error) {
+      console.error('❌ MongoDB operation failed:', error);
+      
+      if (process.env.NODE_ENV === 'development' && fallback !== undefined) {
+        console.log('⚠️  Using fallback value due to MongoDB error');
+        return fallback;
+      }
+      
+      throw error;
+    }
+  },
+
+  // User operations with improved error handling
   async upsertUser(userData: {
     id: string;
     email: string;
@@ -28,10 +90,7 @@ export const mongoStorage = {
     userType?: 'child' | 'adult' | 'guardian';
     language?: 'english' | 'urdu' | 'both';
   }) {
-    try {
-      // Ensure DB connection before proceeding
-      await this._ensureConnected();
-      
+    return this._safeExecute(async () => {
       // First, try to find user by email to avoid duplicate key errors
       const existingUser = await User.findOne({ email: userData.email });
       
@@ -75,238 +134,257 @@ export const mongoStorage = {
           throw duplicateError;
         }
       }
-    } catch (error) {
-      console.error('Error upserting user:', error);
-      throw error;
-    }
+    });
   },
 
   async getUser(userId: string) {
-    try {
-      // Ensure DB connection before proceeding
-      await this._ensureConnected();
-      
+    return this._safeExecute(async () => {
       const user = await User.findOne({ id: userId });
       return user;
-    } catch (error) {
-      console.error('Error getting user:', error);
-      throw error;
-    }
+    }, null); // Return null if MongoDB is not available
   },
 
   async getUserByEmail(email: string) {
-    try {
-      // Ensure DB connection before proceeding
-      await this._ensureConnected();
-      
-      const user = await User.findOne({ email: email });
+    return this._safeExecute(async () => {
+      const user = await User.findOne({ email });
       return user;
-    } catch (error) {
-      console.error('Error getting user by email:', error);
-      throw error;
-    }
+    }, null);
   },
 
   async updateUser(userId: string, updates: any) {
-    try {
-      // Ensure DB connection before proceeding
-      await this._ensureConnected();
-      
+    return this._safeExecute(async () => {
       const user = await User.findOneAndUpdate(
         { id: userId },
-        { ...updates, updatedAt: new Date() },
+        { 
+          ...updates, 
+          updatedAt: new Date() 
+        },
         { new: true }
       );
       return user;
-    } catch (error) {
-      console.error('Error updating user:', error);
-      throw error;
-    }
+    });
   },
 
-  // Speech therapy operations
+  // Speech session operations
   async createSpeechSession(sessionData: {
     userId: string;
     sessionType: 'assessment' | 'exercise' | 'practice';
     exerciseData?: any;
   }) {
-    try {
-      // Ensure DB connection before proceeding
-      await this._ensureConnected();
-      
+    return this._safeExecute(async () => {
+      const sessionId = nanoid();
       const session = new SpeechSession({
-        id: nanoid(),
-        ...sessionData
+        sessionId,
+        ...sessionData,
+        createdAt: new Date()
       });
       await session.save();
       return session;
-    } catch (error) {
-      console.error('Error creating speech session:', error);
-      throw error;
-    }
-  },
-
-  async getSpeechSession(sessionId: string) {
-    try {
-      // Ensure DB connection before proceeding
-      await this._ensureConnected();
-      
-      const session = await SpeechSession.findOne({ id: sessionId });
-      return session;
-    } catch (error) {
-      console.error('Error getting speech session:', error);
-      throw error;
-    }
+    });
   },
 
   async updateSpeechSession(sessionId: string, updates: any) {
-    try {
-      // Ensure DB connection before proceeding
-      await this._ensureConnected();
-      
+    return this._safeExecute(async () => {
       const session = await SpeechSession.findOneAndUpdate(
-        { id: sessionId },
-        { ...updates, updatedAt: new Date() },
+        { sessionId },
+        { 
+          ...updates, 
+          updatedAt: new Date() 
+        },
         { new: true }
       );
       return session;
-    } catch (error) {
-      console.error('Error updating speech session:', error);
-      throw error;
-    }
+    });
   },
 
-  async getSpeechSessions(userId: string, limit = 10) {
-    try {
-      // Ensure DB connection before proceeding
-      await this._ensureConnected();
-      
+  async getSpeechSession(sessionId: string) {
+    return this._safeExecute(async () => {
+      const session = await SpeechSession.findOne({ sessionId });
+      return session;
+    }, null);
+  },
+
+  async getUserSpeechSessions(userId: string, limit = 10) {
+    return this._safeExecute(async () => {
       const sessions = await SpeechSession.find({ userId })
         .sort({ createdAt: -1 })
         .limit(limit);
       return sessions;
-    } catch (error) {
-      console.error('Error getting speech sessions:', error);
-      throw error;
-    }
+    }, []);
   },
 
+  // Speech record operations
   async createSpeechRecord(recordData: {
     sessionId: string;
     userId: string;
-    wordAttempted: string;
-    userPronunciation?: string;
-    accuracyScore?: number;
+    transcription: string;
+    audioPath?: string;
+    accuracy?: number;
     feedback?: string;
-    audioUrl?: string;
+    exerciseType?: string;
   }) {
-    try {
+    return this._safeExecute(async () => {
+      const recordId = nanoid();
       const record = new SpeechRecord({
-        id: nanoid(),
-        ...recordData
+        recordId,
+        ...recordData,
+        createdAt: new Date()
       });
       await record.save();
       return record;
-    } catch (error) {
-      console.error('Error creating speech record:', error);
-      throw error;
-    }
+    });
+  },
+
+  async getSpeechRecord(recordId: string) {
+    return this._safeExecute(async () => {
+      const record = await SpeechRecord.findOne({ recordId });
+      return record;
+    }, null);
+  },
+
+  async getUserSpeechRecords(userId: string, limit = 20) {
+    return this._safeExecute(async () => {
+      const records = await SpeechRecord.find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(limit);
+      return records;
+    }, []);
   },
 
   // User progress operations
-  async getUserProgress(userId: string) {
-    try {
-      // Ensure DB connection before proceeding
-      await this._ensureConnected();
-      
-      let progress = await UserProgress.findOne({ userId });
-      if (!progress) {
-        progress = new UserProgress({
-          id: nanoid(),
-          userId,
-          totalSessions: 0,
-          totalWords: 0,
-          averageAccuracy: 0,
-          streakDays: 0,
-          skillLevels: {},
-          achievements: []
-        });
-        await progress.save();
-      }
-      return progress;
-    } catch (error) {
-      console.error('Error getting user progress:', error);
-      throw error;
-    }
-  },
-
-  async updateUserProgress(userId: string, updates: any) {
-    try {
+  async updateUserProgress(userId: string, progressData: {
+    exerciseType: string;
+    score?: number;
+    accuracy?: number;
+    completionTime?: number;
+    difficulties?: string[];
+  }) {
+    return this._safeExecute(async () => {
       const progress = await UserProgress.findOneAndUpdate(
-        { userId },
-        { ...updates, updatedAt: new Date() },
+        { userId, exerciseType: progressData.exerciseType },
+        {
+          $inc: { totalAttempts: 1 },
+          $push: {
+            scores: progressData.score || 0,
+            accuracies: progressData.accuracy || 0,
+            completionTimes: progressData.completionTime || 0
+          },
+          $set: {
+            lastAttempt: new Date(),
+            ...(progressData.difficulties && { lastDifficulties: progressData.difficulties })
+          }
+        },
         { upsert: true, new: true }
       );
       return progress;
-    } catch (error) {
-      console.error('Error updating user progress:', error);
-      throw error;
-    }
+    });
   },
 
-  // Emotional support operations
+  async getUserProgress(userId: string) {
+    return this._safeExecute(async () => {
+      const progress = await UserProgress.find({ userId });
+      return progress;
+    }, []);
+  },
+
+  // Emotional session operations
   async createEmotionalSession(sessionData: {
     userId: string;
-    sessionType: 'chat' | 'assessment' | 'crisis';
-    emotionalState?: string;
+    sessionType?: 'chat' | 'assessment' | 'crisis';
+    emotion?: string;
+    response?: string;
+    confidence?: number;
   }) {
-    try {
+    return this._safeExecute(async () => {
+      const sessionId = nanoid();
       const session = new EmotionalSession({
-        id: nanoid(),
-        ...sessionData,
-        messages: []
+        id: sessionId,
+        userId: sessionData.userId,
+        sessionType: sessionData.sessionType || 'chat',
+        messages: [],
+        emotionalState: sessionData.emotion,
+        riskLevel: 'low',
+        createdAt: new Date()
       });
       await session.save();
       return session;
-    } catch (error) {
-      console.error('Error creating emotional session:', error);
-      throw error;
-    }
+    });
+  },
+
+  async getUserEmotionalSessions(userId: string, limit = 10) {
+    return this._safeExecute(async () => {
+      const sessions = await EmotionalSession.find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(limit);
+      return sessions;
+    }, []);
   },
 
   async addMessageToEmotionalSession(sessionId: string, message: {
     role: 'user' | 'assistant';
     content: string;
   }) {
-    try {
-      const session = await EmotionalSession.findOneAndUpdate(
-        { id: sessionId },
-        { 
-          $push: { 
-            messages: { 
-              ...message, 
-              timestamp: new Date() 
-            } 
-          } 
-        },
-        { new: true }
-      );
+    return this._safeExecute(async () => {
+      const session = await EmotionalSession.findOne({ id: sessionId });
+      if (!session) {
+        throw new Error('Session not found');
+      }
+      
+      session.messages.push({
+        role: message.role,
+        content: message.content,
+        timestamp: new Date()
+      });
+      
+      await session.save();
       return session;
-    } catch (error) {
-      console.error('Error adding message to emotional session:', error);
-      throw error;
-    }
+    });
   },
 
+  async getEmotionalSession(sessionId: string) {
+    return this._safeExecute(async () => {
+      const session = await EmotionalSession.findOne({ id: sessionId });
+      return session;
+    });
+  },
+
+  // Alias for compatibility with routes.ts
   async getEmotionalSessions(userId: string, limit = 10) {
+    return this.getUserEmotionalSessions(userId, limit);
+  },
+
+  // Helper methods for testing and development
+  async clearAllData() {
+    return this._safeExecute(async () => {
+      if (process.env.NODE_ENV !== 'development') {
+        throw new Error('clearAllData can only be used in development');
+      }
+      
+      await User.deleteMany({});
+      await SpeechSession.deleteMany({});
+      await SpeechRecord.deleteMany({});
+      await UserProgress.deleteMany({});
+      await EmotionalSession.deleteMany({});
+      
+      console.log('All development data cleared');
+    });
+  },
+
+  async getConnectionStatus() {
     try {
-      const sessions = await EmotionalSession.find({ userId })
-        .sort({ createdAt: -1 })
-        .limit(limit);
-      return sessions;
+      const connected = await this._ensureConnected(5000);
+      return {
+        connected: connected && isMongoConnected(),
+        readyState: (require('mongoose') as any).connection?.readyState || 0,
+        host: (require('mongoose') as any).connection?.host || 'unknown',
+        name: (require('mongoose') as any).connection?.name || 'unknown'
+      };
     } catch (error) {
-      console.error('Error getting emotional sessions:', error);
-      throw error;
+      return {
+        connected: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        readyState: 0
+      };
     }
   }
 };
