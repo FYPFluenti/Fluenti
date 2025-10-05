@@ -36,16 +36,6 @@ export default function ChildDashboard() {
   const [showVoiceUI, setShowVoiceUI] = useState(false);
   const [listening, setListening] = useState(false);
 
-  const submitFeedback = () => {
-    
-    setShowFeedback(false);
-    setFeedback("");
-      toast({
-      title: "Feedback submitted!",
-      description: "Thank you for helping us make Fluenti better!",
-    });
-  };
-
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       setLocation("/login");
