@@ -1,14 +1,14 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { SlidersHorizontal, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Star, ThumbsUp, Clock, Mic, MicOff, User } from "lucide-react";
-import DarkModeToggle from "@/components/DarkModeToggle";
 import ModelViewerAvatar from "@/components/ModelViewerAvatar";
 import SharedSidebar from "@/components/layout/SharedSidebar";
 import FeedbackModal from "@/components/layout/FeedbackModel";
+import PageHeader from "@/components/layout/PageHeader";
 
 // Demo avatars - choose your favorites!
 const avatarUrls = {
@@ -30,7 +30,6 @@ export default function ChildDashboard() {
   };
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [showPreferences, setShowPreferences] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [showChatUI, setShowChatUI] = useState(false);
   const [showVoiceUI, setShowVoiceUI] = useState(false);
@@ -65,23 +64,7 @@ export default function ChildDashboard() {
 
       {/* Main Content */}
       <main className="ml-20 px-6 w-full h-screen overflow-hidden flex flex-col">
-        <header className="flex justify-between items-center py-6 flex-shrink-0">
-          <div />
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-semibold">Dark Mode</span>
-              <DarkModeToggle />
-            </div>
-            <button
-              onClick={() => setShowPreferences(!showPreferences)}
-              className="p-2 rounded-full hover:bg-muted transition"
-              aria-label="Toggle preferences"
-              
-            >
-              <SlidersHorizontal className="w-6 h-6 text-foreground" aria-hidden="true" />
-            </button>
-          </div>
-        </header>
+        <PageHeader />
 
         <section className="text-center py-10 flex-1 flex items-center justify-center">
           <motion.div 
@@ -124,38 +107,6 @@ export default function ChildDashboard() {
             </div>
           </motion.div>
         </section>
-
-        {/* Preferences Modal */}
-        {showPreferences && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="fixed top-20 right-10 w-[360px] bg-popover border border-border rounded-xl shadow-xl p-6 space-y-4 z-50"
-          >
-            <div>
-              <h3 className="text-lg font-semibold">Preferences</h3>
-              <p className="text-sm text-muted-foreground">Set how the assistant works for you</p>
-            </div>
-
-            <div className="pt-4 border-t border-border space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-medium">Language</h4>
-                  <p className="text-xs text-muted-foreground">Conversation only</p>
-                </div>
-                <select 
-                  className="bg-card text-foreground border border-border rounded-md px-3 py-1 text-sm font-dm-sans focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
-                  aria-label="Select conversation language"
-                  
-                >
-                  <option value="en">English</option>
-                  <option value="ur">Urdu</option>
-                </select>
-              </div>
-            </div>
-          </motion.div>
-        )}
 
         {/* Feedback Modal */}
         <FeedbackModal 
