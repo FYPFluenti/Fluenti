@@ -158,37 +158,10 @@ export default function ChildDashboard() {
         )}
 
         {/* Feedback Modal */}
-        {showFeedback && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="w-[500px] max-w-[92vw] rounded-2xl bg-popover border border-border shadow-2xl">
-              <div className="p-6">
-                <textarea
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                  placeholder="how can we improve fluenti?"
-                  className="w-full h-32 resize-none rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/70 p-4 focus:outline-none focus:ring-0 focus:border-border shadow-inner"
-                />
-              </div>
-
-              <div className="flex items-center justify-between px-6 pb-6">
-                <button
-                  onClick={() => { setShowFeedback(false); setFeedback(""); }}
-                  className="px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted transition"
-                >
-                  cancel
-                </button>
-                <button
-                  onClick={submitFeedback}
-                  disabled={!feedback.trim()}
-                  className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50 transition"
-                  style={{ backgroundColor: "hsl(27, 95%, 61%)" }}
-                >
-                  submit
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        <FeedbackModal 
+          isOpen={showFeedback} 
+          onClose={() => setShowFeedback(false)} 
+        />
 
         {/* Chat UI Modal */}
         {showChatUI && (
