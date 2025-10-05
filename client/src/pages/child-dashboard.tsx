@@ -4,6 +4,7 @@ import { useLocation } from "wouter";
 import { Gamepad2, LineChart, Smile, User, Settings, SlidersHorizontal, Lock, ArrowRight } from "lucide-react";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { motion } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
 import { Star, ThumbsUp, Clock, Mic, MicOff } from "lucide-react";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import FluentiLogo from "@/components/FluentiLogo";
@@ -28,6 +29,7 @@ export default function ChildDashboard() {
     isAuthenticated: boolean;
   };
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
   const [feedback, setFeedback] = useState("");
