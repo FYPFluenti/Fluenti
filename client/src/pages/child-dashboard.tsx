@@ -31,7 +31,6 @@ export default function ChildDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showPreferences, setShowPreferences] = useState(false);
-  const [feedback, setFeedback] = useState("");
   const [showFeedback, setShowFeedback] = useState(false);
   const [showChatUI, setShowChatUI] = useState(false);
   const [showVoiceUI, setShowVoiceUI] = useState(false);
