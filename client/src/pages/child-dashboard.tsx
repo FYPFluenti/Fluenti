@@ -1,14 +1,14 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { Gamepad2, LineChart, Smile, User, Settings, SlidersHorizontal, Lock, ArrowRight } from "lucide-react";
-import { LogoutButton } from "@/components/auth/LogoutButton";
+import { SlidersHorizontal, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { Star, ThumbsUp, Clock, Mic, MicOff } from "lucide-react";
+import { Star, ThumbsUp, Clock, Mic, MicOff, User } from "lucide-react";
 import DarkModeToggle from "@/components/DarkModeToggle";
-import FluentiLogo from "@/components/FluentiLogo";
 import ModelViewerAvatar from "@/components/ModelViewerAvatar";
+import SharedSidebar from "@/components/layout/SharedSidebar";
+import FeedbackModal from "@/components/layout/FeedbackModel";
 
 // Demo avatars - choose your favorites!
 const avatarUrls = {
@@ -30,17 +30,12 @@ export default function ChildDashboard() {
   };
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
   const [feedback, setFeedback] = useState("");
   const [showFeedback, setShowFeedback] = useState(false);
   const [showChatUI, setShowChatUI] = useState(false);
   const [showVoiceUI, setShowVoiceUI] = useState(false);
   const [listening, setListening] = useState(false);
-
-  const hideTimer = useRef<NodeJS.Timeout | null>(null);
-
-  const [hovered, setHovered] = useState<string | null>(null);
 
   const submitFeedback = () => {
     
@@ -74,113 +69,10 @@ export default function ChildDashboard() {
   return (
     <div className="h-screen font-sans flex bg-background text-foreground overflow-hidden">
       {/* Sidebar */}
-      <aside className="w-20 bg-background flex flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-50 border-r border-border">
-        {/* Sidebar brand (logo with hover + tooltip) */}
-        <div
-          onMouseEnter={() => setHovered("home")}
-          onMouseLeave={() => setHovered(null)}
-          className="relative group"
-        >
-          <button
-            onClick={() => setLocation("/child-dashboard")}
-            aria-label="Go to home"
-            className="w-12 h-12 grid place-items-center rounded-xl transition"
-          >
-            <FluentiLogo
-              className="w-10 h-10 text-[#ff6b1d] transition-colors duration-150 group-hover:text-[#ff8a4a]"
-            />
-          </button>
-
-          {hovered === "home" && (
-            <motion.div
-              initial={{ opacity: 0, x: 5 }}
-              animate={{ opacity: 1, x: 12 }}
-              exit={{ opacity: 0, x: 5 }}
-              className="absolute left-[38px] bottom-1 bg-popover text-popover-foreground px-3 py-1.5 rounded-lg shadow-md border border-border z-10"
-            >
-              home
-            </motion.div>
-          )}
-        </div>
-
-        {/* Sidebar Buttons */}
-        {[
-  { icon: Gamepad2, label: "games", id: "games", path: "/speech-therapy" },
-  { icon: LineChart, label: "progress", id: "progress", path: "/progress-dashboard" },
-  { icon: Smile, label: "feedback", id: "feedback" },
-].map(({ icon: Icon, label, id, path }) => (
-  <div
-    key={id}
-    onMouseEnter={() => setHovered(id)}
-    onMouseLeave={() => setHovered(null)}
-    className="relative group"
-  >
-    <button
-      onClick={() =>
-        id === "feedback"
-          ? setShowFeedback(true)
-          : path && setLocation(path)
-      }
-      className="w-10 h-10 flex items-center justify-center rounded-xl transition group"
-      aria-label={label}
-    >
-      <Icon className="text-foreground w-7 h-7 transition-colors duration-150 group-hover:text-muted-foreground" />
-    </button>
-
-    {hovered === id && (
-      <motion.div
-        initial={{ opacity: 0, x: 5 }}
-        animate={{ opacity: 1, x: 12 }}
-        exit={{ opacity: 0, x: 5 }}
-        className="absolute left-[38px] bottom-0 bg-popover text-popover-foreground px-4 py-2 rounded-lg shadow-md border border-border z-10 w-30 space-y-1"
-      >
-        {label}
-      </motion.div>
-    )}
-  </div>
-))}
-
-        <div className="flex-1" />
-
-        <div 
-          className="relative" 
-          onMouseEnter={() => { 
-            if (hideTimer.current) clearTimeout(hideTimer.current); 
-            setShowUserMenu(true); 
-          }} 
-          onMouseLeave={() => { 
-            hideTimer.current = setTimeout(() => setShowUserMenu(false), 200); 
-          }}
-        >
-          <button
-            className="group w-10 h-10 flex items-center justify-center rounded-full transition"
-            aria-haspopup="menu"
-            aria-expanded={showUserMenu}
-            
-          >
-            <User
-              className={`w-7 h-7 transition-colors duration-150 ${
-                showUserMenu
-                  ? "text-muted-foreground"
-                  : "text-muted-foreground group-hover:text-muted-foreground"
-              }`}
-            />
-          </button>
-
-          {showUserMenu && (
-            <div className="absolute left-12 bottom-0 w-48 bg-popover border border-border rounded-xl shadow-lg p-4 z-50 space-y-2">
-              <button 
-                onClick={() => setLocation("/settings")} 
-                className="w-full px-5 py-3 text-sm flex items-center gap-3 hover:bg-muted hover:brightness-90 rounded-lg"
-              >
-                <Settings className="w-5 h-5" />
-                <span className="text-foreground font-medium">Settings</span>
-              </button>
-              <div className="border-t border-border my-1" />
-<LogoutButton className="w-full px-5 py-3 text-base text-left hover:bg-gray-200 hover:text-black dark:hover:bg-gray-700 dark:hover:text-white bg-orange-500 text-white font-medium flex items-center gap-3 rounded-lg" />            </div>
-          )}
-        </div>
-      </aside>
+      <SharedSidebar 
+        onFeedbackOpen={() => setShowFeedback(true)}
+        currentPage="dashboard"
+      />
 
       {/* Main Content */}
       <main className="ml-20 px-6 w-full h-screen overflow-hidden flex flex-col">
