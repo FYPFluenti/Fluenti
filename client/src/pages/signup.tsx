@@ -451,11 +451,8 @@ export default function Signup() {
             </div>
           </div>
 
-          {/* Your existing form content remains the same */}
+          {/* Signup Form */}
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {/* ... rest of your existing form fields ... */}
-            {/* I'm keeping the rest of your form implementation as-is */}
-            
             {/* Name Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div>
