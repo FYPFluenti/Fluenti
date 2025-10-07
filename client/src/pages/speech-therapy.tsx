@@ -25,7 +25,6 @@ import {
 import SharedSidebar from '@/components/layout/SharedSidebar';
 import FeedbackModal from '@/components/layout/FeedbackModel';
 import PageHeader from '@/components/layout/PageHeader';
-import GameContainer from '@/components/games/GameContainer';
 
 interface GameSession {
   gameId: number;
@@ -273,17 +272,9 @@ export default function SpeechTherapyPage() {
   // Today's goal progress
   const dailyProgress = Math.min((userStats.todaysSessions / userStats.dailyGoal) * 100, 100);
 
-  // Placeholder functions for game integration
+  // Placeholder functions for game integration (will implement below)
   const loadBrowserGame = (gameId: number) => {
-    setActiveGame(games.find(g => g.id === gameId));
-    setGameSession({
-      gameId,
-      startTime: new Date(),
-      currentLevel: 1,
-      score: 0,
-      wordsCompleted: [],
-      accuracy: 0
-    });
+    console.log(`Loading browser game ${gameId}`);
   };
 
   const loadAPIGame = (gameId: number) => {
@@ -549,24 +540,6 @@ export default function SpeechTherapyPage() {
                     </button>
                   </div>
                 </div>
-              </div>
-            )}
-
-            {activeGame.type === 'browser-game' && (
-              <div className="bg-card border border-border rounded-xl p-8">
-                <GameContainer 
-                  gameId={activeGame.id}
-                  onGameEnd={(score, accuracy) => {
-                    if (gameSession) {
-                      setGameSession({
-                        ...gameSession,
-                        score,
-                        accuracy
-                      });
-                    }
-                    setTimeout(endGame, 2000); // Show results for 2 seconds
-                  }}
-                />
               </div>
             )}
           </div>
