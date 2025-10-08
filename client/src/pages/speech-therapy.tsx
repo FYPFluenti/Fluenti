@@ -71,7 +71,6 @@ export default function SpeechTherapyPage() {
       duration: "10 min",
       stars: userStats.level >= 1 ? 3 : 0,
       xpReward: 25,
-      color: "from-blue-400 to-cyan-500",
       unlocked: true,
       category: "Pronunciation",
       type: "interactive"
@@ -85,7 +84,6 @@ export default function SpeechTherapyPage() {
       duration: "8 min",
       stars: userStats.level >= 2 ? 2 : 0,
       xpReward: 20,
-      color: "from-green-400 to-teal-500",
       unlocked: true,
       category: "Listening",
       type: "interactive"
@@ -99,7 +97,6 @@ export default function SpeechTherapyPage() {
       duration: "15 min", 
       stars: userStats.level >= 3 ? 1 : 0,
       xpReward: 40,
-      color: "from-purple-400 to-pink-500",
       unlocked: userStats.level >= 3,
       category: "Grammar",
       type: "interactive"
@@ -113,7 +110,6 @@ export default function SpeechTherapyPage() {
       duration: "12 min",
       stars: userStats.level >= 4 ? 2 : 0,
       xpReward: 35,
-      color: "from-orange-400 to-red-500", 
       unlocked: userStats.level >= 4,
       category: "Fluency",
       type: "browser-game"
@@ -127,7 +123,6 @@ export default function SpeechTherapyPage() {
       duration: "20 min",
       stars: 0,
       xpReward: 60,
-      color: "from-indigo-400 to-purple-600",
       unlocked: userStats.level >= 8,
       category: "Reading",
       type: "api-game"
@@ -141,7 +136,6 @@ export default function SpeechTherapyPage() {
       duration: "18 min",
       stars: 0,
       xpReward: 50,
-      color: "from-yellow-400 to-orange-500",
       unlocked: userStats.level >= 6,
       category: "Speed",
       type: "interactive"
@@ -157,10 +151,10 @@ export default function SpeechTherapyPage() {
 
   const getDifficultyColor = (difficulty: string) => {
     switch(difficulty) {
-      case 'Easy': return 'text-green-600 bg-green-100 dark:bg-green-900/20 dark:text-green-400';
-      case 'Medium': return 'text-yellow-600 bg-yellow-100 dark:bg-yellow-900/20 dark:text-yellow-400'; 
-      case 'Hard': return 'text-red-600 bg-red-100 dark:bg-red-900/20 dark:text-red-400';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'Easy': return 'text-[#ff6b1d] bg-[#ff6b1d]/10 dark:bg-[#ff6b1d]/20';
+      case 'Medium': return 'text-muted-foreground bg-muted'; 
+      case 'Hard': return 'text-foreground bg-accent/50 dark:bg-accent';
+      default: return 'text-muted-foreground bg-muted';
     }
   };
 
@@ -330,8 +324,8 @@ export default function SpeechTherapyPage() {
                   onClick={() => setSoundEnabled(!soundEnabled)}
                   className={`p-3 rounded-xl transition-all ${
                     soundEnabled 
-                      ? 'bg-green-100 text-green-600 hover:bg-green-200 dark:bg-green-900/20 dark:text-green-400' 
-                      : 'bg-gray-100 text-gray-400 hover:bg-gray-200 dark:bg-gray-800'
+                      ? 'bg-[#ff6b1d]/10 text-[#ff6b1d] hover:bg-[#ff6b1d]/20 dark:bg-[#ff6b1d]/20' 
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
                   }`}
                 >
                   {soundEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
@@ -362,23 +356,23 @@ export default function SpeechTherapyPage() {
 
               {/* Quick Stats */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div className="bg-card border border-border rounded-xl p-4 text-center">
-                  <Crown className="w-6 h-6 mx-auto mb-2 text-purple-500" />
+                <div className="bg-card border border-border rounded-xl p-4 text-center hover:shadow-md transition-shadow">
+                  <Crown className="w-6 h-6 mx-auto mb-2 text-[#ff6b1d]" />
                   <div className="text-xl font-bold">{userStats.level}</div>
                   <div className="text-xs text-muted-foreground">Level</div>
                 </div>
-                <div className="bg-card border border-border rounded-xl p-4 text-center">
-                  <Star className="w-6 h-6 mx-auto mb-2 text-yellow-500" />
+                <div className="bg-card border border-border rounded-xl p-4 text-center hover:shadow-md transition-shadow">
+                  <Star className="w-6 h-6 mx-auto mb-2 text-[#ff6b1d]" />
                   <div className="text-xl font-bold">{userStats.stars}</div>
                   <div className="text-xs text-muted-foreground">Stars</div>
                 </div>
-                <div className="bg-card border border-border rounded-xl p-4 text-center">
-                  <Zap className="w-6 h-6 mx-auto mb-2 text-orange-500" />
+                <div className="bg-card border border-border rounded-xl p-4 text-center hover:shadow-md transition-shadow">
+                  <Zap className="w-6 h-6 mx-auto mb-2 text-[#ff6b1d]" />
                   <div className="text-xl font-bold">{userStats.xp}</div>
                   <div className="text-xs text-muted-foreground">XP</div>
                 </div>
-                <div className="bg-card border border-border rounded-xl p-4 text-center">
-                  <Target className="w-6 h-6 mx-auto mb-2 text-green-500" />
+                <div className="bg-card border border-border rounded-xl p-4 text-center hover:shadow-md transition-shadow">
+                  <Target className="w-6 h-6 mx-auto mb-2 text-[#ff6b1d]" />
                   <div className="text-xl font-bold">{userStats.streak}</div>
                   <div className="text-xs text-muted-foreground">Streak</div>
                 </div>
@@ -399,16 +393,16 @@ export default function SpeechTherapyPage() {
                   onClick={() => startGame(game)}
                 >
                   {/* Game Header */}
-                  <div className={`bg-gradient-to-r ${game.color} p-6 text-white relative`}>
+                  <div className="bg-muted p-6 relative">
                     {!game.unlocked && (
-                      <div className="absolute top-2 right-2">
-                        <Crown className="w-6 h-6 text-yellow-300" />
+                      <div className="absolute top-2 right-2 bg-card rounded-full p-1.5 border border-border">
+                        <Crown className="w-5 h-5 text-muted-foreground" />
                       </div>
                     )}
                     
                     <div className="text-4xl mb-3 text-center">{game.emoji}</div>
                     <h3 className="text-lg font-bold text-center mb-2">{game.title}</h3>
-                    <p className="text-sm opacity-90 text-center text-white/90">
+                    <p className="text-sm text-muted-foreground text-center">
                       {game.description}
                     </p>
                   </div>
@@ -416,13 +410,13 @@ export default function SpeechTherapyPage() {
                   {/* Game Details */}
                   <div className="p-4 space-y-3">
                     <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-muted-foreground" />
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Clock className="w-4 h-4" />
                         <span>{game.duration}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Zap className="w-4 h-4 text-muted-foreground" />
-                        <span>+{game.xpReward} XP</span>
+                      <div className="flex items-center gap-2 text-[#ff6b1d]">
+                        <Zap className="w-4 h-4" />
+                        <span className="font-medium">+{game.xpReward} XP</span>
                       </div>
                     </div>
 
@@ -436,8 +430,8 @@ export default function SpeechTherapyPage() {
                             key={i}
                             className={`w-4 h-4 ${
                               i < game.stars 
-                                ? 'text-yellow-500 fill-yellow-500' 
-                                : 'text-gray-300'
+                                ? 'text-[#ff6b1d] fill-[#ff6b1d]' 
+                                : 'text-muted-foreground/30'
                             }`}
                           />
                         ))}
@@ -445,19 +439,20 @@ export default function SpeechTherapyPage() {
                     </div>
 
                     <div className="text-center">
-                      <span className="inline-block bg-muted px-2 py-1 rounded-full text-xs font-medium">
+                      <span className="inline-block bg-muted px-3 py-1 rounded-full text-xs font-medium text-muted-foreground">
                         {game.category}
                       </span>
                     </div>
 
                     {game.unlocked ? (
-                      <button className="w-full bg-[#ff6b1d] hover:bg-[#e55a1a] text-white font-medium py-2 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                      <button className="w-full bg-[#ff6b1d] hover:bg-[#e55a1a] text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
                         <Play className="w-4 h-4" />
                         Start Game
                       </button>
                     ) : (
-                      <button disabled className="w-full bg-muted text-muted-foreground font-medium py-2 px-4 rounded-lg cursor-not-allowed">
-                        🔒 Locked
+                      <button disabled className="w-full bg-muted text-muted-foreground font-medium py-2.5 px-4 rounded-lg cursor-not-allowed flex items-center justify-center gap-2">
+                        <Crown className="w-4 h-4" />
+                        Level {Math.ceil(game.id * 1.5)} Required
                       </button>
                     )}
                   </div>
@@ -511,7 +506,7 @@ export default function SpeechTherapyPage() {
                           speechSynthesis.speak(utterance);
                         }
                       }}
-                      className="w-full bg-blue-500 hover:bg-blue-600 text-white py-3 px-6 rounded-lg flex items-center justify-center gap-2"
+                      className="w-full bg-muted hover:bg-muted/80 text-foreground py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors"
                     >
                       <Headphones className="w-5 h-5" />
                       Listen to Word
@@ -522,7 +517,7 @@ export default function SpeechTherapyPage() {
                       disabled={isListening}
                       className={`w-full py-4 px-6 rounded-lg flex items-center justify-center gap-2 text-lg font-semibold transition-all ${
                         isListening 
-                          ? 'bg-red-500 text-white' 
+                          ? 'bg-[#ff6b1d]/90 text-white animate-pulse' 
                           : 'bg-[#ff6b1d] hover:bg-[#e55a1a] text-white'
                       }`}
                     >
