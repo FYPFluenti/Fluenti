@@ -303,7 +303,7 @@ export default function Signup() {
         </div>
         
         {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center items-start px-16 text-slate-800">
+        <div className="relative z-10 flex flex-col justify-start items-start px-16 pt-24 text-slate-800">
           <div className="mb-8">
             <h1 className="text-5xl font-bold tracking-tight mb-4">fluenti</h1>
             <div className="w-20 h-1 bg-orange-400 rounded-full"></div>
