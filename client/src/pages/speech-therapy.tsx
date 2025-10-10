@@ -1,492 +1,551 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import { 
-  Gamepad2, 
-  LineChart, 
-  Smile, 
-  User, 
-  Settings,
-  Trophy,
   Star,
   Clock,
   Volume2,
   VolumeX,
   Play,
-  Pause,
-  RotateCcw,
   Crown,
   Zap,
   Target,
   Award,
-  Sparkles
+  Sparkles,
+  Mic,
+  MicOff,
+  RotateCcw,
+  CheckCircle,
+  ArrowRight,
+  Headphones
 } from 'lucide-react';
 
-// Your components imports - fixed paths
-import FluentiLogo from '@/components/FluentiLogo';
-import { LogoutButton } from '@/components/auth/LogoutButton';
+import SharedSidebar from '@/components/layout/SharedSidebar';
+import FeedbackModal from '@/components/layout/FeedbackModel';
+import PageHeader from '@/components/layout/PageHeader';
+
+interface GameSession {
+  gameId: number;
+  startTime: Date;
+  currentLevel: number;
+  score: number;
+  wordsCompleted: string[];
+  accuracy: number;
+}
 
 export default function SpeechTherapyPage() {
   const { toast } = useToast();
-  const [hovered, setHovered] = useState<string | null>(null);
-  const [feedback, setFeedback] = useState("");
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  const { user, isAuthenticated } = useAuth() as { user: { firstName?: string; lastName?: string }; isAuthenticated: boolean };
+  const [, setLocation] = useLocation();
   const [showFeedback, setShowFeedback] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [selectedGame, setSelectedGame] = useState<any>(null);
-  const [gameInProgress, setGameInProgress] = useState(false);
+  const [activeGame, setActiveGame] = useState<any>(null);
+  const [gameSession, setGameSession] = useState<GameSession | null>(null);
+  const [isListening, setIsListening] = useState(false);
+  const [currentWord, setCurrentWord] = useState('');
+  const [practiceWords] = useState([
+    { word: 'CAT', phonetic: '/kæt/', difficulty: 1, image: '🐱' },
+    { word: 'DOG', phonetic: '/dɔːg/', difficulty: 1, image: '🐶' },
+    { word: 'HOUSE', phonetic: '/haʊs/', difficulty: 2, image: '🏠' },
+    { word: 'BUTTERFLY', phonetic: '/ˈbʌtərflaɪ/', difficulty: 3, image: '🦋' }
+  ]);
+
   const [userStats, setUserStats] = useState({
-    level: 12,
-    xp: 2450,
-    stars: 156,
-    streak: 7
+    level: 5,
+    xp: 1250,
+    stars: 89,
+    streak: 3,
+    todaysSessions: 1,
+    dailyGoal: 3
   });
-
-  const hideTimer = useRef<NodeJS.Timeout | null>(null);
-
-  const setLocation = (path: string) => {
-    // Your navigation logic here
-    window.location.href = path;
-  };
-
-    // Feedback submit function
-  const submitFeedback = () => {
-    setShowFeedback(false);
-    setFeedback("");
-    toast({
-      title: "Feedback submitted!",
-      description: "Thank you for helping us make Fluenti better!",
-    });
-  };
 
   const games = [
     {
       id: 1,
-      title: "Phonics Adventure Quest",
-      description: "Embark on a magical journey through the kingdom of sounds!",
-      emoji: "🏰",
+      title: "Word Practice",
+      description: "Practice pronouncing common words clearly and correctly",
+      emoji: "💬",
       difficulty: "Easy",
-      duration: "15 min",
-      stars: 3,
-      xpReward: 50,
-      color: "from-purple-400 to-pink-500",
+      duration: "10 min",
+      stars: userStats.level >= 1 ? 3 : 0,
+      xpReward: 25,
       unlocked: true,
-      category: "Phonics"
+      category: "Pronunciation",
+      type: "interactive"
     },
     {
       id: 2,
-      title: "Word Building Workshop",
-      description: "Construct amazing words with your syllable toolkit!",
-      emoji: "🔧",
-      difficulty: "Medium", 
-      duration: "20 min",
-      stars: 2,
-      xpReward: 75,
-      color: "from-blue-400 to-cyan-500",
+      title: "Sound Recognition",
+      description: "Listen and identify different speech sounds",
+      emoji: "�",
+      difficulty: "Easy", 
+      duration: "8 min",
+      stars: userStats.level >= 2 ? 2 : 0,
+      xpReward: 20,
       unlocked: true,
-      category: "Vocabulary"
+      category: "Listening",
+      type: "interactive"
     },
     {
       id: 3,
-      title: "Rhythm & Rhyme Studio",
-      description: "Create beautiful music with speech patterns and beats!",
-      emoji: "🎵",
+      title: "Sentence Building",
+      description: "Create complete sentences with proper pronunciation",
+      emoji: "�️",
       difficulty: "Medium",
-      duration: "18 min", 
-      stars: 3,
-      xpReward: 80,
-      color: "from-green-400 to-teal-500",
-      unlocked: true,
-      category: "Rhythm"
+      duration: "15 min", 
+      stars: userStats.level >= 3 ? 1 : 0,
+      xpReward: 40,
+      unlocked: userStats.level >= 3,
+      category: "Grammar",
+      type: "interactive"
     },
     {
       id: 4,
-      title: "Articulation Arcade",
-      description: "Master pronunciation in this exciting arcade adventure!",
-      emoji: "🕹️",
-      difficulty: "Hard",
-      duration: "25 min",
-      stars: 1,
-      xpReward: 100,
-      color: "from-orange-400 to-red-500", 
-      unlocked: userStats.level >= 10,
-      category: "Articulation"
+      title: "Rhythm Training",
+      description: "Practice speech rhythm and timing patterns",
+      emoji: "🎵",
+      difficulty: "Medium",
+      duration: "12 min",
+      stars: userStats.level >= 4 ? 2 : 0,
+      xpReward: 35,
+      unlocked: userStats.level >= 4,
+      category: "Fluency",
+      type: "browser-game"
     },
     {
       id: 5,
-      title: "Story Theater",
-      description: "Become the star of your own interactive storytelling show!",
-      emoji: "🎭",
+      title: "Story Reading",
+      description: "Read short stories with proper expression and clarity",
+      emoji: "📚",
       difficulty: "Hard",
-      duration: "30 min",
+      duration: "20 min",
       stars: 0,
-      xpReward: 120,
-      color: "from-indigo-400 to-purple-600",
-      unlocked: userStats.level >= 15,
-      category: "Storytelling"
+      xpReward: 60,
+      unlocked: userStats.level >= 8,
+      category: "Reading",
+      type: "api-game"
     },
     {
       id: 6,
-      title: "Sound Safari Explorer",
-      description: "Discover amazing animals and practice their sounds!",
-      emoji: "🦁",
-      difficulty: "Easy",
-      duration: "12 min",
-      stars: 3,
-      xpReward: 45,
-      color: "from-yellow-400 to-orange-500",
-      unlocked: true,
-      category: "Animal Sounds"
+      title: "Quick Sounds",
+      description: "Fast-paced pronunciation challenges for confident speakers",
+      emoji: "⚡",
+      difficulty: "Hard",
+      duration: "18 min",
+      stars: 0,
+      xpReward: 50,
+      unlocked: userStats.level >= 6,
+      category: "Speed",
+      type: "interactive"
     }
   ];
 
+  // Check authentication
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLocation('/login');
+    }
+  }, [isAuthenticated, setLocation]);
+
   const getDifficultyColor = (difficulty: string) => {
     switch(difficulty) {
-      case 'Easy': return 'text-green-600 bg-green-100';
-      case 'Medium': return 'text-yellow-600 bg-yellow-100'; 
-      case 'Hard': return 'text-red-600 bg-red-100';
-      default: return 'text-gray-600 bg-gray-100';
+      case 'Easy': return 'text-[#ff6b1d] bg-[#ff6b1d]/10 dark:bg-[#ff6b1d]/20';
+      case 'Medium': return 'text-muted-foreground bg-muted'; 
+      case 'Hard': return 'text-foreground bg-accent/50 dark:bg-accent';
+      default: return 'text-muted-foreground bg-muted';
     }
   };
 
   const startGame = (game: any) => {
-    if (!game.unlocked) return;
-    setSelectedGame(game);
-    setGameInProgress(true);
+    if (!game.unlocked) {
+      toast({
+        title: "Game Locked 🔒",
+        description: `Reach level ${Math.ceil(game.id * 1.5)} to unlock this game!`,
+        variant: "default",
+      });
+      return;
+    }
+
+    // Initialize game session
+    const session: GameSession = {
+      gameId: game.id,
+      startTime: new Date(),
+      currentLevel: 1,
+      score: 0,
+      wordsCompleted: [],
+      accuracy: 0
+    };
+
+    setActiveGame(game);
+    setGameSession(session);
+
+    if (game.type === 'interactive') {
+      // Start interactive session
+      setCurrentWord(practiceWords[0].word);
+    } else if (game.type === 'browser-game') {
+      // Load browser game (will implement below)
+      loadBrowserGame(game.id);
+    } else if (game.type === 'api-game') {
+      // Load API game (will implement below)
+      loadAPIGame(game.id);
+    }
+
+    toast({
+      title: "Game Started! 🎮",
+      description: `Beginning ${game.title}. Good luck!`,
+    });
   };
 
+  const endGame = () => {
+    if (gameSession) {
+      const finalScore = gameSession.score;
+      const accuracy = gameSession.accuracy;
+      
+      // Update user stats
+      setUserStats(prev => ({
+        ...prev,
+        xp: prev.xp + (activeGame?.xpReward || 0),
+        stars: prev.stars + Math.floor(accuracy / 30),
+        todaysSessions: prev.todaysSessions + 1
+      }));
+
+      toast({
+        title: "Great Job! 🌟",
+        description: `Session completed! Score: ${finalScore}, Accuracy: ${accuracy}%`,
+      });
+    }
+
+    setActiveGame(null);
+    setGameSession(null);
+    setCurrentWord('');
+    setIsListening(false);
+  };
+
+  const handleVoiceInput = () => {
+    if (!isListening) {
+      setIsListening(true);
+      // Simulate voice recognition
+      setTimeout(() => {
+        setIsListening(false);
+        const accuracy = Math.random() * 40 + 60; // 60-100% accuracy
+        
+        if (gameSession) {
+          setGameSession({
+            ...gameSession,
+            score: gameSession.score + Math.round(accuracy),
+            wordsCompleted: [...gameSession.wordsCompleted, currentWord],
+            accuracy: (gameSession.accuracy + accuracy) / 2
+          });
+        }
+
+        if (accuracy > 80) {
+          toast({
+            title: "Excellent! ⭐",
+            description: "Perfect pronunciation!",
+          });
+        } else {
+          toast({
+            title: "Good try! 💪",
+            description: "Keep practicing, you're improving!",
+          });
+        }
+
+        // Move to next word
+        const currentIndex = practiceWords.findIndex(w => w.word === currentWord);
+        if (currentIndex < practiceWords.length - 1) {
+          setCurrentWord(practiceWords[currentIndex + 1].word);
+        } else {
+          endGame();
+        }
+      }, 2000);
+    }
+  };
+
+  // Today's goal progress
+  const dailyProgress = Math.min((userStats.todaysSessions / userStats.dailyGoal) * 100, 100);
+
+  // Placeholder functions for game integration (will implement below)
+  const loadBrowserGame = (gameId: number) => {
+    console.log(`Loading browser game ${gameId}`);
+  };
+
+  const loadAPIGame = (gameId: number) => {
+    console.log(`Loading API game ${gameId}`);
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Please Log In</h2>
+          <p className="text-muted-foreground mb-4">You need to be logged in to access speech games.</p>
+          <button
+            onClick={() => setLocation('/login')}
+            className="bg-[#ff6b1d] text-white px-6 py-2 rounded-lg hover:bg-[#e55a1a]"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
-      {/* Your Sidebar */}
-      <aside className="w-20 bg-background flex flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-50 border-r border-border">
-        {/* Sidebar brand (logo with hover + tooltip) */}
-        <div
-          onMouseEnter={() => setHovered("home")}
-          onMouseLeave={() => setHovered(null)}
-          className="relative group"
-        >
-          <button
-            onClick={() => setLocation("/child-dashboard")}
-            aria-label="Go to home"
-            className="w-12 h-12 grid place-items-center rounded-xl transition"
-          >
-            <FluentiLogo
-              className="w-10 h-10 text-[#ff6b1d] transition-colors duration-150 group-hover:text-[#ff8a4a]"
-            />
-          </button>
-
-          {hovered === "home" && (
-            <motion.div
-              initial={{ opacity: 0, x: 5 }}
-              animate={{ opacity: 1, x: 12 }}
-              exit={{ opacity: 0, x: 5 }}
-              className="absolute left-[38px] bottom-1 bg-popover text-popover-foreground px-3 py-1.5 rounded-lg shadow-md border border-border z-10"
-            >
-              home
-            </motion.div>
-          )}
-        </div>
-
-        {/* Sidebar Buttons */}
-        {[
-          { icon: Gamepad2, label: "games", id: "games", path: "/speech-therapy" },
-          { icon: LineChart, label: "progress", id: "progress", path: "/progress-dashboard" },
-          { icon: Smile, label: "feedback", id: "feedback" },
-        ].map(({ icon: Icon, label, id, path }) => (
-          <div
-            key={id}
-            onMouseEnter={() => setHovered(id)}
-            onMouseLeave={() => setHovered(null)}
-            className="relative group"
-          >
-            <button
-              onClick={() =>
-                id === "feedback"
-                  ? setShowFeedback(true)
-                  : path && setLocation(path)
-              }
-              className="w-10 h-10 flex items-center justify-center rounded-xl transition group"
-              aria-label={label}
-            >
-              <Icon className="text-foreground w-7 h-7 transition-colors duration-150 group-hover:text-muted-foreground" />
-            </button>
-
-            {hovered === id && (
-              <motion.div
-                initial={{ opacity: 0, x: 5 }}
-                animate={{ opacity: 1, x: 12 }}
-                exit={{ opacity: 0, x: 5 }}
-                className="absolute left-[38px] bottom-0 bg-popover text-popover-foreground px-4 py-2 rounded-lg shadow-md border border-border z-10 w-30 space-y-1"
-              >
-                {label}
-              </motion.div>
-            )}
-          </div>
-        ))}
-
-        <div className="flex-1" />
-
-        <div 
-          className="relative" 
-          onMouseEnter={() => { 
-            if (hideTimer.current) clearTimeout(hideTimer.current); 
-            setShowUserMenu(true); 
-          }} 
-          onMouseLeave={() => { 
-            hideTimer.current = setTimeout(() => setShowUserMenu(false), 200); 
-          }}
-        >
-          <button
-            className="group w-10 h-10 flex items-center justify-center rounded-full transition"
-            aria-haspopup="menu"
-            aria-expanded={showUserMenu}
-          >
-            <User
-              className={`w-7 h-7 transition-colors duration-150 ${
-                showUserMenu
-                  ? "text-muted-foreground"
-                  : "text-muted-foreground group-hover:text-muted-foreground"
-              }`}
-            />
-          </button>
-
-          {showUserMenu && (
-            <div className="absolute left-12 bottom-0 w-48 bg-popover border border-border rounded-xl shadow-lg p-4 z-50 space-y-2">
-              <button 
-                onClick={() => setLocation("/settings")} 
-                className="w-full px-5 py-3 text-sm flex items-center gap-3 hover:bg-muted hover:brightness-90 rounded-lg"
-              >
-                <Settings className="w-5 h-5" />
-                <span className="text-foreground font-medium">Settings</span>
-              </button>
-              <div className="border-t border-border my-1" />
-              <LogoutButton className="w-full px-5 py-3 text-base text-left hover:bg-gray-200 hover:text-black dark:hover:bg-gray-700 dark:hover:text-white bg-orange-500 text-white font-medium flex items-center gap-3 rounded-lg" />            
-            </div>
-          )}
-        </div>
-      </aside>
+    <div className="min-h-screen bg-background">
+      {/* Sidebar */}
+      <SharedSidebar 
+        onFeedbackOpen={() => setShowFeedback(true)}
+        currentPage="games"
+      />
 
       {/* Main Content */}
-      <main className="ml-20 p-8">
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
-                Speech Adventure Center 🎮
-              </h1>
-              <p className="text-lg text-muted-foreground">
-                Choose your next gaming adventure and level up your speech skills!
-              </p>
-            </div>
+      <main className="ml-20 p-6">
+        {/* Header */}
+        <PageHeader className="flex justify-end items-center mb-6 -mt-2" />
 
-            {/* Sound Toggle */}
-            <button
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className={`p-3 rounded-xl transition-all ${
-                soundEnabled 
-                  ? 'bg-green-100 text-green-600 hover:bg-green-200' 
-                  : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-              }`}
-            >
-              {soundEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
-            </button>
-          </div>
-
-          {/* Stats Dashboard */}
-          <div className="grid grid-cols-4 gap-6 mb-8">
-            <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-6 rounded-2xl text-white">
-              <div className="flex items-center gap-3">
-                <Crown className="w-8 h-8" />
+        {!activeGame ? (
+          <>
+            {/* Welcome Section */}
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-6">
                 <div>
-                  <p className="text-purple-100 text-sm">Current Level</p>
-                  <p className="text-2xl font-bold">{userStats.level}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 rounded-2xl text-white">
-              <div className="flex items-center gap-3">
-                <Zap className="w-8 h-8" />
-                <div>
-                  <p className="text-orange-100 text-sm">Experience Points</p>
-                  <p className="text-2xl font-bold">{userStats.xp.toLocaleString()}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-yellow-500 to-orange-500 p-6 rounded-2xl text-white">
-              <div className="flex items-center gap-3">
-                <Star className="w-8 h-8" />
-                <div>
-                  <p className="text-yellow-100 text-sm">Stars Collected</p>
-                  <p className="text-2xl font-bold">{userStats.stars}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-r from-green-500 to-teal-500 p-6 rounded-2xl text-white">
-              <div className="flex items-center gap-3">
-                <Target className="w-8 h-8" />
-                <div>
-                  <p className="text-green-100 text-sm">Daily Streak</p>
-                  <p className="text-2xl font-bold">{userStats.streak} days</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Games Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {games.map((game) => (
-            <motion.div
-              key={game.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: game.id * 0.1 }}
-              className={`relative overflow-hidden rounded-2xl cursor-pointer transform transition-all duration-300 hover:scale-105 ${
-                game.unlocked 
-                  ? 'hover:shadow-2xl' 
-                  : 'opacity-50 cursor-not-allowed'
-              }`}
-              onClick={() => startGame(game)}
-            >
-              {/* Game Card Background */}
-              <div className={`bg-gradient-to-br ${game.color} p-6 text-white relative`}>
-                {/* Lock Overlay for Locked Games */}
-                {!game.unlocked && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <div className="text-center">
-                      <Crown className="w-12 h-12 mx-auto mb-2 text-yellow-300" />
-                      <p className="text-sm font-medium">Unlock at Level {game.id * 3}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Game Emoji */}
-                <div className="text-6xl mb-4 text-center">{game.emoji}</div>
-
-                {/* Game Info */}
-                <div className="space-y-3">
-                  <h3 className="text-xl font-bold text-center">{game.title}</h3>
-                  <p className="text-sm opacity-90 text-center leading-relaxed">
-                    {game.description}
+                  <h1 className="text-3xl font-bold text-foreground mb-2">
+                    Hi {(user && 'firstName' in user) ? user.firstName : 'there'}! Ready to practice? �
+                  </h1>
+                  <p className="text-lg text-muted-foreground">
+                    Choose a game to improve your speech skills
                   </p>
+                </div>
 
-                  {/* Game Stats */}
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      <span>{game.duration}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Zap className="w-4 h-4" />
-                      <span>+{game.xpReward} XP</span>
-                    </div>
-                  </div>
+                {/* Sound Toggle */}
+                <button
+                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  className={`p-3 rounded-xl transition-all ${
+                    soundEnabled 
+                      ? 'bg-[#ff6b1d]/10 text-[#ff6b1d] hover:bg-[#ff6b1d]/20 dark:bg-[#ff6b1d]/20' 
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                  }`}
+                >
+                  {soundEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
+                </button>
+              </div>
 
-                  {/* Difficulty Badge */}
-                  <div className="flex items-center justify-between">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(game.difficulty)}`}>
-                      {game.difficulty}
-                    </span>
+              {/* Daily Progress */}
+              <div className="bg-card border border-border rounded-xl p-6 mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    <Target className="w-5 h-5 text-[#ff6b1d]" />
+                    Today's Goal
+                  </h2>
+                  <span className="text-sm text-muted-foreground">
+                    {userStats.todaysSessions}/{userStats.dailyGoal} sessions
+                  </span>
+                </div>
+                <div className="w-full bg-muted rounded-full h-3 mb-2">
+                  <div 
+                    className="bg-[#ff6b1d] h-3 rounded-full transition-all duration-500"
+                    style={{ width: `${dailyProgress}%` }}
+                  />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {dailyProgress >= 100 ? 'Daily goal completed! 🎉' : `${Math.round(dailyProgress)}% complete`}
+                </p>
+              </div>
 
-                    {/* Star Rating */}
-                    <div className="flex items-center gap-1">
-                      {[...Array(3)].map((_, i) => (
-                        <Star
-                          key={i}
-                          className={`w-4 h-4 ${
-                            i < game.stars 
-                              ? 'text-yellow-300 fill-yellow-300' 
-                              : 'text-white/30'
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Category Tag */}
-                  <div className="text-center">
-                    <span className="inline-block bg-white/20 px-3 py-1 rounded-full text-xs font-medium">
-                      {game.category}
-                    </span>
-                  </div>
-
-                  {/* Play Button */}
-                  {game.unlocked && (
-                    <button className="w-full bg-white/20 hover:bg-white/30 text-white font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 group">
-                      <Play className="w-5 h-5 group-hover:scale-110 transition-transform" />
-                      Start Adventure
-                    </button>
-                  )}
+              {/* Quick Stats */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                <div className="bg-card border border-border rounded-xl p-4 text-center hover:shadow-md transition-shadow">
+                  <Crown className="w-6 h-6 mx-auto mb-2 text-[#ff6b1d]" />
+                  <div className="text-xl font-bold">{userStats.level}</div>
+                  <div className="text-xs text-muted-foreground">Level</div>
+                </div>
+                <div className="bg-card border border-border rounded-xl p-4 text-center hover:shadow-md transition-shadow">
+                  <Star className="w-6 h-6 mx-auto mb-2 text-[#ff6b1d]" />
+                  <div className="text-xl font-bold">{userStats.stars}</div>
+                  <div className="text-xs text-muted-foreground">Stars</div>
+                </div>
+                <div className="bg-card border border-border rounded-xl p-4 text-center hover:shadow-md transition-shadow">
+                  <Zap className="w-6 h-6 mx-auto mb-2 text-[#ff6b1d]" />
+                  <div className="text-xl font-bold">{userStats.xp}</div>
+                  <div className="text-xs text-muted-foreground">XP</div>
+                </div>
+                <div className="bg-card border border-border rounded-xl p-4 text-center hover:shadow-md transition-shadow">
+                  <Target className="w-6 h-6 mx-auto mb-2 text-[#ff6b1d]" />
+                  <div className="text-xl font-bold">{userStats.streak}</div>
+                  <div className="text-xs text-muted-foreground">Streak</div>
                 </div>
               </div>
-            </motion.div>
-          ))}
-        </div>
+            </div>
 
-        {/* Achievement Celebration */}
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="mt-12 bg-gradient-to-r from-purple-600 to-pink-600 p-8 rounded-2xl text-white text-center"
-        >
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <Award className="w-12 h-12 text-yellow-300" />
-            <Sparkles className="w-8 h-8 text-yellow-300" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2">Keep Up the Amazing Work! 🌟</h2>
-          <p className="text-purple-100 mb-4">
-            You're on a {userStats.streak}-day streak! Complete one more game today to keep it going!
-          </p>
-          <div className="bg-white/20 rounded-full h-3 mb-4">
-            <div 
-              className="bg-yellow-300 h-3 rounded-full transition-all duration-500"
-              style={{ width: `${(userStats.xp % 100)}%` }}
-            ></div>
-          </div>
-          <p className="text-sm text-purple-100">
-            {100 - (userStats.xp % 100)} XP until next level!
-          </p>
-        </motion.div>
-      </main>
+            {/* Games Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {games.map((game) => (
+                <motion.div
+                  key={game.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: game.id * 0.1 }}
+                  className={`bg-card border border-border rounded-xl overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg ${
+                    !game.unlocked ? 'opacity-60' : ''
+                  }`}
+                  onClick={() => startGame(game)}
+                >
+                  {/* Game Header */}
+                  <div className="bg-muted p-6 relative">
+                    {!game.unlocked && (
+                      <div className="absolute top-2 right-2 bg-card rounded-full p-1.5 border border-border">
+                        <Crown className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    )}
+                    
+                    <div className="text-4xl mb-3 text-center">{game.emoji}</div>
+                    <h3 className="text-lg font-bold text-center mb-2">{game.title}</h3>
+                    <p className="text-sm text-muted-foreground text-center">
+                      {game.description}
+                    </p>
+                  </div>
 
-       {/* Feedback Modal */}
-        {showFeedback && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="w-[500px] max-w-[92vw] rounded-2xl bg-popover border border-border shadow-2xl">
-              <div className="p-6">
-                <textarea
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                  placeholder="how can we improve fluenti?"
-                  className="w-full h-32 resize-none rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/70 p-4 focus:outline-none focus:ring-0 focus:border-border shadow-inner"
-                />
+                  {/* Game Details */}
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Clock className="w-4 h-4" />
+                        <span>{game.duration}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[#ff6b1d]">
+                        <Zap className="w-4 h-4" />
+                        <span className="font-medium">+{game.xpReward} XP</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(game.difficulty)}`}>
+                        {game.difficulty}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {[...Array(3)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-4 h-4 ${
+                              i < game.stars 
+                                ? 'text-[#ff6b1d] fill-[#ff6b1d]' 
+                                : 'text-muted-foreground/30'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="text-center">
+                      <span className="inline-block bg-muted px-3 py-1 rounded-full text-xs font-medium text-muted-foreground">
+                        {game.category}
+                      </span>
+                    </div>
+
+                    {game.unlocked ? (
+                      <button className="w-full bg-[#ff6b1d] hover:bg-[#e55a1a] text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                        <Play className="w-4 h-4" />
+                        Start Game
+                      </button>
+                    ) : (
+                      <button disabled className="w-full bg-muted text-muted-foreground font-medium py-2.5 px-4 rounded-lg cursor-not-allowed flex items-center justify-center gap-2">
+                        <Crown className="w-4 h-4" />
+                        Level {Math.ceil(game.id * 1.5)} Required
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </>
+        ) : (
+          /* Active Game Interface */
+          <div className="max-w-4xl mx-auto">
+            {/* Game Header */}
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={endGame}
+                  className="p-2 bg-muted hover:bg-muted/80 rounded-lg transition-colors"
+                >
+                  <ArrowRight className="w-5 h-5 rotate-180" />
+                </button>
+                <div>
+                  <h1 className="text-2xl font-bold">{activeGame.title}</h1>
+                  <p className="text-muted-foreground">Score: {gameSession?.score || 0} points</p>
+                </div>
               </div>
-
-              <div className="flex items-center justify-between px-6 pb-6">
-                <button
-                  onClick={() => { setShowFeedback(false); setFeedback(""); }}
-                  className="px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted transition"
-                >
-                  cancel
-                </button>
-                <button
-                  onClick={submitFeedback}
-                  disabled={!feedback.trim()}
-                  className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50 transition"
-                  style={{ backgroundColor: "hsl(27, 95%, 61%)" }}
-                >
-                  submit
-                </button>
+              <div className="text-right">
+                <div className="text-sm text-muted-foreground">Progress</div>
+                <div className="text-lg font-semibold">
+                  {gameSession?.wordsCompleted.length || 0}/{practiceWords.length}
+                </div>
               </div>
             </div>
+
+            {/* Game Content */}
+            {activeGame.type === 'interactive' && (
+              <div className="bg-card border border-border rounded-xl p-8 text-center">
+                <div className="mb-8">
+                  <div className="text-8xl mb-4">
+                    {practiceWords.find((w: any) => w.word === currentWord)?.image || '💬'}
+                  </div>
+                  <h2 className="text-4xl font-bold mb-2">{currentWord}</h2>
+                  <p className="text-xl text-muted-foreground mb-6">
+                    {practiceWords.find((w: any) => w.word === currentWord)?.phonetic}
+                  </p>
+                  
+                  <div className="space-y-4 max-w-md mx-auto">
+                    <button
+                      onClick={() => {
+                        if (soundEnabled && 'speechSynthesis' in window) {
+                          const utterance = new SpeechSynthesisUtterance(currentWord);
+                          utterance.rate = 0.8;
+                          speechSynthesis.speak(utterance);
+                        }
+                      }}
+                      className="w-full bg-muted hover:bg-muted/80 text-foreground py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                    >
+                      <Headphones className="w-5 h-5" />
+                      Listen to Word
+                    </button>
+                    
+                    <button
+                      onClick={handleVoiceInput}
+                      disabled={isListening}
+                      className={`w-full py-4 px-6 rounded-lg flex items-center justify-center gap-2 text-lg font-semibold transition-all ${
+                        isListening 
+                          ? 'bg-[#ff6b1d]/90 text-white animate-pulse' 
+                          : 'bg-[#ff6b1d] hover:bg-[#e55a1a] text-white'
+                      }`}
+                    >
+                      {isListening ? (
+                        <>
+                          <MicOff className="w-6 h-6" />
+                          Listening...
+                        </>
+                      ) : (
+                        <>
+                          <Mic className="w-6 h-6" />
+                          Say the Word
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
+      </main>
 
+      {/* Feedback Modal */}
+      <FeedbackModal 
+        isOpen={showFeedback} 
+        onClose={() => setShowFeedback(false)} 
+      />
     </div>
   );
 }
