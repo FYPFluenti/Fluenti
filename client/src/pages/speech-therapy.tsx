@@ -19,7 +19,17 @@ import {
   RotateCcw,
   CheckCircle,
   ArrowRight,
-  Headphones
+  Headphones,
+  MessageSquare,
+  Volume,
+  FileText,
+  Music,
+  BookOpen,
+  Bolt,
+  Cat,
+  Dog,
+  Home,
+  Flower2
 } from 'lucide-react';
 
 import SharedSidebar from '@/components/layout/SharedSidebar';
@@ -46,10 +56,10 @@ export default function SpeechTherapyPage() {
   const [isListening, setIsListening] = useState(false);
   const [currentWord, setCurrentWord] = useState('');
   const [practiceWords] = useState([
-    { word: 'CAT', phonetic: '/kæt/', difficulty: 1, image: '🐱' },
-    { word: 'DOG', phonetic: '/dɔːg/', difficulty: 1, image: '🐶' },
-    { word: 'HOUSE', phonetic: '/haʊs/', difficulty: 2, image: '🏠' },
-    { word: 'BUTTERFLY', phonetic: '/ˈbʌtərflaɪ/', difficulty: 3, image: '🦋' }
+    { word: 'CAT', phonetic: '/kæt/', difficulty: 1, icon: Cat },
+    { word: 'DOG', phonetic: '/dɔːg/', difficulty: 1, icon: Dog },
+    { word: 'HOUSE', phonetic: '/haʊs/', difficulty: 2, icon: Home },
+    { word: 'BUTTERFLY', phonetic: '/ˈbʌtərflaɪ/', difficulty: 3, icon: Flower2 }
   ]);
 
   const [userStats, setUserStats] = useState({
@@ -66,7 +76,8 @@ export default function SpeechTherapyPage() {
       id: 1,
       title: "Word Practice",
       description: "Practice pronouncing common words clearly and correctly",
-      emoji: "💬",
+      icon: MessageSquare,
+      iconColor: "text-blue-500",
       difficulty: "Easy",
       duration: "10 min",
       stars: userStats.level >= 1 ? 3 : 0,
@@ -79,7 +90,8 @@ export default function SpeechTherapyPage() {
       id: 2,
       title: "Sound Recognition",
       description: "Listen and identify different speech sounds",
-      emoji: "�",
+      icon: Volume,
+      iconColor: "text-green-500",
       difficulty: "Easy", 
       duration: "8 min",
       stars: userStats.level >= 2 ? 2 : 0,
@@ -92,7 +104,8 @@ export default function SpeechTherapyPage() {
       id: 3,
       title: "Sentence Building",
       description: "Create complete sentences with proper pronunciation",
-      emoji: "�️",
+      icon: FileText,
+      iconColor: "text-purple-500",
       difficulty: "Medium",
       duration: "15 min", 
       stars: userStats.level >= 3 ? 1 : 0,
@@ -105,7 +118,8 @@ export default function SpeechTherapyPage() {
       id: 4,
       title: "Rhythm Training",
       description: "Practice speech rhythm and timing patterns",
-      emoji: "🎵",
+      icon: Music,
+      iconColor: "text-pink-500",
       difficulty: "Medium",
       duration: "12 min",
       stars: userStats.level >= 4 ? 2 : 0,
@@ -118,7 +132,8 @@ export default function SpeechTherapyPage() {
       id: 5,
       title: "Story Reading",
       description: "Read short stories with proper expression and clarity",
-      emoji: "📚",
+      icon: BookOpen,
+      iconColor: "text-indigo-500",
       difficulty: "Hard",
       duration: "20 min",
       stars: 0,
@@ -131,7 +146,8 @@ export default function SpeechTherapyPage() {
       id: 6,
       title: "Quick Sounds",
       description: "Fast-paced pronunciation challenges for confident speakers",
-      emoji: "⚡",
+      icon: Bolt,
+      iconColor: "text-yellow-500",
       difficulty: "Hard",
       duration: "18 min",
       stars: 0,
@@ -311,9 +327,12 @@ export default function SpeechTherapyPage() {
             <div className="mb-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className="text-3xl font-bold text-foreground mb-2">
-                    Hi {(user && 'firstName' in user) ? user.firstName : 'there'}! Ready to practice? �
-                  </h1>
+                  <div className="flex items-center gap-3 mb-2">
+                    <h1 className="text-3xl font-bold text-foreground">
+                      Hi {(user && 'firstName' in user) ? user.firstName : 'there'}! Ready to practice?
+                    </h1>
+                    <Sparkles className="w-8 h-8 text-[#ff6b1d]" />
+                  </div>
                   <p className="text-lg text-muted-foreground">
                     Choose a game to improve your speech skills
                   </p>
@@ -349,8 +368,15 @@ export default function SpeechTherapyPage() {
                     style={{ width: `${dailyProgress}%` }}
                   />
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {dailyProgress >= 100 ? 'Daily goal completed! 🎉' : `${Math.round(dailyProgress)}% complete`}
+                <p className="text-sm text-muted-foreground flex items-center gap-2">
+                  {dailyProgress >= 100 ? (
+                    <>
+                      <span>Daily goal completed!</span>
+                      <Award className="w-4 h-4 text-[#ff6b1d]" />
+                    </>
+                  ) : (
+                    `${Math.round(dailyProgress)}% complete`
+                  )}
                 </p>
               </div>
 
@@ -400,7 +426,9 @@ export default function SpeechTherapyPage() {
                       </div>
                     )}
                     
-                    <div className="text-4xl mb-3 text-center">{game.emoji}</div>
+                    <div className="mb-3 text-center">
+                      <game.icon className={`w-12 h-12 mx-auto ${game.iconColor}`} />
+                    </div>
                     <h3 className="text-lg font-bold text-center mb-2">{game.title}</h3>
                     <p className="text-sm text-muted-foreground text-center">
                       {game.description}
@@ -489,8 +517,12 @@ export default function SpeechTherapyPage() {
             {activeGame.type === 'interactive' && (
               <div className="bg-card border border-border rounded-xl p-8 text-center">
                 <div className="mb-8">
-                  <div className="text-8xl mb-4">
-                    {practiceWords.find((w: any) => w.word === currentWord)?.image || '💬'}
+                  <div className="mb-4 flex justify-center">
+                    {(() => {
+                      const currentPracticeWord = practiceWords.find((w: any) => w.word === currentWord);
+                      const IconComponent = currentPracticeWord?.icon || MessageSquare;
+                      return <IconComponent className="w-20 h-20 text-[#ff6b1d]" />;
+                    })()}
                   </div>
                   <h2 className="text-4xl font-bold mb-2">{currentWord}</h2>
                   <p className="text-xl text-muted-foreground mb-6">
