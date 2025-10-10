@@ -25,7 +25,15 @@ from datasets import load_dataset
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceBgeEmbeddings
+try:
+    from langchain_huggingface import HuggingFaceEmbeddings
+    EMBEDDINGS_CLASS = HuggingFaceEmbeddings
+    EMBEDDINGS_TYPE = 'new'
+except ImportError:
+    from langchain_community.embeddings import HuggingFaceBgeEmbeddings
+    EMBEDDINGS_CLASS = HuggingFaceBgeEmbeddings
+    EMBEDDINGS_TYPE = 'legacy'
+    print("⚠️ Using deprecated HuggingFaceBgeEmbeddings. Install langchain-huggingface for updated version.")
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # Sentiment analysis
@@ -777,6 +785,14 @@ class CrisisDetector:
 
         return phrases
 
+    def _get_sentence_containing_word(self, text: str, word: str) -> str:
+        """Get the sentence containing a specific word"""
+        sentences = text.split('.')
+        for sentence in sentences:
+            if word in sentence.lower():
+                return sentence.strip()
+        return text  # Return full text if no sentence boundary found
+
     def _analyze_help_seeking_behavior(self, text: str, features: Dict[str, Any]) -> float:
         """Dynamically analyze help-seeking behavior"""
         help_score = 0.0
@@ -823,14 +839,14 @@ class CrisisDetector:
         intensity_multiplier = 1.0 + (features['intensity_words'] * 0.2)
         temporal_urgency = 1.0 + (features['temporal_words'] * 0.3)
 
-        # CRITICAL: Explicit suicide/self-harm detection patterns
+        # CRITICAL: Explicit suicide/self-harm detection patterns - FIXED: More nuanced scoring
         critical_patterns = {
             'suicide_explicit': {
                 'patterns': ['kill myself', 'end my life', 'take my life', 'suicide', 'suicidal', 
                            'want to die', 'wanna die', 'wish i was dead', 'better off dead',
                            'should be dead', 'going to kill myself', 'plan to die',
                            'feel like dying', 'wanna just die', 'ill kill myself', 'i will kill myself',
-                           'dying', 'just die', 'want death', 'wanna be dead'],
+                           'want death', 'wanna be dead'],
                 'score': 10.0,  # Immediate critical level
                 'variations': ['kill my self', 'end my own life', 'want to dies', 'wanna dies',
                               'feel like dieing', 'feeling like dying', 'want 2 die', 'wanna 2 die',
@@ -848,21 +864,46 @@ class CrisisDetector:
                 'variations': []
             },
             'immediate_intent': {
-                'patterns': ['right now', 'tonight', 'today', 'going to do it', 'ready to',
+                'patterns': ['right now', 'tonight', 'going to do it', 'ready to',
                            'have decided', 'made up my mind', 'plan is', 'will do it'],
                 'score': 15.0,  # Maximum critical - immediate action
+                'variations': []
+            },
+            #  Separate casual temporal references from crisis indicators
+            'temporal_casual': {
+                'patterns': ['today', 'yesterday', 'this morning', 'this afternoon', 'earlier'],
+                'score': 0.5,  # Much lower score for casual temporal references
                 'variations': []
             }
         }
 
-        # Check for critical patterns first
+        # Check for critical patterns first - FIXED: Better context analysis
         for pattern_type, pattern_data in critical_patterns.items():
             all_patterns = pattern_data['patterns'] + pattern_data['variations']
             for pattern in all_patterns:
                 if pattern in text_lower:
-                    crisis_score += pattern_data['score']
-                    detected_indicators.append(f"🚨 {pattern} (CRITICAL: {pattern_type})")
-                    print(f"🚨 CRITICAL PATTERN DETECTED: '{pattern}' in '{text}' (Score: +{pattern_data['score']})")
+                    # FIXED: Apply context reduction for casual temporal references
+                    score_multiplier = 1.0
+                    
+                    # If it's a temporal casual pattern, check if it's in a crisis context
+                    if pattern_type == 'temporal_casual':
+                        # Look for actual crisis indicators in the same sentence
+                        sentence_with_pattern = self._get_sentence_containing_word(text_lower, pattern)
+                        has_crisis_context = any(crisis_word in sentence_with_pattern for crisis_word in 
+                                               ['awful', 'terrible', 'horrible', 'devastating', 'crisis', 'emergency'])
+                        
+                        if not has_crisis_context:
+                            score_multiplier = 0.1  # Dramatically reduce score for casual mentions
+                    
+                    adjusted_score = pattern_data['score'] * score_multiplier
+                    crisis_score += adjusted_score
+                    
+                    if adjusted_score > 2.0:  # Only log significant scores
+                        detected_indicators.append(f"🚨 {pattern} (CRITICAL: {pattern_type})")
+                        print(f"🚨 CRITICAL PATTERN DETECTED: '{pattern}' in '{text}' (Score: +{adjusted_score})")
+                    else:
+                        detected_indicators.append(f"{pattern} ({pattern_type})")
+                        print(f"ℹ️ Pattern detected: '{pattern}' (Score: +{adjusted_score})")
 
         # Enhanced flexible pattern matching for variations
         flexible_crisis_patterns = [
@@ -953,7 +994,7 @@ class CrisisDetector:
 
     def _calculate_final_crisis_level(self, crisis_score: float, help_seeking_score: float,
                                     has_negation: bool, contexts: Set[str]) -> CrisisLevel:
-        """Dynamically calculate final crisis level"""
+        """Dynamically calculate final crisis level - FIXED: More balanced thresholds"""
 
         # Apply context-based adjustments
         if has_negation:
@@ -967,14 +1008,14 @@ class CrisisDetector:
         if self.current_user['time_of_day'] in ['night', 'early_morning']:
             crisis_score *= 1.1  # Slightly higher concern during vulnerable hours
 
-        # Determine level based on score - FIXED: More appropriate thresholds
-        if crisis_score >= 10.0:  # Critical patterns (suicide/self-harm)
+        # FIXED: More balanced thresholds to reduce false positives
+        if crisis_score >= 15.0:  # Only truly critical patterns
             return CrisisLevel.CRITICAL
-        elif crisis_score >= 7.0:  # High risk patterns
+        elif crisis_score >= 10.0:  # High risk patterns
             return CrisisLevel.HIGH
-        elif crisis_score >= 3.0:  # Medium concern patterns
+        elif crisis_score >= 5.0:  # Medium concern patterns
             return CrisisLevel.MEDIUM
-        elif crisis_score >= 1.0:  # Low concern patterns
+        elif crisis_score >= 2.0:  # Low concern patterns (raised threshold)
             return CrisisLevel.LOW
         else:
             return CrisisLevel.NONE
@@ -1256,12 +1297,19 @@ class TherapyBot:
 
             print(f"📚 Created {len(chunks)} enhanced knowledge chunks")
 
-            # Enhanced embeddings with better model
-            embeddings = HuggingFaceBgeEmbeddings(
-                model_name='BAAI/bge-small-en-v1.5',
-                model_kwargs={'device': 'cpu'},
-                encode_kwargs={'normalize_embeddings': True}
-            )
+            # Enhanced embeddings with better model - FIXED: Use global constants
+            try:
+                embeddings = EMBEDDINGS_CLASS(
+                    model_name='BAAI/bge-small-en-v1.5',
+                    model_kwargs={'device': 'cpu'},
+                    encode_kwargs={'normalize_embeddings': True}
+                )
+                if EMBEDDINGS_TYPE == 'legacy':
+                    print("⚠️ Using deprecated embeddings class. Consider upgrading to langchain-huggingface.")
+            except Exception as e:
+                print(f"⚠️ Error initializing embeddings: {e}")
+                # Fallback to basic embeddings if needed
+                raise
 
             # Create enhanced vector store with metadata
             self.vector_store = Chroma.from_texts(

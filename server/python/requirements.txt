@@ -2,6 +2,12 @@
 flask==2.3.3
 flask-cors==4.0.0
 
+# Production server (optional but recommended)
+waitress>=2.1.2
+
+# Updated embeddings support
+langchain-huggingface>=0.0.1
+
 # Existing dependencies from emotional_therapy.py
 pymongo==4.5.0
 nltk==3.8.1

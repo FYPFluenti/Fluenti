@@ -48,6 +48,31 @@ except ImportError as e:
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend communication
 
+# FIXED: Add request logging middleware to prevent duplication
+import uuid
+import logging
+from flask import g
+
+# Configure logging to reduce duplication
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
+app.logger.setLevel(logging.INFO)
+
+@app.before_request
+def log_request():
+    """Log incoming requests with unique ID"""
+    g.request_id = str(uuid.uuid4())[:8]
+    
+    # Only log non-health check requests to reduce noise
+    if request.endpoint != 'health_check':
+        app.logger.info(f"[{g.request_id}] {request.method} {request.path}")
+
+@app.after_request 
+def log_response(response):
+    """Log outgoing responses"""
+    if hasattr(g, 'request_id') and request.endpoint != 'health_check':
+        app.logger.info(f"[{g.request_id}] Response: {response.status_code}")
+    return response
+
 # Store active sessions
 active_sessions: Dict[str, Any] = {}
 
@@ -305,23 +330,44 @@ if __name__ == '__main__':
     else:
         print("❌ Therapy bot failed to load - service will have limited functionality")
     
-    print("\n🌟 Starting Flask server on http://localhost:5001")
-    print("🔗 Frontend can now connect to this service")
-    print("💡 Press Ctrl+C to stop the service")
-    print("=" * 60)
+    # FIXED: Add production server option
+    use_production = os.getenv('THERAPY_PRODUCTION', 'false').lower() == 'true'
     
-    try:
-        # Run Flask app
-        app.run(
-            host='0.0.0.0',
-            port=5001,
-            debug=False,  # Disabled to prevent auto-restarts and improve performance
-            threaded=True,
-            use_reloader=False  # Explicitly disable the reloader
-        )
-    except KeyboardInterrupt:
-        print("\n🛑 Service stopped by user")
-        print("👋 Thank you for using the Emotional Therapy Service!")
-    except Exception as e:
-        print(f"\n❌ Service error: {e}")
-        print("💡 Check the error messages above for troubleshooting")
+    if use_production:
+        try:
+            from waitress import serve
+            print("🚀 Starting with Waitress production server...")
+            print("🌟 Server running on http://localhost:5001")
+            print("🔗 Frontend can now connect to this service")
+            print("💡 Press Ctrl+C to stop the service")
+            print("=" * 60)
+            
+            serve(app, host='0.0.0.0', port=5001, threads=6)
+            
+        except ImportError:
+            print("⚠️ Waitress not installed. Install with: pip install waitress")
+            print("🔄 Falling back to Flask development server...")
+            use_production = False
+    
+    if not use_production:
+        print("⚠️ Using Flask development server (not for production)")
+        print("🌟 Starting Flask server on http://localhost:5001")
+        print("🔗 Frontend can now connect to this service")
+        print("💡 Press Ctrl+C to stop the service")
+        print("=" * 60)
+        
+        try:
+            # Run Flask app - FIXED: Better configuration
+            app.run(
+                host='0.0.0.0',
+                port=5001,
+                debug=False,  # Disabled to prevent auto-restarts and improve performance
+                threaded=True,
+                use_reloader=False  # Explicitly disable the reloader
+            )
+        except KeyboardInterrupt:
+            print("\n🛑 Service stopped by user")
+            print("👋 Thank you for using the Emotional Therapy Service!")
+        except Exception as e:
+            print(f"\n❌ Service error: {e}")
+            print("💡 Check the error messages above for troubleshooting")
