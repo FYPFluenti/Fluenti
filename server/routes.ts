@@ -12,22 +12,23 @@ const { SpeechService, transcribeAudio } = speechServiceModule;
 import { simpleTranscribeAudio, validateAudioBuffer } from "./services/simpleSpeechService";
 
 // Phase 3: Import OPTIMIZED emotion detection services
-import { 
-  detectEmotionFromText, 
-  detectEmotionFromAudio, 
-  detectCombinedEmotion 
-} from "./services/emotionServiceOptimized";
+// Commented out missing services - need to implement these
+// import { 
+//   detectEmotionFromText, 
+//   detectEmotionFromAudio, 
+//   detectCombinedEmotion 
+// } from "./services/emotionServiceOptimized";
 // Phase 4: Import response generation functions
-import { analyzeEmotion, generateEmotionalResponse } from "./services/openai";
+// import { analyzeEmotion, generateEmotionalResponse } from "./services/openai";
 // Phase 4: Import new conversational response service with Llama-2 and TTS
-import { generateConversationalResponse, type ConversationHistory } from "./services/responseService";
+// import { generateConversationalResponse, type ConversationHistory } from "./services/responseService";
 // Enhanced Phase 4+: Import enhanced conversational therapy AI
-import { 
-  generateEnhancedConversationalResponse, 
-  generateSuperiorTherapeuticResponse,
-  type EnhancedResponseRequest, 
-  type EnhancedResponseResult 
-} from "./services/enhancedResponseService";
+// import { 
+//   generateEnhancedConversationalResponse, 
+//   generateSuperiorTherapeuticResponse,
+//   type EnhancedResponseRequest, 
+//   type EnhancedResponseResult 
+// } from "./services/enhancedResponseService";
 // Import persistent therapeutic service to initialize the server
 // import "./services/therapeuticServicePersistent"; // Temporarily disabled - Python env not ready
 
@@ -257,7 +258,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
 
+  // Therapeutic game session routes
+  app.post('/api/therapeutic/session', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { userId, gameId, sessionData } = req.body;
 
+      if (!userId || !gameId || !sessionData) {
+        return res.status(400).json({ 
+          error: 'Missing required fields: userId, gameId, sessionData' 
+        });
+      }
+
+      // Save therapeutic session data
+      const session = await mongoStorage.saveTherapeuticSession({
+        userId,
+        gameId,
+        ...sessionData,
+        timestamp: new Date(),
+        evidenceLevel: 'clinical-grade'
+      });
+
+      // Update user progress if therapeutic data is provided
+      if (sessionData.therapeutic_data) {
+        await mongoStorage.updateUserTherapeuticProgress(userId, sessionData.therapeutic_data);
+      }
+
+      return res.status(200).json({ 
+        success: true, 
+        sessionId: session.id,
+        message: 'Session saved successfully'
+      });
+    } catch (error) {
+      console.error('Therapeutic session save error:', error);
+      return res.status(500).json({ 
+        error: 'Failed to save session',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/therapeutic/progress/:userId', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { userId } = req.params;
+
+      if (!userId) {
+        return res.status(400).json({ error: 'Missing userId parameter' });
+      }
+
+      const progress = await mongoStorage.getUserTherapeuticProgress(userId);
+
+      return res.status(200).json({ 
+        success: true, 
+        progress 
+      });
+    } catch (error) {
+      console.error('Get progress error:', error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch progress',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  app.get('/api/therapeutic/sessions/:userId', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { userId } = req.params;
+      const { limit = 10, offset = 0 } = req.query;
+
+      if (!userId) {
+        return res.status(400).json({ error: 'Missing userId parameter' });
+      }
+
+      const result = await mongoStorage.getUserTherapeuticSessions(
+        userId, 
+        Number(limit), 
+        Number(offset)
+      );
+
+      return res.status(200).json({ 
+        success: true, 
+        ...result
+      });
+    } catch (error) {
+      console.error('Get sessions error:', error);
+      return res.status(500).json({ 
+        error: 'Failed to fetch sessions',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 
 
   // Simple emotional support endpoint without authentication - STT and TTS only

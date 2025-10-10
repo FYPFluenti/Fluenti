@@ -353,6 +353,150 @@ export const mongoStorage = {
     return this.getUserEmotionalSessions(userId, limit);
   },
 
+  // Therapeutic game session operations
+  async saveTherapeuticSession(sessionData: any) {
+    return this._safeExecute(async () => {
+      // For now, store in SpeechSession with a therapeutic flag
+      // Later we can create a dedicated TherapeuticSession model
+      const session = new SpeechSession({
+        userId: sessionData.userId,
+        sessionId: nanoid(),
+        gameId: sessionData.gameId,
+        startTime: sessionData.startTime || new Date(),
+        endTime: sessionData.endTime || new Date(),
+        level: sessionData.currentLevel || 1,
+        score: sessionData.score || 0,
+        wordsCompleted: sessionData.wordsCompleted || [],
+        accuracy: sessionData.accuracy || 0,
+        responses: sessionData.responses || [],
+        completed: sessionData.completed || true,
+        // Add therapeutic-specific fields
+        therapeutic_data: sessionData.therapeutic_data,
+        evidenceLevel: sessionData.evidenceLevel || 'clinical-grade',
+        timestamp: sessionData.timestamp || new Date()
+      });
+      
+      await session.save();
+      
+      console.log('Therapeutic session saved:', {
+        userId: sessionData.userId,
+        gameId: sessionData.gameId,
+        sessionId: session.sessionId
+      });
+      
+      return { id: session.sessionId, ...sessionData };
+    }, { id: `mock-${Date.now()}`, ...sessionData });
+  },
+
+  async updateUserTherapeuticProgress(userId: string, therapeuticData: any) {
+    return this._safeExecute(async () => {
+      const updateFields: any = {};
+      
+      if (therapeuticData.phonemeAwareness !== undefined) {
+        updateFields.phonological_awareness = therapeuticData.phonemeAwareness;
+      }
+      
+      if (therapeuticData.socialAccuracy !== undefined) {
+        updateFields.social_communication = therapeuticData.socialAccuracy;
+      }
+      
+      if (therapeuticData.articulationScore !== undefined) {
+        updateFields.articulation_score = therapeuticData.articulationScore;
+      }
+      
+      if (therapeuticData.languageScore !== undefined) {
+        updateFields.language_comprehension = therapeuticData.languageScore;
+      }
+      
+      if (therapeuticData.fluencyScore !== undefined) {
+        updateFields.fluency_score = therapeuticData.fluencyScore;
+      }
+      
+      // Update or create user progress
+      const progress = await UserProgress.findOneAndUpdate(
+        { userId },
+        { 
+          $set: updateFields,
+          $inc: { sessions_completed: 1 },
+          $currentDate: { lastSession: true }
+        },
+        { upsert: true, new: true }
+      );
+      
+      console.log('User therapeutic progress updated:', {
+        userId,
+        updatedFields: Object.keys(updateFields)
+      });
+      
+      return progress;
+    }, null);
+  },
+
+  async getUserTherapeuticProgress(userId: string) {
+    return this._safeExecute(async () => {
+      const progress = await UserProgress.findOne({ userId });
+      
+      if (!progress) {
+        // Return default progress
+        return {
+          userId,
+          articulation_score: 70,
+          phonological_awareness: 65,
+          language_comprehension: 75,
+          social_communication: 70,
+          fluency_score: 70,
+          sessions_completed: 0,
+          level: 1,
+          lastSession: new Date(),
+          totalPracticeTime: 0
+        };
+      }
+      
+      return progress;
+    }, {
+      userId,
+      articulation_score: 70,
+      phonological_awareness: 65,
+      language_comprehension: 75,
+      social_communication: 70,
+      fluency_score: 70,
+      sessions_completed: 0,
+      level: 1,
+      lastSession: new Date(),
+      totalPracticeTime: 0
+    });
+  },
+
+  async getUserTherapeuticSessions(userId: string, limit = 10, offset = 0) {
+    return this._safeExecute(async () => {
+      // Query SpeechSession for therapeutic sessions
+      const sessions = await SpeechSession.find({ 
+        userId,
+        therapeutic_data: { $exists: true }
+      })
+        .sort({ timestamp: -1 })
+        .skip(offset)
+        .limit(limit);
+      
+      const total = await SpeechSession.countDocuments({ 
+        userId,
+        therapeutic_data: { $exists: true }
+      });
+      
+      return {
+        sessions,
+        total,
+        limit,
+        offset
+      };
+    }, {
+      sessions: [],
+      total: 0,
+      limit,
+      offset
+    });
+  },
+
   // Helper methods for testing and development
   async clearAllData() {
     return this._safeExecute(async () => {

@@ -1,23 +1,32 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
-  Gamepad2,
-  LineChart,
-  Smile,
-  SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
   ArrowRight,
   Settings,
   User,
+  TrendingUp,
+  Clock,
+  Target,
+  Award,
+  Calendar,
+  Activity,
+  Gamepad2,
+  LineChart,
+  Smile,
+  SlidersHorizontal
 } from "lucide-react";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import FluentiLogo from "@/components/FluentiLogo";
+import SharedSidebar from "@/components/layout/SharedSidebar";
+import FeedbackModal from "@/components/layout/FeedbackModel";
+import PageHeader from "@/components/layout/PageHeader";
 
 /* ---------- Types ---------- */
 interface UserProgress {
@@ -28,7 +37,10 @@ interface UserProgress {
   longestStreak: number;
   achievements: string[];
   level: number;
+  weeklyGoal: number;
+  thisWeekSessions: number;
 }
+
 interface SessionData {
   id: string;
   sessionType: string;
@@ -37,54 +49,90 @@ interface SessionData {
   createdAt: string;
 }
 
+interface WeeklyData {
+  day: string;
+  sessions: number;
+  accuracy: number;
+  date: string;
+}
+
 export default function ProgressDashboard() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
-  const [hovered, setHovered] = useState<string | null>(null);
-  const [showUserMenu, setShowUserMenu] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
-  const [feedback, setFeedback] = useState("");
-  const hideTimer = useRef<NodeJS.Timeout | null>(null);
-
-  // Feedback submit function
-  const submitFeedback = () => {
-    setShowFeedback(false);
-    setFeedback("");
-    toast({
-      title: "Feedback submitted! 🌟",
-      description: "Thank you for helping us make Fluenti better!",
-    });
-  };
+  const [selectedWeekOffset, setSelectedWeekOffset] = useState(0); // 0 = current week, -1 = last week, etc.
 
   const { data: progressData, isLoading: progressLoading, error } = useQuery<{
     progress: UserProgress;
     recentSessions: SessionData[];
     messageCount: number;
+    weeklyData: WeeklyData[];
+    weekRange: string;
   }>({
-    queryKey: ["/api/speech/progress"],
+    queryKey: ["/api/speech/progress", selectedWeekOffset],
     queryFn: async () => {
       await new Promise((res) => setTimeout(res, 300));
+      
+      // Calculate current week range
+      const today = new Date();
+      const startOfWeek = new Date(today);
+      startOfWeek.setDate(today.getDate() - today.getDay() + 1 + (selectedWeekOffset * 7));
+      const endOfWeek = new Date(startOfWeek);
+      endOfWeek.setDate(startOfWeek.getDate() + 6);
+      
+      const formatDate = (date: Date) => {
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      };
+      
+      const weekRange = `${formatDate(startOfWeek)} – ${formatDate(endOfWeek)}`;
+      
       return {
         progress: {
           overallAccuracy: 88,
-          sessionsCompleted: 4,
-          totalPracticeTime: 120,
+          sessionsCompleted: 12,
+          totalPracticeTime: 180,
           currentStreak: 5,
           longestStreak: 10,
-          achievements: ["First Session", "Accuracy 80%"],
-          level: 2,
+          achievements: ["First Session", "Accuracy 80%", "5-Day Streak"],
+          level: 3,
+          weeklyGoal: 5,
+          thisWeekSessions: selectedWeekOffset === 0 ? 3 : 5
         },
         recentSessions: [
           {
-            id: "abc123",
-            sessionType: "practice",
-            accuracyScore: 90,
-            wordsCompleted: 20,
-            createdAt: "2024-08-10T12:00:00Z",
+            id: "1",
+            sessionType: "pronunciation",
+            accuracyScore: 92,
+            wordsCompleted: 18,
+            createdAt: "2025-10-04T14:30:00Z",
           },
+          {
+            id: "2",
+            sessionType: "fluency",
+            accuracyScore: 85,
+            wordsCompleted: 24,
+            createdAt: "2025-10-03T10:15:00Z",
+          },
+          {
+            id: "3",
+            sessionType: "vocabulary",
+            accuracyScore: 90,
+            wordsCompleted: 16,
+            createdAt: "2025-10-02T16:45:00Z",
+          }
         ],
-        messageCount: 4,
+        messageCount: 45,
+        weeklyData: [
+          { day: 'Mon', sessions: 1, accuracy: 88, date: '10/30' },
+          { day: 'Tue', sessions: 2, accuracy: 92, date: '10/31' },
+          { day: 'Wed', sessions: 0, accuracy: 0, date: '11/01' },
+          { day: 'Thu', sessions: 1, accuracy: 85, date: '11/02' },
+          { day: 'Fri', sessions: 1, accuracy: 90, date: '11/03' },
+          { day: 'Sat', sessions: 0, accuracy: 0, date: '11/04' },
+          { day: 'Sun', sessions: 0, accuracy: 0, date: '11/05' }
+        ],
+        weekRange
       };
     },
     enabled: !!isAuthenticated,
@@ -111,149 +159,42 @@ export default function ProgressDashboard() {
     );
   }
 
+  const progress = progressData?.progress;
+  const weeklyGoalProgress = progress ? Math.min((progress.thisWeekSessions / progress.weeklyGoal) * 100, 100) : 0;
+  const practiceHours = progress ? Math.floor(progress.totalPracticeTime / 60) : 0;
+  const practiceMinutes = progress ? progress.totalPracticeTime % 60 : 0;
+
   return (
     <div className="min-h-screen bg-background text-foreground flex">
-      {/* Updated Sidebar */}
-      <aside className="w-20 bg-background flex flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-50 border-r border-border">
-        {/* Sidebar brand (logo with hover + tooltip) */}
-        <div
-          onMouseEnter={() => setHovered("home")}
-          onMouseLeave={() => setHovered(null)}
-          className="relative group"
-        >
-          <button
-            onClick={() => setLocation("/child-dashboard")}
-            aria-label="Go to home"
-            className="w-12 h-12 grid place-items-center rounded-xl transition"
-          >
-            <FluentiLogo
-              className="w-10 h-10 text-[#ff6b1d] transition-colors duration-150 group-hover:text-[#ff8a4a]"
-            />
-          </button>
-
-          {hovered === "home" && (
-            <motion.div
-              initial={{ opacity: 0, x: 5 }}
-              animate={{ opacity: 1, x: 12 }}
-              exit={{ opacity: 0, x: 5 }}
-              className="absolute left-[38px] bottom-1 bg-popover text-popover-foreground px-3 py-1.5 rounded-lg shadow-md border border-border z-10"
-            >
-              home
-            </motion.div>
-          )}
-        </div>
-
-        {/* Sidebar Buttons */}
-        {[
-          { icon: Gamepad2, label: "games", id: "games", path: "/speech-therapy" },
-          { icon: LineChart, label: "progress", id: "progress", path: "/progress-dashboard" },
-          { icon: Smile, label: "feedback", id: "feedback" },
-        ].map(({ icon: Icon, label, id, path }) => (
-          <div
-            key={id}
-            onMouseEnter={() => setHovered(id)}
-            onMouseLeave={() => setHovered(null)}
-            className="relative group"
-          >
-            <button
-              onClick={() =>
-                id === "feedback"
-                  ? setShowFeedback(true)
-                  : path && setLocation(path)
-              }
-              className="w-10 h-10 flex items-center justify-center rounded-xl transition group"
-              aria-label={label}
-            >
-              <Icon className="text-foreground w-7 h-7 transition-colors duration-150 group-hover:text-muted-foreground" />
-            </button>
-
-            {hovered === id && (
-              <motion.div
-                initial={{ opacity: 0, x: 5 }}
-                animate={{ opacity: 1, x: 12 }}
-                exit={{ opacity: 0, x: 5 }}
-                className="absolute left-[38px] bottom-0 bg-popover text-popover-foreground px-4 py-2 rounded-lg shadow-md border border-border z-10 w-30 space-y-1"
-              >
-                {label}
-              </motion.div>
-            )}
-          </div>
-        ))}
-
-        <div className="flex-1" />
-
-        <div 
-          className="relative" 
-          onMouseEnter={() => { 
-            if (hideTimer.current) clearTimeout(hideTimer.current); 
-            setShowUserMenu(true); 
-          }} 
-          onMouseLeave={() => { 
-            hideTimer.current = setTimeout(() => setShowUserMenu(false), 200); 
-          }}
-        >
-          <button
-            className="group w-10 h-10 flex items-center justify-center rounded-full transition"
-            aria-haspopup="menu"
-            aria-expanded={showUserMenu}
-          >
-            <User
-              className={`w-7 h-7 transition-colors duration-150 ${
-                showUserMenu
-                  ? "text-muted-foreground"
-                  : "text-muted-foreground group-hover:text-muted-foreground"
-              }`}
-            />
-          </button>
-
-          {showUserMenu && (
-            <div className="absolute left-12 bottom-0 w-48 bg-popover border border-border rounded-xl shadow-lg p-4 z-50 space-y-2">
-              <button 
-                onClick={() => setLocation("/settings")} 
-                className="w-full px-5 py-3 text-sm flex items-center gap-3 hover:bg-muted hover:brightness-90 rounded-lg"
-              >
-                <Settings className="w-5 h-5" />
-                <span className="text-foreground font-medium">Settings</span>
-              </button>
-              <div className="border-t border-border my-1" />
-              <LogoutButton className="w-full px-5 py-3 text-base text-left hover:bg-gray-200 hover:text-black dark:hover:bg-gray-700 dark:hover:text-white bg-orange-500 text-white font-medium flex items-center gap-3 rounded-lg" />
-            </div>
-          )}
-        </div>
-      </aside>
+      {/* Sidebar */}
+      <SharedSidebar 
+        onFeedbackOpen={() => setShowFeedback(true)} 
+        currentPage="progress"
+      />
 
       {/* Main Content */}
       <main className="ml-20 w-full">
         {/* Top controls (right) */}
-        <header className="flex justify-end items-center gap-4 px-5 py-5">
-          <div className="flex items-center gap-2">
-            <span className="text-base font-semibold">gen z mode</span>
-            <DarkModeToggle />
-          </div>
-          <button
-            onClick={() => setLocation("/child-dashboard?prefs=1")}
-            className="p-2 rounded-full hover:bg-muted transition"
-            aria-label="Preferences"
-          >
-            <SlidersHorizontal className="w-5 h-5" />
-          </button>
-        </header>
+        <PageHeader className="flex justify-end items-center gap-4 px-5 py-5" />
 
-        {/* Date pager pill — SLIGHTLY BIGGER, NO BORDER */}
+        {/* Date pager pill — Enhanced with better navigation */}
         <div className="px-5">
           <div className="mx-auto max-w-[600px]">
             <div className="mx-auto h-11 rounded-full bg-neutral-100 dark:bg-muted/30 flex items-center justify-between px-3">
               <button
+                onClick={() => setSelectedWeekOffset(selectedWeekOffset - 1)}
                 className="w-9 h-9 grid place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition"
                 aria-label="Previous week"
               >
                 <ChevronLeft className="w-4.5 h-4.5" />
               </button>
               <span className="text-[15px] font-medium tracking-tight select-none">
-                aug 4 – aug 10
+                {progressData?.weekRange || "Loading..."}
               </span>
               <button
-                className="w-9 h-9 grid place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition"
+                onClick={() => setSelectedWeekOffset(selectedWeekOffset + 1)}
+                disabled={selectedWeekOffset >= 0}
+                className="w-9 h-9 grid place-items-center rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition disabled:opacity-50"
                 aria-label="Next week"
               >
                 <ChevronRight className="w-4.5 h-4.5" />
@@ -262,90 +203,207 @@ export default function ProgressDashboard() {
           </div>
         </div>
 
-        {/* Title + center content — SLIGHTLY BIGGER */}
+        {/* Title + Enhanced weekly overview */}
         <section className="px-5 pt-9">
-          <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-[26px] font-bold mb-12">your week</h1>
+          <div className="mx-auto max-w-4xl text-center">
+            <h1 className="text-[26px] font-bold mb-8">
+              {selectedWeekOffset === 0 ? 'your week' : 'week overview'}
+            </h1>
 
-            {/* Stars illustration — a bit larger */}
-            <div className="flex justify-center mb-5">
-              <svg width="95" height="95" viewBox="0 0 120 120" fill="none">
-                <path d="M60 20l7 18 19 2-15 12 5 18-16-10-16 10 5-18-15-12 19-2 7-18z" fill="#F5B82E" />
-                <circle cx="25" cy="75" r="2" fill="#F5B82E" />
-                <circle cx="95" cy="60" r="2" fill="#F5B82E" />
-                <circle cx="45" cy="95" r="2" fill="#F5B82E" />
-              </svg>
+            {/* Weekly Progress Ring */}
+            <div className="flex justify-center mb-8">
+              <div className="relative">
+                <svg width="120" height="120" viewBox="0 0 120 120" className="transform -rotate-90">
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="45"
+                    stroke="currentColor"
+                    strokeWidth="8"
+                    fill="none"
+                    className="text-muted/30"
+                  />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="45"
+                    stroke="#F5B82E"
+                    strokeWidth="8"
+                    fill="none"
+                    strokeDasharray={`${2 * Math.PI * 45}`}
+                    strokeDashoffset={`${2 * Math.PI * 45 * (1 - weeklyGoalProgress / 100)}`}
+                    className="transition-all duration-500"
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-bold">{progress?.thisWeekSessions || 0}</span>
+                  <span className="text-xs text-muted-foreground">/ {progress?.weeklyGoal || 5}</span>
+                </div>
+              </div>
             </div>
 
-            <p className="text-[15px] text-muted-foreground mb-5">
-              your weekly insights are ready!
+            <p className="text-[15px] text-muted-foreground mb-6">
+              {selectedWeekOffset === 0 
+                ? weeklyGoalProgress >= 100 
+                  ? 'Weekly goal completed!' 
+                  : `${Math.round(weeklyGoalProgress)}% of weekly goal completed`
+                : 'Historical week data'
+              }
             </p>
 
-            <button
-              className="inline-flex items-center gap-2 bg-[#F5B82E] text-black px-5 py-2.5 rounded-lg text-[15px] font-semibold hover:opacity-90 transition"
-            >
-              view now <ArrowRight className="w-4.5 h-4.5" />
-            </button>
+            {selectedWeekOffset === 0 && (
+              <button
+                onClick={() => setLocation('/speech-therapy')}
+                className="inline-flex items-center gap-2 bg-[#F5B82E] text-black px-5 py-2.5 rounded-lg text-[15px] font-semibold hover:opacity-90 transition"
+              >
+                start session <ArrowRight className="w-4.5 h-4.5" />
+              </button>
+            )}
           </div>
         </section>
-         {/* Feedback Modal */}
-        {showFeedback && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="w-[500px] max-w-[92vw] rounded-2xl bg-popover border border-border shadow-2xl">
-              <div className="p-6">
-                <textarea
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                  placeholder="how can we improve fluenti?"
-                  className="w-full h-32 resize-none rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/70 p-4 focus:outline-none focus:ring-0 focus:border-border shadow-inner"
-                />
-              </div>
 
-              <div className="flex items-center justify-between px-6 pb-6">
-                <button
-                  onClick={() => { setShowFeedback(false); setFeedback(""); }}
-                  className="px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted transition"
-                >
-                  cancel
-                </button>
-                <button
-                  onClick={submitFeedback}
-                  disabled={!feedback.trim()}
-                  className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50 transition"
-                  style={{ backgroundColor: "hsl(27, 95%, 61%)" }}
-                >
-                  submit
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Stats — slightly bigger */}
-        <section className="px-5 mt-14 pb-10">
+        {/* Enhanced Stats Grid */}
+        <section className="px-5 mt-12">
           <div className="mx-auto max-w-4xl">
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full border-2 border-border grid place-items-center text-muted-foreground text-xs">⏱</span>
-              stats
+            <h2 className="text-lg font-semibold mb-6 flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full border-2 border-border grid place-items-center text-muted-foreground text-xs"></span>
+              key metrics
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div className="bg-card text-card-foreground border border-border rounded-xl p-5">
-                <div className="text-sm text-muted-foreground mb-1.5">convos completed</div>
-                <div className="text-[34px] font-bold leading-none">
-                  {progressData?.progress.sessionsCompleted ?? "--"}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              {/* Current Streak */}
+              <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Target className="w-4 h-4 text-orange-500" />
+                  <span className="text-xs font-medium text-muted-foreground">STREAK</span>
+                </div>
+                <div className="text-2xl font-bold">
+                  {progress?.currentStreak || 0}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {progress?.currentStreak === 1 ? 'day' : 'days'}
                 </div>
               </div>
 
-              <div className="bg-card text-card-foreground border border-border rounded-xl p-5">
-                <div className="text-sm text-muted-foreground mb-1.5">messages</div>
-                <div className="text-[34px] font-bold leading-none">
-                  {progressData?.messageCount ?? "--"}
+              {/* Overall Accuracy */}
+              <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="w-4 h-4 text-green-500" />
+                  <span className="text-xs font-medium text-muted-foreground">ACCURACY</span>
+                </div>
+                <div className="text-2xl font-bold">
+                  {progress?.overallAccuracy || 0}%
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  overall
+                </div>
+              </div>
+
+              {/* Practice Time */}
+              <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs font-medium text-muted-foreground">TIME</span>
+                </div>
+                <div className="text-2xl font-bold">
+                  {practiceHours}h{practiceMinutes > 0 ? ` ${practiceMinutes}m` : ''}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  total
+                </div>
+              </div>
+
+              {/* Level */}
+              <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Award className="w-4 h-4 text-purple-500" />
+                  <span className="text-xs font-medium text-muted-foreground">LEVEL</span>
+                </div>
+                <div className="text-2xl font-bold">
+                  {progress?.level || 1}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  current
                 </div>
               </div>
             </div>
+
+            {/* Weekly Activity Chart */}
+            <div className="bg-card border border-border rounded-xl p-6 mb-8">
+              <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
+                <Activity className="w-4 h-4" />
+                daily activity
+              </h3>
+              <div className="space-y-3">
+                {progressData?.weeklyData.map((day, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <div className="w-8 text-xs font-medium text-muted-foreground">
+                      {day.day}
+                    </div>
+                    <div className="w-12 text-xs text-muted-foreground">
+                      {day.date}
+                    </div>
+                    <div className="flex-1 bg-muted rounded-full h-2 relative overflow-hidden">
+                      <div 
+                        className="bg-[#F5B82E] h-2 rounded-full transition-all duration-500"
+                        style={{ width: `${day.sessions ? Math.min((day.sessions / 3) * 100, 100) : 0}%` }}
+                      />
+                    </div>
+                    <div className="w-16 text-xs text-right">
+                      {day.sessions > 0 ? `${day.sessions} session${day.sessions > 1 ? 's' : ''}` : 'rest'}
+                    </div>
+                    {day.accuracy > 0 && (
+                      <div className="w-12 text-xs text-muted-foreground text-right">
+                        {day.accuracy}%
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Recent Sessions */}
+            <div className="bg-card border border-border rounded-xl p-6">
+              <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                recent sessions
+              </h3>
+              <div className="space-y-3">
+                {progressData?.recentSessions.map((session) => (
+                  <div key={session.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    <div>
+                      <div className="text-sm font-medium capitalize">{session.sessionType}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {session.wordsCompleted} words • {new Date(session.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </div>
+                    <div className="text-sm font-bold text-[#F5B82E]">
+                      {session.accuracyScore}%
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              {progressData?.recentSessions.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p className="text-sm">No sessions this week yet</p>
+                  <button 
+                    onClick={() => setLocation('/speech-therapy')}
+                    className="text-[#F5B82E] text-sm hover:underline mt-2"
+                  >
+                    Start your first session →
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </section>
+
+        {/* Feedback Modal */}
+        <FeedbackModal 
+          isOpen={showFeedback} 
+          onClose={() => setShowFeedback(false)} 
+        />
       </main>
     </div>
   );
