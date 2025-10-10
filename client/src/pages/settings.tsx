@@ -25,15 +25,15 @@ export default function Settings() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground/80">Loading…</div>
+      <div className="min-h-screen bg-background flex items-center justify-center child-dashboard-no-zoom">
+        <div className="text-foreground/80 child-dashboard-container px-4">Loading…</div>
       </div>
     );
   }
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
+    <div className="min-h-screen bg-background text-foreground flex child-dashboard-no-zoom">
       {/* Sidebar (same as child-dashboard) */}
       <aside className="w-20 bg-background flex flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-40 border-r border-border">
         <div className="w-6 h-6 rounded-full bg-orange-400" />
@@ -58,9 +58,9 @@ export default function Settings() {
       </aside>
 
       {/* Main */}
-      <main className="ml-20 w-full">
+      <main className="ml-20 w-full child-dashboard-container">
         {/* Header actions (right) */}
-        <header className="flex justify-end items-center gap-4 px-6 py-6">
+        <header className="flex justify-end items-center gap-4 px-4 sm:px-6 py-4 sm:py-6">
           <button
             onClick={() => setLocation("/child-dashboard?prefs=1")}
             className="p-2 rounded-full hover:bg-muted transition"
@@ -70,7 +70,7 @@ export default function Settings() {
           </button>
         </header>
 
-        <div className="max-w-4xl mx-auto px-6 pb-24">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
           {/* Profile header */}
           <section className="mb-10">
             <div className="flex items-center gap-4">

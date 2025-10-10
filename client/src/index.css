@@ -545,6 +545,15 @@
     font-size: 14px;
     padding: 12px 16px;
   }
+
+  /* Settings page specific */
+  .child-dashboard-container h2 {
+    font-size: 1.5rem;
+  }
+  
+  .child-dashboard-container h1 {
+    font-size: 1.75rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -560,6 +569,20 @@
   .child-dashboard-button {
     font-size: 13px;
     padding: 10px 14px;
+  }
+
+  /* Mobile specific adjustments */
+  .child-dashboard-container h2 {
+    font-size: 1.25rem;
+  }
+  
+  .child-dashboard-container h1 {
+    font-size: 1.5rem;
+  }
+
+  /* Sidebar adjustments */
+  .child-dashboard-container main {
+    margin-left: 60px;
   }
 }
 

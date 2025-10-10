@@ -145,16 +145,20 @@ export default function ProgressDashboard() {
 
   if (isLoading || progressLoading) {
     return (
-      <div className="flex items-center justify-center h-screen text-foreground">
-        Loading…
+      <div className="flex items-center justify-center h-screen text-foreground/80 child-dashboard-no-zoom">
+        <div className="text-center child-dashboard-container px-4">
+          Loading…
+        </div>
       </div>
     );
   }
   if (!isAuthenticated) return null;
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen text-red-500">
-        Failed to load progress data.
+      <div className="flex items-center justify-center h-screen text-red-500 child-dashboard-no-zoom">
+        <div className="text-center child-dashboard-container px-4">
+          Failed to load progress data.
+        </div>
       </div>
     );
   }
@@ -165,7 +169,7 @@ export default function ProgressDashboard() {
   const practiceMinutes = progress ? progress.totalPracticeTime % 60 : 0;
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
+    <div className="min-h-screen bg-background text-foreground flex child-dashboard-no-zoom">
       {/* Sidebar */}
       <SharedSidebar 
         onFeedbackOpen={() => setShowFeedback(true)} 
@@ -173,12 +177,12 @@ export default function ProgressDashboard() {
       />
 
       {/* Main Content */}
-      <main className="ml-20 w-full">
+      <main className="ml-20 w-full child-dashboard-container">
         {/* Top controls (right) */}
-        <PageHeader className="flex justify-end items-center gap-4 px-5 py-5" />
+        <PageHeader className="flex justify-end items-center gap-4 px-4 sm:px-5 py-4 sm:py-5" />
 
         {/* Date pager pill — Enhanced with better navigation */}
-        <div className="px-5">
+        <div className="px-4 sm:px-5">
           <div className="mx-auto max-w-[600px]">
             <div className="mx-auto h-11 rounded-full bg-neutral-100 dark:bg-muted/30 flex items-center justify-between px-3">
               <button

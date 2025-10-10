@@ -293,13 +293,13 @@ export default function SpeechTherapyPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-4">Please Log In</h2>
+      <div className="min-h-screen bg-background flex items-center justify-center child-dashboard-no-zoom">
+        <div className="text-center child-dashboard-container px-4">
+          <h2 className="text-xl sm:text-2xl font-bold mb-4">Please Log In</h2>
           <p className="text-muted-foreground mb-4">You need to be logged in to access speech games.</p>
           <button
             onClick={() => setLocation('/login')}
-            className="bg-[#ff6b1d] text-white px-6 py-2 rounded-lg hover:bg-[#e55a1a]"
+            className="bg-[#ff6b1d] text-white px-6 py-2 rounded-lg hover:bg-[#e55a1a] child-dashboard-button"
           >
             Go to Login
           </button>
@@ -309,7 +309,7 @@ export default function SpeechTherapyPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background child-dashboard-no-zoom">
       {/* Sidebar */}
       <SharedSidebar 
         onFeedbackOpen={() => setShowFeedback(true)}
@@ -317,9 +317,9 @@ export default function SpeechTherapyPage() {
       />
 
       {/* Main Content */}
-      <main className="ml-20 p-6">
+      <main className="ml-20 p-4 sm:p-6 child-dashboard-container">
         {/* Header */}
-        <PageHeader className="flex justify-end items-center mb-6 -mt-2" />
+        <PageHeader className="flex justify-end items-center mb-4 sm:mb-6 -mt-1 sm:-mt-2" />
 
         {!activeGame ? (
           <>

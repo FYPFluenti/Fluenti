@@ -34,7 +34,6 @@ export default function ChildDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showFeedback, setShowFeedback] = useState(false);
-  const [showChatUI, setShowChatUI] = useState(false);
   const [showVoiceUI, setShowVoiceUI] = useState(false);
   const [listening, setListening] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -88,25 +87,18 @@ export default function ChildDashboard() {
                 />
               </div>
             </div>
-            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Feeling stuck?</h2>
-            <div className="space-y-3 w-full">
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 flex items-center justify-center gap-2">
+              Ready to Practice Speaking? 
+              <Mic className="w-6 h-6 sm:w-7 sm:h-7 text-[#F5B82E]" />
+            </h2>
+            <div className="w-full">
               <button 
                 onClick={() => setShowVoiceUI(true)} 
                 className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-full max-w-sm mx-auto flex items-center justify-between hover:bg-muted transition-all child-dashboard-button"
               >
                 <div>
-                  <h3 className="text-base font-semibold">voice mode</h3>
-                  <p className="text-sm text-muted-foreground">Say Hi to Your Avatar</p>
-                </div>
-                <ArrowRight className="w-5 h-5 flex-shrink-0" />
-              </button>
-              <button 
-                onClick={() => setShowChatUI(true)} 
-                className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-full max-w-sm mx-auto flex items-center justify-between hover:bg-muted transition-all child-dashboard-button"
-              >
-                <div>
-                  <h3 className="text-base font-semibold">text mode</h3>
-                  <p className="text-sm text-muted-foreground">Need a break from talking?</p>
+                  <h3 className="text-base font-semibold">Start Speech Practice</h3>
+                  <p className="text-sm text-muted-foreground">Talk with your AI friend!</p>
                 </div>
                 <ArrowRight className="w-5 h-5 flex-shrink-0" />
               </button>
@@ -118,56 +110,6 @@ export default function ChildDashboard() {
           isOpen={showFeedback} 
           onClose={() => setShowFeedback(false)} 
         />
-
-        {/* Chat UI Modal */}
-        {showChatUI && (
-          <div className="fixed inset-0 bg-background flex">
-            <button
-              onClick={() => setShowChatUI(false)}
-              className="absolute top-4 right-4 z-10 text-muted-foreground hover:text-foreground text-2xl"
-            >
-              ✕
-            </button>
-
-            <div className="w-16 flex-shrink-0 flex flex-col items-center py-6 gap-8 bg-background border-r border-border">
-              <span className="w-8 h-8 rounded-full bg-[#F5B82E]" />
-              <Star className="w-6 h-6 text-muted-foreground" />
-              <Clock className="w-6 h-6 text-muted-foreground" />
-              <ThumbsUp className="w-6 h-6 text-muted-foreground" />
-              <User className="w-6 h-6 text-muted-foreground mt-auto" />
-            </div>
-
-            <div className="flex-1 flex flex-col p-4 sm:p-6 max-w-4xl mx-auto">
-              <div className="flex-1 flex flex-col justify-center mb-6">
-                <div className="flex items-start gap-3 mb-6">
-                  <span className="inline-block w-8 h-8 rounded-full bg-[#F5B82E] flex-shrink-0" />
-                  <div className="bg-muted/40 text-foreground rounded-xl px-4 py-2 shadow-sm max-w-md">
-                    hey there! what's on your mind today?
-                  </div>
-                </div>
-              </div>
-
-              <div className="w-full flex items-center gap-3 border border-border rounded-xl bg-card p-3 shadow-sm">
-                <textarea
-                  placeholder="type your message..."
-                  rows={1}
-                  className="flex-1 resize-none bg-transparent outline-none text-foreground placeholder:text-muted-foreground/70 min-h-[2.5rem]"
-                />
-                <button className="w-8 h-8 sm:w-10 sm:h-10 rounded-full border border-border grid place-items-center text-muted-foreground hover:bg-muted flex-shrink-0">
-                  ✕
-                </button>
-                <button
-                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full grid place-items-center bg-[#F5B82E] flex-shrink-0"
-                  aria-label="send"
-                >
-                  <svg viewBox="0 0 24 24" className="w-4 h-4 sm:w-5 sm:h-5 text-black">
-                    <path fill="currentColor" d="M3 11l18-8-8 18-2-7-8-3z" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Voice UI Modal */}
         {showVoiceUI && (
