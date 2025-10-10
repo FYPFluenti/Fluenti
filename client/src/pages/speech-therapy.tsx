@@ -177,7 +177,7 @@ export default function SpeechTherapyPage() {
   const startGame = (game: any) => {
     if (!game.unlocked) {
       toast({
-        title: "Game Locked 🔒",
+        title: "Game Locked",
         description: `Reach level ${Math.ceil(game.id * 1.5)} to unlock this game!`,
         variant: "default",
       });
@@ -209,7 +209,7 @@ export default function SpeechTherapyPage() {
     }
 
     toast({
-      title: "Game Started! 🎮",
+      title: "Game Started!",
       description: `Beginning ${game.title}. Good luck!`,
     });
   };
@@ -228,7 +228,7 @@ export default function SpeechTherapyPage() {
       }));
 
       toast({
-        title: "Great Job! 🌟",
+        title: "Great Job!",
         description: `Session completed! Score: ${finalScore}, Accuracy: ${accuracy}%`,
       });
     }
@@ -258,12 +258,12 @@ export default function SpeechTherapyPage() {
 
         if (accuracy > 80) {
           toast({
-            title: "Excellent! ⭐",
+            title: "Excellent!",
             description: "Perfect pronunciation!",
           });
         } else {
           toast({
-            title: "Good try! 💪",
+            title: "Good try!",
             description: "Keep practicing, you're improving!",
           });
         }
@@ -328,10 +328,10 @@ export default function SpeechTherapyPage() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-3xl font-bold text-foreground">
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
                       Hi {(user && 'firstName' in user) ? user.firstName : 'there'}! Ready to practice?
                     </h1>
-                    <Sparkles className="w-8 h-8 text-[#ff6b1d]" />
+                    <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-[#ff6b1d]" />
                   </div>
                   <p className="text-lg text-muted-foreground">
                     Choose a game to improve your speech skills

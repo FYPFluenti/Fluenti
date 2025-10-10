@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { Star, ThumbsUp, Clock, Mic, MicOff, User, Gamepad2, LineChart, Smile, Settings, SlidersHorizontal } from "lucide-react";
 import DarkModeToggle from "@/components/DarkModeToggle";
-import FluentiLogo from "@/components/FluentiLogo";
+import FluentiLogo from "@/components/FluentiLogo"; 
 import ModelViewerAvatar from "@/components/ModelViewerAvatar";
 import SharedSidebar from "@/components/layout/SharedSidebar";
 import FeedbackModal from "@/components/layout/FeedbackModel";

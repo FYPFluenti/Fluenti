@@ -859,24 +859,25 @@ export default function Home() {
             </ul>
           </div>
           
-          {/* Copyright */}
-          <div className="text-right">
-            <p className="text-gray-600 text-sm leading-relaxed">
-              © 2025 fluenti inc
-              <br />
-              by samaha munir & fluenti team
-            </p>
-          </div>
           
         </div>
       </div>
     </div>
+    
+    {/* Copyright - Below Footer */}
+    <div className="border-t border-gray-200 py-4">
+      <div className="max-w-7xl mx-auto px-6">
+        <p className="text-center text-gray-600 text-sm">
+          © 2025 fluenti inc by fluenti team
+        </p>
+      </div>
+    </div>
   </footer>
       </div>
-      ); // ✅ Close the return statement for landing page
+      ); // Close the return statement for landing page
   }
 
-  // ✅ FIXED: Dashboard for authenticated users (removed duplicate header)
+  // Dashboard for authenticated users (removed duplicate header)
   const userType = (user as any)?.userType || 'child';
 
   return (
