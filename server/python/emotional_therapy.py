@@ -811,7 +811,7 @@ class CrisisDetector:
         return min(help_score / 5.0, 1.0)
 
     def _detect_crisis_indicators(self, text: str, contexts: Set[str], features: Dict[str, Any]) -> Tuple[float, List[str]]:
-        """Dynamically detect crisis indicators"""
+        """Dynamically detect crisis indicators with explicit suicide/self-harm detection"""
         text_lower = text.lower()
         crisis_score = 0.0
         detected_indicators = []
@@ -822,6 +822,66 @@ class CrisisDetector:
         # Emotional intensity analysis
         intensity_multiplier = 1.0 + (features['intensity_words'] * 0.2)
         temporal_urgency = 1.0 + (features['temporal_words'] * 0.3)
+
+        # CRITICAL: Explicit suicide/self-harm detection patterns
+        critical_patterns = {
+            'suicide_explicit': {
+                'patterns': ['kill myself', 'end my life', 'take my life', 'suicide', 'suicidal', 
+                           'want to die', 'wanna die', 'wish i was dead', 'better off dead',
+                           'should be dead', 'going to kill myself', 'plan to die',
+                           'feel like dying', 'wanna just die', 'ill kill myself', 'i will kill myself',
+                           'dying', 'just die', 'want death', 'wanna be dead'],
+                'score': 10.0,  # Immediate critical level
+                'variations': ['kill my self', 'end my own life', 'want to dies', 'wanna dies',
+                              'feel like dieing', 'feeling like dying', 'want 2 die', 'wanna 2 die',
+                              'gunna kill myself', 'gonna kill myself']
+            },
+            'self_harm_explicit': {
+                'patterns': ['cut myself', 'hurt myself', 'harm myself', 'self harm', 'cutting',
+                           'overdose', 'pills', 'razor', 'blade', 'cut my wrists'],
+                'score': 8.0,  # High level
+                'variations': []
+            },
+            'method_specific': {
+                'patterns': ['hanging', 'jump off', 'bridge', 'gun', 'poison', 'rope'],
+                'score': 12.0,  # Extremely critical - specific methods
+                'variations': []
+            },
+            'immediate_intent': {
+                'patterns': ['right now', 'tonight', 'today', 'going to do it', 'ready to',
+                           'have decided', 'made up my mind', 'plan is', 'will do it'],
+                'score': 15.0,  # Maximum critical - immediate action
+                'variations': []
+            }
+        }
+
+        # Check for critical patterns first
+        for pattern_type, pattern_data in critical_patterns.items():
+            all_patterns = pattern_data['patterns'] + pattern_data['variations']
+            for pattern in all_patterns:
+                if pattern in text_lower:
+                    crisis_score += pattern_data['score']
+                    detected_indicators.append(f"🚨 {pattern} (CRITICAL: {pattern_type})")
+                    print(f"🚨 CRITICAL PATTERN DETECTED: '{pattern}' in '{text}' (Score: +{pattern_data['score']})")
+
+        # Enhanced flexible pattern matching for variations
+        flexible_crisis_patterns = [
+            # Match variations of "want to die" / "wanna die"
+            (r'\b(wanna?|want\s+to)\s+\w*\s*die\b', 12.0, 'flexible_suicide_intent'),
+            # Match "feel like dying" variations  
+            (r'\bfeel\w*\s+like\s+dyin[g]?\b', 12.0, 'flexible_dying_feeling'),
+            # Match "kill myself" variations
+            (r'\b(i?ll|will|gonna|going\s+to)?\s*kill\s+(my)?self\b', 12.0, 'flexible_kill_self'),
+            # Match death wishes
+            (r'\b(wish|want)\w*\s+(i\s+)?(was|were)\s+dead\b', 10.0, 'flexible_death_wish'),
+        ]
+
+        import re
+        for pattern_regex, score, pattern_name in flexible_crisis_patterns:
+            if re.search(pattern_regex, text_lower, re.IGNORECASE):
+                crisis_score += score
+                detected_indicators.append(f"🚨 FLEXIBLE MATCH: {pattern_name} (Score: +{score})")
+                print(f"🚨 FLEXIBLE CRISIS PATTERN: '{pattern_regex}' matched in '{text}' (Score: +{score})")
 
         # Learn crisis patterns dynamically
         crisis_patterns = {
@@ -907,14 +967,14 @@ class CrisisDetector:
         if self.current_user['time_of_day'] in ['night', 'early_morning']:
             crisis_score *= 1.1  # Slightly higher concern during vulnerable hours
 
-        # Determine level based on score
-        if crisis_score >= 8.0:
+        # Determine level based on score - FIXED: More appropriate thresholds
+        if crisis_score >= 10.0:  # Critical patterns (suicide/self-harm)
             return CrisisLevel.CRITICAL
-        elif crisis_score >= 5.0:
+        elif crisis_score >= 7.0:  # High risk patterns
             return CrisisLevel.HIGH
-        elif crisis_score >= 2.5:
+        elif crisis_score >= 3.0:  # Medium concern patterns
             return CrisisLevel.MEDIUM
-        elif crisis_score >= 1.0:
+        elif crisis_score >= 1.0:  # Low concern patterns
             return CrisisLevel.LOW
         else:
             return CrisisLevel.NONE

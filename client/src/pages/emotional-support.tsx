@@ -187,16 +187,31 @@ Your wellbeing is important.`,
                   
                   {/* AI response */}
                   <div className="flex justify-start">
-                    <div className={`px-4 py-2 rounded-lg max-w-[80%] ${
+                    <div className={`px-4 py-3 rounded-xl max-w-[80%] ${
                       message.isCrisis 
-                        ? 'bg-red-50 border border-red-200' 
+                        ? 'bg-gradient-to-br from-red-25 via-red-50 to-red-25 border border-red-200/60 shadow-md backdrop-blur-sm' 
                         : 'bg-muted'
                     }`}>
                       {/* Crisis alert */}
                       {message.isCrisis && (
-                        <div className="flex items-center gap-2 mb-2 text-red-600">
-                          <AlertTriangle className="w-4 h-4" />
-                          <span className="text-xs font-medium">URGENT SUPPORT NEEDED</span>
+                        <div className="relative mb-4 p-4 bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-xl shadow-sm overflow-hidden">
+                          {/* Subtle animated background */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-100/20 to-transparent animate-pulse" />
+                          
+                          {/* Content */}
+                          <div className="relative flex items-start gap-3">
+                            <div className="flex-shrink-0 p-2 bg-red-100 rounded-full border border-red-200">
+                              <AlertTriangle className="w-5 h-5 text-red-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm font-semibold text-red-800 mb-1">
+                                Urgent Support Needed
+                              </h4>
+                              <p className="text-xs text-red-700/90 leading-relaxed">
+                                Crisis support resources are available 24/7. You don't have to face this alone.
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       )}
                       
@@ -207,13 +222,19 @@ Your wellbeing is important.`,
                           {message.timestamp.toLocaleTimeString()}
                         </p>
                         {message.crisisLevel && message.crisisLevel !== 'none' && (
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            message.crisisLevel === 'critical' ? 'bg-red-100 text-red-800' :
-                            message.crisisLevel === 'high' ? 'bg-orange-100 text-orange-800' :
-                            message.crisisLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-blue-100 text-blue-800'
+                          <span className={`inline-flex items-center text-xs px-2.5 py-1 rounded-full font-medium border ${
+                            message.crisisLevel === 'critical' ? 'bg-red-100 text-red-800 border-red-200' :
+                            message.crisisLevel === 'high' ? 'bg-orange-100 text-orange-800 border-orange-200' :
+                            message.crisisLevel === 'medium' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                            'bg-blue-100 text-blue-800 border-blue-200'
                           }`}>
-                            {message.crisisLevel}
+                            <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                              message.crisisLevel === 'critical' ? 'bg-red-500' :
+                              message.crisisLevel === 'high' ? 'bg-orange-500' :
+                              message.crisisLevel === 'medium' ? 'bg-yellow-500' :
+                              'bg-blue-500'
+                            }`} />
+                            {message.crisisLevel.charAt(0).toUpperCase() + message.crisisLevel.slice(1)}
                           </span>
                         )}
                       </div>
@@ -228,8 +249,17 @@ Your wellbeing is important.`,
         {/* Input */}
         <div className="space-y-2">
           {/* Crisis Resources Banner */}
-          <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded text-center">
-            <strong>Crisis Resources:</strong> 988 (Suicide & Crisis Lifeline) • 911 (Emergency)
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-3">
+            <div className="flex items-center justify-center gap-2 text-xs">
+              <Heart className="w-3 h-3 text-blue-600" />
+              <span className="text-blue-800">
+                <span className="font-medium">Crisis Resources:</span>
+                <span className="mx-2">•</span>
+                <span className="font-semibold">988</span> <span className="text-blue-600">(Crisis Lifeline)</span>
+                <span className="mx-2">•</span>  
+                <span className="font-semibold">911</span> <span className="text-blue-600">(Emergency)</span>
+              </span>
+            </div>
           </div>
           
           <div className="flex gap-2">
