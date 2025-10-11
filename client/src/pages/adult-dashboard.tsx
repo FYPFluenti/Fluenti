@@ -1,12 +1,13 @@
 import { useAuth } from "@/hooks/useAuth";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, Link } from "wouter";
-import { Home, BarChart, History, MessageSquare, User, Settings, SlidersHorizontal, ArrowRight, Sun, Moon } from "lucide-react";
-import { LogoutButton } from "@/components/auth/LogoutButton";
+import { ArrowRight, SlidersHorizontal, User } from "lucide-react";
 import { motion } from "framer-motion";
 import { Star, ThumbsUp, Clock, Mic, MicOff } from "lucide-react";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import { AdultSettings } from "@/components/dashboard/AdultSettings";
+import SharedSidebarEmotional from "@/components/layout/SharedSidebarEmotional";
+import FeedbackModal from "@/components/layout/FeedbackModel";
 
 interface User {
   firstName?: string;
@@ -22,7 +23,6 @@ export default function AdultDashboard() {
   const [, setLocation] = useLocation();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
-  const [feedback, setFeedback] = useState("");
   const [showFeedback, setShowFeedback] = useState(false);
   const [showVoiceUI, setShowVoiceUI] = useState(false);
   const [listening, setListening] = useState(false);
@@ -34,28 +34,13 @@ export default function AdultDashboard() {
   // Note: Emotional Support Chat functionality moved to /emotional-support page
   // These states are kept for potential future use but chat UI removed
 
-  const hideTimer = useRef<NodeJS.Timeout | null>(null);
   const therapyRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
   const motivationRef = useRef<HTMLDivElement>(null);
 
-  const [hovered, setHovered] = useState<string | null>(null);
-
-  const scrollToRef = (ref: React.RefObject<HTMLDivElement>) => {
-    if (ref.current) {
-      ref.current.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
   const handleLanguageChange = (val: 'en' | 'ur') => {
     setLanguage(val);
     localStorage.setItem('language', val);  // Persist for modes
-  };
-
-  const submitFeedback = () => {
-    // TODO: send to your API
-    setShowFeedback(false);
-    setFeedback("");
   };
 
   useEffect(() => {
@@ -80,84 +65,10 @@ export default function AdultDashboard() {
   return (
     <div className="min-h-screen font-sans flex bg-background text-foreground">
       {/* Sidebar */}
-      <aside className="w-20 bg-background flex flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-50 border-r border-border">
-        <div className="w-6 h-6 rounded-full bg-blue-500" />
-
-        {/* Sidebar Buttons */}
-        {[
-          { icon: Home, label: "Home", id: "home", path: "/adult-dashboard" },
-          { icon: BarChart, label: "Insight", id: "insight", path: "/adult-insights" },
-          { icon: History, label: "History", id: "history", path: "/adult-history" },
-          { icon: MessageSquare, label: "Feedback", id: "feedback" },
-        ].map(({ icon: Icon, label, id, path }) => (
-          <div
-            key={id}
-            onMouseEnter={() => setHovered(id)}
-            onMouseLeave={() => setHovered(null)}
-            className="relative group"
-          >
-            <button
-              onClick={() =>
-                id === "feedback"
-                  ? setShowFeedback(true)
-                  : path
-                    ? setLocation(path)
-                    : undefined
-              }
-              className={`w-10 h-10 flex items-center justify-center rounded-xl transition ${
-                hovered === id ? "bg-muted" : ""
-              }`}
-              aria-label={label}
-            >
-              <Icon className="text-foreground w-7 h-7" />
-            </button>
-
-            {hovered === id && (
-              <motion.div
-                initial={{ opacity: 0, x: 5 }}
-                animate={{ opacity: 1, x: 12 }}
-                exit={{ opacity: 0, x: 5 }}
-                className="absolute left-[38px] bottom-0 bg-popover text-popover-foreground px-4 py-2 rounded-lg shadow-md border border-border z-10 w-30 space-y-1"
-              >
-                {label}
-              </motion.div>
-            )}
-          </div>
-        ))}
-
-        <div className="flex-1" />
-
-        <div className="relative" onMouseEnter={() => { if (hideTimer.current) clearTimeout(hideTimer.current); setShowUserMenu(true); }} onMouseLeave={() => { hideTimer.current = setTimeout(() => setShowUserMenu(false), 200); }}>
-          <button 
-            className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-muted transition"
-            aria-label="User menu"
-            title="User menu"
-          >
-            <User className="w-7 h-7 text-foreground" aria-hidden="true" />
-          </button>
-
-          {showUserMenu && (
-            <div className="absolute left-12 bottom-0 w-48 bg-popover border border-border rounded-xl shadow-lg p-3 z-50">
-              <div className="space-y-1">
-                <button 
-                  onClick={() => { 
-                    setShowAdultSettings(true); 
-                    setShowUserMenu(false); 
-                  }}
-                  className="w-full flex items-center gap-3 px-3 py-3 text-foreground font-medium hover:bg-muted rounded-lg transition"
-                >
-                  <Settings className="w-4 h-4" />
-                  <span>settings</span>
-                </button>
-                
-                <div className="border-t border-border pt-1 mt-1">
-                  <LogoutButton className="w-full px-3 py-3 text-base text-left hover:bg-muted text-foreground font-medium flex items-center gap-3 rounded-lg" />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </aside>
+      <SharedSidebarEmotional 
+        onFeedbackOpen={() => setShowFeedback(true)}
+        currentPage="home"
+      />
 
       {/* Main Content */}
       <main className="ml-20 px-6 pb-24 w-full">
@@ -310,39 +221,11 @@ export default function AdultDashboard() {
           </>
         )}
 
-        {showFeedback && (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="w-[500px] max-w-[92vw] rounded-2xl bg-popover border border-border shadow-2xl">
-              {/* Textarea */}
-              <div className="p-6">
-                <textarea
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                  placeholder="how can we improve calmi?"
-                  className="w-full h-32 resize-none rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground/70 p-4 focus:outline-none focus:ring-0 focus:border-border shadow-inner"
-                />
-              </div>
-
-              {/* Footer buttons */}
-              <div className="flex items-center justify-between px-6 pb-6">
-                <button
-                  onClick={() => { setShowFeedback(false); setFeedback(""); }}
-                  className="px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted transition"
-                >
-                  cancel
-                </button>
-                <button
-                  onClick={submitFeedback}
-                  disabled={!feedback.trim()}
-                  className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary/90 disabled:opacity-50 transition"
-                  style={{ backgroundColor: "hsl(27, 95%, 61%)" }} // soft orange
-                >
-                  submit
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Feedback Modal */}
+        <FeedbackModal 
+          isOpen={showFeedback} 
+          onClose={() => setShowFeedback(false)} 
+        />
 
         {showVoiceUI && (
           <div className="fixed inset-0 bg-background flex">
