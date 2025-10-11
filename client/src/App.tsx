@@ -12,6 +12,7 @@ import GuardianDashboard from "@/pages/guardian-dashboard";
 import SpeechTherapy from "@/pages/speech-therapy";
 import ProgressDashboard from "@/pages/progress-dashboard";
 import EmotionalSupport from "@/pages/emotional-support";
+import EmotionalSupportVoice from "@/pages/emotional-support-voice";
 import Assessment from "@/pages/assessment";
 import Achievements from "@/pages/achievements";
 import Settings from "@/pages/settings";
@@ -74,6 +75,12 @@ export default function App() {
             <Route path="/emotional-support">
               <ProtectedRoute allowedUserTypes={['adult']}>
                 <EmotionalSupport />
+              </ProtectedRoute>
+            </Route>
+            
+            <Route path="/emotional-support-voice">
+              <ProtectedRoute allowedUserTypes={['adult']}>
+                <EmotionalSupportVoice />
               </ProtectedRoute>
             </Route>
             
