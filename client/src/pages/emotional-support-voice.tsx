@@ -1,7 +1,13 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ThreeAvatar } from '@/components/ui/three-avatar';
+import ModelViewerAvatar from '@/components/ModelViewerAvatar';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition_simple';
+import SharedSidebarEmotional from '@/components/layout/SharedSidebarEmotional';
+import FeedbackModal from '@/components/layout/FeedbackModel';
+
+const avatarUrls = {
+  casual: "https://models.readyplayer.me/68aa261a75e83eeb00564816.glb",  // Professional male
+};
 
 const EmotionalSupportVoice = () => {
   const language = localStorage.getItem('language') || 'en';
@@ -9,6 +15,7 @@ const EmotionalSupportVoice = () => {
   const [history, setHistory] = useState<{ user: string; ai: string }[]>([]);
   const [emotion, setEmotion] = useState('');
   const [response, setResponse] = useState('');
+  const [showFeedback, setShowFeedback] = useState(false);
   const { startRecording, stopRecording, isRecording } = useSpeechRecognition();
 
   const handleRecordStop = async (blob: Blob) => {
@@ -32,34 +39,56 @@ const EmotionalSupportVoice = () => {
   };
 
   return (
-    <div className="h-screen flex flex-col">
-      <div className="flex-1 p-4">
-        <ThreeAvatar 
-          isListening={isRecording}
-          currentMessage={response}
-          language={supportLanguage}
-        />
-      </div>
-      
-      
-      <div className="p-4 bg-gray-100">
-        <div className="max-w-md mx-auto">
-          <Button 
-            onClick={() => isRecording ? stopRecording(handleRecordStop) : startRecording()}
-            className={`w-full ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-500 hover:bg-blue-600'}`}
-            size="lg"
-          >
-            {isRecording ? 'Stop Speaking' : 'Start Speaking'}
-          </Button>
-          
-          {response && (
-            <div className="mt-4 p-3 bg-white rounded-lg shadow">
-              <p className="text-sm text-gray-600">Last response:</p>
-              <p className="text-gray-800">{response}</p>
-            </div>
-          )}
+    <div className="h-screen flex bg-background">
+      {/* Sidebar */}
+      <SharedSidebarEmotional 
+        onFeedbackOpen={() => setShowFeedback(true)}
+        currentPage="voice"
+      />
+
+      {/* Main Content */}
+      <div className="ml-20 flex-1 flex flex-col">
+        <div className="flex-1 p-4 flex items-center justify-center">
+          <div className="text-center">
+            <ModelViewerAvatar
+              avatarUrl={avatarUrls.casual}
+              size="large"
+              className="mx-auto mb-8"
+            />
+            
+            {isRecording && (
+              <div className="mt-4 text-[#ff6b1d] font-semibold animate-pulse">
+                Listening...
+              </div>
+            )}
+            
+            {response && (
+              <div className="mt-4 p-4 bg-card border border-border rounded-xl shadow-lg max-w-lg mx-auto">
+                <p className="text-sm text-muted-foreground mb-2">AI Response:</p>
+                <p className="text-foreground text-lg">{response}</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        <div className="p-4 bg-muted border-t border-border">
+          <div className="max-w-md mx-auto">
+            <Button 
+              onClick={() => isRecording ? stopRecording(handleRecordStop) : startRecording()}
+              className={`w-full ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-[#ff6b1d] hover:bg-[#e55a1a]'}`}
+              size="lg"
+            >
+              {isRecording ? 'Stop Speaking' : 'Start Speaking'}
+            </Button>
+          </div>
         </div>
       </div>
+
+      {/* Feedback Modal */}
+      <FeedbackModal 
+        isOpen={showFeedback} 
+        onClose={() => setShowFeedback(false)} 
+      />
     </div>
   );
 };
