@@ -79,7 +79,7 @@ export default function SpeechTherapyPage() {
       id: 2,
       title: "Sound Recognition",
       description: "Listen and identify different speech sounds",
-      emoji: "�",
+      emoji: "👂",
       difficulty: "Easy", 
       duration: "8 min",
       stars: userStats.level >= 2 ? 2 : 0,
@@ -92,7 +92,7 @@ export default function SpeechTherapyPage() {
       id: 3,
       title: "Sentence Building",
       description: "Create complete sentences with proper pronunciation",
-      emoji: "�️",
+      emoji: "🏗️",
       difficulty: "Medium",
       duration: "15 min", 
       stars: userStats.level >= 3 ? 1 : 0,
@@ -312,7 +312,7 @@ export default function SpeechTherapyPage() {
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h1 className="text-3xl font-bold text-foreground mb-2">
-                    Hi {(user && 'firstName' in user) ? user.firstName : 'there'}! Ready to practice? �
+                    Hi {(user && 'firstName' in user) ? user.firstName : 'there'}! Ready to practice? 🎯
                   </h1>
                   <p className="text-lg text-muted-foreground">
                     Choose a game to improve your speech skills
@@ -490,11 +490,11 @@ export default function SpeechTherapyPage() {
               <div className="bg-card border border-border rounded-xl p-8 text-center">
                 <div className="mb-8">
                   <div className="text-8xl mb-4">
-                    {practiceWords.find((w: any) => w.word === currentWord)?.image || '💬'}
+                    {practiceWords.find(w => w.word === currentWord)?.image || '💬'}
                   </div>
                   <h2 className="text-4xl font-bold mb-2">{currentWord}</h2>
                   <p className="text-xl text-muted-foreground mb-6">
-                    {practiceWords.find((w: any) => w.word === currentWord)?.phonetic}
+                    {practiceWords.find(w => w.word === currentWord)?.phonetic}
                   </p>
                   
                   <div className="space-y-4 max-w-md mx-auto">
