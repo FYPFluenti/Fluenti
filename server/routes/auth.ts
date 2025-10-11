@@ -132,7 +132,113 @@ router.post('/google', async (req: Request, res: Response) => {
 });
 
 // Facebook OAuth Signup/Login
-router.post('/facebook', async (req: Request, res: Response) => {
+// Google OAuth handler function
+const handleGoogleAuth = async (req: Request, res: Response) => {
+  try {
+    const { credential, userType, language } = req.body;
+    
+    if (!credential) {
+      return res.status(400).json({
+        success: false,
+        message: 'Google credential is required'
+      });
+    }
+    
+    // Verify Google JWT token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID,
+    });
+    
+    const payload = ticket.getPayload();
+    if (!payload) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Google token'
+      });
+    }
+    
+    const googleId = payload.sub;
+    const email = payload.email!;
+    const firstName = payload.given_name || 'User';
+    const lastName = payload.family_name || '';
+    const picture = payload.picture;
+    
+    // Check if user already exists
+    let user = await User.findOne({ 
+      $or: [
+        { email: email },
+        { googleId: googleId }
+      ]
+    });
+    
+    if (user) {
+      // Update existing user with Google ID if not present
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
+      
+      const authToken = generateAuthToken(user._id);
+      return res.json({
+        success: true,
+        user: createUserResponse(user),
+        authToken: authToken,
+        message: 'Successfully signed in with Google'
+      });
+    }
+    
+    // For new users, require userType and language
+    if (!userType || !language) {
+      return res.status(400).json({
+        success: false,
+        message: 'User type and language are required for new users',
+        needsProfileInfo: true,
+        tempUserData: {
+          email,
+          firstName,
+          lastName,
+          picture,
+          googleId
+        }
+      });
+    }
+    
+    // Create new user
+    user = new User({
+      firstName,
+      lastName,
+      email,
+      googleId,
+      profilePicture: picture,
+      userType,
+      language,
+      emailVerified: true,
+      signupMethod: 'google'
+    });
+    
+    await user.save();
+    
+    const authToken = generateAuthToken(user._id);
+    
+    res.json({
+      success: true,
+      user: createUserResponse(user),
+      authToken: authToken,
+      message: 'Account created successfully with Google'
+    });
+    
+  } catch (error) {
+    console.error('Google auth error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Google authentication failed. Please try again.'
+    });
+  }
+};
+
+// Facebook OAuth handler function  
+const handleFacebookAuth = async (req: Request, res: Response) => {
   try {
     const { accessToken, userID, userType, language } = req.body;
     
@@ -240,6 +346,10 @@ router.post('/facebook', async (req: Request, res: Response) => {
       message: 'Facebook authentication failed. Please try again.'
     });
   }
-});
+};
+
+// Add route aliases for frontend compatibility
+router.post('/google-signup', handleGoogleAuth);
+router.post('/facebook-signup', handleFacebookAuth);
 
 export default router;
