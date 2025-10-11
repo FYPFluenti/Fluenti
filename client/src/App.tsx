@@ -15,6 +15,7 @@ import EmotionalSupport from "@/pages/emotional-support";
 import Assessment from "@/pages/assessment";
 import Achievements from "@/pages/achievements";
 import Settings from "@/pages/settings";
+import VoiceModel from "@/pages/voice-model";
 
 // Protected Route Component
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -91,6 +92,12 @@ export default function App() {
             <Route path="/settings">
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            </Route>
+            
+            <Route path="/voice-model">
+              <ProtectedRoute allowedUserTypes={['child']}>
+                <VoiceModel />
               </ProtectedRoute>
             </Route>
             
