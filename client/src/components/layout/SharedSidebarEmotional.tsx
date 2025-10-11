@@ -25,10 +25,10 @@ export default function SharedSidebarEmotional({ onFeedbackOpen, currentPage }: 
   const sidebarItems = [
     { 
       icon: LineChart, 
-      label: "progress", 
-      id: "progress", 
-      path: "/progress-dashboard",
-      isActive: currentPage === "progress"
+      label: "history", 
+      id: "history", 
+      path: "/adult-history",
+      isActive: currentPage === "history"
     },
     { 
       icon: Smile, 
