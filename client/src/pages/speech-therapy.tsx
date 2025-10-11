@@ -19,7 +19,17 @@ import {
   RotateCcw,
   CheckCircle,
   ArrowRight,
-  Headphones
+  Headphones,
+  MessageSquare,
+  Ear,
+  Construction,
+  Music,
+  BookOpen,
+  Bolt,
+  Cat,
+  Dog,
+  Home,
+  Bug
 } from 'lucide-react';
 
 import SharedSidebar from '@/components/layout/SharedSidebar';
@@ -46,10 +56,10 @@ export default function SpeechTherapyPage() {
   const [isListening, setIsListening] = useState(false);
   const [currentWord, setCurrentWord] = useState('');
   const [practiceWords] = useState([
-    { word: 'CAT', phonetic: '/kæt/', difficulty: 1, image: '🐱' },
-    { word: 'DOG', phonetic: '/dɔːg/', difficulty: 1, image: '🐶' },
-    { word: 'HOUSE', phonetic: '/haʊs/', difficulty: 2, image: '🏠' },
-    { word: 'BUTTERFLY', phonetic: '/ˈbʌtərflaɪ/', difficulty: 3, image: '🦋' }
+    { word: 'CAT', phonetic: '/kæt/', difficulty: 1, icon: Cat },
+    { word: 'DOG', phonetic: '/dɔːg/', difficulty: 1, icon: Dog },
+    { word: 'HOUSE', phonetic: '/haʊs/', difficulty: 2, icon: Home },
+    { word: 'BUTTERFLY', phonetic: '/ˈbʌtərflaɪ/', difficulty: 3, icon: Bug }
   ]);
 
   const [userStats, setUserStats] = useState({
@@ -66,7 +76,7 @@ export default function SpeechTherapyPage() {
       id: 1,
       title: "Word Practice",
       description: "Practice pronouncing common words clearly and correctly",
-      emoji: "💬",
+      icon: MessageSquare,
       difficulty: "Easy",
       duration: "10 min",
       stars: userStats.level >= 1 ? 3 : 0,
@@ -79,7 +89,7 @@ export default function SpeechTherapyPage() {
       id: 2,
       title: "Sound Recognition",
       description: "Listen and identify different speech sounds",
-      emoji: "👂",
+      icon: Ear,
       difficulty: "Easy", 
       duration: "8 min",
       stars: userStats.level >= 2 ? 2 : 0,
@@ -92,7 +102,7 @@ export default function SpeechTherapyPage() {
       id: 3,
       title: "Sentence Building",
       description: "Create complete sentences with proper pronunciation",
-      emoji: "🏗️",
+      icon: Construction,
       difficulty: "Medium",
       duration: "15 min", 
       stars: userStats.level >= 3 ? 1 : 0,
@@ -105,7 +115,7 @@ export default function SpeechTherapyPage() {
       id: 4,
       title: "Rhythm Training",
       description: "Practice speech rhythm and timing patterns",
-      emoji: "🎵",
+      icon: Music,
       difficulty: "Medium",
       duration: "12 min",
       stars: userStats.level >= 4 ? 2 : 0,
@@ -118,7 +128,7 @@ export default function SpeechTherapyPage() {
       id: 5,
       title: "Story Reading",
       description: "Read short stories with proper expression and clarity",
-      emoji: "📚",
+      icon: BookOpen,
       difficulty: "Hard",
       duration: "20 min",
       stars: 0,
@@ -131,7 +141,7 @@ export default function SpeechTherapyPage() {
       id: 6,
       title: "Quick Sounds",
       description: "Fast-paced pronunciation challenges for confident speakers",
-      emoji: "⚡",
+      icon: Bolt,
       difficulty: "Hard",
       duration: "18 min",
       stars: 0,
@@ -400,7 +410,11 @@ export default function SpeechTherapyPage() {
                       </div>
                     )}
                     
-                    <div className="text-4xl mb-3 text-center">{game.emoji}</div>
+                    <div className="flex justify-center mb-3">
+                      <div className="w-16 h-16 rounded-xl bg-[#ff6b1d]/10 flex items-center justify-center">
+                        <game.icon className="w-8 h-8 text-[#ff6b1d]" />
+                      </div>
+                    </div>
                     <h3 className="text-lg font-bold text-center mb-2">{game.title}</h3>
                     <p className="text-sm text-muted-foreground text-center">
                       {game.description}
@@ -489,8 +503,13 @@ export default function SpeechTherapyPage() {
             {activeGame.type === 'interactive' && (
               <div className="bg-card border border-border rounded-xl p-8 text-center">
                 <div className="mb-8">
-                  <div className="text-8xl mb-4">
-                    {practiceWords.find(w => w.word === currentWord)?.image || '💬'}
+                  <div className="flex justify-center mb-4">
+                    <div className="w-32 h-32 rounded-2xl bg-[#ff6b1d]/10 flex items-center justify-center">
+                      {(() => {
+                        const WordIcon = practiceWords.find(w => w.word === currentWord)?.icon || MessageSquare;
+                        return <WordIcon className="w-16 h-16 text-[#ff6b1d]" />;
+                      })()}
+                    </div>
                   </div>
                   <h2 className="text-4xl font-bold mb-2">{currentWord}</h2>
                   <p className="text-xl text-muted-foreground mb-6">
