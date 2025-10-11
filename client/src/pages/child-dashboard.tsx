@@ -7,6 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Star, ThumbsUp, Clock, Mic, MicOff, User, Gamepad2, LineChart, Smile, Settings, SlidersHorizontal } from "lucide-react";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import FluentiLogo from "@/components/FluentiLogo";
+import voiceModel from "./voice-model";
 import ModelViewerAvatar from "@/components/ModelViewerAvatar";
 import SharedSidebar from "@/components/layout/SharedSidebar";
 import FeedbackModal from "@/components/layout/FeedbackModel";
@@ -90,7 +91,7 @@ export default function ChildDashboard() {
             <h2 className="text-2xl font-bold mb-4">Feeling stuck?</h2>
             <div className="space-y-3">
               <button 
-                onClick={() => setShowVoiceUI(true)} 
+                onClick={() => setLocation('/voice-model')} 
                 className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all"
               >
                 <div>
@@ -99,7 +100,7 @@ export default function ChildDashboard() {
                 </div>
                 <ArrowRight className="w-5 h-5" />
               </button>
-              <button 
+              {/* <button 
                 onClick={() => setShowChatUI(true)} 
                 className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all"
               >
@@ -108,7 +109,7 @@ export default function ChildDashboard() {
                   <p className="text-sm text-muted-foreground">Need a break from talking?</p>
                 </div>
                 <ArrowRight className="w-5 h-5" />
-              </button>
+              </button> */}
             </div>
           </motion.div>
         </section>
@@ -167,74 +168,7 @@ export default function ChildDashboard() {
         )}
 
         {/* Voice UI Modal */}
-        {showVoiceUI && (
-          <div className="fixed inset-0 bg-background flex">
-            <button
-              onClick={() => { setListening(false); setShowVoiceUI(false); }}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
-              aria-label="Close voice chat"
-            >
-              ✕
-            </button>
-
-            <aside className="w-16 shrink-0 border-r border-border bg-background flex flex-col items-center py-6 gap-8">
-              <span className="w-8 h-8 rounded-full bg-[#F5B82E]" />
-              <Star className="w-6 h-6 text-muted-foreground" />
-              <Clock className="w-6 h-6 text-muted-foreground" />
-              <ThumbsUp className="w-6 h-6 text-muted-foreground" />
-              <User className="w-6 h-6 text-muted-foreground mt-auto" />
-            </aside>
-
-            <main className="flex-1 grid place-items-center p-6">
-              <div className="flex flex-col items-center gap-8">
-                <div className="relative">
-                  <div className="absolute inset-0 -m-3 rounded-full border-4 border-cyan-300/90 blur-[0.3px]" />
-                  <div className="relative rounded-full overflow-hidden bg-[#1f2028] w-56 h-56 sm:w-72 sm:h-72 md:w-80 md:h-80">
-                    <div className="absolute inset-0 w-full h-full">
-
-<ModelViewerAvatar
-  avatarUrl={avatarUrls.professional}
-  size="large"
-  className="absolute inset-0 w-full h-full"
-  //animate={true}
-/>
-</div>
-                  </div>
-                </div>
-
-                <div className="w-full max-w-lg border border-border rounded-xl bg-card p-4 shadow-sm flex items-center justify-between gap-3">
-                  <div className="flex flex-col">
-                    <span className="text-sm font-medium">
-                      {listening ? "Listening…" : "Ready to talk"}
-                    </span>
-                    <span className="text-xs text-muted-foreground">
-                      {listening ? "Speak to your AI avatar" : "Tap the mic to start"}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setListening(false)}
-                      className="w-10 h-10 rounded-full border border-border grid place-items-center text-muted-foreground hover:bg-muted"
-                      aria-label="stop listening"
-                      title="stop listening"
-                    >
-                      ✕
-                    </button>
-                    <button
-                      onClick={() => setListening(v => !v)}
-                      className="w-12 h-12 rounded-full grid place-items-center bg-[#F5B82E] hover:brightness-95 transition"
-                      aria-label="toggle microphone"
-                      title="toggle microphone"
-                    >
-                      {listening ? <Mic className="w-5 h-5 text-black" /> : <MicOff className="w-5 h-5 text-black" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </main>
-          </div>
-        )}
+        
       </main>
     </div>
   );
