@@ -4,9 +4,12 @@ import ModelViewerAvatar from '@/components/ModelViewerAvatar';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition_simple';
 import SharedSidebarEmotional from '@/components/layout/SharedSidebarEmotional';
 import FeedbackModal from '@/components/layout/FeedbackModel';
+import PageHeader from '@/components/layout/PageHeader';
 
 const avatarUrls = {
-  casual: "https://models.readyplayer.me/68aa261a75e83eeb00564816.glb",  // Professional male
+ therapist: "https://models.readyplayer.me/68ab4a2c3f2023411197a0fa.glb" ,
+  professional: "https://models.readyplayer.me/68ab4ab5e05b84c2efb26767.glb", 
+  casual: "https://models.readyplayer.me/68aa261a75e83eeb00564816.glb",  
 };
 
 const EmotionalSupportVoice = () => {
@@ -48,10 +51,12 @@ const EmotionalSupportVoice = () => {
 
       {/* Main Content */}
       <div className="ml-20 flex-1 flex flex-col">
+        <PageHeader />
+        
         <div className="flex-1 p-4 flex items-center justify-center">
           <div className="text-center">
             <ModelViewerAvatar
-              avatarUrl={avatarUrls.casual}
+              avatarUrl={avatarUrls.therapist}
               size="large"
               className="mx-auto mb-8"
             />
