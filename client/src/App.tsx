@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
+import OnboardingPage from "@/pages/onboarding";
 import ChildDashboard from "@/pages/child-dashboard";
 import AdultDashboard from "@/pages/adult-dashboard";
 import GuardianDashboard from "@/pages/guardian-dashboard";
@@ -39,6 +40,13 @@ export default function App() {
             <Route path="/" component={Home} />
             <Route path="/login" component={Login} />
             <Route path="/signup" component={Signup} />
+            
+            {/* Onboarding Route */}
+            <Route path="/onboarding">
+              <ProtectedRoute>
+                <OnboardingPage />
+              </ProtectedRoute>
+            </Route>
             
             {/* Protected Dashboard Routes */}
             <Route path="/child-dashboard">

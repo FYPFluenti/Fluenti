@@ -112,6 +112,70 @@ const UserProgressSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now }
 });
 
+// Child Onboarding Schema
+const ChildOnboardingSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  userId: { type: String, required: true, ref: 'User' },
+  childBirthYear: { type: Number, required: true },
+  
+  // Child Information
+  childName: { type: String },
+  childGender: { 
+    type: String, 
+    enum: ['girl', 'boy'], 
+  },
+  childBirthDate: { type: Date },
+  
+  // Interests
+  interests: [{
+    type: String,
+    enum: ['animals', 'nature', 'vehicles', 'books', 'dinosaurs', 'music', 'space', 'robots', 'colors', 'numbers', 'shapes', 'food', 'jobs']
+  }],
+  
+  // Assessment Data
+  vocabularyLevel: {
+    type: String,
+    enum: ['0-words', '1-5-words', '6-10-words', '11-50-words', '50+-words', 'cant-tell']
+  },
+  
+  seekingSpeechTherapy: { type: Boolean },
+  hasBeenEvaluated: { type: Boolean },
+  
+  // Assessment Responses
+  assessmentResponses: {
+    hearing: [{
+      question: { type: String, required: true },
+      answer: { type: String, enum: ['yes', 'no', 'cant-tell'], required: true }
+    }],
+    pragmatics: [{
+      question: { type: String, required: true },
+      answer: { type: String, enum: ['yes', 'no', 'cant-tell'], required: true }
+    }],
+    play: [{
+      question: { type: String, required: true },
+      answer: { type: String, enum: ['yes', 'no', 'cant-tell'], required: true }
+    }],
+    comprehension: [{
+      question: { type: String, required: true },
+      answer: { type: String, enum: ['yes', 'no', 'cant-tell'], required: true }
+    }]
+  },
+  
+  // Booking Information
+  evaluationBooking: {
+    selectedDate: { type: Date },
+    selectedTime: { type: String },
+    timezone: { type: String, default: 'Pakistan Standard Time (GMT+5)' }
+  },
+  
+  // Completion Status
+  isCompleted: { type: Boolean, default: false },
+  currentStep: { type: Number, default: 1 },
+  
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
 // Emotional Support Session Schema
 const EmotionalSessionSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
@@ -143,4 +207,5 @@ export const Session = mongoose.models.Session || mongoose.model('Session', Sess
 export const SpeechSession = mongoose.models.SpeechSession || mongoose.model('SpeechSession', SpeechSessionSchema);
 export const SpeechRecord = mongoose.models.SpeechRecord || mongoose.model('SpeechRecord', SpeechRecordSchema);
 export const UserProgress = mongoose.models.UserProgress || mongoose.model('UserProgress', UserProgressSchema);
+export const ChildOnboarding = mongoose.models.ChildOnboarding || mongoose.model('ChildOnboarding', ChildOnboardingSchema);
 export const EmotionalSession = mongoose.models.EmotionalSession || mongoose.model('EmotionalSession', EmotionalSessionSchema);

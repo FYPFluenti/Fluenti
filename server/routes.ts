@@ -76,7 +76,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: 'Local',
           lastName: 'Developer',
           profileImageUrl: 'https://via.placeholder.com/150',
-          userType: 'adult', // Can be 'adult', 'child', or 'guardian'
+          userType: 'child', // Can be 'adult', 'child', or 'guardian'
           language: 'english',
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -193,6 +193,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error: any) {
         console.error("Signup error:", error.message);
         res.status(400).json({ success: false, message: error.message });
+      }
+    });
+
+    // Onboarding endpoints
+    app.get('/api/onboarding', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ message: "User not authenticated" });
+        }
+
+        // Import ChildOnboarding model
+        const { ChildOnboarding } = await import('./models');
+        
+        const onboardingData = await ChildOnboarding.findOne({ userId });
+        
+        if (!onboardingData) {
+          return res.json(null);
+        }
+        
+        res.json(onboardingData.toObject());
+      } catch (error) {
+        console.error("Error fetching onboarding data:", error);
+        res.status(500).json({ message: "Failed to fetch onboarding data" });
+      }
+    });
+
+    app.post('/api/onboarding', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ message: "User not authenticated" });
+        }
+
+        const { 
+          childBirthYear,
+          childName,
+          childGender,
+          childBirthDate,
+          interests,
+          vocabularyLevel,
+          seekingSpeechTherapy,
+          hasBeenEvaluated,
+          assessmentResponses,
+          evaluationBooking,
+          isCompleted,
+          currentStep
+        } = req.body;
+
+        // Import models
+        const { ChildOnboarding } = await import('./models');
+        const { v4: uuidv4 } = await import('uuid');
+        
+        // Find existing or create new onboarding record
+        let onboardingRecord = await ChildOnboarding.findOne({ userId });
+        
+        if (!onboardingRecord) {
+          onboardingRecord = new ChildOnboarding({
+            id: uuidv4(),
+            userId
+          });
+        }
+
+        // Update fields that are provided
+        if (childBirthYear !== undefined) onboardingRecord.childBirthYear = childBirthYear;
+        if (childName !== undefined) onboardingRecord.childName = childName;
+        if (childGender !== undefined) onboardingRecord.childGender = childGender;
+        if (childBirthDate !== undefined) onboardingRecord.childBirthDate = new Date(childBirthDate);
+        if (interests !== undefined) onboardingRecord.interests = interests;
+        if (vocabularyLevel !== undefined) onboardingRecord.vocabularyLevel = vocabularyLevel;
+        if (seekingSpeechTherapy !== undefined) onboardingRecord.seekingSpeechTherapy = seekingSpeechTherapy;
+        if (hasBeenEvaluated !== undefined) onboardingRecord.hasBeenEvaluated = hasBeenEvaluated;
+        if (isCompleted !== undefined) onboardingRecord.isCompleted = isCompleted;
+        if (currentStep !== undefined) onboardingRecord.currentStep = currentStep;
+        
+        // Handle assessment responses
+        if (assessmentResponses) {
+          if (!onboardingRecord.assessmentResponses) {
+            onboardingRecord.assessmentResponses = {};
+          }
+          
+          if (assessmentResponses.hearing) {
+            onboardingRecord.assessmentResponses.hearing = assessmentResponses.hearing;
+          }
+          if (assessmentResponses.pragmatics) {
+            onboardingRecord.assessmentResponses.pragmatics = assessmentResponses.pragmatics;
+          }
+          if (assessmentResponses.play) {
+            onboardingRecord.assessmentResponses.play = assessmentResponses.play;
+          }
+          if (assessmentResponses.comprehension) {
+            onboardingRecord.assessmentResponses.comprehension = assessmentResponses.comprehension;
+          }
+        }
+        
+        // Handle evaluation booking
+        if (evaluationBooking) {
+          onboardingRecord.evaluationBooking = {
+            selectedDate: evaluationBooking.selectedDate ? new Date(evaluationBooking.selectedDate) : undefined,
+            selectedTime: evaluationBooking.selectedTime,
+            timezone: evaluationBooking.timezone || 'Pakistan Standard Time (GMT+5)'
+          };
+        }
+        
+        onboardingRecord.updatedAt = new Date();
+        
+        await onboardingRecord.save();
+        
+        res.json({ success: true, data: onboardingRecord.toObject() });
+      } catch (error) {
+        console.error("Error saving onboarding data:", error);
+        res.status(500).json({ message: "Failed to save onboarding data" });
+      }
+    });
+
+    // Check if user has completed onboarding
+    app.get('/api/onboarding/status', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ message: "User not authenticated" });
+        }
+
+        const { ChildOnboarding } = await import('./models');
+        
+        const onboardingData = await ChildOnboarding.findOne({ userId });
+        
+        const isCompleted = onboardingData ? onboardingData.isCompleted : false;
+        const currentStep = onboardingData ? onboardingData.currentStep : 1;
+        
+        res.json({ 
+          isCompleted, 
+          currentStep,
+          hasStarted: !!onboardingData
+        });
+      } catch (error) {
+        console.error("Error checking onboarding status:", error);
+        res.status(500).json({ message: "Failed to check onboarding status" });
       }
     });
 

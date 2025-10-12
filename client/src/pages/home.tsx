@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useOnboardingStatus } from "@/hooks/useOnboarding";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,7 @@ export default function Home() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const { onboardingStatus, isLoading: isOnboardingLoading } = useOnboardingStatus();
   
   // State variables
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -57,12 +59,23 @@ export default function Home() {
   
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // ✅ STEP 1: Redirect authenticated users to appropriate dashboard
+  // ✅ STEP 1: Redirect authenticated users - check onboarding for children only
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user) {
+    if (!isLoading && !isOnboardingLoading && isAuthenticated && user) {
       const userType = (user as any)?.userType;
-      console.log('User type detected:', userType); // For debugging
+      console.log('User type detected:', userType);
+      console.log('Onboarding status:', onboardingStatus);
       
+      // Check if CHILD user needs onboarding first
+      const needsOnboarding = onboardingStatus ? !onboardingStatus.isCompleted : true;
+      
+      if (needsOnboarding && userType === 'child') {
+        console.log('Child user needs onboarding, redirecting to onboarding flow');
+        setLocation('/onboarding');
+        return;
+      }
+      
+      // Redirect to appropriate dashboard based on user type
       switch (userType) {
         case 'child':
           console.log('Redirecting to child dashboard');
@@ -81,7 +94,7 @@ export default function Home() {
           setLocation('/child-dashboard');
       }
     }
-  }, [isAuthenticated, isLoading, user, setLocation]);
+  }, [isAuthenticated, isLoading, isOnboardingLoading, user, onboardingStatus, setLocation]);
 
   // Feedback submit function
   const submitFeedback = () => {

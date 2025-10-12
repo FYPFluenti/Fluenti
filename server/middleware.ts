@@ -12,17 +12,22 @@ export async function extractTokenFromHeader(req: Request, res: Response, next: 
       // Try to find user by token (which is the user ID)
       if (token) {
         try {
+          console.log('🔍 Looking up user by token:', token);
           const user = await mongoStorage.getUser(token);
           if (user) {
+            console.log('✅ User found by token:', user.id, user.userType);
             // Attach user to request object
             (req as any).user = {
               ...user.toObject(),
               claims: { sub: user.id }
             };
+          } else {
+            console.log('❌ User not found for token:', token);
           }
         } catch (error) {
           // Only log error if it's not a connection issue (to avoid spam)
           const errorMessage = error instanceof Error ? error.message : String(error);
+          console.log('🔴 Token validation error for token:', token, errorMessage);
           if (!errorMessage.includes('MongoDB') && !errorMessage.includes('connection')) {
             console.error('Token validation error:', error);
           }
