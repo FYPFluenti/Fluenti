@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Heart, ArrowRight } from 'lucide-react';
+import { Heart, ArrowRight, Check, Cat, Trees, Car, Book, Bone, Music, Rocket, Bot, Palette, Hash, Shapes, Apple, Briefcase } from 'lucide-react';
 
 interface InterestsSelectionScreenProps {
   data: any;
@@ -10,19 +10,19 @@ interface InterestsSelectionScreenProps {
 }
 
 const interestOptions = [
-  { id: 'animals', name: 'Animals', icon: '🦁', color: 'from-emerald-400 to-emerald-600' },
-  { id: 'nature', name: 'Nature', icon: '🌳', color: 'from-blue-400 to-blue-600' },
-  { id: 'vehicles', name: 'Vehicles', icon: '🚗', color: 'from-amber-400 to-amber-600' },
-  { id: 'books', name: 'Books', icon: '📚', color: 'from-purple-400 to-purple-600' },
-  { id: 'dinosaurs', name: 'Dinosaurs', icon: '🦕', color: 'from-lime-400 to-lime-600' },
-  { id: 'music', name: 'Music', icon: '🎵', color: 'from-pink-400 to-pink-600' },
-  { id: 'space', name: 'Space', icon: '🚀', color: 'from-indigo-400 to-indigo-600' },
-  { id: 'robots', name: 'Robots', icon: '🤖', color: 'from-cyan-400 to-cyan-600' },
-  { id: 'colors', name: 'Colors', icon: '🎨', color: 'from-rose-400 to-rose-600' },
-  { id: 'numbers', name: 'Numbers', icon: '🔢', color: 'from-violet-400 to-violet-600' },
-  { id: 'shapes', name: 'Shapes', icon: '🔶', color: 'from-sky-400 to-sky-600' },
-  { id: 'food', name: 'Food', icon: '🍎', color: 'from-orange-400 to-orange-600' },
-  { id: 'jobs', name: 'Jobs', icon: '👨‍🚒', color: 'from-red-400 to-red-600' },
+  { id: 'animals', name: 'Animals', icon: Cat, color: 'from-emerald-400 to-emerald-600' },
+  { id: 'nature', name: 'Nature', icon: Trees, color: 'from-blue-400 to-blue-600' },
+  { id: 'vehicles', name: 'Vehicles', icon: Car, color: 'from-amber-400 to-amber-600' },
+  { id: 'books', name: 'Books', icon: Book, color: 'from-purple-400 to-purple-600' },
+  { id: 'dinosaurs', name: 'Dinosaurs', icon: Bone, color: 'from-lime-400 to-lime-600' },
+  { id: 'music', name: 'Music', icon: Music, color: 'from-pink-400 to-pink-600' },
+  { id: 'space', name: 'Space', icon: Rocket, color: 'from-indigo-400 to-indigo-600' },
+  { id: 'robots', name: 'Robots', icon: Bot, color: 'from-cyan-400 to-cyan-600' },
+  { id: 'colors', name: 'Colors', icon: Palette, color: 'from-rose-400 to-rose-600' },
+  { id: 'numbers', name: 'Numbers', icon: Hash, color: 'from-violet-400 to-violet-600' },
+  { id: 'shapes', name: 'Shapes', icon: Shapes, color: 'from-sky-400 to-sky-600' },
+  { id: 'food', name: 'Food', icon: Apple, color: 'from-orange-400 to-orange-600' },
+  { id: 'jobs', name: 'Jobs', icon: Briefcase, color: 'from-red-400 to-red-600' },
 ];
 
 export default function InterestsSelectionScreen({ data, onNext, onBack, onSkip }: InterestsSelectionScreenProps) {
@@ -71,11 +71,20 @@ export default function InterestsSelectionScreen({ data, onNext, onBack, onSkip 
           {interestOptions.map((interest, index) => (
             <motion.button
               key={interest.id}
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.6 + index * 0.05 }}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.8, rotate: -10 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              transition={{ 
+                delay: 0.6 + index * 0.05,
+                type: "spring",
+                stiffness: 200,
+                damping: 15
+              }}
+              whileHover={{ 
+                scale: 1.08, 
+                rotate: selectedInterests.includes(interest.id) ? 5 : 0,
+                transition: { type: "spring", stiffness: 400, damping: 10 }
+              }}
+              whileTap={{ scale: 0.92, rotate: -5 }}
               onClick={() => handleInterestToggle(interest.id)}
               className={`relative p-6 rounded-2xl transition-all duration-200 ${
                 selectedInterests.includes(interest.id)
@@ -85,15 +94,34 @@ export default function InterestsSelectionScreen({ data, onNext, onBack, onSkip 
             >
               {selectedInterests.includes(interest.id) && (
                 <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -top-2 -right-2 w-6 h-6 bg-white rounded-full flex items-center justify-center"
+                  initial={{ scale: 0, rotate: -180 }}
+                  animate={{ scale: 1, rotate: 0 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 15 }}
+                  className="absolute -top-2 -right-2 w-7 h-7 bg-white rounded-full flex items-center justify-center shadow-md"
                 >
-                  <span className="text-green-500 text-sm">✓</span>
+                  <Check className="w-4 h-4 text-green-500 stroke-[3]" />
                 </motion.div>
               )}
               
-              <div className="text-4xl mb-2">{interest.icon}</div>
+              <motion.div 
+                className="mb-2 flex justify-center"
+                animate={selectedInterests.includes(interest.id) ? {
+                  rotate: [0, -10, 10, -10, 10, 0],
+                  scale: [1, 1.1, 1.1, 1.1, 1.1, 1]
+                } : {}}
+                transition={{
+                  duration: 0.5,
+                  ease: "easeInOut"
+                }}
+              >
+                <interest.icon 
+                  className={`w-12 h-12 transition-all duration-200 ${
+                    selectedInterests.includes(interest.id) 
+                      ? 'stroke-[2.5] drop-shadow-lg' 
+                      : 'stroke-[2]'
+                  }`} 
+                />
+              </motion.div>
               <div className="text-sm font-semibold">{interest.name}</div>
             </motion.button>
           ))}
