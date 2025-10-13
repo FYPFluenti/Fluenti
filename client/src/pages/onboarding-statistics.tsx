@@ -177,8 +177,15 @@ export default function OnboardingStatistics() {
             <div className="bg-card border border-border rounded-xl p-6 mb-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-lg font-semibold">
-                    {onboardingData.isCompleted ? 'Onboarding Completed! 🎉' : 'Onboarding In Progress'}
+                  <h2 className="text-lg font-semibold flex items-center gap-2">
+                    {onboardingData.isCompleted ? (
+                      <>
+                        Onboarding Completed! 
+                        <Award className="w-5 h-5 text-[#F5B82E]" />
+                      </>
+                    ) : (
+                      'Onboarding In Progress'
+                    )}
                   </h2>
                   <p className="text-sm text-muted-foreground mt-1">
                     {onboardingData.isCompleted 

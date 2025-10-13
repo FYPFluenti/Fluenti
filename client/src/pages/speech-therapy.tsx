@@ -29,7 +29,8 @@ import {
   Cat,
   Dog,
   Home,
-  Bug
+  Bug,
+  Hand
 } from 'lucide-react';
 
 import SharedSidebar from '@/components/layout/SharedSidebar';
@@ -55,6 +56,7 @@ export default function SpeechTherapyPage() {
   const [gameSession, setGameSession] = useState<GameSession | null>(null);
   const [isListening, setIsListening] = useState(false);
   const [currentWord, setCurrentWord] = useState('');
+  const [childName, setChildName] = useState<string | null>(null);
   const [practiceWords] = useState([
     { word: 'CAT', phonetic: '/kæt/', difficulty: 1, icon: Cat },
     { word: 'DOG', phonetic: '/dɔːg/', difficulty: 1, icon: Dog },
@@ -158,6 +160,34 @@ export default function SpeechTherapyPage() {
       setLocation('/login');
     }
   }, [isAuthenticated, setLocation]);
+
+  // Fetch child's name from onboarding data
+  useEffect(() => {
+    const fetchChildName = async () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch('/api/onboarding', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data?.childName) {
+            setChildName(data.childName);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch child name:', error);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchChildName();
+    }
+  }, [isAuthenticated]);
 
   const getDifficultyColor = (difficulty: string) => {
     switch(difficulty) {
@@ -321,8 +351,10 @@ export default function SpeechTherapyPage() {
             <div className="mb-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className="text-3xl font-bold text-foreground mb-2">
-                    Hi {(user && 'firstName' in user) ? user.firstName : 'there'}! Ready to practice? 🎯
+                  <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-2">
+                    <Hand className="w-8 h-8 text-[#F5B82E]" />
+                    Hi {childName || ((user && 'firstName' in user) ? user.firstName : 'there')}! Ready to practice?
+                    <Target className="w-7 h-7 text-[#F5B82E]" />
                   </h1>
                   <p className="text-lg text-muted-foreground">
                     Choose a game to improve your speech skills
