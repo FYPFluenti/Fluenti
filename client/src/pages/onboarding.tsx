@@ -202,7 +202,7 @@ export default function OnboardingPage() {
         title: "Welcome!",
         description: "Your setup is complete. Let's start your child's learning journey!",
       });
-      setLocation('/home');
+      setLocation('/child-dashboard');
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
     }
