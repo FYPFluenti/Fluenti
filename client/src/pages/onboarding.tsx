@@ -144,7 +144,13 @@ export default function OnboardingPage() {
     const updatedData = { ...onboardingData, ...stepData };
     setOnboardingData(updatedData);
     
-    const nextStep = currentStep + 1;
+    let nextStep = currentStep + 1;
+    
+    // Skip booking screen (step 9) if user is not seeking speech therapy (step 8)
+    if (currentStep === 8 && updatedData.seekingSpeechTherapy === false) {
+      nextStep = 10; // Skip step 9 (BookingEvaluationScreen) and go to step 10
+    }
+    
     await saveOnboardingData(updatedData, nextStep);
     
     if (nextStep > TOTAL_STEPS) {
@@ -157,8 +163,15 @@ export default function OnboardingPage() {
 
   const handleBack = () => {
     if (currentStep > 1) {
-      setCurrentStep(currentStep - 1);
-      saveOnboardingData(onboardingData, currentStep - 1);
+      let previousStep = currentStep - 1;
+      
+      // If on step 10 and user is not seeking therapy, skip back to step 8 (not step 9)
+      if (currentStep === 10 && onboardingData.seekingSpeechTherapy === false) {
+        previousStep = 8;
+      }
+      
+      setCurrentStep(previousStep);
+      saveOnboardingData(onboardingData, previousStep);
     }
   };
 
