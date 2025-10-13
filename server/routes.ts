@@ -262,7 +262,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (childBirthYear !== undefined) onboardingRecord.childBirthYear = childBirthYear;
         if (childName !== undefined) onboardingRecord.childName = childName;
         if (childGender !== undefined) onboardingRecord.childGender = childGender;
-        if (childBirthDate !== undefined) onboardingRecord.childBirthDate = new Date(childBirthDate);
+        if (childBirthDate !== undefined) {
+          onboardingRecord.childBirthDate = new Date(childBirthDate);
+          // Automatically extract and save birth year from date if not already set
+          if (!childBirthYear) {
+            onboardingRecord.childBirthYear = new Date(childBirthDate).getFullYear();
+          }
+        }
         if (interests !== undefined) onboardingRecord.interests = interests;
         if (vocabularyLevel !== undefined) onboardingRecord.vocabularyLevel = vocabularyLevel;
         if (seekingSpeechTherapy !== undefined) onboardingRecord.seekingSpeechTherapy = seekingSpeechTherapy;

@@ -3,59 +3,56 @@ import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'wouter';
 import { motion } from 'framer-motion';
 import { 
-  Users, 
-  TrendingUp, 
+  User, 
   CheckCircle, 
   Clock, 
-  Download,
   Heart,
   Brain,
   Gamepad2,
   Volume2,
   MessageSquare,
   BarChart3,
-  PieChart,
-  Activity
+  Calendar,
+  ArrowRight,
+  Award
 } from 'lucide-react';
 import SharedSidebar from '@/components/layout/SharedSidebar';
 import PageHeader from '@/components/layout/PageHeader';
 import { useToast } from '@/hooks/use-toast';
 
-interface OnboardingStats {
-  overview: {
-    total: number;
-    completed: number;
-    inProgress: number;
-    completionRate: number;
-    averageStep: number;
+interface UserOnboardingData {
+  userId: string;
+  parentBirthYear?: number;
+  childBirthYear?: number;
+  childName?: string;
+  childGender?: 'girl' | 'boy';
+  childBirthDate?: Date;
+  interests?: string[];
+  vocabularyLevel?: string;
+  seekingSpeechTherapy?: boolean;
+  hasBeenEvaluated?: boolean;
+  evaluationBooking?: {
+    selectedDate?: Date;
+    selectedTime?: string;
+    timezone?: string;
   };
-  demographics: {
-    gender: {
-      girl: number;
-      boy: number;
-      unspecified: number;
-    };
-    interests: Record<string, number>;
-    vocabularyLevels: Record<string, number>;
+  assessmentResponses?: {
+    hearing?: Array<{ question: string; answer: 'yes' | 'no' | 'cant-tell' }>;
+    pragmatics?: Array<{ question: string; answer: 'yes' | 'no' | 'cant-tell' }>;
+    play?: Array<{ question: string; answer: 'yes' | 'no' | 'cant-tell' }>;
+    comprehension?: Array<{ question: string; answer: 'yes' | 'no' | 'cant-tell' }>;
   };
-  therapy: {
-    seekingTherapy: number;
-    notSeekingTherapy: number;
-    percentage: number;
-  };
-  assessments: {
-    hearing: number;
-    pragmatics: number;
-    play: number;
-    comprehension: number;
-  };
+  isCompleted?: boolean;
+  currentStep?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export default function OnboardingStatistics() {
   const { isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [statistics, setStatistics] = useState<OnboardingStats | null>(null);
+  const [onboardingData, setOnboardingData] = useState<UserOnboardingData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -65,13 +62,15 @@ export default function OnboardingStatistics() {
   }, [isLoading, isAuthenticated, setLocation]);
 
   useEffect(() => {
-    fetchStatistics();
-  }, []);
+    if (isAuthenticated) {
+      fetchUserOnboardingData();
+    }
+  }, [isAuthenticated]);
 
-  const fetchStatistics = async () => {
+  const fetchUserOnboardingData = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/onboarding/statistics', {
+      const response = await fetch('/api/onboarding', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -80,13 +79,15 @@ export default function OnboardingStatistics() {
 
       if (response.ok) {
         const data = await response.json();
-        setStatistics(data.statistics);
+        setOnboardingData(data);
+      } else if (response.status === 401) {
+        setLocation('/login');
       }
     } catch (error) {
-      console.error('Failed to fetch statistics:', error);
+      console.error('Failed to fetch onboarding data:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load statistics',
+        description: 'Failed to load your onboarding data',
         variant: 'destructive'
       });
     } finally {
@@ -94,39 +95,18 @@ export default function OnboardingStatistics() {
     }
   };
 
-  const handleExport = async () => {
-    try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch('/api/admin/onboarding/export', {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+  const handleContinueOnboarding = () => {
+    setLocation('/onboarding');
+  };
 
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `onboarding-data-${new Date().toISOString().split('T')[0]}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
+  const calculateProgress = () => {
+    if (!onboardingData) return 0;
+    const totalSteps = 21;
+    return Math.round(((onboardingData.currentStep || 1) / totalSteps) * 100);
+  };
 
-        toast({
-          title: 'Success',
-          description: 'Data exported successfully'
-        });
-      }
-    } catch (error) {
-      console.error('Failed to export data:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to export data',
-        variant: 'destructive'
-      });
-    }
+  const getAssessmentCount = (category: keyof NonNullable<UserOnboardingData['assessmentResponses']>) => {
+    return onboardingData?.assessmentResponses?.[category]?.length || 0;
   };
 
   if (isLoading || loading) {
@@ -134,25 +114,45 @@ export default function OnboardingStatistics() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-[#F5B82E] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading statistics...</p>
+          <p className="text-muted-foreground">Loading your onboarding data...</p>
         </div>
       </div>
     );
   }
 
-  if (!statistics) {
+  if (!onboardingData) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">No data available</p>
+      <div className="min-h-screen bg-background text-foreground flex child-dashboard-no-zoom">
+        <SharedSidebar currentPage="onboarding-stats" />
+        
+        <main className="ml-20 w-full child-dashboard-container">
+          <PageHeader className="flex justify-end items-center gap-4 px-4 sm:px-5 py-4 sm:py-5" />
+          
+          <div className="px-5 pt-9">
+            <div className="mx-auto max-w-4xl text-center py-12">
+              <div className="mb-6">
+                <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                  <User className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h1 className="text-2xl font-bold mb-2">No Onboarding Data</h1>
+                <p className="text-muted-foreground mb-6">
+                  You haven't started the onboarding process yet.
+                </p>
+              </div>
+              <button
+                onClick={handleContinueOnboarding}
+                className="inline-flex items-center gap-2 bg-[#F5B82E] text-black px-5 py-2.5 rounded-lg text-[15px] font-semibold hover:opacity-90 transition"
+              >
+                Start Onboarding <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </main>
       </div>
     );
   }
 
-  const interestsList = Object.entries(statistics.demographics.interests)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 8);
-
-  const vocabularyList = Object.entries(statistics.demographics.vocabularyLevels);
+  const progress = calculateProgress();
 
   return (
     <div className="min-h-screen bg-background text-foreground flex child-dashboard-no-zoom">
@@ -163,147 +163,144 @@ export default function OnboardingStatistics() {
         
         <div className="px-5 pt-9">
           <div className="mx-auto max-w-4xl">
-            {/* Header with Export Button */}
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h1 className="text-[26px] font-bold">
-                  onboarding statistics
-                </h1>
-                <p className="text-[15px] text-muted-foreground mt-1">
-                  Overview of all assessment data and statistics
-                </p>
-              </div>
-              
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleExport}
-                className="flex items-center gap-2 bg-[#F5B82E] text-black px-5 py-2.5 rounded-lg text-[15px] font-semibold hover:opacity-90 transition"
-              >
-                <Download className="w-4 h-4" />
-                Export CSV
-              </motion.button>
+            {/* Header */}
+            <div className="mb-8">
+              <h1 className="text-[26px] font-bold">
+                your onboarding progress
+              </h1>
+              <p className="text-[15px] text-muted-foreground mt-1">
+                Track your assessment completion and child's profile
+              </p>
             </div>
 
-            {/* Overview Cards */}
+            {/* Progress Overview */}
+            <div className="bg-card border border-border rounded-xl p-6 mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    {onboardingData.isCompleted ? 'Onboarding Completed! 🎉' : 'Onboarding In Progress'}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {onboardingData.isCompleted 
+                      ? 'All steps completed successfully'
+                      : `Step ${onboardingData.currentStep || 1} of 21`
+                    }
+                  </p>
+                </div>
+                {!onboardingData.isCompleted && (
+                  <button
+                    onClick={handleContinueOnboarding}
+                    className="inline-flex items-center gap-2 bg-[#F5B82E] text-black px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition"
+                  >
+                    Continue <ArrowRight className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              
+              {/* Progress Bar */}
+              <div className="relative">
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-[#F5B82E] transition-all duration-500"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
+                <div className="flex justify-between mt-2">
+                  <span className="text-xs text-muted-foreground">0%</span>
+                  <span className="text-xs font-bold text-[#F5B82E]">{progress}%</span>
+                  <span className="text-xs text-muted-foreground">100%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Profile Overview */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Users className="w-4 h-4 text-blue-500" />
-                  <span className="text-xs font-medium text-muted-foreground">TOTAL</span>
+                  <User className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs font-medium text-muted-foreground">CHILD NAME</span>
                 </div>
-                <div className="text-2xl font-bold">
-                  {statistics.overview.total}
+                <div className="text-xl font-bold truncate">
+                  {onboardingData.childName || 'Not set'}
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  onboardings
-                </div>
-              </div>
-
-              <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
-                  <span className="text-xs font-medium text-muted-foreground">COMPLETED</span>
-                </div>
-                <div className="text-2xl font-bold">
-                  {statistics.overview.completed}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  {statistics.overview.completionRate}% rate
+                <div className="text-xs text-muted-foreground capitalize">
+                  {onboardingData.childGender || 'Not specified'}
                 </div>
               </div>
 
               <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Clock className="w-4 h-4 text-orange-500" />
-                  <span className="text-xs font-medium text-muted-foreground">IN PROGRESS</span>
+                  <Calendar className="w-4 h-4 text-green-500" />
+                  <span className="text-xs font-medium text-muted-foreground">BIRTH YEAR</span>
                 </div>
-                <div className="text-2xl font-bold">
-                  {statistics.overview.inProgress}
+                <div className="text-xl font-bold">
+                  {onboardingData.childBirthYear || 
+                   (onboardingData.childBirthDate ? new Date(onboardingData.childBirthDate).getFullYear() : 'Not set')}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  avg step {statistics.overview.averageStep}
+                  {(onboardingData.childBirthYear || (onboardingData.childBirthDate && new Date(onboardingData.childBirthDate).getFullYear())) 
+                    ? `Age ${new Date().getFullYear() - (onboardingData.childBirthYear || new Date(onboardingData.childBirthDate!).getFullYear())}` 
+                    : 'Unknown'}
                 </div>
               </div>
 
               <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
-                  <Heart className="w-4 h-4 text-purple-500" />
+                  <Brain className="w-4 h-4 text-purple-500" />
+                  <span className="text-xs font-medium text-muted-foreground">VOCABULARY</span>
+                </div>
+                <div className="text-xl font-bold capitalize">
+                  {onboardingData.vocabularyLevel?.replace(/-/g, ' ') || 'Not assessed'}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Current level
+                </div>
+              </div>
+
+              <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Heart className="w-4 h-4 text-orange-500" />
                   <span className="text-xs font-medium text-muted-foreground">THERAPY</span>
                 </div>
-                <div className="text-2xl font-bold">
-                  {statistics.therapy.seekingTherapy}
+                <div className="text-xl font-bold">
+                  {onboardingData.seekingSpeechTherapy === true ? 'Yes' : onboardingData.seekingSpeechTherapy === false ? 'No' : 'Not set'}
                 </div>
                 <div className="text-xs text-muted-foreground">
-                  {statistics.therapy.percentage}% seeking
+                  Seeking help
                 </div>
               </div>
             </div>
 
-            {/* Demographics Section */}
+            {/* Interests & Assessments */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-              {/* Gender Distribution */}
+              {/* Interests */}
               <div className="bg-card border border-border rounded-xl p-6">
                 <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
-                  <PieChart className="w-4 h-4" />
-                  gender distribution
+                  <Heart className="w-4 h-4" />
+                  child's interests
                 </h3>
                 
-                <div className="space-y-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 text-xs font-medium text-muted-foreground">Girls</div>
-                    <div className="flex-1 bg-muted rounded-full h-2 relative overflow-hidden">
-                      <div 
-                        className="bg-pink-500 h-2 rounded-full transition-all duration-500"
-                        style={{ 
-                          width: `${(statistics.demographics.gender.girl / statistics.overview.total) * 100}%` 
-                        }}
-                      />
-                    </div>
-                    <div className="w-12 text-xs text-right font-bold text-pink-500">
-                      {statistics.demographics.gender.girl}
-                    </div>
+                {onboardingData.interests && onboardingData.interests.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {onboardingData.interests.map((interest, index) => (
+                      <span
+                        key={index}
+                        className="px-3 py-1.5 bg-[#F5B82E]/10 text-[#F5B82E] rounded-lg text-sm font-medium capitalize"
+                      >
+                        {interest}
+                      </span>
+                    ))}
                   </div>
-                  
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 text-xs font-medium text-muted-foreground">Boys</div>
-                    <div className="flex-1 bg-muted rounded-full h-2 relative overflow-hidden">
-                      <div 
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-500"
-                        style={{ 
-                          width: `${(statistics.demographics.gender.boy / statistics.overview.total) * 100}%` 
-                        }}
-                      />
-                    </div>
-                    <div className="w-12 text-xs text-right font-bold text-blue-500">
-                      {statistics.demographics.gender.boy}
-                    </div>
-                  </div>
-
-                  {statistics.demographics.gender.unspecified > 0 && (
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 text-xs font-medium text-muted-foreground">Other</div>
-                      <div className="flex-1 bg-muted rounded-full h-2 relative overflow-hidden">
-                        <div 
-                          className="bg-gray-500 h-2 rounded-full transition-all duration-500"
-                          style={{ 
-                            width: `${(statistics.demographics.gender.unspecified / statistics.overview.total) * 100}%` 
-                          }}
-                        />
-                      </div>
-                      <div className="w-12 text-xs text-right font-bold text-gray-500">
-                        {statistics.demographics.gender.unspecified}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No interests selected yet</p>
+                )}
               </div>
 
-              {/* Assessment Completion */}
+              {/* Assessment Progress */}
               <div className="bg-card border border-border rounded-xl p-6">
                 <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
                   <BarChart3 className="w-4 h-4" />
-                  assessment completion
+                  assessment responses
                 </h3>
                 
                 <div className="space-y-3">
@@ -312,7 +309,9 @@ export default function OnboardingStatistics() {
                       <Volume2 className="w-4 h-4 text-blue-500" />
                       <span className="text-sm font-medium">Hearing</span>
                     </div>
-                    <span className="text-sm font-bold text-[#F5B82E]">{statistics.assessments.hearing}</span>
+                    <span className="text-sm font-bold text-[#F5B82E]">
+                      {getAssessmentCount('hearing')} {getAssessmentCount('hearing') === 1 ? 'question' : 'questions'}
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
@@ -320,7 +319,9 @@ export default function OnboardingStatistics() {
                       <MessageSquare className="w-4 h-4 text-purple-500" />
                       <span className="text-sm font-medium">Pragmatics</span>
                     </div>
-                    <span className="text-sm font-bold text-[#F5B82E]">{statistics.assessments.pragmatics}</span>
+                    <span className="text-sm font-bold text-[#F5B82E]">
+                      {getAssessmentCount('pragmatics')} {getAssessmentCount('pragmatics') === 1 ? 'question' : 'questions'}
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
@@ -328,7 +329,9 @@ export default function OnboardingStatistics() {
                       <Gamepad2 className="w-4 h-4 text-green-500" />
                       <span className="text-sm font-medium">Play</span>
                     </div>
-                    <span className="text-sm font-bold text-[#F5B82E]">{statistics.assessments.play}</span>
+                    <span className="text-sm font-bold text-[#F5B82E]">
+                      {getAssessmentCount('play')} {getAssessmentCount('play') === 1 ? 'question' : 'questions'}
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
@@ -336,61 +339,61 @@ export default function OnboardingStatistics() {
                       <Brain className="w-4 h-4 text-orange-500" />
                       <span className="text-sm font-medium">Comprehension</span>
                     </div>
-                    <span className="text-sm font-bold text-[#F5B82E]">{statistics.assessments.comprehension}</span>
+                    <span className="text-sm font-bold text-[#F5B82E]">
+                      {getAssessmentCount('comprehension')} {getAssessmentCount('comprehension') === 1 ? 'question' : 'questions'}
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Top Interests */}
-            <div className="bg-card border border-border rounded-xl p-6 mb-8">
-              <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
-                <Heart className="w-4 h-4" />
-                top interests
-              </h3>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {interestsList.map(([interest, count], index) => (
-                  <div
-                    key={interest}
-                    className="p-3 bg-muted/30 rounded-lg text-center"
-                  >
-                    <div className="text-xl font-bold text-[#F5B82E] mb-1">{count}</div>
-                    <div className="text-xs font-medium capitalize">
-                      {interest}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Vocabulary Distribution */}
-            {vocabularyList.length > 0 && (
+            {/* Timeline Info */}
+            {(onboardingData.createdAt || onboardingData.updatedAt) && (
               <div className="bg-card border border-border rounded-xl p-6">
                 <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
-                  <Activity className="w-4 h-4" />
-                  vocabulary levels
+                  <Clock className="w-4 h-4" />
+                  timeline
                 </h3>
                 
                 <div className="space-y-3">
-                  {vocabularyList.map(([level, count]) => (
-                    <div key={level} className="flex items-center gap-3">
-                      <div className="w-24 text-xs font-medium text-muted-foreground capitalize">
-                        {level.replace(/-/g, ' ')}
-                      </div>
-                      <div className="flex-1 bg-muted rounded-full h-2 relative overflow-hidden">
-                        <div 
-                          className="bg-[#F5B82E] h-2 rounded-full transition-all duration-500"
-                          style={{ 
-                            width: `${(count / statistics.overview.total) * 100}%` 
-                          }}
-                        />
-                      </div>
-                      <div className="w-12 text-xs text-right font-bold text-[#F5B82E]">
-                        {count}
-                      </div>
+                  {onboardingData.createdAt && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Started</span>
+                      <span className="text-sm font-medium">
+                        {new Date(onboardingData.createdAt).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
                     </div>
-                  ))}
+                  )}
+                  
+                  {onboardingData.updatedAt && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Last Updated</span>
+                      <span className="text-sm font-medium">
+                        {new Date(onboardingData.updatedAt).toLocaleDateString('en-US', { 
+                          month: 'short', 
+                          day: 'numeric', 
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
+                    </div>
+                  )}
+
+                  {onboardingData.isCompleted && (
+                    <div className="flex items-center gap-2 p-3 bg-green-500/10 rounded-lg mt-4">
+                      <Award className="w-5 h-5 text-green-500" />
+                      <span className="text-sm font-medium text-green-500">
+                        Onboarding completed successfully!
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
