@@ -7,6 +7,7 @@ import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
 import OnboardingPage from "@/pages/onboarding";
+import OnboardingStatistics from "@/pages/onboarding-statistics";
 import ChildDashboard from "@/pages/child-dashboard";
 import AdultDashboard from "@/pages/adult-dashboard";
 import GuardianDashboard from "@/pages/guardian-dashboard";
@@ -45,6 +46,13 @@ export default function App() {
             <Route path="/onboarding">
               <ProtectedRoute>
                 <OnboardingPage />
+              </ProtectedRoute>
+            </Route>
+            
+            {/* Onboarding Statistics Route (Admin) */}
+            <Route path="/onboarding-statistics">
+              <ProtectedRoute>
+                <OnboardingStatistics />
               </ProtectedRoute>
             </Route>
             

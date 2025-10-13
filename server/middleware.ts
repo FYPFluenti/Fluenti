@@ -45,16 +45,27 @@ export async function extractTokenFromHeader(req: Request, res: Response, next: 
 
 // Alternative isAuthenticated middleware that checks for token auth as well
 export function tokenBasedAuth(req: Request, res: Response, next: NextFunction) {
+  console.log('🔐 tokenBasedAuth check:', {
+    path: req.path,
+    hasSession: !!(req as any).isAuthenticated?.(),
+    hasUser: !!(req as any).user,
+    userId: (req as any).user?.id,
+    authHeader: req.headers.authorization ? 'present' : 'missing'
+  });
+  
   // If user is already authenticated via session, continue
   if ((req as any).isAuthenticated?.() && (req as any).user) {
+    console.log('✅ Auth via session');
     return next();
   }
   
   // If user was attached via token extraction, they're authenticated
   if ((req as any).user) {
+    console.log('✅ Auth via token');
     return next();
   }
   
-  // No authentication found - return 401 without logging (this is expected behavior)
+  // No authentication found
+  console.log('❌ No auth found, returning 401');
   return res.status(401).json({ message: "Unauthorized" });
 }

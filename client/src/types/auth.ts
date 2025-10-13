@@ -13,7 +13,8 @@ export interface User {
 export interface OnboardingData {
   id: string;
   userId: string;
-  childBirthYear: number;
+  parentBirthYear: number;
+  childBirthYear?: number;
   childName?: string;
   childGender?: 'girl' | 'boy';
   childBirthDate?: Date;

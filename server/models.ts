@@ -116,9 +116,10 @@ const UserProgressSchema = new mongoose.Schema({
 const ChildOnboardingSchema = new mongoose.Schema({
   id: { type: String, required: true, unique: true },
   userId: { type: String, required: true, ref: 'User' },
-  childBirthYear: { type: Number, required: true },
+  parentBirthYear: { type: Number, required: true },
   
   // Child Information
+  childBirthYear: { type: Number },
   childName: { type: String },
   childGender: { 
     type: String, 

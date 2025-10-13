@@ -25,6 +25,7 @@ import {
 } from '@/components/onboarding';
 
 interface OnboardingData {
+  parentBirthYear?: number;
   childBirthYear?: number;
   childName?: string;
   childGender?: 'girl' | 'boy';
@@ -82,15 +83,25 @@ export default function OnboardingPage() {
 
   const loadOnboardingData = async () => {
     try {
+      // Get auth token from localStorage
+      const authToken = localStorage.getItem('authToken');
+      
       const response = await fetch('/api/onboarding', {
+        headers: {
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+        },
         credentials: 'include'
       });
+      
       if (response.ok) {
         const data = await response.json();
         if (data) {
           setOnboardingData(data);
           setCurrentStep(data.currentStep || 1);
+          console.log('✅ Onboarding data loaded successfully');
         }
+      } else {
+        console.log('No existing onboarding data found');
       }
     } catch (error) {
       console.error('Failed to load onboarding data:', error);
@@ -99,16 +110,26 @@ export default function OnboardingPage() {
 
   const saveOnboardingData = async (data: Partial<OnboardingData>, step: number) => {
     try {
+      // Get auth token from localStorage
+      const authToken = localStorage.getItem('authToken');
+      
       const response = await fetch('/api/onboarding', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
+        },
         credentials: 'include',
         body: JSON.stringify({ ...data, currentStep: step })
       });
       
       if (!response.ok) {
-        throw new Error('Failed to save onboarding data');
+        const errorText = await response.text();
+        console.error('Save failed:', response.status, errorText);
+        throw new Error(`Failed to save onboarding data: ${response.status}`);
       }
+      
+      console.log('✅ Onboarding data saved successfully');
     } catch (error) {
       console.error('Failed to save onboarding data:', error);
       toast({

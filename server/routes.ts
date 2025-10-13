@@ -228,6 +228,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const { 
+          parentBirthYear,
           childBirthYear,
           childName,
           childGender,
@@ -257,6 +258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Update fields that are provided
+        if (parentBirthYear !== undefined) onboardingRecord.parentBirthYear = parentBirthYear;
         if (childBirthYear !== undefined) onboardingRecord.childBirthYear = childBirthYear;
         if (childName !== undefined) onboardingRecord.childName = childName;
         if (childGender !== undefined) onboardingRecord.childGender = childGender;
@@ -331,6 +333,158 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (error) {
         console.error("Error checking onboarding status:", error);
         res.status(500).json({ message: "Failed to check onboarding status" });
+      }
+    });
+
+    // Get all onboarding data (admin endpoint)
+    app.get('/api/admin/onboarding/all', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const { ChildOnboarding } = await import('./models');
+        
+        const allOnboarding = await ChildOnboarding.find({})
+          .sort({ createdAt: -1 })
+          .lean();
+        
+        res.json({ success: true, data: allOnboarding, count: allOnboarding.length });
+      } catch (error) {
+        console.error("Error fetching all onboarding data:", error);
+        res.status(500).json({ message: "Failed to fetch onboarding data" });
+      }
+    });
+
+    // Get onboarding statistics (admin endpoint)
+    app.get('/api/admin/onboarding/statistics', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const { ChildOnboarding } = await import('./models');
+        
+        const allOnboarding = await ChildOnboarding.find({}).lean();
+        
+        // Calculate statistics
+        const totalOnboardings = allOnboarding.length;
+        const completedOnboardings = allOnboarding.filter(o => o.isCompleted).length;
+        const inProgressOnboardings = totalOnboardings - completedOnboardings;
+        const completionRate = totalOnboardings > 0 ? (completedOnboardings / totalOnboardings) * 100 : 0;
+        
+        // Calculate average step progress
+        const avgStep = totalOnboardings > 0 
+          ? allOnboarding.reduce((sum, o) => sum + (o.currentStep || 1), 0) / totalOnboardings 
+          : 0;
+        
+        // Interest distribution
+        const interestCounts: Record<string, number> = {};
+        allOnboarding.forEach(o => {
+          if (o.interests && Array.isArray(o.interests)) {
+            o.interests.forEach((interest: string) => {
+              interestCounts[interest] = (interestCounts[interest] || 0) + 1;
+            });
+          }
+        });
+        
+        // Gender distribution
+        const genderCounts = {
+          girl: allOnboarding.filter(o => o.childGender === 'girl').length,
+          boy: allOnboarding.filter(o => o.childGender === 'boy').length,
+          unspecified: allOnboarding.filter(o => !o.childGender).length
+        };
+        
+        // Vocabulary level distribution
+        const vocabularyCounts: Record<string, number> = {};
+        allOnboarding.forEach(o => {
+          if (o.vocabularyLevel) {
+            vocabularyCounts[o.vocabularyLevel] = (vocabularyCounts[o.vocabularyLevel] || 0) + 1;
+          }
+        });
+        
+        // Speech therapy interest
+        const seekingTherapy = allOnboarding.filter(o => o.seekingSpeechTherapy === true).length;
+        const notSeekingTherapy = allOnboarding.filter(o => o.seekingSpeechTherapy === false).length;
+        
+        // Assessment completion by category
+        const assessmentStats = {
+          hearing: allOnboarding.filter(o => o.assessmentResponses?.hearing?.length > 0).length,
+          pragmatics: allOnboarding.filter(o => o.assessmentResponses?.pragmatics?.length > 0).length,
+          play: allOnboarding.filter(o => o.assessmentResponses?.play?.length > 0).length,
+          comprehension: allOnboarding.filter(o => o.assessmentResponses?.comprehension?.length > 0).length
+        };
+        
+        res.json({
+          success: true,
+          statistics: {
+            overview: {
+              total: totalOnboardings,
+              completed: completedOnboardings,
+              inProgress: inProgressOnboardings,
+              completionRate: Math.round(completionRate * 10) / 10,
+              averageStep: Math.round(avgStep * 10) / 10
+            },
+            demographics: {
+              gender: genderCounts,
+              interests: interestCounts,
+              vocabularyLevels: vocabularyCounts
+            },
+            therapy: {
+              seekingTherapy,
+              notSeekingTherapy,
+              percentage: totalOnboardings > 0 ? Math.round((seekingTherapy / totalOnboardings) * 100) : 0
+            },
+            assessments: assessmentStats
+          }
+        });
+      } catch (error) {
+        console.error("Error fetching onboarding statistics:", error);
+        res.status(500).json({ message: "Failed to fetch statistics" });
+      }
+    });
+
+    // Export onboarding data as CSV
+    app.get('/api/admin/onboarding/export', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const { ChildOnboarding } = await import('./models');
+        
+        const allOnboarding = await ChildOnboarding.find({}).lean();
+        
+        // Create CSV header
+        const csvHeader = [
+          'User ID',
+          'Child Name',
+          'Child Gender',
+          'Parent Birth Year',
+          'Child Birth Year',
+          'Interests',
+          'Vocabulary Level',
+          'Seeking Therapy',
+          'Has Been Evaluated',
+          'Is Completed',
+          'Current Step',
+          'Created At',
+          'Updated At'
+        ].join(',');
+        
+        // Create CSV rows
+        const csvRows = allOnboarding.map(o => [
+          o.userId,
+          o.childName || '',
+          o.childGender || '',
+          o.parentBirthYear || '',
+          o.childBirthYear || '',
+          (o.interests || []).join(';'),
+          o.vocabularyLevel || '',
+          o.seekingSpeechTherapy ? 'Yes' : 'No',
+          o.hasBeenEvaluated ? 'Yes' : 'No',
+          o.isCompleted ? 'Yes' : 'No',
+          o.currentStep || 1,
+          o.createdAt,
+          o.updatedAt
+        ].map(field => `"${field}"`).join(','));
+        
+        const csv = [csvHeader, ...csvRows].join('\n');
+        
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=onboarding-data.csv');
+        res.send(csv);
+      } catch (error) {
+        console.error("Error exporting onboarding data:", error);
+        res.status(500).json({ message: "Failed to export data" });
       }
     });
 

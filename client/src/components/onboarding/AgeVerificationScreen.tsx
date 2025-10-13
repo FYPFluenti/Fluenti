@@ -9,7 +9,7 @@ interface AgeVerificationScreenProps {
 }
 
 export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerificationScreenProps) {
-  const [birthYear, setBirthYear] = useState<string>(data.childBirthYear?.toString() || '');
+  const [birthYear, setBirthYear] = useState<string>(data.parentBirthYear?.toString() || '');
 
   const handleNumberPress = (num: string) => {
     if (birthYear.length < 4) {
@@ -26,9 +26,9 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
       const year = parseInt(birthYear);
       const currentYear = new Date().getFullYear();
       
-      // Children ages 3-17 (born between currentYear-17 and currentYear-3)
-      if (year >= currentYear - 17 && year <= currentYear - 3) {
-        onNext({ childBirthYear: year });
+      // Parents must be 18+ years old (born currentYear-18 or earlier)
+      if (year >= 1900 && year <= currentYear - 18) {
+        onNext({ parentBirthYear: year });
       }
     }
   };
@@ -36,7 +36,7 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
   const isValidYear = birthYear.length === 4;
   const year = parseInt(birthYear);
   const currentYear = new Date().getFullYear();
-  const isValidAge = year >= currentYear - 17 && year <= currentYear - 3; // Ages 3-17
+  const isOfAge = year >= 1900 && year <= currentYear - 18; // Must be 18+ years old
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center max-w-lg mx-auto">
@@ -55,11 +55,11 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
         transition={{ delay: 0.4 }}
       >
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
-          What year were you born? 🎂
+          Please enter your year of birth
         </h1>
 
         <p className="text-gray-600 dark:text-gray-300 mb-8">
-          This helps us make sure the activities are just right for you!
+          For age verification, type in your year of birth (parent/guardian).
         </p>
 
         {/* Year Input Display */}
@@ -113,20 +113,20 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
         </div>
 
         {/* Validation Message */}
-        {isValidYear && !isValidAge && (
+        {isValidYear && !isOfAge && (
           <p className="text-red-500 text-sm mb-4">
-            Please enter a valid birth year. You should be between 3 and 17 years old.
+            You must be 18 or older to create an account for a child.
           </p>
         )}
 
         {/* Continue Button */}
         <motion.button
-          whileHover={{ scale: isValidYear && isValidAge ? 1.02 : 1 }}
-          whileTap={{ scale: isValidYear && isValidAge ? 0.98 : 1 }}
+          whileHover={{ scale: isValidYear && isOfAge ? 1.02 : 1 }}
+          whileTap={{ scale: isValidYear && isOfAge ? 0.98 : 1 }}
           onClick={handleContinue}
-          disabled={!isValidYear || !isValidAge}
+          disabled={!isValidYear || !isOfAge}
           className={`w-full py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 ${
-            isValidYear && isValidAge
+            isValidYear && isOfAge
               ? 'bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white hover:shadow-lg'
               : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
           }`}
