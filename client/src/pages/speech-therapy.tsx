@@ -36,14 +36,21 @@ import {
 import SharedSidebar from '@/components/layout/SharedSidebar';
 import FeedbackModal from '@/components/layout/FeedbackModel';
 import PageHeader from '@/components/layout/PageHeader';
+import WordPracticeGame from '@/components/games/WordPracticeGame';
+import SoundRecognitionGame from '@/components/games/SoundRecognitionGame';
+import SentenceBuildingGame from '@/components/games/SentenceBuildingGame';
+import RhythmTrainingGame from '@/components/games/RhythmTrainingGame';
+import StoryReadingGame from '@/components/games/StoryReadingGame';
+import QuickSoundsGame from '@/components/games/QuickSoundsGame';
 
 interface GameSession {
+  _id: string;
   gameId: number;
+  gameName: string;
   startTime: Date;
-  currentLevel: number;
   score: number;
-  wordsCompleted: string[];
   accuracy: number;
+  completed: boolean;
 }
 
 export default function SpeechTherapyPage() {
@@ -54,105 +61,107 @@ export default function SpeechTherapyPage() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [activeGame, setActiveGame] = useState<any>(null);
   const [gameSession, setGameSession] = useState<GameSession | null>(null);
-  const [isListening, setIsListening] = useState(false);
-  const [currentWord, setCurrentWord] = useState('');
+  const [gameData, setGameData] = useState<any>(null);
   const [childName, setChildName] = useState<string | null>(null);
-  const [practiceWords] = useState([
-    { word: 'CAT', phonetic: '/kæt/', difficulty: 1, icon: Cat },
-    { word: 'DOG', phonetic: '/dɔːg/', difficulty: 1, icon: Dog },
-    { word: 'HOUSE', phonetic: '/haʊs/', difficulty: 2, icon: Home },
-    { word: 'BUTTERFLY', phonetic: '/ˈbʌtərflaɪ/', difficulty: 3, icon: Bug }
-  ]);
+  const [loading, setLoading] = useState(true);
+  const [gameProgress, setGameProgress] = useState<any[]>([]);
 
   const [userStats, setUserStats] = useState({
-    level: 5,
-    xp: 1250,
-    stars: 89,
-    streak: 3,
-    todaysSessions: 1,
-    dailyGoal: 3
+    level: 1,
+    xp: 0,
+    stars: 0,
+    streak: 0,
+    todaysSessions: 0,
+    dailyGoal: 3,
+    averageAccuracy: 0
   });
 
-  const games = [
-    {
-      id: 1,
-      title: "Word Practice",
-      description: "Practice pronouncing common words clearly and correctly",
-      icon: MessageSquare,
-      difficulty: "Easy",
-      duration: "10 min",
-      stars: userStats.level >= 1 ? 3 : 0,
-      xpReward: 25,
-      unlocked: true,
-      category: "Pronunciation",
-      type: "interactive"
-    },
-    {
-      id: 2,
-      title: "Sound Recognition",
-      description: "Listen and identify different speech sounds",
-      icon: Ear,
-      difficulty: "Easy", 
-      duration: "8 min",
-      stars: userStats.level >= 2 ? 2 : 0,
-      xpReward: 20,
-      unlocked: true,
-      category: "Listening",
-      type: "interactive"
-    },
-    {
-      id: 3,
-      title: "Sentence Building",
-      description: "Create complete sentences with proper pronunciation",
-      icon: Construction,
-      difficulty: "Medium",
-      duration: "15 min", 
-      stars: userStats.level >= 3 ? 1 : 0,
-      xpReward: 40,
-      unlocked: userStats.level >= 3,
-      category: "Grammar",
-      type: "interactive"
-    },
-    {
-      id: 4,
-      title: "Rhythm Training",
-      description: "Practice speech rhythm and timing patterns",
-      icon: Music,
-      difficulty: "Medium",
-      duration: "12 min",
-      stars: userStats.level >= 4 ? 2 : 0,
-      xpReward: 35,
-      unlocked: userStats.level >= 4,
-      category: "Fluency",
-      type: "browser-game"
-    },
-    {
-      id: 5,
-      title: "Story Reading",
-      description: "Read short stories with proper expression and clarity",
-      icon: BookOpen,
-      difficulty: "Hard",
-      duration: "20 min",
-      stars: 0,
-      xpReward: 60,
-      unlocked: userStats.level >= 8,
-      category: "Reading",
-      type: "api-game"
-    },
-    {
-      id: 6,
-      title: "Quick Sounds",
-      description: "Fast-paced pronunciation challenges for confident speakers",
-      icon: Bolt,
-      difficulty: "Hard",
-      duration: "18 min",
-      stars: 0,
-      xpReward: 50,
-      unlocked: userStats.level >= 6,
-      category: "Speed",
-      type: "interactive"
-    }
-  ];
+  // Games configuration
+  const getGames = () => {
+    const baseGames = [
+      {
+        id: 1,
+        title: "Word Practice",
+        description: "Practice pronouncing common words clearly and correctly",
+        icon: MessageSquare,
+        difficulty: "Easy",
+        duration: "10 min",
+        xpReward: 25,
+        category: "Pronunciation",
+        type: "word-practice"
+      },
+      {
+        id: 2,
+        title: "Sound Recognition",
+        description: "Listen and identify different speech sounds",
+        icon: Ear,
+        difficulty: "Easy", 
+        duration: "8 min",
+        xpReward: 20,
+        category: "Listening",
+        type: "sound-recognition"
+      },
+      {
+        id: 3,
+        title: "Sentence Building",
+        description: "Create complete sentences with proper pronunciation",
+        icon: Construction,
+        difficulty: "Medium",
+        duration: "15 min", 
+        xpReward: 40,
+        category: "Grammar",
+        type: "sentence-building"
+      },
+      {
+        id: 4,
+        title: "Rhythm Training",
+        description: "Practice speech rhythm and timing patterns",
+        icon: Music,
+        difficulty: "Medium",
+        duration: "12 min",
+        xpReward: 35,
+        category: "Fluency",
+        type: "rhythm-training"
+      },
+      {
+        id: 5,
+        title: "Story Reading",
+        description: "Read short stories with proper expression and clarity",
+        icon: BookOpen,
+        difficulty: "Hard",
+        duration: "20 min",
+        xpReward: 60,
+        category: "Reading",
+        type: "story-reading"
+      },
+      {
+        id: 6,
+        title: "Quick Sounds",
+        description: "Fast-paced pronunciation challenges for confident speakers",
+        icon: Bolt,
+        difficulty: "Hard",
+        duration: "18 min",
+        xpReward: 50,
+        category: "Speed",
+        type: "quick-sounds"
+      }
+    ];
+
+    // Merge with progress data from backend
+    return baseGames.map(game => {
+      const progress = gameProgress.find(p => p.gameId === game.id);
+      return {
+        ...game,
+        stars: progress?.stars || 0,
+        unlocked: progress?.unlocked || false,
+        level: progress?.level || 1,
+        bestScore: progress?.bestScore || 0,
+        averageAccuracy: progress?.averageAccuracy || 0
+      };
+    });
+  };
+
+  const games = getGames();
 
   // Check authentication
   useEffect(() => {
@@ -161,33 +170,82 @@ export default function SpeechTherapyPage() {
     }
   }, [isAuthenticated, setLocation]);
 
-  // Fetch child's name from onboarding data
+  // Fetch initial data
   useEffect(() => {
-    const fetchChildName = async () => {
+    const fetchInitialData = async () => {
+      if (!isAuthenticated) return;
+      
       try {
+        setLoading(true);
         const token = localStorage.getItem('authToken');
-        const response = await fetch('/api/onboarding', {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
 
-        if (response.ok) {
-          const data = await response.json();
-          if (data?.childName) {
-            setChildName(data.childName);
+        // Fetch child name, statistics, and game progress in parallel
+        const [onboardingRes, statsRes, progressRes] = await Promise.all([
+          fetch('/api/onboarding', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }),
+          fetch('/api/games/statistics', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }),
+          fetch('/api/games/progress', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          })
+        ]);
+
+        // Handle onboarding data
+        if (onboardingRes.ok) {
+          const onboardingData = await onboardingRes.json();
+          if (onboardingData?.childName) {
+            setChildName(onboardingData.childName);
           }
         }
+
+        // Handle statistics
+        if (statsRes.ok) {
+          const stats = await statsRes.json();
+          setUserStats({
+            level: stats.level || 1,
+            xp: stats.xp || 0,
+            stars: stats.stars || 0,
+            streak: stats.streak || 0,
+            todaysSessions: stats.recentSessions?.filter((s: any) => {
+              const today = new Date().toDateString();
+              return new Date(s.createdAt).toDateString() === today;
+            }).length || 0,
+            dailyGoal: 3,
+            averageAccuracy: stats.averageAccuracy || 0
+          });
+        }
+
+        // Handle game progress
+        if (progressRes.ok) {
+          const progress = await progressRes.json();
+          setGameProgress(progress);
+        }
+
       } catch (error) {
-        console.error('Failed to fetch child name:', error);
+        console.error('Failed to fetch initial data:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load game data',
+          variant: 'destructive'
+        });
+      } finally {
+        setLoading(false);
       }
     };
 
-    if (isAuthenticated) {
-      fetchChildName();
-    }
-  }, [isAuthenticated]);
+    fetchInitialData();
+  }, [isAuthenticated, toast]);
 
   const getDifficultyColor = (difficulty: string) => {
     switch(difficulty) {
@@ -198,122 +256,119 @@ export default function SpeechTherapyPage() {
     }
   };
 
-  const startGame = (game: any) => {
+  const startGame = async (game: any) => {
     if (!game.unlocked) {
       toast({
         title: "Game Locked",
-        description: `Reach level ${Math.ceil(game.id * 1.5)} to unlock this game!`,
+        description: `Complete more games to unlock this!`,
         variant: "default",
       });
       return;
     }
 
-    // Initialize game session
-    const session: GameSession = {
-      gameId: game.id,
-      startTime: new Date(),
-      currentLevel: 1,
-      score: 0,
-      wordsCompleted: [],
-      accuracy: 0
-    };
+    try {
+      const token = localStorage.getItem('authToken');
 
-    setActiveGame(game);
-    setGameSession(session);
+      // Fetch game-specific data
+      const gameDataRes = await fetch(`/api/games/game-data/${game.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
 
-    if (game.type === 'interactive') {
-      // Start interactive session
-      setCurrentWord(practiceWords[0].word);
-    } else if (game.type === 'browser-game') {
-      // Load browser game (will implement below)
-      loadBrowserGame(game.id);
-    } else if (game.type === 'api-game') {
-      // Load API game (will implement below)
-      loadAPIGame(game.id);
-    }
+      if (!gameDataRes.ok) {
+        throw new Error('Failed to fetch game data');
+      }
 
-    toast({
-      title: "Game Started!",
-      description: `Beginning ${game.title}. Good luck!`,
-    });
-  };
+      const fetchedGameData = await gameDataRes.json();
 
-  const endGame = () => {
-    if (gameSession) {
-      const finalScore = gameSession.score;
-      const accuracy = gameSession.accuracy;
-      
-      // Update user stats
-      setUserStats(prev => ({
-        ...prev,
-        xp: prev.xp + (activeGame?.xpReward || 0),
-        stars: prev.stars + Math.floor(accuracy / 30),
-        todaysSessions: prev.todaysSessions + 1
-      }));
+      // Create game session
+      const sessionRes = await fetch('/api/games/session/start', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          gameId: game.id,
+          gameName: game.title
+        })
+      });
+
+      if (!sessionRes.ok) {
+        throw new Error('Failed to create game session');
+      }
+
+      const session = await sessionRes.json();
+
+      setGameData(fetchedGameData);
+      setGameSession(session);
+      setActiveGame(game);
 
       toast({
-        title: "Great Job!",
-        description: `Session completed! Score: ${finalScore}, Accuracy: ${accuracy}%`,
+        title: "Game Started!",
+        description: `Beginning ${game.title}. Good luck!`,
+      });
+
+    } catch (error) {
+      console.error('Error starting game:', error);
+      toast({
+        title: "Error",
+        description: "Failed to start game. Please try again.",
+        variant: "destructive"
       });
     }
-
-    setActiveGame(null);
-    setGameSession(null);
-    setCurrentWord('');
-    setIsListening(false);
   };
 
-  const handleVoiceInput = () => {
-    if (!isListening) {
-      setIsListening(true);
-      // Simulate voice recognition
-      setTimeout(() => {
-        setIsListening(false);
-        const accuracy = Math.random() * 40 + 60; // 60-100% accuracy
-        
-        if (gameSession) {
-          setGameSession({
-            ...gameSession,
-            score: gameSession.score + Math.round(accuracy),
-            wordsCompleted: [...gameSession.wordsCompleted, currentWord],
-            accuracy: (gameSession.accuracy + accuracy) / 2
-          });
-        }
+  const handleGameComplete = async (results: any) => {
+    // Update user stats with rewards
+    setUserStats(prev => ({
+      ...prev,
+      xp: prev.xp + results.rewards.xp,
+      stars: prev.stars + results.rewards.stars,
+      todaysSessions: prev.todaysSessions + 1,
+      level: Math.floor((prev.xp + results.rewards.xp) / 100) + 1
+    }));
 
-        if (accuracy > 80) {
-          toast({
-            title: "Excellent!",
-            description: "Perfect pronunciation!",
-          });
-        } else {
-          toast({
-            title: "Good try!",
-            description: "Keep practicing, you're improving!",
-          });
-        }
+    // Show completion toast
+    toast({
+      title: "🎉 Great Job!",
+      description: `You earned ${results.rewards.xp} XP and ${results.rewards.stars} stars!`,
+    });
 
-        // Move to next word
-        const currentIndex = practiceWords.findIndex(w => w.word === currentWord);
-        if (currentIndex < practiceWords.length - 1) {
-          setCurrentWord(practiceWords[currentIndex + 1].word);
-        } else {
-          endGame();
+    // Reset game state
+    setActiveGame(null);
+    setGameSession(null);
+    setGameData(null);
+
+    // Refresh progress data
+    try {
+      const token = localStorage.getItem('authToken');
+      const progressRes = await fetch('/api/games/progress', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
-      }, 2000);
+      });
+
+      if (progressRes.ok) {
+        const progress = await progressRes.json();
+        setGameProgress(progress);
+      }
+    } catch (error) {
+      console.error('Error refreshing progress:', error);
     }
+  };
+
+  const handleGameExit = () => {
+    setActiveGame(null);
+    setGameSession(null);
+    setGameData(null);
   };
 
   // Today's goal progress
   const dailyProgress = Math.min((userStats.todaysSessions / userStats.dailyGoal) * 100, 100);
-
-  // Placeholder functions for game integration (will implement below)
-  const loadBrowserGame = (gameId: number) => {
-    console.log(`Loading browser game ${gameId}`);
-  };
-
-  const loadAPIGame = (gameId: number) => {
-    console.log(`Loading API game ${gameId}`);
-  };
 
   if (!isAuthenticated) {
     return (
@@ -328,6 +383,20 @@ export default function SpeechTherapyPage() {
             Go to Login
           </button>
         </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background child-dashboard-no-zoom">
+        <SharedSidebar currentPage="games" />
+        <main className="ml-20 p-4 sm:p-6 child-dashboard-container flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-[#F5B82E] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading games...</p>
+          </div>
+        </main>
       </div>
     );
   }
@@ -515,85 +584,59 @@ export default function SpeechTherapyPage() {
           </>
         ) : (
           /* Active Game Interface */
-          <div className="max-w-4xl mx-auto">
-            {/* Game Header */}
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={endGame}
-                  className="p-2 bg-muted hover:bg-muted/80 rounded-lg transition-colors"
-                >
-                  <ArrowRight className="w-5 h-5 rotate-180" />
-                </button>
-                <div>
-                  <h1 className="text-2xl font-bold">{activeGame.title}</h1>
-                  <p className="text-muted-foreground">Score: {gameSession?.score || 0} points</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm text-muted-foreground">Progress</div>
-                <div className="text-lg font-semibold">
-                  {gameSession?.wordsCompleted.length || 0}/{practiceWords.length}
-                </div>
-              </div>
-            </div>
-
-            {/* Game Content */}
-            {activeGame.type === 'interactive' && (
-              <div className="bg-card border border-border rounded-xl p-8 text-center">
-                <div className="mb-8">
-                  <div className="flex justify-center mb-4">
-                    <div className="w-32 h-32 rounded-2xl bg-[#ff6b1d]/10 flex items-center justify-center">
-                      {(() => {
-                        const WordIcon = practiceWords.find(w => w.word === currentWord)?.icon || MessageSquare;
-                        return <WordIcon className="w-16 h-16 text-[#ff6b1d]" />;
-                      })()}
-                    </div>
-                  </div>
-                  <h2 className="text-4xl font-bold mb-2">{currentWord}</h2>
-                  <p className="text-xl text-muted-foreground mb-6">
-                    {practiceWords.find(w => w.word === currentWord)?.phonetic}
-                  </p>
-                  
-                  <div className="space-y-4 max-w-md mx-auto">
-                    <button
-                      onClick={() => {
-                        if (soundEnabled && 'speechSynthesis' in window) {
-                          const utterance = new SpeechSynthesisUtterance(currentWord);
-                          utterance.rate = 0.8;
-                          speechSynthesis.speak(utterance);
-                        }
-                      }}
-                      className="w-full bg-muted hover:bg-muted/80 text-foreground py-3 px-6 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                    >
-                      <Headphones className="w-5 h-5" />
-                      Listen to Word
-                    </button>
-                    
-                    <button
-                      onClick={handleVoiceInput}
-                      disabled={isListening}
-                      className={`w-full py-4 px-6 rounded-lg flex items-center justify-center gap-2 text-lg font-semibold transition-all ${
-                        isListening 
-                          ? 'bg-[#ff6b1d]/90 text-white animate-pulse' 
-                          : 'bg-[#ff6b1d] hover:bg-[#e55a1a] text-white'
-                      }`}
-                    >
-                      {isListening ? (
-                        <>
-                          <MicOff className="w-6 h-6" />
-                          Listening...
-                        </>
-                      ) : (
-                        <>
-                          <Mic className="w-6 h-6" />
-                          Say the Word
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
+          <div>
+            {activeGame.type === 'word-practice' && gameSession && gameData && (
+              <WordPracticeGame
+                gameData={gameData}
+                sessionId={gameSession._id}
+                onComplete={handleGameComplete}
+                onExit={handleGameExit}
+              />
+            )}
+            
+            {activeGame.type === 'sound-recognition' && gameSession && gameData && (
+              <SoundRecognitionGame
+                gameData={gameData}
+                sessionId={gameSession._id}
+                onComplete={handleGameComplete}
+                onExit={handleGameExit}
+              />
+            )}
+            
+            {activeGame.type === 'sentence-building' && gameSession && gameData && (
+              <SentenceBuildingGame
+                gameData={gameData}
+                sessionId={gameSession._id}
+                onComplete={handleGameComplete}
+                onExit={handleGameExit}
+              />
+            )}
+            
+            {activeGame.type === 'rhythm-training' && gameSession && gameData && (
+              <RhythmTrainingGame
+                gameData={gameData}
+                sessionId={gameSession._id}
+                onComplete={handleGameComplete}
+                onExit={handleGameExit}
+              />
+            )}
+            
+            {activeGame.type === 'story-reading' && gameSession && gameData && (
+              <StoryReadingGame
+                gameData={gameData}
+                sessionId={gameSession._id}
+                onComplete={handleGameComplete}
+                onExit={handleGameExit}
+              />
+            )}
+            
+            {activeGame.type === 'quick-sounds' && gameSession && gameData && (
+              <QuickSoundsGame
+                gameData={gameData}
+                sessionId={gameSession._id}
+                onComplete={handleGameComplete}
+                onExit={handleGameExit}
+              />
             )}
           </div>
         )}

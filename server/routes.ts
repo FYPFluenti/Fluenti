@@ -32,6 +32,7 @@ import { generateTTSAudio } from "./services/ttsService";
 import { fastTranscribeAudio } from "./services/fastSTTService";
 
 import { AuthService } from "./auth";
+import gamesRouter from "./routes/games";
 
 
 // Configure multer for handling form data
@@ -63,7 +64,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add token extraction middleware for all routes
   app.use(extractTokenFromHeader);
 
-
+  // Register games routes
+  app.use('/api/games', tokenBasedAuth, gamesRouter);
 
   // Auth routes
   app.get('/api/auth/user', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
