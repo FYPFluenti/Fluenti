@@ -155,307 +155,246 @@ export default function OnboardingStatistics() {
   const vocabularyList = Object.entries(statistics.demographics.vocabularyLevels);
 
   return (
-    <div className="flex h-screen bg-background overflow-hidden">
-      <SharedSidebar />
+    <div className="min-h-screen bg-background text-foreground flex child-dashboard-no-zoom">
+      <SharedSidebar currentPage="onboarding-stats" />
       
-      <main className="flex-1 overflow-y-auto">
-        <PageHeader />
+      <main className="ml-20 w-full child-dashboard-container">
+        <PageHeader className="flex justify-end items-center gap-4 px-4 sm:px-5 py-4 sm:py-5" />
         
-        <div className="p-6 space-y-6">
-          {/* Header with Export Button */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Onboarding Dashboard
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 mt-1">
-                Overview of all assessment data and statistics
-              </p>
-            </div>
-            
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleExport}
-              className="flex items-center gap-2 px-4 py-2 bg-[#F5B82E] text-white rounded-lg hover:bg-[#e5a820] transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Export CSV
-            </motion.button>
-          </div>
-
-          {/* Overview Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                  <Users className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {statistics.overview.total}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Total</div>
-                </div>
-              </div>
-              <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Total Onboardings
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
-                  <CheckCircle className="w-6 h-6 text-green-600 dark:text-green-400" />
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {statistics.overview.completed}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Completed</div>
-                </div>
-              </div>
-              <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Completion Rate: {statistics.overview.completionRate}%
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
-                  <Clock className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {statistics.overview.inProgress}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">In Progress</div>
-                </div>
-              </div>
-              <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                Average Step: {statistics.overview.averageStep}
-              </div>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
-                  <Heart className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {statistics.therapy.seekingTherapy}
-                  </div>
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Seeking Help</div>
-                </div>
-              </div>
-              <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                {statistics.therapy.percentage}% seeking therapy
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Demographics Section */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Gender Distribution */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
-            >
-              <div className="flex items-center gap-3 mb-6">
-                <PieChart className="w-6 h-6 text-[#F5B82E]" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Gender Distribution
-                </h2>
+        <div className="px-5 pt-9">
+          <div className="mx-auto max-w-4xl">
+            {/* Header with Export Button */}
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h1 className="text-[26px] font-bold">
+                  onboarding statistics
+                </h1>
+                <p className="text-[15px] text-muted-foreground mt-1">
+                  Overview of all assessment data and statistics
+                </p>
               </div>
               
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Girls</span>
-                    <span className="text-sm font-bold text-pink-600">{statistics.demographics.gender.girl}</span>
-                  </div>
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-pink-400 to-pink-600 rounded-full transition-all duration-500"
-                      style={{ 
-                        width: `${(statistics.demographics.gender.girl / statistics.overview.total) * 100}%` 
-                      }}
-                    />
-                  </div>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleExport}
+                className="flex items-center gap-2 bg-[#F5B82E] text-black px-5 py-2.5 rounded-lg text-[15px] font-semibold hover:opacity-90 transition"
+              >
+                <Download className="w-4 h-4" />
+                Export CSV
+              </motion.button>
+            </div>
+
+            {/* Overview Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs font-medium text-muted-foreground">TOTAL</span>
                 </div>
+                <div className="text-2xl font-bold">
+                  {statistics.overview.total}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  onboardings
+                </div>
+              </div>
+
+              <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <span className="text-xs font-medium text-muted-foreground">COMPLETED</span>
+                </div>
+                <div className="text-2xl font-bold">
+                  {statistics.overview.completed}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {statistics.overview.completionRate}% rate
+                </div>
+              </div>
+
+              <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Clock className="w-4 h-4 text-orange-500" />
+                  <span className="text-xs font-medium text-muted-foreground">IN PROGRESS</span>
+                </div>
+                <div className="text-2xl font-bold">
+                  {statistics.overview.inProgress}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  avg step {statistics.overview.averageStep}
+                </div>
+              </div>
+
+              <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Heart className="w-4 h-4 text-purple-500" />
+                  <span className="text-xs font-medium text-muted-foreground">THERAPY</span>
+                </div>
+                <div className="text-2xl font-bold">
+                  {statistics.therapy.seekingTherapy}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {statistics.therapy.percentage}% seeking
+                </div>
+              </div>
+            </div>
+
+            {/* Demographics Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
+              {/* Gender Distribution */}
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
+                  <PieChart className="w-4 h-4" />
+                  gender distribution
+                </h3>
                 
-                <div>
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Boys</span>
-                    <span className="text-sm font-bold text-blue-600">{statistics.demographics.gender.boy}</span>
-                  </div>
-                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-gradient-to-r from-blue-400 to-blue-600 rounded-full transition-all duration-500"
-                      style={{ 
-                        width: `${(statistics.demographics.gender.boy / statistics.overview.total) * 100}%` 
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {statistics.demographics.gender.unspecified > 0 && (
-                  <div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Unspecified</span>
-                      <span className="text-sm font-bold text-gray-600">{statistics.demographics.gender.unspecified}</span>
-                    </div>
-                    <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 text-xs font-medium text-muted-foreground">Girls</div>
+                    <div className="flex-1 bg-muted rounded-full h-2 relative overflow-hidden">
                       <div 
-                        className="h-full bg-gradient-to-r from-gray-400 to-gray-600 rounded-full transition-all duration-500"
+                        className="bg-pink-500 h-2 rounded-full transition-all duration-500"
                         style={{ 
-                          width: `${(statistics.demographics.gender.unspecified / statistics.overview.total) * 100}%` 
+                          width: `${(statistics.demographics.gender.girl / statistics.overview.total) * 100}%` 
                         }}
                       />
                     </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-
-            {/* Assessment Completion */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
-            >
-              <div className="flex items-center gap-3 mb-6">
-                <BarChart3 className="w-6 h-6 text-[#F5B82E]" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Assessment Completion
-                </h2>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <Volume2 className="w-5 h-5 text-blue-600" />
-                    <span className="font-medium text-gray-700 dark:text-gray-300">Hearing</span>
-                  </div>
-                  <span className="font-bold text-blue-600">{statistics.assessments.hearing}</span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <MessageSquare className="w-5 h-5 text-purple-600" />
-                    <span className="font-medium text-gray-700 dark:text-gray-300">Pragmatics</span>
-                  </div>
-                  <span className="font-bold text-purple-600">{statistics.assessments.pragmatics}</span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/20 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <Gamepad2 className="w-5 h-5 text-green-600" />
-                    <span className="font-medium text-gray-700 dark:text-gray-300">Play</span>
-                  </div>
-                  <span className="font-bold text-green-600">{statistics.assessments.play}</span>
-                </div>
-
-                <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/20 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <Brain className="w-5 h-5 text-orange-600" />
-                    <span className="font-medium text-gray-700 dark:text-gray-300">Comprehension</span>
-                  </div>
-                  <span className="font-bold text-orange-600">{statistics.assessments.comprehension}</span>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
-          {/* Top Interests */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
-          >
-            <div className="flex items-center gap-3 mb-6">
-              <Heart className="w-6 h-6 text-[#F5B82E]" />
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                Top Interests
-              </h2>
-            </div>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {interestsList.map(([interest, count], index) => (
-                <div
-                  key={interest}
-                  className="p-4 bg-gradient-to-br from-[#F5B82E]/10 to-orange-100 dark:from-[#F5B82E]/20 dark:to-orange-900/20 rounded-xl text-center"
-                >
-                  <div className="text-2xl font-bold text-[#F5B82E] mb-1">{count}</div>
-                  <div className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
-                    {interest}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Vocabulary Distribution */}
-          {vocabularyList.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.7 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-lg border border-gray-200 dark:border-gray-700"
-            >
-              <div className="flex items-center gap-3 mb-6">
-                <Activity className="w-6 h-6 text-[#F5B82E]" />
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-                  Vocabulary Levels
-                </h2>
-              </div>
-              
-              <div className="space-y-3">
-                {vocabularyList.map(([level, count]) => (
-                  <div key={level}>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700 dark:text-gray-300 capitalize">
-                        {level.replace(/-/g, ' ')}
-                      </span>
-                      <span className="text-sm font-bold text-[#F5B82E]">{count}</span>
+                    <div className="w-12 text-xs text-right font-bold text-pink-500">
+                      {statistics.demographics.gender.girl}
                     </div>
-                    <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 text-xs font-medium text-muted-foreground">Boys</div>
+                    <div className="flex-1 bg-muted rounded-full h-2 relative overflow-hidden">
                       <div 
-                        className="h-full bg-gradient-to-r from-[#F5B82E] to-orange-400 rounded-full transition-all duration-500"
+                        className="bg-blue-500 h-2 rounded-full transition-all duration-500"
                         style={{ 
-                          width: `${(count / statistics.overview.total) * 100}%` 
+                          width: `${(statistics.demographics.gender.boy / statistics.overview.total) * 100}%` 
                         }}
                       />
+                    </div>
+                    <div className="w-12 text-xs text-right font-bold text-blue-500">
+                      {statistics.demographics.gender.boy}
+                    </div>
+                  </div>
+
+                  {statistics.demographics.gender.unspecified > 0 && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 text-xs font-medium text-muted-foreground">Other</div>
+                      <div className="flex-1 bg-muted rounded-full h-2 relative overflow-hidden">
+                        <div 
+                          className="bg-gray-500 h-2 rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${(statistics.demographics.gender.unspecified / statistics.overview.total) * 100}%` 
+                          }}
+                        />
+                      </div>
+                      <div className="w-12 text-xs text-right font-bold text-gray-500">
+                        {statistics.demographics.gender.unspecified}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Assessment Completion */}
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4" />
+                  assessment completion
+                </h3>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Volume2 className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm font-medium">Hearing</span>
+                    </div>
+                    <span className="text-sm font-bold text-[#F5B82E]">{statistics.assessments.hearing}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <MessageSquare className="w-4 h-4 text-purple-500" />
+                      <span className="text-sm font-medium">Pragmatics</span>
+                    </div>
+                    <span className="text-sm font-bold text-[#F5B82E]">{statistics.assessments.pragmatics}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Gamepad2 className="w-4 h-4 text-green-500" />
+                      <span className="text-sm font-medium">Play</span>
+                    </div>
+                    <span className="text-sm font-bold text-[#F5B82E]">{statistics.assessments.play}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <Brain className="w-4 h-4 text-orange-500" />
+                      <span className="text-sm font-medium">Comprehension</span>
+                    </div>
+                    <span className="text-sm font-bold text-[#F5B82E]">{statistics.assessments.comprehension}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Top Interests */}
+            <div className="bg-card border border-border rounded-xl p-6 mb-8">
+              <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
+                <Heart className="w-4 h-4" />
+                top interests
+              </h3>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {interestsList.map(([interest, count], index) => (
+                  <div
+                    key={interest}
+                    className="p-3 bg-muted/30 rounded-lg text-center"
+                  >
+                    <div className="text-xl font-bold text-[#F5B82E] mb-1">{count}</div>
+                    <div className="text-xs font-medium capitalize">
+                      {interest}
                     </div>
                   </div>
                 ))}
               </div>
-            </motion.div>
-          )}
+            </div>
+
+            {/* Vocabulary Distribution */}
+            {vocabularyList.length > 0 && (
+              <div className="bg-card border border-border rounded-xl p-6">
+                <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
+                  <Activity className="w-4 h-4" />
+                  vocabulary levels
+                </h3>
+                
+                <div className="space-y-3">
+                  {vocabularyList.map(([level, count]) => (
+                    <div key={level} className="flex items-center gap-3">
+                      <div className="w-24 text-xs font-medium text-muted-foreground capitalize">
+                        {level.replace(/-/g, ' ')}
+                      </div>
+                      <div className="flex-1 bg-muted rounded-full h-2 relative overflow-hidden">
+                        <div 
+                          className="bg-[#F5B82E] h-2 rounded-full transition-all duration-500"
+                          style={{ 
+                            width: `${(count / statistics.overview.total) * 100}%` 
+                          }}
+                        />
+                      </div>
+                      <div className="w-12 text-xs text-right font-bold text-[#F5B82E]">
+                        {count}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </main>
     </div>
