@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Gift, ArrowRight, Clock } from 'lucide-react';
+import { Gift, ArrowRight, Clock, PartyPopper } from 'lucide-react';
 
 interface WelcomeScreenProps {
   onNext: (data: any) => void;
@@ -28,8 +28,9 @@ export default function WelcomeScreen({ onNext, onSkip }: WelcomeScreenProps) {
           Let's Start Your Journey
         </div>
         
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">
-          Welcome to Fluenti! 🎉
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6 flex items-center justify-center gap-2">
+          Welcome to Fluenti! 
+          <PartyPopper className="w-8 h-8 text-[#F5B82E]" />
         </h1>
 
         <div className="text-gray-600 dark:text-gray-300 text-base leading-relaxed mb-8 space-y-4">
@@ -42,8 +43,8 @@ export default function WelcomeScreen({ onNext, onSkip }: WelcomeScreenProps) {
             <span>Only takes about 5 minutes - it's like a fun game!</span>
           </div>
           <p className="text-sm">
-            At the end, you'll get a <strong className="text-[#F5B82E]">special reward</strong> 
-            and we'll help you start your speaking adventure!
+            At the end, you'll get a <strong className="text-[#F5B82E]">special reward </strong> 
+             and we'll help you start your speaking adventure!
           </p>
         </div>
 
