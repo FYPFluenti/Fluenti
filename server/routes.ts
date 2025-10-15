@@ -12,21 +12,6 @@ const { SpeechService, transcribeAudio } = speechServiceModule;
 import { simpleTranscribeAudio, validateAudioBuffer } from "./services/simpleSpeechService";
 import { generateSmartTTS } from "./services/enhancedTTSService";
 
-// Future service imports - commented out until implemented
-// import { 
-//   detectEmotionFromText, 
-//   detectEmotionFromAudio, 
-//   detectCombinedEmotion 
-// } from "./services/emotionServiceOptimized";
-// import { analyzeEmotion, generateEmotionalResponse } from "./services/openai";
-// import { generateConversationalResponse, type ConversationHistory } from "./services/responseService";
-// import { 
-//   generateEnhancedConversationalResponse, 
-//   generateSuperiorTherapeuticResponse,
-//   type EnhancedResponseRequest, 
-//   type EnhancedResponseResult 
-// } from "./services/enhancedResponseService";
-// import "./services/therapeuticServicePersistent"; // Temporarily disabled - Python env not ready
 
 import { generateTTSAudio } from "./services/ttsService";
 import { fastTranscribeAudio } from "./services/fastSTTService";
