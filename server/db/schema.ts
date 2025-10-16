@@ -77,10 +77,8 @@ const userSchema = new Schema<IUser>({
   timestamps: true
 });
 
-// Indexes for performance
-userSchema.index({ email: 1 });
-userSchema.index({ googleId: 1 });
-userSchema.index({ facebookId: 1 });
+// Note: Indexes are automatically created by the 'unique: true' field option
+// No need for explicit index definitions to avoid duplicate warnings
 
 // Prevent model overwrite error
 export const User = mongoose.models.User || mongoose.model<IUser>('User', userSchema);
