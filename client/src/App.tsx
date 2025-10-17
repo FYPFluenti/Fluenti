@@ -18,6 +18,8 @@ import SpeechTherapy from "@/pages/speech-therapy";
 import ProgressDashboard from "@/pages/progress-dashboard";
 import EmotionalSupport from "@/pages/emotional-support";
 import EmotionalSupportVoice from "@/pages/emotional-support-voice";
+import SpeechTest from "@/pages/SpeechTest";
+import QuickSpeechTest from "@/pages/QuickSpeechTest";
 import Assessment from "@/pages/assessment";
 import Achievements from "@/pages/achievements";
 import Settings from "@/pages/settings";
@@ -134,6 +136,16 @@ export default function App() {
               <ProtectedRoute allowedUserTypes={['child']}>
                 <VoiceModel />
               </ProtectedRoute>
+            </Route>
+            
+            {/* Speech Test Route (Debug) */}
+            <Route path="/speech-test">
+              <SpeechTest />
+            </Route>
+            
+            {/* Quick Speech Test Route (Debug) */}
+            <Route path="/quick-test">
+              <QuickSpeechTest />
             </Route>
             
             {/* 404 Route */}

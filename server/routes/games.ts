@@ -1,14 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { GameProgress } from '../models/GameProgress';
 import { GameSession } from '../models/GameSession';
-import { 
-  wordPracticeData, 
-  soundRecognitionData, 
-  sentenceBuildingData,
-  rhythmPatternsData,
-  storyReadingData,
-  quickSoundsData
-} from '../data/speechTherapyData';
+import OpenAI from 'openai';
+
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY || ''
+});
 
 const router = Router();
 
@@ -79,10 +77,8 @@ router.get('/game-data/:gameId', async (req: Request, res: Response) => {
           gameId: 1,
           gameName: 'Word Practice',
           currentLevel: userLevel,
-          levels: wordPracticeData,
-          words: userLevel === 1 ? wordPracticeData.level1.words :
-                 userLevel === 2 ? wordPracticeData.level2.words :
-                 wordPracticeData.level3.words
+          description: 'AI-powered word practice game with personalized content',
+          isAIPowered: true
         };
         break;
 
@@ -90,9 +86,9 @@ router.get('/game-data/:gameId', async (req: Request, res: Response) => {
         gameData = {
           gameId: 2,
           gameName: 'Sound Recognition',
-          phonemes: soundRecognitionData.phonemes,
-          vowels: soundRecognitionData.vowels,
-          totalSounds: soundRecognitionData.phonemes.length + soundRecognitionData.vowels.length
+          currentLevel: userLevel,
+          description: 'Interactive sound recognition and phoneme practice',
+          isAIPowered: false // Will be enhanced later
         };
         break;
 
@@ -101,8 +97,8 @@ router.get('/game-data/:gameId', async (req: Request, res: Response) => {
           gameId: 3,
           gameName: 'Sentence Building',
           currentLevel: userLevel,
-          templates: userLevel === 1 ? sentenceBuildingData.level1.templates :
-                     sentenceBuildingData.level2.templates
+          description: 'Build sentences with guided practice',
+          isAIPowered: false // Will be enhanced later
         };
         break;
 
@@ -111,9 +107,8 @@ router.get('/game-data/:gameId', async (req: Request, res: Response) => {
           gameId: 4,
           gameName: 'Rhythm Training',
           currentLevel: userLevel,
-          patterns: userLevel === 1 ? rhythmPatternsData.basic :
-                   userLevel === 2 ? rhythmPatternsData.intermediate :
-                   rhythmPatternsData.advanced
+          description: 'Practice speech rhythm and timing',
+          isAIPowered: false // Will be enhanced later
         };
         break;
 
@@ -122,9 +117,8 @@ router.get('/game-data/:gameId', async (req: Request, res: Response) => {
           gameId: 5,
           gameName: 'Story Reading',
           currentLevel: userLevel,
-          story: userLevel === 1 ? storyReadingData.level1 :
-                 userLevel === 2 ? storyReadingData.level2 :
-                 storyReadingData.level3
+          description: 'Interactive story reading with speech practice',
+          isAIPowered: false // Will be enhanced later
         };
         break;
 
@@ -133,9 +127,18 @@ router.get('/game-data/:gameId', async (req: Request, res: Response) => {
           gameId: 6,
           gameName: 'Quick Sounds',
           currentLevel: userLevel,
-          sounds: userLevel === 1 ? quickSoundsData.easy :
-                 userLevel === 2 ? quickSoundsData.medium :
-                 quickSoundsData.hard
+          description: 'Fast-paced sound recognition game',
+          isAIPowered: false // Will be enhanced later
+        };
+        break;
+
+      case 7: // Phonological Awareness
+        gameData = {
+          gameId: 7,
+          gameName: 'Phonological Awareness',
+          currentLevel: userLevel,
+          description: 'Develop awareness of speech sounds and patterns',
+          isAIPowered: false // Will be enhanced later
         };
         break;
 
@@ -352,5 +355,398 @@ router.get('/statistics', async (req: Request, res: Response) => {
     res.status(500).json({ error: 'Failed to fetch statistics' });
   }
 });
+
+// AI-powered word generation endpoint
+router.post('/generate-words', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { childProfile, sessionType = 'practice' } = req.body;
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ 
+        error: 'AI service not configured. Please contact administrator.' 
+      });
+    }
+
+    // Generate AI-powered personalized words
+    const personalizedWords = await generateAIPersonalizedWords(childProfile, sessionType);
+    
+    if (!personalizedWords || personalizedWords.length === 0) {
+      return res.status(500).json({ 
+        error: 'Unable to generate personalized words at this time. Please try again.' 
+      });
+    }
+    
+    res.json({ words: personalizedWords });
+  } catch (error) {
+    console.error('Error generating personalized words:', error);
+    res.status(500).json({ 
+      error: 'AI service temporarily unavailable. Please try again in a moment.' 
+    });
+  }
+});
+
+// AI feedback generation endpoint
+router.post('/generate-feedback', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ 
+        error: 'AI service not configured. Please contact administrator.' 
+      });
+    }
+
+    const { 
+      childName, 
+      targetWord, 
+      userAttempt, 
+      accuracy, 
+      attemptNumber, 
+      childAge, 
+      interests 
+    } = req.body;
+
+    // Generate AI-powered encouraging feedback
+    const feedback = await generateAIEncouragingFeedback(
+      childName,
+      targetWord,
+      userAttempt,
+      accuracy,
+      attemptNumber,
+      childAge,
+      interests
+    );
+    
+    if (!feedback) {
+      return res.status(500).json({ 
+        error: 'Unable to generate feedback at this time. Please try again.' 
+      });
+    }
+    
+    res.json(feedback);
+  } catch (error) {
+    console.error('Error generating feedback:', error);
+    res.status(500).json({ 
+      error: 'AI service temporarily unavailable. Please try again in a moment.' 
+    });
+  }
+});
+
+// AI session summary generation endpoint
+router.post('/generate-session-summary', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ 
+        error: 'AI service not configured. Please contact administrator.' 
+      });
+    }
+
+    const { 
+      childName,
+      wordsAttempted,
+      wordsCompleted,
+      averageAccuracy,
+      totalScore,
+      childAge,
+      interests
+    } = req.body;
+
+    // Generate AI-powered session summary
+    const summary = await generateAISessionSummary(
+      childName,
+      wordsAttempted,
+      wordsCompleted,
+      averageAccuracy,
+      totalScore,
+      childAge,
+      interests
+    );
+    
+    if (!summary) {
+      return res.status(500).json({ 
+        error: 'Unable to generate session summary at this time. Please try again.' 
+      });
+    }
+    
+    res.json(summary);
+  } catch (error) {
+    console.error('Error generating session summary:', error);
+    res.status(500).json({ 
+      error: 'AI service temporarily unavailable. Please try again in a moment.' 
+    });
+  }
+});
+
+// AI Helper Functions
+async function generateAIPersonalizedWords(childProfile: any, sessionType: string) {
+  const childAge = childProfile?.childBirthYear ? 
+    new Date().getFullYear() - childProfile.childBirthYear : 5;
+  
+  // Analyze child's specific speech challenges from assessment
+  const speechChallenges = analyzeSpeechChallenges(childProfile);
+  
+  const prompt = buildWordGenerationPrompt(childProfile, childAge, speechChallenges, sessionType);
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a certified speech-language pathologist specializing in pediatric speech therapy. Generate personalized, developmentally appropriate words for children with speech difficulties. Always return valid JSON format."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.7,
+      max_tokens: 2000,
+      response_format: { type: "json_object" }
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    if (response) {
+      const parsedResponse = JSON.parse(response);
+      return parsedResponse.words || [];
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error calling OpenAI for word generation:', error);
+    throw error;
+  }
+}
+
+async function generateAIEncouragingFeedback(
+  childName: string,
+  targetWord: string,
+  userAttempt: string,
+  accuracy: number,
+  attemptNumber: number,
+  childAge: number,
+  interests: string[]
+) {
+  const prompt = `
+Generate encouraging, positive feedback for ${childName || 'the child'}, a ${childAge}-year-old working on pronunciation.
+
+Target word: "${targetWord}"
+Child's attempt: "${userAttempt}"
+Accuracy: ${accuracy}%
+Attempt number: ${attemptNumber}/3
+Child's interests: ${interests?.join(', ') || 'general'}
+
+Requirements:
+- Always be positive and encouraging
+- Use child-friendly language appropriate for age ${childAge}
+- If accuracy is high (70%+), celebrate success
+- If accuracy is low, focus on effort and provide gentle guidance
+- Include the child's name when possible
+- Reference their interests if relevant
+- Keep technical tips simple and actionable
+- Make it feel like a fun game, not a clinical assessment
+
+Return JSON with:
+{
+  "message": "main encouraging message",
+  "encouragement": "additional motivational text",
+  "technicalTip": "simple pronunciation guidance if needed",
+  "emotionalTone": "excited|encouraging|supportive|proud",
+  "nextSteps": "what to try next (optional)"
+}`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a warm, encouraging speech therapist who makes children feel confident and excited about learning. Always maintain a positive, supportive tone. Always return valid JSON format."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.8,
+      max_tokens: 500,
+      response_format: { type: "json_object" }
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    if (response) {
+      return JSON.parse(response);
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error calling OpenAI for feedback generation:', error);
+    throw error;
+  }
+}
+
+async function generateAISessionSummary(
+  childName: string,
+  wordsAttempted: number,
+  wordsCompleted: number,
+  averageAccuracy: number,
+  totalScore: number,
+  childAge: number,
+  interests: string[]
+) {
+  const prompt = `
+Generate a celebratory session summary for ${childName || 'the child'}, age ${childAge}.
+
+Session Stats:
+- Words attempted: ${wordsAttempted}
+- Words completed: ${wordsCompleted}
+- Average accuracy: ${averageAccuracy}%
+- Total score: ${totalScore}
+- Child's interests: ${interests?.join(', ') || 'general'}
+
+Create an encouraging, celebration-focused summary that:
+- Celebrates effort and progress
+- Highlights specific achievements
+- Uses child-friendly language
+- References their interests when possible
+- Encourages continued practice
+- Feels rewarding and motivating
+
+Return JSON with:
+{
+  "title": "celebratory title",
+  "message": "main congratulatory message",
+  "achievements": ["list of specific things they did well"],
+  "encouragement": "motivational message for future sessions",
+  "nextGoals": ["simple goals for next time"]
+}`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are a celebration specialist who makes children feel proud of their accomplishments and excited to continue learning. Always return valid JSON format."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.8,
+      max_tokens: 800,
+      response_format: { type: "json_object" }
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    if (response) {
+      return JSON.parse(response);
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error calling OpenAI for session summary:', error);
+    throw error;
+  }
+}
+
+function buildWordGenerationPrompt(
+  childProfile: any,
+  childAge: number,
+  speechChallenges: string[],
+  sessionType: string
+): string {
+  return `
+Generate 15-20 personalized practice words for speech therapy.
+
+Child Profile:
+- Name: ${childProfile.childName || 'Child'}
+- Age: ${childAge} years old
+- Gender: ${childProfile.childGender || 'not specified'}
+- Vocabulary Level: ${childProfile.vocabularyLevel || 'unknown'}
+- Interests: ${childProfile.interests?.join(', ') || 'general interests'}
+- Speech Therapy Status: ${childProfile.seekingSpeechTherapy ? 'Currently seeking therapy' : 'Not currently in therapy'}
+- Previously Evaluated: ${childProfile.hasBeenEvaluated ? 'Yes' : 'No'}
+
+Identified Speech Challenges: ${speechChallenges.join(', ') || 'General pronunciation practice'}
+
+Requirements:
+- Words must be age-appropriate for a ${childAge}-year-old
+- Include words related to their interests: ${childProfile.interests?.join(', ') || 'general'}
+- Focus on identified speech challenges
+- Mix difficulty levels (60% easy, 30% medium, 10% challenging)
+- Include phonetic transcriptions (IPA)
+- Specify target sounds being practiced
+- Add visual cues or emojis where helpful
+- Each word should have a clear therapeutic purpose
+
+Return JSON format:
+{
+  "words": [
+    {
+      "word": "cat",
+      "phonetic": "/kæt/",
+      "phonemes": ["k", "æ", "t"],
+      "difficulty": 1,
+      "category": "animals",
+      "targetSounds": ["k", "t"],
+      "visualCue": "🐱",
+      "therapyFocus": "final consonant practice"
+    }
+  ]
+}`;
+}
+
+function analyzeSpeechChallenges(childProfile: any): string[] {
+  const challenges: string[] = [];
+  
+  // Analyze assessment responses for speech patterns
+  if (childProfile.assessmentResponses?.hearing) {
+    const hearingIssues = childProfile.assessmentResponses.hearing
+      .filter((response: any) => response.answer === 'yes' || response.answer === 'cant-tell')
+      .map((response: any) => response.question.toLowerCase());
+    
+    if (hearingIssues.length > 0) {
+      challenges.push('auditory processing');
+    }
+  }
+  
+  if (childProfile.assessmentResponses?.pragmatics) {
+    const pragmaticIssues = childProfile.assessmentResponses.pragmatics
+      .filter((response: any) => response.answer === 'no' || response.answer === 'cant-tell');
+      
+    if (pragmaticIssues.length > 2) {
+      challenges.push('social communication');
+    }
+  }
+  
+  // Analyze vocabulary level
+  if (childProfile.vocabularyLevel) {
+    if (childProfile.vocabularyLevel.includes('0-words') || childProfile.vocabularyLevel.includes('1-5-words')) {
+      challenges.push('vocabulary building', 'basic phoneme production');
+    } else if (childProfile.vocabularyLevel.includes('6-10-words')) {
+      challenges.push('consonant combinations', 'word endings');
+    }
+  }
+  
+  return challenges;
+}
 
 export default router;

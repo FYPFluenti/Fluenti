@@ -322,19 +322,41 @@ export default function SpeechTherapyPage() {
   };
 
   const handleGameComplete = async (results: any) => {
+    console.log('🎮 Game completed with results:', results);
+    
+    // Calculate rewards based on game results
+    const earnedXP = Math.floor(results.score || 0);
+    const earnedStars = results.stars || 0;
+    
     // Update user stats with rewards
-    setUserStats(prev => ({
-      ...prev,
-      xp: prev.xp + results.rewards.xp,
-      stars: prev.stars + results.rewards.stars,
-      todaysSessions: prev.todaysSessions + 1,
-      level: Math.floor((prev.xp + results.rewards.xp) / 100) + 1
-    }));
+    setUserStats(prev => {
+      // Safety check to ensure prev exists
+      if (!prev) {
+        console.warn('⚠️ Previous user stats is undefined, using default values');
+        prev = {
+          level: 1,
+          xp: 0,
+          stars: 0,
+          streak: 0,
+          todaysSessions: 0,
+          dailyGoal: 3,
+          averageAccuracy: 0
+        };
+      }
+      
+      return {
+        ...prev,
+        xp: (prev.xp || 0) + earnedXP,
+        stars: (prev.stars || 0) + earnedStars,
+        todaysSessions: (prev.todaysSessions || 0) + 1,
+        level: Math.floor(((prev.xp || 0) + earnedXP) / 100) + 1
+      };
+    });
 
     // Show completion toast
     toast({
       title: "🎉 Great Job!",
-      description: `You earned ${results.rewards.xp} XP and ${results.rewards.stars} stars!`,
+      description: `You earned ${earnedXP} XP and ${earnedStars} stars!`,
     });
 
     // Reset game state

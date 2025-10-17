@@ -93,6 +93,7 @@
     "lucide-react": "^0.453.0",
     "memoizee": "^0.4.17",
     "memorystore": "^1.6.7",
+    "microsoft-cognitiveservices-speech-sdk": "^1.46.0",
     "mongodb": "4.1",
     "mongoose": "^8.18.1",
     "multer": "^2.0.2",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Mic, 
@@ -10,17 +10,22 @@ import {
   ArrowRight,
   ArrowLeft,
   Trophy,
-  Sparkles
+  Sparkles,
+  Heart,
+  Zap,
+  Award,
+  Smile,
+  PartyPopper,
+  Target,
+  Brain,
+  Headphones
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-interface Word {
-  word: string;
-  phonetic: string;
-  phonemes: string[];
-  difficulty: number;
-  category: string;
-}
+import { useLocation } from 'wouter';
+import { aiSpeechService, PersonalizedWord, SpeechFeedback, ChildProfile } from '@/services/aiSpeechTherapy';
+import { RealTimeSpeechRecognition, PronunciationAnalyzer, SpeechRecognitionResult } from '@/services/realTimeSpeechRecognition';
+import { HybridSpeechRecognition, HybridPronunciationAnalyzer, HybridSpeechResult } from '@/services/hybridSpeechService';
+import { microsoftSpeechService } from '@/services/microsoftSpeechService';
 
 interface WordPracticeGameProps {
   gameData: any;
@@ -36,212 +41,625 @@ export default function WordPracticeGame({
   onExit 
 }: WordPracticeGameProps) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
   const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] = useState<any>(null);
   const [attempts, setAttempts] = useState<any[]>([]);
   const [currentAttempt, setCurrentAttempt] = useState(1);
   const [score, setScore] = useState(0);
   const [totalAccuracy, setTotalAccuracy] = useState(0);
   const [showFeedback, setShowFeedback] = useState(false);
-  const [feedback, setFeedback] = useState<any>(null);
+  const [feedback, setFeedback] = useState<SpeechFeedback | null>(null);
+  const [isLoadingWords, setIsLoadingWords] = useState(true);
+  const [personalizedWords, setPersonalizedWords] = useState<PersonalizedWord[]>([]);
+  const [childProfile, setChildProfile] = useState<ChildProfile | null>(null);
+  const [sessionSummary, setSessionSummary] = useState<any>(null);
+  const [showSessionSummary, setShowSessionSummary] = useState(false);
+  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+  const [stars, setStars] = useState(0);
+  const [streak, setStreak] = useState(0);
+  const [maxStreak, setMaxStreak] = useState(0);
+  const [cheerfulCharacter, setCheerfulCharacter] = useState('🌟');
+  const [useEnhancedSpeech, setUseEnhancedSpeech] = useState(true); // Default to enhanced mode
+  
+  const speechRecognitionRef = useRef<RealTimeSpeechRecognition | null>(null);
+  const hybridSpeechRef = useRef<HybridSpeechRecognition | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const words: Word[] = gameData?.words || [];
-  const currentWord = words[currentWordIndex];
+  const currentWord = personalizedWords[currentWordIndex];
+  const maxAttempts = 3;
 
-  // Initialize Web Speech API
+  // Load child profile and generate personalized words
   useEffect(() => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-      const recognitionInstance = new SpeechRecognition();
-      
-      recognitionInstance.continuous = false;
-      recognitionInstance.interimResults = false;
-      recognitionInstance.maxAlternatives = 3;
-      recognitionInstance.lang = 'en-US';
+    const initializeGame = async () => {
+      try {
+        // Fetch child's onboarding data
+        const token = localStorage.getItem('authToken');
+        const onboardingResponse = await fetch('/api/onboarding', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
 
-      recognitionInstance.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript.toLowerCase().trim();
-        const confidence = event.results[0][0].confidence;
+        if (onboardingResponse.ok) {
+          const profile = await onboardingResponse.json();
+          setChildProfile(profile);
+          
+          // Set random cheerful character based on interests
+          const characters = ['🌟', '🦋', '🌈', '🎈', '🎭', '🎯', '🎪', '🎨'];
+          if (profile.interests?.includes('animals')) {
+            setCheerfulCharacter(['🐱', '🐶', '🦊', '🐸', '🐰'][Math.floor(Math.random() * 5)]);
+          } else {
+            setCheerfulCharacter(characters[Math.floor(Math.random() * characters.length)]);
+          }
+          
+          // Generate personalized words using AI with retry mechanism
+          let retryCount = 0;
+          const maxRetries = 3;
+          
+          while (retryCount < maxRetries) {
+            try {
+              const words = await aiSpeechService.generatePersonalizedWords(profile, 'practice');
+              if (words && words.length > 0) {
+                setPersonalizedWords(words);
+                break;
+              } else {
+                throw new Error('No words generated');
+              }
+            } catch (error) {
+              retryCount++;
+              if (retryCount >= maxRetries) {
+                throw new Error(`Failed to generate words after ${maxRetries} attempts. Please check your connection and try again.`);
+              }
+              // Wait before retry (exponential backoff)
+              await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, retryCount - 1)));
+            }
+          }
+        } else {
+          throw new Error('Unable to load your profile. Please try refreshing the page.');
+        }
         
-        handleSpeechResult(transcript, confidence);
-      };
+      } catch (error) {
+        console.error('Error initializing game:', error);
+        setIsLoadingWords(false);
+        toast({
+          title: "Unable to Create Personalized Game",
+          description: "AI service is currently unavailable. Please check your connection and try again.",
+          variant: "destructive"
+        });
+        // Don't set any fallback words - let the user retry
+        return;
+      } finally {
+        setIsLoadingWords(false);
+      }
+    };
 
-      recognitionInstance.onerror = (event: any) => {
-        console.error('Speech recognition error:', event.error);
-        setIsListening(false);
-        
-        if (event.error === 'no-speech') {
+    initializeGame();
+  }, [gameData]);
+
+  // Initialize Real-Time Speech Recognition
+  useEffect(() => {
+    if (personalizedWords.length > 0) {
+      const speechConfig = {
+        language: 'en-US',
+        sampleRate: 16000,
+        continuous: false,
+        interimResults: true,
+        maxAlternatives: 5,
+        onResult: (result: SpeechRecognitionResult) => {
+          if (result.isFinal) {
+            handleSpeechResult(result.transcript, result.confidence, result.alternatives);
+          }
+        },
+        onError: (error: string) => {
+          console.error('Speech recognition error:', error);
+          setIsListening(false);
           toast({
-            title: "No speech detected",
-            description: "Please try speaking louder",
+            title: "Oops! Let's try again!",
+            description: error,
             variant: "destructive"
           });
+        },
+        onStart: () => {
+          setIsListening(true);
+        },
+        onEnd: () => {
+          setIsListening(false);
         }
       };
 
-      recognitionInstance.onend = () => {
-        setIsListening(false);
+      speechRecognitionRef.current = new RealTimeSpeechRecognition(speechConfig);
+      
+      // Initialize Hybrid Speech Recognition (Microsoft + Web Speech)
+      const hybridConfig = {
+        language: 'en-US',
+        sampleRate: 16000,
+        continuous: false,
+        interimResults: true,
+        maxAlternatives: 5,
+        useMicrosoftAssessment: true,
+        onResult: (result: HybridSpeechResult) => {
+          if (result.isFinal) {
+            handleHybridSpeechResult(result);
+          }
+        },
+        onError: (error: string) => {
+          console.error('Hybrid speech recognition error:', error);
+          setIsListening(false);
+          toast({
+            title: "Oops! Let's try again!",
+            description: error,
+            variant: "destructive"
+          });
+        },
+        onStart: () => {
+          setIsListening(true);
+        },
+        onEnd: () => {
+          setIsListening(false);
+        }
       };
-
-      setRecognition(recognitionInstance);
-    } else {
-      toast({
-        title: "Speech Recognition Not Supported",
-        description: "Your browser doesn't support speech recognition. Try Chrome or Edge.",
-        variant: "destructive"
-      });
+      
+      try {
+        hybridSpeechRef.current = new HybridSpeechRecognition(hybridConfig);
+      } catch (hybridError) {
+        console.warn('⚠️ Failed to initialize hybrid speech recognition:', hybridError);
+        // Don't block the game if hybrid fails, just use regular speech recognition
+        hybridSpeechRef.current = null;
+      }
     }
 
     return () => {
-      if (recognition) {
-        recognition.stop();
+      if (speechRecognitionRef.current) {
+        speechRecognitionRef.current.destroy();
+      }
+      if (hybridSpeechRef.current) {
+        hybridSpeechRef.current.destroy();
       }
     };
-  }, []);
+  }, [personalizedWords]);
 
-  const startListening = () => {
-    if (recognition && !isListening) {
+  const startEnhancedListening = async () => {
+    if (!isListening && currentWord) {
       try {
-        recognition.start();
         setIsListening(true);
+        console.log('🎯 Starting enhanced speech recognition for:', currentWord.word);
+        
+        // Use Microsoft Speech directly for better accuracy
+        const result = await microsoftSpeechService.assessPronunciationDirect(currentWord.word);
+        
+        if (result && result.transcript && result.transcript.trim() !== '.') {
+          // Process the Microsoft Speech result
+          const childAge = childProfile?.childBirthYear ? 
+            new Date().getFullYear() - childProfile.childBirthYear : 5;
+          
+          const feedback = await aiSpeechService.generateEncouragingFeedback(
+            childProfile?.childName || 'friend',
+            currentWord.word,
+            result.transcript,
+            result.pronunciationScore / 100,
+            currentAttempt,
+            childAge,
+            childProfile?.interests
+          );
+          
+          await handleSpeechResult(result.transcript, result.pronunciationScore / 100, [], result);
+        } else {
+          // Fallback to regular speech recognition
+          await startListening();
+        }
+        
+      } catch (error) {
+        console.error('Enhanced listening error:', error);
+        // Fallback to regular speech recognition
+        await startListening();
+      } finally {
+        setIsListening(false);
+      }
+    }
+  };
+
+  const startListening = async () => {
+    if (speechRecognitionRef.current && !isListening) {
+      try {
+        await speechRecognitionRef.current.startListening();
       } catch (error) {
         console.error('Error starting recognition:', error);
       }
     }
   };
 
-  const stopListening = () => {
-    if (recognition && isListening) {
-      recognition.stop();
-      setIsListening(false);
+  const startHybridListening = async () => {
+    if (hybridSpeechRef.current && !isListening && currentWord) {
+      try {
+        // Set the target word for pronunciation assessment
+        hybridSpeechRef.current.setTargetWord(currentWord.word);
+        await hybridSpeechRef.current.startListening();
+      } catch (error) {
+        console.error('Error starting hybrid recognition:', error);
+        toast({
+          title: "Enhanced Recognition Unavailable",
+          description: "Falling back to standard recognition mode.",
+          variant: "default"
+        });
+        // Fallback to regular speech recognition
+        startListening();
+      }
     }
   };
 
-  const handleSpeechResult = (transcript: string, confidence: number) => {
+  const stopListening = () => {
+    if (speechRecognitionRef.current && isListening) {
+      speechRecognitionRef.current.stopListening();
+    }
+    if (hybridSpeechRef.current && isListening) {
+      hybridSpeechRef.current.stopListening();
+    }
+  };
+
+  const handleSpeechResult = async (
+    transcript: string, 
+    confidence: number, 
+    alternatives?: Array<{ transcript: string; confidence: number }>,
+    microsoftResult?: any
+  ) => {
+    setIsGeneratingFeedback(true);
     const targetWord = currentWord.word.toLowerCase();
-    const isCorrect = transcript === targetWord;
     
-    // Calculate accuracy based on similarity and confidence
-    let accuracy = 0;
-    if (isCorrect) {
-      accuracy = Math.round(confidence * 100);
+    // Use Microsoft Speech result if available, otherwise use standard analysis
+    let analysis;
+    if (microsoftResult) {
+      console.log('🎯 Using Microsoft Speech assessment result');
+      analysis = {
+        accuracy: Math.round(microsoftResult.pronunciationScore),
+        phonemeAccuracy: microsoftResult.phonemeDetails?.map((p: any) => Math.round(p.accuracy)) || [],
+        suggestions: microsoftResult.suggestions || ['Keep practicing!'],
+        isCorrect: microsoftResult.isCorrect,
+        source: 'microsoft'
+      };
     } else {
-      // Partial credit for similar pronunciation
-      const similarity = calculateSimilarity(transcript, targetWord);
-      accuracy = Math.round(similarity * confidence * 100);
+      // Use advanced pronunciation analysis
+      analysis = PronunciationAnalyzer.analyzePronunciation(
+        targetWord, 
+        transcript, 
+        confidence, 
+        alternatives
+      );
     }
 
     const attemptData = {
       word: currentWord.word,
       transcript,
-      accuracy,
-      correct: isCorrect,
+      accuracy: analysis.accuracy,
+      correct: analysis.isCorrect,
       confidence,
       attempt: currentAttempt,
-      timestamp: new Date()
+      timestamp: new Date(),
+      phonemeAccuracy: analysis.phonemeAccuracy,
+      suggestions: analysis.suggestions
     };
 
     setAttempts([...attempts, attemptData]);
-    
-    // Show feedback
-    setFeedback({
-      correct: isCorrect,
-      accuracy,
-      transcript,
-      targetWord: currentWord.word
-    });
-    setShowFeedback(true);
 
-    // Update score
-    const newScore = score + accuracy;
+    // Generate AI-powered feedback with retry mechanism
+    const childAge = childProfile?.childBirthYear ? 
+      new Date().getFullYear() - childProfile.childBirthYear : 5;
+    
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    while (retryCount < maxRetries) {
+      try {
+        const aiFeedback = await aiSpeechService.generateEncouragingFeedback(
+          childProfile?.childName || 'friend',
+          currentWord.word,
+          transcript,
+          analysis.accuracy,
+          currentAttempt,
+          childAge,
+          childProfile?.interests
+        );
+        
+        setFeedback(aiFeedback);
+        break;
+      } catch (error) {
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          console.error('Failed to generate AI feedback after retries:', error);
+          toast({
+            title: "Unable to Generate Personalized Feedback",
+            description: "AI service temporarily unavailable. Please try again.",
+            variant: "destructive"
+          });
+          // Show generic loading message instead of proceeding without feedback
+          setFeedback({
+            message: "Loading your personalized feedback...",
+            encouragement: "Please wait a moment while we prepare your response.",
+            emotionalTone: "supportive"
+          });
+          return; // Don't proceed with the game flow
+        }
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
+      }
+    }
+
+    setShowFeedback(true);
+    setIsGeneratingFeedback(false);
+
+    // Update scoring with more nuanced system
+    let pointsEarned = analysis.accuracy;
+    if (analysis.isCorrect && currentAttempt === 1) {
+      pointsEarned += 20; // Bonus for first try
+      setStreak(streak + 1);
+      setMaxStreak(Math.max(maxStreak, streak + 1));
+    } else if (analysis.isCorrect) {
+      pointsEarned += 10; // Smaller bonus for later attempts
+      setStreak(streak + 1);
+      setMaxStreak(Math.max(maxStreak, streak + 1));
+    } else {
+      setStreak(0); // Reset streak
+    }
+
+    // Award stars based on performance
+    if (analysis.accuracy >= 90) setStars(stars + 3);
+    else if (analysis.accuracy >= 70) setStars(stars + 2);
+    else if (analysis.accuracy >= 50) setStars(stars + 1);
+
+    const newScore = score + pointsEarned;
     setScore(newScore);
     setTotalAccuracy(Math.round(newScore / ((currentWordIndex + 1) * 100) * 100));
 
-    // Auto-advance after showing feedback
+    // Auto-advance logic
     setTimeout(() => {
       setShowFeedback(false);
       
-      if (currentAttempt < 2 && !isCorrect && accuracy < 70) {
-        // Give another try
-        setCurrentAttempt(currentAttempt + 1);
-        toast({
-          title: "Try again!",
-          description: "Listen carefully and repeat the word",
-        });
-      } else {
-        // Move to next word
-        if (currentWordIndex < words.length - 1) {
+      console.log('🎯 Auto-advance decision:', {
+        currentAttempt,
+        maxAttempts,
+        isCorrect: analysis.isCorrect,
+        accuracy: analysis.accuracy,
+        shouldTryAgain: currentAttempt < maxAttempts && !analysis.isCorrect,
+        shouldAdvance: analysis.isCorrect || currentAttempt >= maxAttempts
+      });
+      
+      if (analysis.isCorrect) {
+        // Correct answer - move to next word
+        console.log('✅ Correct answer - advancing to next word');
+        if (currentWordIndex < personalizedWords.length - 1) {
           setCurrentWordIndex(currentWordIndex + 1);
           setCurrentAttempt(1);
         } else {
-          // Game complete
+          completeGame();
+        }
+      } else if (currentAttempt < maxAttempts) {
+        // Give another try
+        console.log(`🔄 Attempt ${currentAttempt} failed - allowing retry`);
+        setCurrentAttempt(currentAttempt + 1);
+        toast({
+          title: `Try ${currentAttempt + 1} of ${maxAttempts}!`,
+          description: "You can do it! " + cheerfulCharacter,
+        });
+      } else {
+        // Used all attempts - move to next word automatically
+        console.log('⏭️ All attempts used - auto-advancing to next word');
+        toast({
+          title: "Let's try the next word!",
+          description: "Don't worry, practice makes perfect! " + cheerfulCharacter,
+          variant: "default"
+        });
+        
+        if (currentWordIndex < personalizedWords.length - 1) {
+          setCurrentWordIndex(currentWordIndex + 1);
+          setCurrentAttempt(1);
+        } else {
           completeGame();
         }
       }
-    }, 2500);
+    }, 3000); // Longer display time for AI feedback
   };
 
-  const calculateSimilarity = (str1: string, str2: string): number => {
-    const longer = str1.length > str2.length ? str1 : str2;
-    const shorter = str1.length > str2.length ? str2 : str1;
+  const handleHybridSpeechResult = async (result: HybridSpeechResult) => {
+    setIsGeneratingFeedback(true);
+    const targetWord = currentWord.word.toLowerCase();
     
-    if (longer.length === 0) return 1.0;
+    // Use hybrid pronunciation analysis (prioritizes Microsoft assessment if available)
+    const analysis = HybridPronunciationAnalyzer.analyzePronunciation(
+      targetWord,
+      result.transcript,
+      result.confidence,
+      result.alternatives,
+      result.microsoftAssessment
+    );
+
+    const attemptData = {
+      word: currentWord.word,
+      transcript: result.transcript,
+      accuracy: analysis.accuracy,
+      correct: analysis.isCorrect,
+      confidence: result.confidence,
+      attempt: currentAttempt,
+      timestamp: new Date(),
+      phonemeAccuracy: analysis.phonemeAccuracy,
+      suggestions: analysis.suggestions,
+      assessmentSource: analysis.source,
+      microsoftScore: result.microsoftAssessment?.pronunciationScore
+    };
+
+    setAttempts([...attempts, attemptData]);
+
+    // Generate AI-powered feedback with enhanced Microsoft data
+    const childAge = childProfile?.childBirthYear ? 
+      new Date().getFullYear() - childProfile.childBirthYear : 5;
     
-    const editDistance = levenshteinDistance(str1, str2);
-    return (longer.length - editDistance) / longer.length;
-  };
-
-  const levenshteinDistance = (str1: string, str2: string): number => {
-    const matrix: number[][] = [];
-
-    for (let i = 0; i <= str2.length; i++) {
-      matrix[i] = [i];
-    }
-
-    for (let j = 0; j <= str1.length; j++) {
-      matrix[0][j] = j;
-    }
-
-    for (let i = 1; i <= str2.length; i++) {
-      for (let j = 1; j <= str1.length; j++) {
-        if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-          matrix[i][j] = matrix[i - 1][j - 1];
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    while (retryCount < maxRetries) {
+      try {
+        const feedbackPrompt = result.microsoftAssessment 
+          ? `${currentWord.word} (pronounced: ${result.transcript}, Microsoft pronunciation score: ${result.microsoftAssessment.pronunciationScore})`
+          : `${currentWord.word} (pronounced: ${result.transcript})`;
+          
+        const aiFeedback = await aiSpeechService.generateEncouragingFeedback(
+          childProfile?.childName || 'friend',
+          feedbackPrompt,
+          result.transcript,
+          analysis.accuracy,
+          currentAttempt,
+          childAge,
+          childProfile?.interests
+        );
+        
+        // Enhance feedback with Microsoft-specific insights
+        if (result.microsoftAssessment && analysis.detailedFeedback) {
+          aiFeedback.technicalTip = analysis.detailedFeedback;
+        }
+        
+        setFeedback(aiFeedback);
+        break;
+      } catch (error) {
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          console.error('Failed to generate AI feedback after retries:', error);
+          setFeedback({
+            message: "Great attempt! Keep practicing!",
+            encouragement: "You're doing wonderfully! " + cheerfulCharacter,
+            emotionalTone: "supportive",
+            technicalTip: analysis.detailedFeedback
+          });
         } else {
-          matrix[i][j] = Math.min(
-            matrix[i - 1][j - 1] + 1,
-            matrix[i][j - 1] + 1,
-            matrix[i - 1][j] + 1
-          );
+          await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
         }
       }
     }
 
-    return matrix[str2.length][str1.length];
-  };
+    setShowFeedback(true);
+    setIsGeneratingFeedback(false);
 
-  const playWordAudio = () => {
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(currentWord.word);
-      utterance.rate = 0.7;
-      utterance.pitch = 1;
-      utterance.volume = 1;
-      speechSynthesis.speak(utterance);
+    // Enhanced scoring with Microsoft assessment bonus
+    let pointsEarned = analysis.accuracy;
+    if (result.microsoftAssessment?.pronunciationScore) {
+      pointsEarned += (result.microsoftAssessment.pronunciationScore - 50) * 0.5; // Bonus for high Microsoft scores
     }
+    
+    if (analysis.isCorrect && currentAttempt === 1) {
+      pointsEarned += 20;
+      setStreak(streak + 1);
+      setMaxStreak(Math.max(maxStreak, streak + 1));
+    } else if (analysis.isCorrect) {
+      pointsEarned += 10;
+      setStreak(streak + 1);
+      setMaxStreak(Math.max(maxStreak, streak + 1));
+    } else {
+      setStreak(0);
+    }
+
+    if (analysis.accuracy >= 90) setStars(stars + 3);
+    else if (analysis.accuracy >= 70) setStars(stars + 2);
+    else if (analysis.accuracy >= 50) setStars(stars + 1);
+
+    const newScore = score + pointsEarned;
+    setScore(newScore);
+    setTotalAccuracy(Math.round(newScore / ((currentWordIndex + 1) * 100) * 100));
+
+    // Auto-advance with same logic as regular handler
+    setTimeout(() => {
+      setShowFeedback(false);
+      
+      if (analysis.isCorrect) {
+        if (currentWordIndex < personalizedWords.length - 1) {
+          setCurrentWordIndex(currentWordIndex + 1);
+          setCurrentAttempt(1);
+        } else {
+          completeGame();
+        }
+      } else if (currentAttempt < maxAttempts) {
+        setCurrentAttempt(currentAttempt + 1);
+        toast({
+          title: `Try ${currentAttempt + 1} of ${maxAttempts}!`,
+          description: "You can do it! " + cheerfulCharacter,
+        });
+      } else {
+        toast({
+          title: "Let's try the next word!",
+          description: "Don't worry, practice makes perfect! " + cheerfulCharacter,
+        });
+        
+        if (currentWordIndex < personalizedWords.length - 1) {
+          setCurrentWordIndex(currentWordIndex + 1);
+          setCurrentAttempt(1);
+        } else {
+          completeGame();
+        }
+      }
+    }, 3000);
   };
 
   const completeGame = async () => {
-    const gameData = {
-      wordsAttempted: attempts.map(a => ({
-        word: a.word,
-        attempts: attempts.filter(att => att.word === a.word).length,
-        accuracy: a.accuracy,
-        phonemes: words.find(w => w.word === a.word)?.phonemes || [],
-        timestamp: a.timestamp
-      }))
-    };
+    // Generate AI session summary with retry mechanism
+    const wordsCompleted = attempts.filter(a => a.correct).length;
+    const childAge = childProfile?.childBirthYear ? 
+      new Date().getFullYear() - childProfile.childBirthYear : 5;
+
+    let retryCount = 0;
+    const maxRetries = 3;
+    
+    while (retryCount < maxRetries) {
+      try {
+        const summary = await aiSpeechService.generateSessionSummary(
+          childProfile?.childName || 'friend',
+          personalizedWords.length,
+          wordsCompleted,
+          totalAccuracy,
+          score,
+          childAge,
+          childProfile?.interests
+        );
+
+        setSessionSummary(summary);
+        setShowSessionSummary(true);
+        break;
+
+      } catch (error) {
+        retryCount++;
+        console.warn(`Failed to generate session summary (attempt ${retryCount}):`, error);
+        
+        if (retryCount >= maxRetries) {
+          console.error('Max retries reached for session summary generation');
+          setSessionSummary("Great job! The AI is taking a break, but you did wonderfully!");
+          setShowSessionSummary(true);
+          break;
+        } else {
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+        }
+      }
+    }
 
     try {
+      // Save to backend
+      const gameData = {
+        personalizedWords: personalizedWords,
+        wordsAttempted: attempts.map(a => ({
+          word: a.word,
+          attempts: attempts.filter(att => att.word === a.word).length,
+          accuracy: a.accuracy,
+          phonemeAccuracy: a.phonemeAccuracy,
+          suggestions: a.suggestions,
+          timestamp: a.timestamp
+        })),
+        aiGenerated: true,
+        childProfile: childProfile,
+        finalStats: {
+          stars,
+          streak: maxStreak,
+          totalAccuracy,
+          score
+        }
+      };
+
       const token = localStorage.getItem('authToken');
       const response = await fetch(`/api/games/session/${sessionId}/complete`, {
         method: 'POST',
@@ -256,22 +674,32 @@ export default function WordPracticeGame({
         })
       });
 
-      if (response.ok) {
-        const results = await response.json();
-        onComplete(results);
+      if (!response.ok) {
+        throw new Error('Failed to save session');
       }
+
     } catch (error) {
-      console.error('Error completing game:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save game progress",
-        variant: "destructive"
-      });
+      console.error('Error saving game session:', error);
+      // Still show the summary even if save fails - AI summary already generated above
+      if (!sessionSummary) {
+        setSessionSummary("Great job! You worked hard today!");
+      }
+      setShowSessionSummary(true);
     }
   };
 
   const skipWord = () => {
-    if (currentWordIndex < words.length - 1) {
+    // Deduct points for skipping
+    const newScore = Math.max(0, score - 30);
+    setScore(newScore);
+    setStreak(0); // Reset streak
+    
+    toast({
+      title: "Word Skipped",
+      description: "No worries! Let's try the next word " + cheerfulCharacter,
+    });
+
+    if (currentWordIndex < personalizedWords.length - 1) {
       setCurrentWordIndex(currentWordIndex + 1);
       setCurrentAttempt(1);
       setShowFeedback(false);
@@ -280,12 +708,190 @@ export default function WordPracticeGame({
     }
   };
 
+  const playWordAudio = () => {
+    if ('speechSynthesis' in window) {
+      // Cancel any ongoing speech
+      speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(currentWord.word);
+      utterance.rate = 0.7;
+      utterance.pitch = 1.1;
+      utterance.volume = 1;
+      
+      // Try to use a child-friendly voice
+      const voices = speechSynthesis.getVoices();
+      const childVoice = voices.find(voice => 
+        voice.name.includes('Female') || voice.name.includes('Child')
+      );
+      if (childVoice) {
+        utterance.voice = childVoice;
+      }
+      
+      speechSynthesis.speak(utterance);
+    }
+  };
+
+  // Loading state for word generation
+  if (isLoadingWords) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <motion.div 
+          className="text-center"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <div className="w-16 h-16 border-4 border-[#F5B82E] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-xl text-foreground">Creating your special words...</p>
+          <p className="text-muted-foreground mt-2">Our AI is preparing words just for you! {cheerfulCharacter}</p>
+        </motion.div>
+      </div>
+    );
+  }
+
   if (!currentWord) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <p className="text-xl">Loading words...</p>
+          <p className="text-xl text-red-500">No words available. Please try again.</p>
         </div>
+      </div>
+    );
+  }
+
+  // Session Summary Modal
+  if (showSessionSummary && sessionSummary) {
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0, y: 50 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          className="bg-card border-2 border-[#F5B82E] rounded-3xl p-8 max-w-lg w-full text-center overflow-y-auto max-h-[90vh]"
+        >
+          {/* Celebration Header */}
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+            className="mb-6"
+          >
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#F5B82E] to-orange-400 flex items-center justify-center mx-auto mb-4">
+              <Trophy className="w-12 h-12 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-[#F5B82E] mb-2">
+              {sessionSummary.title}
+            </h1>
+          </motion.div>
+
+          {/* Character and Message */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="mb-6"
+          >
+            <div className="text-6xl mb-4">{cheerfulCharacter}</div>
+            <p className="text-lg text-foreground mb-4">
+              {sessionSummary.message}
+            </p>
+          </motion.div>
+
+          {/* Stats Display */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div className="bg-muted rounded-lg p-4">
+              <div className="text-2xl font-bold text-[#F5B82E]">{score}</div>
+              <div className="text-sm text-muted-foreground">Total Points</div>
+            </div>
+            <div className="bg-muted rounded-lg p-4">
+              <div className="flex items-center justify-center">
+                {[...Array(Math.min(3, Math.floor(stars / 10)))].map((_, i) => (
+                  <Star key={i} className="w-6 h-6 text-[#F5B82E] fill-[#F5B82E]" />
+                ))}
+              </div>
+              <div className="text-sm text-muted-foreground">Stars Earned</div>
+            </div>
+            <div className="bg-muted rounded-lg p-4">
+              <div className="text-2xl font-bold text-[#F5B82E]">{maxStreak}</div>
+              <div className="text-sm text-muted-foreground">Best Streak</div>
+            </div>
+            <div className="bg-muted rounded-lg p-4">
+              <div className="text-2xl font-bold text-[#F5B82E]">{totalAccuracy}%</div>
+              <div className="text-sm text-muted-foreground">Accuracy</div>
+            </div>
+          </div>
+
+          {/* Achievements */}
+          <div className="mb-6">
+            <h3 className="text-lg font-bold mb-3 flex items-center justify-center gap-2">
+              <Award className="w-5 h-5 text-[#F5B82E]" />
+              Amazing Achievements!
+            </h3>
+            <div className="space-y-2">
+              {sessionSummary.achievements.map((achievement: string, index: number) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.7 + index * 0.1 }}
+                  className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-3"
+                >
+                  <Check className="w-5 h-5 text-green-500" />
+                  <span className="text-sm">{achievement}</span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Encouragement */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1 }}
+            className="mb-6 p-4 bg-[#F5B82E]/10 rounded-lg border border-[#F5B82E]/20"
+          >
+            <p className="text-foreground font-medium">
+              {sessionSummary.encouragement}
+            </p>
+          </motion.div>
+
+          {/* Next Goals */}
+          {sessionSummary.nextGoals && sessionSummary.nextGoals.length > 0 && (
+            <div className="mb-6">
+              <h4 className="font-bold mb-2 flex items-center justify-center gap-2">
+                <Target className="w-4 h-4 text-[#F5B82E]" />
+                Next Time Let's Try:
+              </h4>
+              <div className="space-y-1">
+                {sessionSummary.nextGoals.map((goal: string, index: number) => (
+                  <div key={index} className="text-sm text-muted-foreground">
+                    • {goal}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => {
+                // Save the game completion results first
+                onComplete({ 
+                  score, 
+                  accuracy: totalAccuracy, 
+                  stars, 
+                  maxStreak,
+                  summary: sessionSummary 
+                });
+                // Then navigate to speech therapy page to see all games
+                setLocation('/speech-therapy');
+              }}
+              className="flex-1 bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white py-3 px-6 rounded-xl font-bold hover:shadow-lg transition-all"
+            >
+              Continue Learning! 🚀
+            </button>
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -305,32 +911,47 @@ export default function WordPracticeGame({
           <div className="text-center">
             <div className="text-sm text-muted-foreground">Progress</div>
             <div className="text-lg font-bold">
-              {currentWordIndex + 1}/{words.length}
+              {currentWordIndex + 1}/{personalizedWords.length}
             </div>
           </div>
           
           <div className="text-center">
             <div className="text-sm text-muted-foreground">Score</div>
-            <div className="text-lg font-bold text-[#F5B82E]">
+            <div className="text-lg font-bold text-[#F5B82E] flex items-center gap-1">
               {score}
+              <Zap className="w-4 h-4" />
             </div>
           </div>
           
           <div className="text-center">
-            <div className="text-sm text-muted-foreground">Accuracy</div>
-            <div className="text-lg font-bold text-[#F5B82E]">
-              {totalAccuracy}%
+            <div className="text-sm text-muted-foreground">Stars</div>
+            <div className="text-lg font-bold text-[#F5B82E] flex items-center gap-1">
+              {Math.floor(stars / 10)}
+              <Star className="w-4 h-4 fill-current" />
+            </div>
+          </div>
+
+          <div className="text-center">
+            <div className="text-sm text-muted-foreground">Streak</div>
+            <div className="text-lg font-bold text-green-500 flex items-center gap-1">
+              {streak}
+              <Heart className="w-4 h-4 fill-current" />
             </div>
           </div>
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="w-full bg-muted rounded-full h-2 mb-8">
-        <div 
-          className="bg-[#F5B82E] h-2 rounded-full transition-all duration-500"
-          style={{ width: `${((currentWordIndex + 1) / words.length) * 100}%` }}
+      <div className="w-full bg-muted rounded-full h-3 mb-8 relative overflow-hidden">
+        <motion.div 
+          className="bg-gradient-to-r from-[#F5B82E] to-orange-400 h-3 rounded-full transition-all duration-500"
+          style={{ width: `${((currentWordIndex + 1) / personalizedWords.length) * 100}%` }}
+          initial={{ width: 0 }}
+          animate={{ width: `${((currentWordIndex + 1) / personalizedWords.length) * 100}%` }}
         />
+        <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white">
+          {Math.round(((currentWordIndex + 1) / personalizedWords.length) * 100)}%
+        </div>
       </div>
 
       {/* Main Word Card */}
@@ -351,21 +972,61 @@ export default function WordPracticeGame({
               transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
               className="inline-block mb-4"
             >
-              <div className="w-24 h-24 rounded-full bg-[#F5B82E]/10 flex items-center justify-center">
-                <Sparkles className="w-12 h-12 text-[#F5B82E]" />
+              <div className="w-32 h-32 rounded-full bg-gradient-to-br from-[#F5B82E]/20 to-orange-400/20 flex items-center justify-center mb-2 border-4 border-[#F5B82E]/30">
+                {currentWord.visualCue ? (
+                  <div className="text-6xl">{currentWord.visualCue}</div>
+                ) : (
+                  <Sparkles className="w-16 h-16 text-[#F5B82E]" />
+                )}
               </div>
+              {/* Cheerful character */}
+              <motion.div
+                animate={{ 
+                  y: [0, -10, 0],
+                  rotate: [0, 5, -5, 0]
+                }}
+                transition={{ 
+                  duration: 2,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+                className="text-3xl"
+              >
+                {cheerfulCharacter}
+              </motion.div>
             </motion.div>
             
-            <h2 className="text-5xl font-bold mb-3 text-foreground capitalize">
+            <h2 className="text-6xl font-bold mb-4 capitalize bg-gradient-to-r from-[#F5B82E] to-orange-400 bg-clip-text text-transparent">
               {currentWord.word}
             </h2>
             
-            <p className="text-2xl text-muted-foreground mb-2">
+            <p className="text-2xl text-muted-foreground mb-3">
               {currentWord.phonetic}
             </p>
             
-            <div className="inline-block px-4 py-2 bg-muted rounded-full">
-              <span className="text-sm font-medium capitalize">{currentWord.category}</span>
+            <div className="flex justify-center gap-2 mb-4">
+              <div className="inline-block px-4 py-2 bg-[#F5B82E]/10 border border-[#F5B82E]/30 rounded-full">
+                <span className="text-sm font-medium capitalize text-[#F5B82E]">{currentWord.category}</span>
+              </div>
+              {currentWord.therapyFocus && (
+                <div className="inline-block px-4 py-2 bg-blue-50 border border-blue-200 rounded-full">
+                  <span className="text-sm font-medium text-blue-600">{currentWord.therapyFocus}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Attempt indicator */}
+            <div className="flex justify-center gap-2 mb-4">
+              {[...Array(maxAttempts)].map((_, i) => (
+                <div
+                  key={i}
+                  className={`w-3 h-3 rounded-full transition-all ${
+                    i < currentAttempt 
+                      ? 'bg-[#F5B82E]' 
+                      : 'bg-muted-foreground/20'
+                  }`}
+                />
+              ))}
             </div>
           </div>
 
@@ -373,128 +1034,227 @@ export default function WordPracticeGame({
           <div className="space-y-4 max-w-md mx-auto">
             <button
               onClick={playWordAudio}
-              className="w-full bg-muted hover:bg-muted/80 text-foreground py-4 px-6 rounded-xl flex items-center justify-center gap-3 transition-colors"
+              className="w-full bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 border-2 border-blue-200 text-blue-700 py-4 px-6 rounded-xl flex items-center justify-center gap-3 transition-all transform hover:scale-105"
             >
-              <Volume2 className="w-6 h-6" />
-              <span className="text-lg font-semibold">Listen to Word</span>
+              <Headphones className="w-6 h-6" />
+              <span className="text-lg font-semibold">🎧 Listen Carefully</span>
             </button>
             
-            <button
-              onClick={isListening ? stopListening : startListening}
-              disabled={showFeedback}
-              className={`w-full py-5 px-6 rounded-xl flex items-center justify-center gap-3 text-lg font-bold transition-all ${
+            <motion.button
+              onClick={isListening ? stopListening : (useEnhancedSpeech ? startEnhancedListening : startListening)}
+              disabled={showFeedback || isGeneratingFeedback}
+              className={`w-full py-6 px-6 rounded-xl flex items-center justify-center gap-3 text-lg font-bold transition-all transform hover:scale-105 ${
                 isListening 
-                  ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
-                  : 'bg-gradient-to-r from-[#F5B82E] to-orange-400 hover:shadow-lg text-white'
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse shadow-lg' 
+                  : 'bg-gradient-to-r from-[#F5B82E] to-orange-400 hover:shadow-xl text-white'
+              } disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
+              whileTap={{ scale: 0.95 }}
             >
               {isListening ? (
                 <>
-                  <MicOff className="w-7 h-7" />
-                  Listening...
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 1, repeat: Infinity }}
+                  >
+                    <Mic className="w-7 h-7" />
+                  </motion.div>
+                  I'm Listening... 👂
+                </>
+              ) : isGeneratingFeedback ? (
+                <>
+                  <Brain className="w-7 h-7 animate-spin" />
+                  Thinking...
                 </>
               ) : (
                 <>
                   <Mic className="w-7 h-7" />
-                  Say the Word
+                  🎤 Say "{currentWord.word}"
                 </>
               )}
-            </button>
+            </motion.button>
 
             {currentAttempt > 1 && (
-              <div className="text-center text-sm text-muted-foreground">
-                Attempt {currentAttempt} of 2
-              </div>
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="text-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg"
+              >
+                <div className="text-sm font-medium text-yellow-700">
+                  Try {currentAttempt} of {maxAttempts} - You can do it! {cheerfulCharacter}
+                </div>
+              </motion.div>
             )}
+
+            {/* Speech Recognition Mode Toggle */}
+            <div className="flex items-center justify-center gap-2 py-2">
+              <button
+                onClick={() => setUseEnhancedSpeech(!useEnhancedSpeech)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm ${
+                  useEnhancedSpeech 
+                    ? 'bg-green-100 text-green-700 border border-green-200' 
+                    : 'bg-gray-100 text-gray-600 border border-gray-200'
+                }`}
+              >
+                <Zap className={`w-4 h-4 ${useEnhancedSpeech ? 'text-green-600' : 'text-gray-400'}`} />
+                <span className="font-medium">
+                  {useEnhancedSpeech ? '🚀 Enhanced Mode' : '📢 Basic Mode'}
+                </span>
+              </button>
+            </div>
 
             <button
               onClick={skipWord}
-              className="w-full text-muted-foreground hover:text-foreground py-2 px-4 rounded-lg transition-colors text-sm"
+              className="w-full text-muted-foreground hover:text-red-500 py-3 px-4 rounded-lg transition-colors text-sm border-2 border-dashed border-muted hover:border-red-200"
             >
-              Skip this word →
+              Skip this word (-30 points) →
             </button>
           </div>
         </motion.div>
       </AnimatePresence>
 
-      {/* Feedback Modal */}
+      {/* Enhanced AI Feedback Modal */}
       <AnimatePresence>
         {showFeedback && feedback && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4"
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4"
             onClick={() => setShowFeedback(false)}
           >
             <motion.div
-              initial={{ scale: 0.8, y: 50 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.8, y: 50 }}
+              initial={{ scale: 0.8, y: 50, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.8, y: 50, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className={`bg-card border-2 rounded-2xl p-8 max-w-md w-full text-center ${
-                feedback.correct 
-                  ? 'border-green-500' 
-                  : feedback.accuracy >= 70 
-                    ? 'border-yellow-500' 
-                    : 'border-red-500'
-              }`}
+              className="bg-white/95 backdrop-blur border-4 border-[#F5B82E] rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl"
             >
+              {/* Animated Character */}
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
                 transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-                className="mb-4"
+                className="mb-6"
               >
-                {feedback.correct ? (
-                  <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center mx-auto">
-                    <Check className="w-10 h-10 text-green-500" />
+                <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                  feedback.emotionalTone === 'excited' ? 'bg-green-100 border-4 border-green-300' :
+                  feedback.emotionalTone === 'proud' ? 'bg-purple-100 border-4 border-purple-300' :
+                  feedback.emotionalTone === 'encouraging' ? 'bg-yellow-100 border-4 border-yellow-300' :
+                  'bg-blue-100 border-4 border-blue-300'
+                }`}>
+                  {feedback.emotionalTone === 'excited' ? (
+                    <PartyPopper className="w-12 h-12 text-green-600" />
+                  ) : feedback.emotionalTone === 'proud' ? (
+                    <Trophy className="w-12 h-12 text-purple-600" />
+                  ) : feedback.emotionalTone === 'encouraging' ? (
+                    <Smile className="w-12 h-12 text-yellow-600" />
+                  ) : (
+                    <Heart className="w-12 h-12 text-blue-600" />
+                  )}
+                </div>
+                
+                {/* Cheerful character celebration */}
+                <motion.div
+                  animate={{ 
+                    y: [0, -20, 0],
+                    rotate: [0, 10, -10, 0]
+                  }}
+                  transition={{ 
+                    duration: 1.5,
+                    repeat: 2,
+                    ease: "easeInOut"
+                  }}
+                  className="text-4xl mb-2"
+                >
+                  {cheerfulCharacter}
+                </motion.div>
+              </motion.div>
+
+              {/* AI-Generated Feedback Message */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+              >
+                <h3 className="text-2xl font-bold mb-3 text-[#F5B82E]">
+                  {feedback.message}
+                </h3>
+
+                <p className="text-lg text-foreground mb-4 bg-[#F5B82E]/10 p-4 rounded-lg border border-[#F5B82E]/20">
+                  {feedback.encouragement}
+                </p>
+
+                {feedback.technicalTip && (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Brain className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-bold text-blue-700">Helpful Tip:</span>
+                    </div>
+                    <p className="text-sm text-blue-600">{feedback.technicalTip}</p>
                   </div>
-                ) : feedback.accuracy >= 70 ? (
-                  <div className="w-20 h-20 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto">
-                    <Star className="w-10 h-10 text-yellow-500" />
-                  </div>
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mx-auto">
-                    <X className="w-10 h-10 text-red-500" />
+                )}
+
+                {feedback.nextSteps && (
+                  <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Target className="w-4 h-4 text-green-600" />
+                      <span className="text-sm font-bold text-green-700">Next Step:</span>
+                    </div>
+                    <p className="text-sm text-green-600">{feedback.nextSteps}</p>
                   </div>
                 )}
               </motion.div>
 
-              <h3 className="text-2xl font-bold mb-2">
-                {feedback.correct 
-                  ? 'Perfect!' 
-                  : feedback.accuracy >= 70 
-                    ? 'Good Try!' 
-                    : 'Keep Practicing!'}
-              </h3>
+              {/* Performance Visualization */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.6 }}
+                className="mb-4"
+              >
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  {[...Array(5)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ delay: 0.8 + i * 0.1 }}
+                    >
+                      <Star
+                        className={`w-6 h-6 ${
+                          i < Math.floor((attempts[attempts.length - 1]?.accuracy || 0) / 20)
+                            ? 'text-[#F5B82E] fill-[#F5B82E]'
+                            : 'text-muted-foreground/30'
+                        }`}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
 
-              <p className="text-muted-foreground mb-4">
-                You said: <span className="font-semibold text-foreground">"{feedback.transcript}"</span>
-              </p>
+                <div className="bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white py-3 px-6 rounded-xl">
+                  <p className="text-sm font-medium">Points Earned</p>
+                  <p className="text-2xl font-bold">
+                    +{attempts[attempts.length - 1]?.accuracy || 0} 🎯
+                  </p>
+                </div>
+              </motion.div>
 
-              {!feedback.correct && (
-                <p className="text-sm text-muted-foreground mb-4">
-                  Target: <span className="font-semibold text-foreground capitalize">"{feedback.targetWord}"</span>
-                </p>
-              )}
-
-              <div className="flex items-center justify-center gap-2 mb-4">
-                {[...Array(3)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`w-6 h-6 ${
-                      feedback.accuracy >= (i + 1) * 33
-                        ? 'text-[#F5B82E] fill-[#F5B82E]'
-                        : 'text-muted-foreground/30'
-                    }`}
-                  />
-                ))}
-              </div>
-
-              <p className="text-3xl font-bold text-[#F5B82E]">
-                +{feedback.accuracy} points
-              </p>
+              {/* Continue Button */}
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1 }}
+                onClick={() => setShowFeedback(false)}
+                className="w-full bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white py-4 px-6 rounded-xl font-bold text-lg hover:shadow-lg transition-all transform hover:scale-105"
+                whileTap={{ scale: 0.95 }}
+              >
+                {currentWordIndex >= personalizedWords.length - 1 && currentAttempt >= maxAttempts ? 
+                  "🎉 Finish Game!" : 
+                  currentAttempt < maxAttempts && (attempts[attempts.length - 1]?.accuracy || 0) < 70 ?
+                  "Try Again! 💪" :
+                  "Next Word! 🚀"
+                }
+              </motion.button>
             </motion.div>
           </motion.div>
         )}
