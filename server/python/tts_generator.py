@@ -21,8 +21,9 @@ def generate_tts_audio(text, language="en"):
         
         # Clean and prepare text
         clean_text = text.replace('"', '""').replace("'", "''")
-        if len(clean_text) > 300:
-            clean_text = clean_text[:300] + "..."
+        # Allow longer text for therapy responses (up to 2000 characters)
+        if len(clean_text) > 2000:
+            clean_text = clean_text[:2000] + "..."
         
         # Create unique temp files
         timestamp = int(time.time() * 1000)
@@ -33,7 +34,7 @@ def generate_tts_audio(text, language="en"):
         powershell_script = f'''
 Add-Type -AssemblyName System.Speech
 $synth = New-Object System.Speech.Synthesis.SpeechSynthesizer
-$synth.Rate = 2
+$synth.Rate = 0
 $synth.SetOutputToWaveFile("{audio_path}")
 $synth.Speak("{clean_text}")
 $synth.Dispose()
@@ -47,7 +48,7 @@ $synth.Dispose()
             ["powershell", "-ExecutionPolicy", "Bypass", "-File", script_path],
             capture_output=True,
             text=True,
-            timeout=15  # 15 second timeout
+            timeout=30  # 30 second timeout for longer text
         )
         
         if result.returncode == 0 and os.path.exists(audio_path):
