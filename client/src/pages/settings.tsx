@@ -6,6 +6,7 @@ import {
   LineChart,
   Smile,
   SlidersHorizontal,
+  Shield,
 } from "lucide-react";
 
 export default function Settings() {
@@ -80,6 +81,30 @@ export default function Settings() {
               <div className="text-lg font-medium">{user?.email || "user@example.com"}</div>
             </div>
             <div className="mt-6 h-px bg-border" />
+          </section>
+
+          {/* Security Settings */}
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-1">security</h2>
+            <p className="text-muted-foreground mb-6">
+              manage your account security and authentication
+            </p>
+
+            <button
+              onClick={() => setLocation("/security")}
+              className="w-full p-4 bg-muted hover:bg-accent rounded-lg transition flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-3">
+                <Shield className="w-5 h-5 text-blue-600" />
+                <div className="text-left">
+                  <div className="font-semibold">Security Settings</div>
+                  <div className="text-sm text-muted-foreground">
+                    Two-factor authentication, email verification, and more
+                  </div>
+                </div>
+              </div>
+              <div className="text-muted-foreground group-hover:translate-x-1 transition">→</div>
+            </button>
           </section>
 
           {/* Privacy settings */}

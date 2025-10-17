@@ -239,17 +239,17 @@ export default function Signup() {
       const data = await response.json();
       
       if (data.success && data.user) {
-        setSuccess("Account created successfully! Redirecting...");
+        setSuccess("Account created successfully! Please check your email to verify your account before logging in.");
         
         // No need to store token - it's in httpOnly cookie
         // Just clear and refresh queries
         queryClient.clear();
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
-        // Redirect to home - it handles user type routing
+        // Redirect to login page after 3 seconds
         setTimeout(() => {
-          setLocation('/');
-        }, 1000);
+          setLocation('/login');
+        }, 3000);
         
       } else {
         setError(data.message || 'Signup failed. Please try again.');

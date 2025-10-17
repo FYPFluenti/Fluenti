@@ -123,13 +123,16 @@ export const apiRequest = async (method: 'GET' | 'POST' | 'PUT' | 'DELETE', url:
     config.body = JSON.stringify(data);
   }
 
-  const response = await fetch(`${API_BASE_URL}${url}`, config);
-  
-  if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+  try {
+    const response = await fetch(`${API_BASE_URL}${url}`, config);
+    
+    // Don't throw on HTTP errors - let the caller handle response status
+    // This allows us to read error messages from the response body
+    return response;
+  } catch (error) {
+    // Network errors or fetch failures
+    throw new Error('Network error: Unable to connect to server');
   }
-  
-  return response;
 };
 
 export const queryClient = new QueryClient({

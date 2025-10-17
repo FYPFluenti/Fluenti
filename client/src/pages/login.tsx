@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { Link } from "wouter";
 import { Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle } from "lucide-react";
+import TwoFactorModal from "@/components/TwoFactorModal";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -15,6 +16,9 @@ export default function Login() {
   const [success, setSuccess] = useState("");
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
+  const [show2FAModal, setShow2FAModal] = useState(false);
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState("");
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuth();
@@ -58,7 +62,26 @@ export default function Login() {
       
       const data = await response.json();
       
+      // Check if response was successful
+      if (!response.ok) {
+        const errorMessage = data.message || 'Login failed. Please check your credentials.';
+        setError(errorMessage);
+        
+        // Check if it's an email verification error
+        if (errorMessage.toLowerCase().includes('verify') && errorMessage.toLowerCase().includes('email')) {
+          setShowResendVerification(true);
+          setVerificationEmail(email.trim());
+        }
+        return;
+      }
+      
       if (data.success && data.user) {
+        // Check if 2FA is required
+        if (data.requires2FA) {
+          setShow2FAModal(true);
+          return;
+        }
+        
         setSuccess("Login successful! Redirecting...");
         
         // No need to store token - it's in httpOnly cookie
@@ -74,12 +97,31 @@ export default function Login() {
       } else {
         setError(data.message || 'Login failed. Please check your credentials.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login error:', error);
-      setError('Unable to connect to server. Please try again.');
+      setError(error.message || 'Unable to connect to server. Please check your network connection.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handle2FASuccess = async () => {
+    setShow2FAModal(false);
+    setSuccess("Login successful! Redirecting...");
+    
+    // Clear and refresh queries
+    queryClient.clear();
+    await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    
+    // Redirect to home
+    setTimeout(() => {
+      setLocation('/');
+    }, 1000);
+  };
+
+  const handle2FACancel = () => {
+    setShow2FAModal(false);
+    setError("Login cancelled. Please try again.");
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -115,6 +157,38 @@ export default function Login() {
     } catch (error) {
       console.error('Forgot password error:', error);
       setError('Unable to send reset email. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!verificationEmail?.trim()) {
+      setError("Please enter your email address");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError("");
+      setShowResendVerification(false);
+      
+      const response = await apiRequest('POST', '/api/auth/resend-verification', { 
+        email: verificationEmail.trim()
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        setSuccess("Verification email sent! Please check your inbox and click the link to verify your account.");
+      } else {
+        setError(data.message || 'Failed to send verification email');
+        setShowResendVerification(true);
+      }
+    } catch (error: any) {
+      console.error('Resend verification error:', error);
+      setError(error.message || 'Unable to send verification email. Please try again.');
+      setShowResendVerification(true);
     } finally {
       setIsLoading(false);
     }
@@ -186,9 +260,23 @@ export default function Login() {
 
           {/* Error Display */}
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
-              <p className="text-sm text-red-700">{error}</p>
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-3 mb-2">
+                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+              {showResendVerification && (
+                <div className="mt-3 pl-8">
+                  <button
+                    type="button"
+                    onClick={handleResendVerification}
+                    disabled={isLoading}
+                    className="text-sm font-semibold text-blue-600 hover:text-blue-700 underline disabled:opacity-50"
+                  >
+                    {isLoading ? 'Sending...' : 'Resend Verification Email'}
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -423,6 +511,14 @@ export default function Login() {
           </div>
         </div>
       </div>
+      
+      {/* 2FA Modal */}
+      {show2FAModal && (
+        <TwoFactorModal
+          onSuccess={handle2FASuccess}
+          onCancel={handle2FACancel}
+        />
+      )}
     </div>
   );
 }

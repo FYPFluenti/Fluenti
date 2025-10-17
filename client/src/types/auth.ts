@@ -6,6 +6,8 @@ export interface User {
   userType: 'child' | 'adult' | 'guardian';
   language: 'english' | 'urdu' | 'both';
   profileImageUrl?: string;
+  emailVerified?: boolean;
+  twoFactorEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }

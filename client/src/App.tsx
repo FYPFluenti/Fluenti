@@ -6,6 +6,9 @@ import { Toaster } from "@/components/ui/toaster";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
+import VerifyEmail from "@/pages/verify-email";
+import ResetPassword from "@/pages/reset-password";
+import SecuritySettings from "@/pages/security-settings";
 import OnboardingPage from "@/pages/onboarding";
 import OnboardingStatistics from "@/pages/onboarding-statistics";
 import ChildDashboard from "@/pages/child-dashboard";
@@ -41,6 +44,15 @@ export default function App() {
             <Route path="/" component={Home} />
             <Route path="/login" component={Login} />
             <Route path="/signup" component={Signup} />
+            <Route path="/verify-email" component={VerifyEmail} />
+            <Route path="/reset-password" component={ResetPassword} />
+            
+            {/* Protected Settings Routes */}
+            <Route path="/security">
+              <ProtectedRoute>
+                <SecuritySettings />
+              </ProtectedRoute>
+            </Route>
             
             {/* Onboarding Route */}
             <Route path="/onboarding">

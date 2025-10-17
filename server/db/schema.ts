@@ -13,10 +13,20 @@ export interface IUser extends Document {
   language: 'english' | 'urdu';
   signupMethod: 'email' | 'google' | 'facebook';
   emailVerified: boolean;
+  emailVerificationToken?: string;
+  emailVerificationExpiry?: Date;
   refreshToken?: string;
   refreshTokenExpiry?: Date;
   passwordResetToken?: string;
   passwordResetExpiry?: Date;
+  // Account lockout fields
+  failedLoginAttempts: number;
+  accountLockedUntil?: Date;
+  lastFailedLoginAt?: Date;
+  // 2FA fields
+  twoFactorEnabled: boolean;
+  twoFactorSecret?: string;
+  twoFactorBackupCodes?: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -77,6 +87,14 @@ const userSchema = new Schema<IUser>({
     type: Boolean,
     default: false
   },
+  emailVerificationToken: {
+    type: String,
+    select: false
+  },
+  emailVerificationExpiry: {
+    type: Date,
+    select: false
+  },
   refreshToken: {
     type: String,
     select: false // Don't return in queries by default
@@ -91,6 +109,32 @@ const userSchema = new Schema<IUser>({
   },
   passwordResetExpiry: {
     type: Date,
+    select: false
+  },
+  // Account lockout fields
+  failedLoginAttempts: {
+    type: Number,
+    default: 0
+  },
+  accountLockedUntil: {
+    type: Date,
+    select: false
+  },
+  lastFailedLoginAt: {
+    type: Date,
+    select: false
+  },
+  // 2FA fields
+  twoFactorEnabled: {
+    type: Boolean,
+    default: false
+  },
+  twoFactorSecret: {
+    type: String,
+    select: false
+  },
+  twoFactorBackupCodes: {
+    type: [String],
     select: false
   }
 }, {

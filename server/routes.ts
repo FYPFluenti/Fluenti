@@ -7,7 +7,7 @@ import path from "path";
 import fs from "fs";
 import { setupAuth, isAuthenticated } from "./simpleAuth";
 import { extractAndValidateJWT, tokenBasedAuth } from "./middleware";
-import { authRateLimiter, refreshTokenRateLimiter } from "./middleware/rateLimiter";
+import { authRateLimiter, refreshTokenRateLimiter, passwordResetRateLimiter } from "./middleware/rateLimiter";
 import { verifyRefreshToken, TOKEN_EXPIRY } from "./services/jwtService";
 import * as speechServiceModule from "./services/speechService";
 const { SpeechService, transcribeAudio } = speechServiceModule;
@@ -263,6 +263,197 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.clearCookie('accessToken');
         res.clearCookie('refreshToken');
         res.status(401).json({ message: 'Token refresh failed' });
+      }
+    });
+
+    // Email verification endpoint
+    app.get('/api/auth/verify-email', async (req: Request, res: Response) => {
+      try {
+        const { token } = req.query;
+        
+        if (!token || typeof token !== 'string') {
+          return res.status(400).json({ message: 'Verification token is required' });
+        }
+        
+        const result = await AuthService.verifyEmail(token);
+        res.json(result);
+      } catch (error: any) {
+        console.error('Email verification error:', error.message);
+        res.status(400).json({ success: false, message: error.message });
+      }
+    });
+
+    // Resend verification email endpoint
+    app.post('/api/auth/resend-verification', authRateLimiter, async (req: Request, res: Response) => {
+      try {
+        const { email } = req.body;
+        
+        if (!email) {
+          return res.status(400).json({ message: 'Email is required' });
+        }
+        
+        const result = await AuthService.resendVerificationEmail(email);
+        res.json(result);
+      } catch (error: any) {
+        console.error('Resend verification error:', error.message);
+        res.status(400).json({ success: false, message: error.message });
+      }
+    });
+
+    // Request password reset endpoint
+    app.post('/api/auth/forgot-password', passwordResetRateLimiter, async (req: Request, res: Response) => {
+      try {
+        const { email } = req.body;
+        
+        if (!email) {
+          return res.status(400).json({ message: 'Email is required' });
+        }
+        
+        const result = await AuthService.requestPasswordReset(email);
+        res.json(result);
+      } catch (error: any) {
+        console.error('Password reset request error:', error.message);
+        res.status(500).json({ success: false, message: 'Failed to process password reset request' });
+      }
+    });
+
+    // Reset password with token endpoint
+    app.post('/api/auth/reset-password', passwordResetRateLimiter, async (req: Request, res: Response) => {
+      try {
+        const { token, password } = req.body;
+        
+        if (!token || !password) {
+          return res.status(400).json({ message: 'Token and new password are required' });
+        }
+        
+        if (password.length < 6) {
+          return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+        }
+        
+        const result = await AuthService.resetPassword(token, password);
+        res.json(result);
+      } catch (error: any) {
+        console.error('Password reset error:', error.message);
+        res.status(400).json({ success: false, message: error.message });
+      }
+    });
+
+    // ===== 2FA Endpoints =====
+
+    // Setup 2FA
+    app.post('/api/auth/2fa/setup', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ message: "User not authenticated" });
+        }
+        
+        const result = await AuthService.setup2FA(userId);
+        res.json(result);
+      } catch (error: any) {
+        console.error('2FA setup error:', error.message);
+        res.status(400).json({ success: false, message: error.message });
+      }
+    });
+
+    // Verify and enable 2FA
+    app.post('/api/auth/2fa/verify', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ message: "User not authenticated" });
+        }
+        
+        const { token } = req.body;
+        if (!token) {
+          return res.status(400).json({ message: 'Verification code is required' });
+        }
+        
+        const result = await AuthService.verify2FA(userId, token);
+        res.json(result);
+      } catch (error: any) {
+        console.error('2FA verification error:', error.message);
+        res.status(400).json({ success: false, message: error.message });
+      }
+    });
+
+    // Disable 2FA
+    app.post('/api/auth/2fa/disable', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ message: "User not authenticated" });
+        }
+        
+        const { password } = req.body;
+        if (!password) {
+          return res.status(400).json({ message: 'Password is required to disable 2FA' });
+        }
+        
+        const result = await AuthService.disable2FA(userId, password);
+        res.json(result);
+      } catch (error: any) {
+        console.error('2FA disable error:', error.message);
+        res.status(400).json({ success: false, message: error.message });
+      }
+    });
+
+    // Verify 2FA code during login
+    app.post('/api/auth/2fa/verify-login', authRateLimiter, async (req: Request, res: Response) => {
+      try {
+        const { userId, token, isBackupCode } = req.body;
+        
+        if (!userId || !token) {
+          return res.status(400).json({ message: 'User ID and token are required' });
+        }
+        
+        const isValid = await AuthService.verify2FALogin(userId, token, isBackupCode);
+        
+        if (!isValid) {
+          return res.status(401).json({ success: false, message: 'Invalid verification code' });
+        }
+        
+        res.json({ success: true, message: 'Verification successful' });
+      } catch (error: any) {
+        console.error('2FA login verification error:', error.message);
+        res.status(400).json({ success: false, message: error.message });
+      }
+    });
+
+    // Check 2FA status
+    app.get('/api/auth/2fa/status', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ message: "User not authenticated" });
+        }
+        
+        const enabled = await AuthService.has2FAEnabled(userId);
+        res.json({ enabled });
+      } catch (error: any) {
+        console.error('2FA status error:', error.message);
+        res.status(500).json({ message: 'Failed to check 2FA status' });
+      }
+    });
+
+    // Regenerate backup codes
+    app.post('/api/auth/2fa/regenerate-backup-codes', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        if (!userId) {
+          return res.status(401).json({ message: "User not authenticated" });
+        }
+        
+        const { password } = req.body;
+        if (!password) {
+          return res.status(400).json({ message: 'Password is required' });
+        }
+        
+        const result = await AuthService.regenerateBackupCodes(userId, password);
+        res.json(result);
+      } catch (error: any) {
+        console.error('Backup codes regeneration error:', error.message);
+        res.status(400).json({ success: false, message: error.message });
       }
     });
 
