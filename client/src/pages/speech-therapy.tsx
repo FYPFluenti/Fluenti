@@ -153,7 +153,9 @@ export default function SpeechTherapyPage() {
       return {
         ...game,
         stars: progress?.stars || 0,
-        unlocked: progress?.unlocked || false,
+
+        //lock the game later on 
+        unlocked: true, // TEMPORARILY UNLOCK ALL GAMES
         level: progress?.level || 1,
         bestScore: progress?.bestScore || 0,
         averageAccuracy: progress?.averageAccuracy || 0
