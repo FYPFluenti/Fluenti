@@ -58,21 +58,43 @@ export const getQueryFn: <T>(options: {
     // Ensure URL is absolute by prepending API_BASE_URL if it's relative
     const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
     
-    // Include auth token in headers if available
-    const headers: Record<string, string> = {};
-    const authToken = localStorage.getItem('authToken');
-    if (authToken) {
-      headers["Authorization"] = `Bearer ${authToken}`;
-    }
+    // No need to add Authorization header - cookies are sent automatically
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
     
     try {
       const res = await fetch(fullUrl, {
         headers,
-        credentials: "include",
+        credentials: "include", // Important: include cookies in request
       });
 
       if (unauthorizedBehavior === "returnNull" && res.status === 401) {
         // Don't log 401 errors when we expect them (e.g., when not authenticated)
+        // Try to refresh token automatically
+        if (res.status === 401) {
+          try {
+            const refreshRes = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+              method: 'POST',
+              credentials: 'include',
+            });
+            
+            if (refreshRes.ok) {
+              // Token refreshed, retry original request
+              const retryRes = await fetch(fullUrl, {
+                headers,
+                credentials: "include",
+              });
+              
+              if (retryRes.ok) {
+                return await retryRes.json();
+              }
+            }
+          } catch (refreshError) {
+            // Refresh failed, return null
+            console.log('Token refresh failed, user needs to log in');
+          }
+        }
         return null;
       }
 
@@ -89,14 +111,12 @@ export const getQueryFn: <T>(options: {
 
 // API request function for direct HTTP calls
 export const apiRequest = async (method: 'GET' | 'POST' | 'PUT' | 'DELETE', url: string, data?: any): Promise<Response> => {
-  const token = localStorage.getItem('authToken');
-  
   const config: RequestInit = {
     method,
     headers: {
       'Content-Type': 'application/json',
-      ...(token && { Authorization: `Bearer ${token}` }),
     },
+    credentials: 'include', // Important: include cookies
   };
 
   if (data && (method === 'POST' || method === 'PUT')) {

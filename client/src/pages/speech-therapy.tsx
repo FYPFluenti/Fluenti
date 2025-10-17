@@ -177,25 +177,25 @@ export default function SpeechTherapyPage() {
       
       try {
         setLoading(true);
-        const token = localStorage.getItem('authToken');
 
         // Fetch child name, statistics, and game progress in parallel
+        // No need for Authorization header - cookies are sent automatically
         const [onboardingRes, statsRes, progressRes] = await Promise.all([
           fetch('/api/onboarding', {
+            credentials: 'include',
             headers: {
-              'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             }
           }),
           fetch('/api/games/statistics', {
+            credentials: 'include',
             headers: {
-              'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             }
           }),
           fetch('/api/games/progress', {
+            credentials: 'include',
             headers: {
-              'Authorization': `Bearer ${token}`,
               'Content-Type': 'application/json'
             }
           })
@@ -267,12 +267,10 @@ export default function SpeechTherapyPage() {
     }
 
     try {
-      const token = localStorage.getItem('authToken');
-
-      // Fetch game-specific data
+      // Fetch game-specific data (cookies sent automatically)
       const gameDataRes = await fetch(`/api/games/game-data/${game.id}`, {
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
@@ -286,8 +284,8 @@ export default function SpeechTherapyPage() {
       // Create game session
       const sessionRes = await fetch('/api/games/session/start', {
         method: 'POST',
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -344,10 +342,9 @@ export default function SpeechTherapyPage() {
 
     // Refresh progress data
     try {
-      const token = localStorage.getItem('authToken');
       const progressRes = await fetch('/api/games/progress', {
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });

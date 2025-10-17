@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs';
 import { mongoStorage } from './mongoStorage';
 import { nanoid } from 'nanoid';
+import { generateTokenPair, type JWTPayload, type TokenPair } from './services/jwtService';
+import { User } from './db/schema';
 
 export interface SignupData {
   firstName: string;
@@ -16,6 +18,19 @@ export interface LoginData {
   password: string;
 }
 
+export interface AuthResponse {
+  user: {
+    id: string;
+    email: string;
+    firstName: string;
+    lastName: string;
+    userType: string;
+    language: string;
+    profileImageUrl?: string;
+  };
+  tokens: TokenPair;
+}
+
 export class AuthService {
   // Hash password before storing
   static async hashPassword(password: string): Promise<string> {
@@ -29,7 +44,7 @@ export class AuthService {
   }
 
   // Register new user
-  static async signup(signupData: SignupData) {
+  static async signup(signupData: SignupData): Promise<AuthResponse> {
     try {
       // Check if user already exists
       const existingUser = await mongoStorage.getUserByEmail(signupData.email);
@@ -41,8 +56,9 @@ export class AuthService {
       const hashedPassword = await this.hashPassword(signupData.password);
 
       // Create user with hashed password
+      const userId = `user-${nanoid()}`;
       const user = await mongoStorage.upsertUser({
-        id: `user-${nanoid()}`,
+        id: userId,
         email: signupData.email,
         password: hashedPassword,
         firstName: signupData.firstName,
@@ -52,16 +68,43 @@ export class AuthService {
         language: signupData.language,
       });
 
-      // Return user without password
-      const { password, ...userWithoutPassword } = user.toObject();
-      return userWithoutPassword;
+      // Generate JWT tokens
+      const jwtPayload: JWTPayload = {
+        userId: user.id,
+        email: user.email,
+        userType: user.userType as 'child' | 'adult' | 'guardian',
+      };
+      const tokens = generateTokenPair(jwtPayload);
+
+      // Store refresh token in database
+      await User.findOneAndUpdate(
+        { _id: user._id },
+        {
+          refreshToken: tokens.refreshToken,
+          refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        }
+      );
+
+      // Return user without sensitive data
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          userType: user.userType,
+          language: user.language,
+          profileImageUrl: user.profileImageUrl,
+        },
+        tokens,
+      };
     } catch (error: any) {
       throw new Error(`Signup failed: ${error.message}`);
     }
   }
 
   // Login user
-  static async login(loginData: LoginData) {
+  static async login(loginData: LoginData): Promise<AuthResponse> {
     try {
       // Find user by email
       const user = await mongoStorage.getUserByEmail(loginData.email);
@@ -75,11 +118,90 @@ export class AuthService {
         throw new Error('Invalid email or password');
       }
 
-      // Return user without password
-      const { password, ...userWithoutPassword } = user.toObject();
-      return userWithoutPassword;
+      // Generate JWT tokens
+      const jwtPayload: JWTPayload = {
+        userId: user.id,
+        email: user.email,
+        userType: user.userType as 'child' | 'adult' | 'guardian',
+      };
+      const tokens = generateTokenPair(jwtPayload);
+
+      // Store refresh token in database
+      await User.findOneAndUpdate(
+        { _id: user._id },
+        {
+          refreshToken: tokens.refreshToken,
+          refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        }
+      );
+
+      // Return user without sensitive data
+      return {
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          userType: user.userType,
+          language: user.language,
+          profileImageUrl: user.profileImageUrl,
+        },
+        tokens,
+      };
     } catch (error: any) {
       throw new Error(`Login failed: ${error.message}`);
+    }
+  }
+
+  // Logout user - invalidate refresh token
+  static async logout(userId: string): Promise<void> {
+    try {
+      await User.findOneAndUpdate(
+        { id: userId },
+        {
+          $unset: { refreshToken: '', refreshTokenExpiry: '' }
+        }
+      );
+    } catch (error: any) {
+      throw new Error(`Logout failed: ${error.message}`);
+    }
+  }
+
+  // Refresh access token using refresh token
+  static async refreshAccessToken(userId: string, oldRefreshToken: string): Promise<TokenPair> {
+    try {
+      // Find user and check if refresh token matches
+      const user = await User.findOne({ id: userId }).select('+refreshToken +refreshTokenExpiry');
+      
+      if (!user || !user.refreshToken || user.refreshToken !== oldRefreshToken) {
+        throw new Error('Invalid refresh token');
+      }
+
+      // Check if refresh token is expired
+      if (user.refreshTokenExpiry && user.refreshTokenExpiry < new Date()) {
+        throw new Error('Refresh token expired');
+      }
+
+      // Generate new token pair
+      const jwtPayload: JWTPayload = {
+        userId: user.id,
+        email: user.email,
+        userType: user.userType as 'child' | 'adult' | 'guardian',
+      };
+      const tokens = generateTokenPair(jwtPayload);
+
+      // Update refresh token in database
+      await User.findOneAndUpdate(
+        { _id: user._id },
+        {
+          refreshToken: tokens.refreshToken,
+          refreshTokenExpiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        }
+      );
+
+      return tokens;
+    } catch (error: any) {
+      throw new Error(`Token refresh failed: ${error.message}`);
     }
   }
 }

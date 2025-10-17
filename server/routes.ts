@@ -6,7 +6,9 @@ import { mongoStorage } from "./mongoStorage";
 import path from "path";
 import fs from "fs";
 import { setupAuth, isAuthenticated } from "./simpleAuth";
-import { extractTokenFromHeader, tokenBasedAuth } from "./middleware";
+import { extractAndValidateJWT, tokenBasedAuth } from "./middleware";
+import { authRateLimiter, refreshTokenRateLimiter } from "./middleware/rateLimiter";
+import { verifyRefreshToken, TOKEN_EXPIRY } from "./services/jwtService";
 import * as speechServiceModule from "./services/speechService";
 const { SpeechService, transcribeAudio } = speechServiceModule;
 import { simpleTranscribeAudio, validateAudioBuffer } from "./services/simpleSpeechService";
@@ -46,8 +48,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
   
-  // Add token extraction middleware for all routes
-  app.use(extractTokenFromHeader);
+  // Add JWT validation middleware for all routes
+  app.use(extractAndValidateJWT);
 
   // Register games routes
   app.use('/api/games', tokenBasedAuth, gamesRouter);
@@ -112,8 +114,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Authentication endpoints (available in all environments)
   if (mongoStorage) {
-    // User login endpoint
-    app.post('/api/auth/login', async (req: AuthenticatedRequest, res: Response) => {
+    // User login endpoint with rate limiting
+    app.post('/api/auth/login', authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
       try {
         const { email, password } = req.body;
         
@@ -121,28 +123,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ message: "Email and password are required" });
         }
         
-        // Authenticate user
-        const user = await AuthService.login({ email, password });
+        // Authenticate user and get JWT tokens
+        const authResponse = await AuthService.login({ email, password });
         
-        // Set user in session
-        if (req.session) {
-          req.session.user = {
-            id: user.id,
-            claims: { sub: user.id }
-          };
-          console.log('User logged in via session:', user.id, user.userType);
-        }
+        console.log('User logged in:', authResponse.user.id, authResponse.user.userType);
         
-        // Return user with auth token (user ID can serve as token)
-        res.json({ success: true, user, authToken: user.id });
+        // Set httpOnly cookies for tokens
+        res.cookie('accessToken', authResponse.tokens.accessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+          sameSite: 'strict',
+          maxAge: TOKEN_EXPIRY.ACCESS_TOKEN_MS,
+        });
+        
+        res.cookie('refreshToken', authResponse.tokens.refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS,
+        });
+        
+        // Return user data (tokens are in httpOnly cookies)
+        res.json({ 
+          success: true, 
+          user: authResponse.user
+        });
       } catch (error: any) {
         console.error("Login error:", error.message);
         res.status(401).json({ message: error.message });
       }
     });
     
-    // User signup endpoint
-    app.post('/api/auth/signup', async (req: AuthenticatedRequest, res: Response) => {
+    // User signup endpoint with rate limiting
+    app.post('/api/auth/signup', authRateLimiter, async (req: AuthenticatedRequest, res: Response) => {
       try {
         console.log('Signup request received:', req.body);
         const { firstName, lastName, email, password, userType, language } = req.body;
@@ -152,9 +165,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ success: false, message: "All fields are required" });
         }
         
-        // Create new user
+        // Create new user and get JWT tokens
         console.log('Creating user with AuthService...');
-        const user = await AuthService.signup({
+        const authResponse = await AuthService.signup({
           firstName,
           lastName,
           email,
@@ -163,23 +176,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
           language
         });
         
-        console.log('User created successfully:', user.id, user.userType);
+        console.log('User created successfully:', authResponse.user.id, authResponse.user.userType);
         
-        // Set user in session
-        if (req.session) {
-          req.session.user = {
-            id: user.id,
-            claims: { sub: user.id }
-          };
-          console.log('Session set for user:', user.id);
-        }
+        // Set httpOnly cookies for tokens
+        res.cookie('accessToken', authResponse.tokens.accessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: TOKEN_EXPIRY.ACCESS_TOKEN_MS,
+        });
+        
+        res.cookie('refreshToken', authResponse.tokens.refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS,
+        });
         
         console.log('Sending success response');
-        // Return user with auth token (user ID can serve as token)
-        res.json({ success: true, user, authToken: user.id });
+        // Return user data (tokens are in httpOnly cookies)
+        res.json({ 
+          success: true, 
+          user: authResponse.user
+        });
       } catch (error: any) {
         console.error("Signup error:", error.message);
         res.status(400).json({ success: false, message: error.message });
+      }
+    });
+
+    // Logout endpoint
+    app.post('/api/auth/logout', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+      try {
+        const userId = req.user?.claims?.sub || req.user?.id;
+        
+        if (userId) {
+          // Invalidate refresh token in database
+          await AuthService.logout(userId);
+        }
+        
+        // Clear cookies
+        res.clearCookie('accessToken');
+        res.clearCookie('refreshToken');
+        
+        res.json({ success: true, message: 'Logged out successfully' });
+      } catch (error: any) {
+        console.error("Logout error:", error.message);
+        res.status(500).json({ message: 'Logout failed' });
+      }
+    });
+
+    // Refresh token endpoint
+    app.post('/api/auth/refresh', refreshTokenRateLimiter, async (req: Request, res: Response) => {
+      try {
+        const refreshToken = req.cookies?.refreshToken;
+        
+        if (!refreshToken) {
+          return res.status(401).json({ message: 'Refresh token not found' });
+        }
+        
+        // Verify refresh token
+        const payload = verifyRefreshToken(refreshToken);
+        
+        // Get new token pair
+        const tokens = await AuthService.refreshAccessToken(payload.userId, refreshToken);
+        
+        // Set new cookies
+        res.cookie('accessToken', tokens.accessToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: TOKEN_EXPIRY.ACCESS_TOKEN_MS,
+        });
+        
+        res.cookie('refreshToken', tokens.refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS,
+        });
+        
+        res.json({ success: true, message: 'Token refreshed successfully' });
+      } catch (error: any) {
+        console.error("Token refresh error:", error.message);
+        // Clear invalid cookies
+        res.clearCookie('accessToken');
+        res.clearCookie('refreshToken');
+        res.status(401).json({ message: 'Token refresh failed' });
       }
     });
 

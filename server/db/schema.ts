@@ -9,10 +9,14 @@ export interface IUser extends Document {
   googleId?: string;
   facebookId?: string;
   profilePicture?: string;
-  userType: 'child' | 'adult';
+  userType: 'child' | 'adult' | 'guardian';
   language: 'english' | 'urdu';
   signupMethod: 'email' | 'google' | 'facebook';
   emailVerified: boolean;
+  refreshToken?: string;
+  refreshTokenExpiry?: Date;
+  passwordResetToken?: string;
+  passwordResetExpiry?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -56,7 +60,7 @@ const userSchema = new Schema<IUser>({
   },
   userType: {
     type: String,
-    enum: ['child', 'adult'],
+    enum: ['child', 'adult', 'guardian'],
     required: true
   },
   language: {
@@ -72,6 +76,22 @@ const userSchema = new Schema<IUser>({
   emailVerified: {
     type: Boolean,
     default: false
+  },
+  refreshToken: {
+    type: String,
+    select: false // Don't return in queries by default
+  },
+  refreshTokenExpiry: {
+    type: Date,
+    select: false
+  },
+  passwordResetToken: {
+    type: String,
+    select: false
+  },
+  passwordResetExpiry: {
+    type: Date,
+    select: false
   }
 }, {
   timestamps: true

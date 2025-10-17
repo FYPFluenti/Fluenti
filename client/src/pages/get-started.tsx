@@ -25,7 +25,7 @@ export default function GetStarted() {
         <div className="space-y-4">
           <Button onClick={() => onNext('child')} className="w-full">Child</Button>
           <Button onClick={() => onNext('adult')} className="w-full">Adult</Button>
-          <Button onClick={() => onNext('guardian')} className="w-full">Guardian</Button>
+          {/* Guardian option hidden - feature not currently active */}
         </div>
       </CardContent>
     </Card>

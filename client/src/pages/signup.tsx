@@ -112,17 +112,8 @@ export default function Signup() {
       if (data.success && data.user) {
         setSuccess("Account created successfully with Google! Redirecting...");
         
-        // Store auth token
-        const authToken = data.authToken || data.user.id;
-        localStorage.setItem('authToken', authToken);
-        
-        // Trigger auth state update
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: 'authToken',
-          newValue: authToken,
-        }));
-        
-        // Clear and refresh queries
+        // No need to store token - it's in httpOnly cookie
+        // Just clear and refresh queries
         queryClient.clear();
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
@@ -166,17 +157,8 @@ export default function Signup() {
             if (data.success && data.user) {
               setSuccess("Account created successfully with Facebook! Redirecting...");
               
-              // Store auth token
-              const authToken = data.authToken || data.user.id;
-              localStorage.setItem('authToken', authToken);
-              
-              // Trigger auth state update
-              window.dispatchEvent(new StorageEvent('storage', {
-                key: 'authToken',
-                newValue: authToken,
-              }));
-              
-              // Clear and refresh queries
+              // No need to store token - it's in httpOnly cookie
+              // Just clear and refresh queries
               queryClient.clear();
               await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
               
@@ -259,17 +241,8 @@ export default function Signup() {
       if (data.success && data.user) {
         setSuccess("Account created successfully! Redirecting...");
         
-        // Store auth token
-        const authToken = data.authToken || data.user.id;
-        localStorage.setItem('authToken', authToken);
-        
-        // Trigger auth state update
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: 'authToken',
-          newValue: authToken,
-        }));
-        
-        // Clear and refresh queries
+        // No need to store token - it's in httpOnly cookie
+        // Just clear and refresh queries
         queryClient.clear();
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         

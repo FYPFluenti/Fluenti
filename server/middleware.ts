@@ -1,36 +1,47 @@
 import { Request, Response, NextFunction } from 'express';
 import { mongoStorage } from './mongoStorage';
+import { verifyAccessToken } from './services/jwtService';
 
-// Middleware to extract token from Authorization header
-export async function extractTokenFromHeader(req: Request, res: Response, next: NextFunction) {
+// Middleware to extract and validate JWT from cookie or Authorization header
+export async function extractAndValidateJWT(req: Request, res: Response, next: NextFunction) {
   try {
-    const authHeader = req.headers.authorization;
+    // Try to get token from httpOnly cookie first (preferred)
+    let token = req.cookies?.accessToken;
     
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      const token = authHeader.substring(7); // Remove "Bearer " prefix
-      
-      // Try to find user by token (which is the user ID)
-      if (token) {
-        try {
-          console.log('🔍 Looking up user by token:', token);
-          const user = await mongoStorage.getUser(token);
-          if (user) {
-            console.log('✅ User found by token:', user.id, user.userType);
-            // Attach user to request object
-            (req as any).user = {
-              ...user.toObject(),
-              claims: { sub: user.id }
-            };
-          } else {
-            console.log('❌ User not found for token:', token);
-          }
-        } catch (error) {
-          // Only log error if it's not a connection issue (to avoid spam)
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          console.log('🔴 Token validation error for token:', token, errorMessage);
-          if (!errorMessage.includes('MongoDB') && !errorMessage.includes('connection')) {
-            console.error('Token validation error:', error);
-          }
+    // Fallback to Authorization header for API clients
+    if (!token && req.headers.authorization) {
+      const authHeader = req.headers.authorization;
+      if (authHeader.startsWith('Bearer ')) {
+        token = authHeader.substring(7);
+      }
+    }
+    
+    if (token) {
+      try {
+        // Verify JWT token
+        const payload = verifyAccessToken(token);
+        console.log('✅ Valid JWT token for user:', payload.userId);
+        
+        // Fetch user from database
+        const user = await mongoStorage.getUser(payload.userId);
+        if (user) {
+          // Attach user to request object
+          (req as any).user = {
+            ...user.toObject(),
+            claims: { sub: user.id }
+          };
+          console.log('✅ User attached to request:', user.id, user.userType);
+        } else {
+          console.log('❌ User not found in database:', payload.userId);
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        
+        if (errorMessage.includes('expired')) {
+          console.log('⏰ Access token expired, client should refresh');
+          // Don't attach user, but don't throw error - let tokenBasedAuth handle it
+        } else if (!errorMessage.includes('MongoDB') && !errorMessage.includes('connection')) {
+          console.log('🔴 Token validation error:', errorMessage);
         }
       }
     }
@@ -38,7 +49,7 @@ export async function extractTokenFromHeader(req: Request, res: Response, next: 
     // Continue to the next middleware regardless of token validation
     next();
   } catch (error) {
-    console.error('Token extraction error:', error);
+    console.error('JWT extraction error:', error);
     next();
   }
 }

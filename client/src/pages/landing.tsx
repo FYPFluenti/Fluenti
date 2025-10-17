@@ -360,8 +360,8 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* Guardians */}
-            <div className="fluenti-card fluenti-card-interactive bg-gradient-to-br from-purple-50 to-pink-100 rounded-2xl p-8 hover-lift animate-slide-up border-2 border-purple-200 hover:border-purple-300 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-200/50" style={{animationDelay: '0.2s'}}>
+            {/* Guardian section hidden - feature coming soon */}
+            {/* <div className="fluenti-card fluenti-card-interactive bg-gradient-to-br from-purple-50 to-pink-100 rounded-2xl p-8 hover-lift animate-slide-up border-2 border-purple-200 hover:border-purple-300 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-200/50" style={{animationDelay: '0.2s'}}>
               <div className="p-0 text-center">
                 <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6 fluenti-pulse shadow-lg">
                   <Shield className="text-white text-3xl" />
@@ -370,104 +370,16 @@ export default function Landing() {
                 <p className="text-gray-600 mb-6">
                   Comprehensive oversight and monitoring tools to track your child's progress and support their learning journey.
                 </p>
-                <div className="space-y-3 text-left">
-                  <div className="flex items-center space-x-3 hover-lift">
-                    <CheckCircle className="text-purple-600 w-5 h-5 animate-pulse" />
-                    <span className="text-gray-700">Real-time progress monitoring</span>
-                  </div>
-                  <div className="flex items-center space-x-3 hover-lift">
-                    <CheckCircle className="text-purple-600 w-5 h-5 animate-pulse" style={{animationDelay: '0.1s'}} />
-                    <span className="text-gray-700">Detailed session reports</span>
-                  </div>
-                  <div className="flex items-center space-x-3 hover-lift">
-                    <CheckCircle className="text-purple-600 w-5 h-5 animate-pulse" style={{animationDelay: '0.2s'}} />
-                    <span className="text-gray-700">Goal setting & milestones</span>
-                  </div>
-                  <div className="flex items-center space-x-3 hover-lift">
-                    <CheckCircle className="text-purple-600 w-5 h-5 animate-pulse" style={{animationDelay: '0.3s'}} />
-                    <span className="text-gray-700">Child safety controls</span>
-                  </div>
-                  <div className="flex items-center space-x-3 hover-lift">
-                    <CheckCircle className="text-purple-600 w-5 h-5 animate-pulse" style={{animationDelay: '0.4s'}} />
-                    <span className="text-gray-700">Communication with therapists</span>
-                  </div>
-                </div>
-                
-                {/* Featured Badge */}
-                <div className="mt-6 p-3 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg border border-purple-200 hover-lift">
-                  <div className="flex items-center justify-center space-x-2">
-                    <Trophy className="text-purple-600 w-5 h-5 animate-bounce-gentle" />
-                    <span className="text-purple-800 font-semibold text-sm">Most Comprehensive Dashboard</span>
-                  </div>
-                </div>
               </div>
-            </div>
+            </div> */}
           </div>
 
-          {/* Guardian Role Highlight */}
+          {/* Guardian Role Highlight - Hidden (Feature Coming Soon) */}
+          {/* 
           <div className="mt-16 bg-white rounded-2xl shadow-lg p-8 border border-purple-100">
-            <div className="grid lg:grid-cols-2 gap-8 items-center">
-              <div>
-                <div className="flex items-center space-x-3 mb-4">
-                  <div className="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center">
-                    <Shield className="text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900">Guardian Role Features</h3>
-                </div>
-                <p className="text-gray-600 mb-6">
-                  As a Guardian, you have complete oversight of your child's therapy journey with advanced monitoring and control features designed specifically for family management.
-                </p>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="text-purple-600 w-4 h-4" />
-                    <span className="text-sm text-gray-700">Session scheduling</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="text-purple-600 w-4 h-4" />
-                    <span className="text-sm text-gray-700">Progress analytics</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="text-purple-600 w-4 h-4" />
-                    <span className="text-sm text-gray-700">Content filtering</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="text-purple-600 w-4 h-4" />
-                    <span className="text-sm text-gray-700">Time management</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6">
-                <h4 className="font-semibold text-gray-900 mb-4">What Guardians Can Do:</h4>
-                <div className="space-y-3">
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-white text-sm font-bold">1</span>
-                    </div>
-                    <span className="text-gray-700 text-sm">Monitor child's daily progress and session completion rates</span>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-white text-sm font-bold">2</span>
-                    </div>
-                    <span className="text-gray-700 text-sm">Set learning goals and customize therapy plans</span>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-white text-sm font-bold">3</span>
-                    </div>
-                    <span className="text-gray-700 text-sm">Receive detailed weekly and monthly progress reports</span>
-                  </div>
-                  <div className="flex items-start space-x-3">
-                    <div className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="text-white text-sm font-bold">4</span>
-                    </div>
-                    <span className="text-gray-700 text-sm">Communicate directly with AI system about child's needs</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            Guardian features temporarily hidden
           </div>
+          */}
 
           {/* Children Role Highlight */}
           <div className="mt-16 bg-white rounded-2xl shadow-lg p-8 border border-green-100">
