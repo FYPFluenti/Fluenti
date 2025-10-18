@@ -1,11 +1,12 @@
 import { Router, Request, Response } from 'express';
 import { GameProgress } from '../models/GameProgress';
 import { GameSession } from '../models/GameSession';
-import OpenAI from 'openai';
+import Groq from 'groq-sdk';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || ''
+// Initialize Groq client (compatible with OpenAI SDK)
+// Using Groq's openai/gpt-oss-120b model for all AI operations
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY || ''
 });
 
 const router = Router();
@@ -367,13 +368,13 @@ router.post('/generate-words', async (req: Request, res: Response) => {
 
     const { childProfile, sessionType = 'practice' } = req.body;
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.GROQ_API_KEY) {
       return res.status(500).json({ 
         error: 'AI service not configured. Please contact administrator.' 
       });
     }
 
-    // Generate AI-powered personalized words
+    // Generate AI-powered personalized words using Groq openai/gpt-oss-120b
     const personalizedWords = await generateAIPersonalizedWords(childProfile, sessionType);
     
     if (!personalizedWords || personalizedWords.length === 0) {
@@ -400,7 +401,7 @@ router.post('/generate-feedback', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.GROQ_API_KEY) {
       return res.status(500).json({ 
         error: 'AI service not configured. Please contact administrator.' 
       });
@@ -451,7 +452,7 @@ router.post('/generate-session-summary', async (req: Request, res: Response) => 
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.GROQ_API_KEY) {
       return res.status(500).json({ 
         error: 'AI service not configured. Please contact administrator.' 
       });
@@ -502,7 +503,7 @@ router.post('/validate-pronunciation', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
+    if (!process.env.GROQ_API_KEY) {
       return res.status(500).json({ 
         error: 'AI service not configured. Please contact administrator.' 
       });
@@ -545,12 +546,16 @@ async function generateAIPersonalizedWords(childProfile: any, sessionType: strin
   const prompt = buildWordGenerationPrompt(childProfile, childAge, speechChallenges, sessionType);
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    console.log('🤖 Calling Groq API for word generation...');
+    console.log('📊 Model: openai/gpt-oss-120b');
+    console.log('👤 Child Profile:', JSON.stringify(childProfile, null, 2));
+    
+    const completion = await groq.chat.completions.create({
+      model: "openai/gpt-oss-120b",
       messages: [
         {
           role: "system",
-          content: "You are a certified speech-language pathologist specializing in pediatric speech therapy. Generate personalized, developmentally appropriate words for children with speech difficulties. Always return valid JSON format."
+          content: "You are a certified speech-language pathologist specializing in pediatric speech therapy. Generate personalized, developmentally appropriate words for children with speech difficulties. Always return valid JSON format. IMPORTANT: Keep responses concise to fit within token limits."
         },
         {
           role: "user",
@@ -558,19 +563,41 @@ async function generateAIPersonalizedWords(childProfile: any, sessionType: strin
         }
       ],
       temperature: 0.7,
-      max_tokens: 2000,
+      max_completion_tokens: 8000, // Increased from 2000 to handle 15-20 words with details
       response_format: { type: "json_object" }
     });
 
+    console.log('✅ Groq API response received');
     const response = completion.choices[0]?.message?.content;
-    if (response) {
-      const parsedResponse = JSON.parse(response);
-      return parsedResponse.words || [];
+    console.log('📝 Response content length:', response?.length || 0);
+    console.log('🔍 Finish reason:', completion.choices[0]?.finish_reason);
+    
+    if (completion.choices[0]?.finish_reason === 'length') {
+      console.error('⚠️ WARNING: Response was truncated due to token limit!');
+      console.error('💡 Consider reducing word count or simplifying word details');
     }
     
+    if (response) {
+      try {
+        const parsedResponse = JSON.parse(response);
+        console.log('✅ JSON parsed successfully');
+        console.log('📊 Words generated:', parsedResponse.words?.length || 0);
+        return parsedResponse.words || [];
+      } catch (parseError) {
+        console.error('❌ JSON parse failed:', parseError);
+        console.error('📄 Raw response (first 500 chars):', response.substring(0, 500));
+        console.error('📄 Raw response (last 500 chars):', response.substring(Math.max(0, response.length - 500)));
+        throw parseError;
+      }
+    }
+    
+    console.log('⚠️ No response content from Groq API');
     return [];
   } catch (error) {
-    console.error('Error calling OpenAI for word generation:', error);
+    console.error('❌ Error calling Groq (openai/gpt-oss-120b) for word generation:');
+    console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
+    console.error('Full error:', error);
     throw error;
   }
 }
@@ -613,12 +640,14 @@ Return JSON with:
 }`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    console.log('🤖 Generating feedback for:', { targetWord, userAttempt, accuracy });
+    
+    const completion = await groq.chat.completions.create({
+      model: "openai/gpt-oss-120b",
       messages: [
         {
           role: "system",
-          content: "You are a warm, encouraging speech therapist who makes children feel confident and excited about learning. Always maintain a positive, supportive tone. Always return valid JSON format."
+          content: "You are a warm, encouraging speech therapist who makes children feel confident and excited about learning. Always maintain a positive, supportive tone. Always return valid JSON format. Keep responses concise."
         },
         {
           role: "user",
@@ -626,18 +655,36 @@ Return JSON with:
         }
       ],
       temperature: 0.8,
-      max_tokens: 500,
+      max_completion_tokens: 1500, // Increased from 500 to prevent truncation
       response_format: { type: "json_object" }
     });
 
+    console.log('✅ Feedback response received');
     const response = completion.choices[0]?.message?.content;
+    console.log('📝 Response length:', response?.length || 0);
+    console.log('🔍 Finish reason:', completion.choices[0]?.finish_reason);
+    
+    if (completion.choices[0]?.finish_reason === 'length') {
+      console.error('⚠️ WARNING: Feedback response was truncated!');
+    }
+    
     if (response) {
-      return JSON.parse(response);
+      try {
+        const parsedFeedback = JSON.parse(response);
+        console.log('✅ Feedback JSON parsed successfully');
+        return parsedFeedback;
+      } catch (parseError) {
+        console.error('❌ Feedback JSON parse failed:', parseError);
+        console.error('📄 Raw response:', response);
+        throw parseError;
+      }
     }
 
     return null;
   } catch (error) {
-    console.error('Error calling OpenAI for feedback generation:', error);
+    console.error('❌ Error calling Groq (openai/gpt-oss-120b) for feedback generation:');
+    console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
     throw error;
   }
 }
@@ -679,12 +726,14 @@ Return JSON with:
 }`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    console.log('🎉 Generating session summary...');
+    
+    const completion = await groq.chat.completions.create({
+      model: "openai/gpt-oss-120b",
       messages: [
         {
           role: "system",
-          content: "You are a celebration specialist who makes children feel proud of their accomplishments and excited to continue learning. Always return valid JSON format."
+          content: "You are a celebration specialist who makes children feel proud of their accomplishments and excited to continue learning. Always return valid JSON format. Keep responses concise."
         },
         {
           role: "user",
@@ -692,18 +741,36 @@ Return JSON with:
         }
       ],
       temperature: 0.8,
-      max_tokens: 800,
+      max_completion_tokens: 2000, // Increased from 800 to prevent truncation
       response_format: { type: "json_object" }
     });
 
+    console.log('✅ Summary response received');
     const response = completion.choices[0]?.message?.content;
+    console.log('📝 Response length:', response?.length || 0);
+    console.log('🔍 Finish reason:', completion.choices[0]?.finish_reason);
+    
+    if (completion.choices[0]?.finish_reason === 'length') {
+      console.error('⚠️ WARNING: Summary response was truncated!');
+    }
+    
     if (response) {
-      return JSON.parse(response);
+      try {
+        const parsedSummary = JSON.parse(response);
+        console.log('✅ Summary JSON parsed successfully');
+        return parsedSummary;
+      } catch (parseError) {
+        console.error('❌ Summary JSON parse failed:', parseError);
+        console.error('📄 Raw response:', response);
+        throw parseError;
+      }
     }
 
     return null;
   } catch (error) {
-    console.error('Error calling OpenAI for session summary:', error);
+    console.error('❌ Error calling Groq (openai/gpt-oss-120b) for session summary:');
+    console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
     throw error;
   }
 }
@@ -714,31 +781,20 @@ function buildWordGenerationPrompt(
   speechChallenges: string[],
   sessionType: string
 ): string {
-  return `
-Generate 15-20 personalized practice words for speech therapy.
+  return `Generate exactly 15 speech therapy practice words for a ${childAge}-year-old named ${childProfile.childName || 'Child'}.
 
-Child Profile:
-- Name: ${childProfile.childName || 'Child'}
-- Age: ${childAge} years old
-- Gender: ${childProfile.childGender || 'not specified'}
-- Vocabulary Level: ${childProfile.vocabularyLevel || 'unknown'}
-- Interests: ${childProfile.interests?.join(', ') || 'general interests'}
-- Speech Therapy Status: ${childProfile.seekingSpeechTherapy ? 'Currently seeking therapy' : 'Not currently in therapy'}
-- Previously Evaluated: ${childProfile.hasBeenEvaluated ? 'Yes' : 'No'}
-
-Identified Speech Challenges: ${speechChallenges.join(', ') || 'General pronunciation practice'}
+Child Info:
+- Interests: ${childProfile.interests?.join(', ') || 'general'}
+- Vocabulary: ${childProfile.vocabularyLevel || 'beginner'}
+- Challenges: ${speechChallenges.join(', ') || 'general pronunciation'}
 
 Requirements:
-- Words must be age-appropriate for a ${childAge}-year-old
-- Include words related to their interests: ${childProfile.interests?.join(', ') || 'general'}
-- Focus on identified speech challenges
-- Mix difficulty levels (60% easy, 30% medium, 10% challenging)
-- Include phonetic transcriptions (IPA)
-- Specify target sounds being practiced
-- Add visual cues or emojis where helpful
-- Each word should have a clear therapeutic purpose
+1. Age-appropriate for ${childAge} years
+2. Related to: ${childProfile.interests?.join(', ') || 'general topics'}
+3. Mix difficulty: 60% easy, 30% medium, 10% hard
+4. Include phonetic (IPA) and emoji
 
-Return JSON format:
+Return ONLY valid JSON with this EXACT structure:
 {
   "words": [
     {
@@ -749,10 +805,12 @@ Return JSON format:
       "category": "animals",
       "targetSounds": ["k", "t"],
       "visualCue": "🐱",
-      "therapyFocus": "final consonant practice"
+      "therapyFocus": "consonants"
     }
   ]
-}`;
+}
+
+Generate ALL 15 words now. Keep responses concise.`;
 }
 
 function analyzeSpeechChallenges(childProfile: any): string[] {
@@ -838,8 +896,8 @@ Return JSON:
 Be STRICT: If the child added extra sounds or syllables, mark as incorrect.`;
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const completion = await groq.chat.completions.create({
+      model: "openai/gpt-oss-120b",
       messages: [
         {
           role: "system",
@@ -851,18 +909,33 @@ Be STRICT: If the child added extra sounds or syllables, mark as incorrect.`;
         }
       ],
       temperature: 0.3, // Low temperature for consistent, strict analysis
-      max_tokens: 600,
+      max_completion_tokens: 1500, // Increased from 600 to prevent truncation
       response_format: { type: "json_object" }
     });
 
+    console.log('✅ Validation response received');
     const response = completion.choices[0]?.message?.content;
+    console.log('📝 Response length:', response?.length || 0);
+    console.log('🔍 Finish reason:', completion.choices[0]?.finish_reason);
+    
+    if (completion.choices[0]?.finish_reason === 'length') {
+      console.error('⚠️ WARNING: Validation response was truncated!');
+    }
+    
     if (response) {
-      const result = JSON.parse(response);
-      console.log(`🔍 AI Pronunciation Validation: "${targetWord}" vs "${spokenWord}" → ${result.isCorrect ? 'CORRECT ✅' : 'INCORRECT ❌'} (${result.accuracy}%)`);
-      return result;
+      try {
+        const result = JSON.parse(response);
+        console.log(`🔍 AI Pronunciation Validation: "${targetWord}" vs "${spokenWord}" → ${result.isCorrect ? 'CORRECT ✅' : 'INCORRECT ❌'} (${result.accuracy}%)`);
+        return result;
+      } catch (parseError) {
+        console.error('❌ Validation JSON parse failed:', parseError);
+        console.error('📄 Raw response:', response);
+        throw parseError;
+      }
     }
 
     // Fallback if no response
+    console.log('⚠️ No validation response from API');
     return {
       isCorrect: false,
       accuracy: 0,
@@ -871,7 +944,9 @@ Be STRICT: If the child added extra sounds or syllables, mark as incorrect.`;
       suggestions: []
     };
   } catch (error) {
-    console.error('Error calling OpenAI for pronunciation validation:', error);
+    console.error('❌ Error calling Groq (openai/gpt-oss-120b) for pronunciation validation:');
+    console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
+    console.error('Error message:', error instanceof Error ? error.message : String(error));
     throw error;
   }
 }
