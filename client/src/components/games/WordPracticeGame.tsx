@@ -480,7 +480,15 @@ export default function WordPracticeGame({
     // Update score (FIXED: Using functional update)
     setScore(prevScore => {
       const newScore = prevScore + pointsEarned;
-      setTotalAccuracy(Math.round(newScore / ((currentWordIndex + 1) * 100) * 100));
+      const newAccuracy = Math.round(newScore / ((currentWordIndex + 1) * 100) * 100);
+      console.log('📊 Score Update:', {
+        prevScore,
+        pointsEarned,
+        newScore,
+        currentWordIndex,
+        calculatedAccuracy: newAccuracy
+      });
+      setTotalAccuracy(newAccuracy);
       return newScore;
     });
 
@@ -549,6 +557,16 @@ export default function WordPracticeGame({
     const childAge = childProfile?.childBirthYear ? 
       new Date().getFullYear() - childProfile.childBirthYear : 5;
 
+    console.log('🎯 Game Complete - Final Stats:', {
+      score,
+      stars,
+      maxStreak,
+      totalAccuracy,
+      wordsAttempted: personalizedWords.length,
+      wordsCompleted,
+      attempts: attempts.length
+    });
+
     let retryCount = 0;
     const maxRetries = 3;
     
@@ -564,6 +582,7 @@ export default function WordPracticeGame({
           childProfile?.interests
         );
 
+        console.log('✅ Session summary generated:', summary);
         setSessionSummary(summary);
         setShowSessionSummary(true);
         break;
