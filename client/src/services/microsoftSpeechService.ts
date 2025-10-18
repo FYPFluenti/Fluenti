@@ -44,13 +44,11 @@ export class MicrosoftSpeechService {
     console.log('🔧 Starting Microsoft Speech SDK initialization...');
     
     try {
-      // For Vite, prioritize VITE_ environment variables 
+      // For Vite, use import.meta.env only (process.env not available in browser)
       const key = import.meta.env.VITE_MICROSOFT_SPEECH_KEY || 
-                  import.meta.env.REACT_APP_MICROSOFT_SPEECH_KEY || 
-                  process.env.REACT_APP_MICROSOFT_SPEECH_KEY;
+                  import.meta.env.REACT_APP_MICROSOFT_SPEECH_KEY;
       const region = import.meta.env.VITE_MICROSOFT_SPEECH_REGION || 
-                     import.meta.env.REACT_APP_MICROSOFT_SPEECH_REGION || 
-                     process.env.REACT_APP_MICROSOFT_SPEECH_REGION;
+                     import.meta.env.REACT_APP_MICROSOFT_SPEECH_REGION;
 
       console.log('🔑 Microsoft Speech API Key check:', {
         keyPresent: !!key,
@@ -61,8 +59,7 @@ export class MicrosoftSpeechService {
         sdkVersion: 'Microsoft Speech SDK loaded',
         envCheck: {
           viteKey: !!import.meta.env.VITE_MICROSOFT_SPEECH_KEY,
-          reactAppKey: !!import.meta.env.REACT_APP_MICROSOFT_SPEECH_KEY,
-          processEnvKey: !!process.env.REACT_APP_MICROSOFT_SPEECH_KEY
+          reactAppKey: !!import.meta.env.REACT_APP_MICROSOFT_SPEECH_KEY
         }
       });
 

@@ -17,6 +17,7 @@ import { generateSmartTTS } from "./services/enhancedTTSService";
 
 import { generateTTSAudio } from "./services/ttsService";
 import { fastTranscribeAudio } from "./services/fastSTTService";
+import { transcribeAudioWithGroq, assessPronunciationWithGroq } from "./services/groqSpeechService";
 
 import { AuthService } from "./auth";
 import gamesRouter from "./routes/games";
@@ -795,6 +796,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Groq Speech Recognition Routes
+  app.post('/api/speech/groq/transcribe', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await transcribeAudioWithGroq(req, res);
+    } catch (error) {
+      console.error("Error in Groq transcription route:", error);
+      res.status(500).json({ 
+        error: "Groq transcription failed",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.post('/api/speech/groq/assess', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      await assessPronunciationWithGroq(req, res);
+    } catch (error) {
+      console.error("Error in Groq pronunciation assessment route:", error);
+      res.status(500).json({ 
+        error: "Groq pronunciation assessment failed",
+        message: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
 
 
   app.get('/api/speech/progress', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {

@@ -143,8 +143,8 @@ export class MicrosoftSpeechAssessment {
 // Usage example for speech therapy
 export const createSpeechTherapyAssessment = () => {
   const microsoftSpeech = new MicrosoftSpeechAssessment({
-    subscriptionKey: process.env.MICROSOFT_SPEECH_KEY || '',
-    region: process.env.MICROSOFT_SPEECH_REGION || 'eastus'
+    subscriptionKey: import.meta.env.VITE_MICROSOFT_SPEECH_KEY || import.meta.env.REACT_APP_MICROSOFT_SPEECH_KEY || '',
+    region: import.meta.env.VITE_MICROSOFT_SPEECH_REGION || import.meta.env.REACT_APP_MICROSOFT_SPEECH_REGION || 'eastus'
   });
 
   return microsoftSpeech;

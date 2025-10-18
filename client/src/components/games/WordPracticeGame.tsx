@@ -26,6 +26,7 @@ import { aiSpeechService, PersonalizedWord, SpeechFeedback, ChildProfile } from 
 import { RealTimeSpeechRecognition, PronunciationAnalyzer, SpeechRecognitionResult } from '@/services/realTimeSpeechRecognition';
 import { HybridSpeechRecognition, HybridPronunciationAnalyzer, HybridSpeechResult } from '@/services/hybridSpeechService';
 import { microsoftSpeechService } from '@/services/microsoftSpeechService';
+import { groqSpeechService, GroqSpeechResult } from '@/services/groqSpeechService';
 
 interface WordPracticeGameProps {
   gameData: any;
@@ -60,11 +61,12 @@ export default function WordPracticeGame({
   const [streak, setStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
   const [cheerfulCharacter, setCheerfulCharacter] = useState('🌟');
-  const [useEnhancedSpeech, setUseEnhancedSpeech] = useState(true); // Default to enhanced mode
+  const [isGroqListening, setIsGroqListening] = useState(false);
   
   const speechRecognitionRef = useRef<RealTimeSpeechRecognition | null>(null);
   const hybridSpeechRef = useRef<HybridSpeechRecognition | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const groqListeningControllerRef = useRef<{ stop: () => void } | null>(null);
 
   const currentWord = personalizedWords[currentWordIndex];
   const maxAttempts = 3;
@@ -138,155 +140,203 @@ export default function WordPracticeGame({
     initializeGame();
   }, [gameData]);
 
-  // Initialize Real-Time Speech Recognition
-  useEffect(() => {
-    if (personalizedWords.length > 0) {
-      const speechConfig = {
-        language: 'en-US',
-        sampleRate: 16000,
-        continuous: false,
-        interimResults: true,
-        maxAlternatives: 5,
-        onResult: (result: SpeechRecognitionResult) => {
-          if (result.isFinal) {
-            handleSpeechResult(result.transcript, result.confidence, result.alternatives);
-          }
-        },
-        onError: (error: string) => {
-          console.error('Speech recognition error:', error);
-          setIsListening(false);
-          toast({
-            title: "Oops! Let's try again!",
-            description: error,
-            variant: "destructive"
-          });
-        },
-        onStart: () => {
-          setIsListening(true);
-        },
-        onEnd: () => {
-          setIsListening(false);
-        }
-      };
-
-      speechRecognitionRef.current = new RealTimeSpeechRecognition(speechConfig);
-      
-      // Initialize Hybrid Speech Recognition (Microsoft + Web Speech)
-      const hybridConfig = {
-        language: 'en-US',
-        sampleRate: 16000,
-        continuous: false,
-        interimResults: true,
-        maxAlternatives: 5,
-        useMicrosoftAssessment: true,
-        onResult: (result: HybridSpeechResult) => {
-          if (result.isFinal) {
-            handleHybridSpeechResult(result);
-          }
-        },
-        onError: (error: string) => {
-          console.error('Hybrid speech recognition error:', error);
-          setIsListening(false);
-          toast({
-            title: "Oops! Let's try again!",
-            description: error,
-            variant: "destructive"
-          });
-        },
-        onStart: () => {
-          setIsListening(true);
-        },
-        onEnd: () => {
-          setIsListening(false);
-        }
-      };
-      
-      try {
-        hybridSpeechRef.current = new HybridSpeechRecognition(hybridConfig);
-      } catch (hybridError) {
-        console.warn('⚠️ Failed to initialize hybrid speech recognition:', hybridError);
-        // Don't block the game if hybrid fails, just use regular speech recognition
-        hybridSpeechRef.current = null;
-      }
-    }
-
-    return () => {
-      if (speechRecognitionRef.current) {
-        speechRecognitionRef.current.destroy();
-      }
-      if (hybridSpeechRef.current) {
-        hybridSpeechRef.current.destroy();
-      }
-    };
-  }, [personalizedWords]);
-
   const startEnhancedListening = async () => {
-    if (!isListening && currentWord) {
+    if (!isListening && currentWord && !isGeneratingFeedback) {
       try {
-        setIsListening(true);
-        console.log('🎯 Starting enhanced speech recognition for:', currentWord.word);
+        console.log('🎯 Starting Groq Whisper speech recognition for:', currentWord.word);
+        setIsGroqListening(true);
         
-        // Use Microsoft Speech directly for better accuracy
-        const result = await microsoftSpeechService.assessPronunciationDirect(currentWord.word);
+        // Use Groq's Whisper for transcription
+        const result = await groqSpeechService.recordAndTranscribe(5000); // 5 second recording
         
-        if (result && result.transcript && result.transcript.trim() !== '.') {
-          // Process the Microsoft Speech result
-          const childAge = childProfile?.childBirthYear ? 
-            new Date().getFullYear() - childProfile.childBirthYear : 5;
-          
-          const feedback = await aiSpeechService.generateEncouragingFeedback(
-            childProfile?.childName || 'friend',
-            currentWord.word,
-            result.transcript,
-            result.pronunciationScore / 100,
-            currentAttempt,
-            childAge,
-            childProfile?.interests
-          );
-          
-          await handleSpeechResult(result.transcript, result.pronunciationScore / 100, [], result);
+        if (result && result.text && result.text.trim() !== '') {
+          // Process the Groq result
+          await handleGroqSpeechResult(result);
         } else {
-          // Fallback to regular speech recognition
-          await startListening();
+          toast({
+            title: "No speech detected",
+            description: "Please try speaking clearly into your microphone.",
+            variant: "default"
+          });
+          setIsGroqListening(false);
         }
         
       } catch (error) {
-        console.error('Enhanced listening error:', error);
-        // Fallback to regular speech recognition
-        await startListening();
-      } finally {
-        setIsListening(false);
+        console.error('Groq speech recognition error:', error);
+        setIsGroqListening(false);
+        toast({
+          title: "Speech Recognition Error",
+          description: "Please check your microphone and try again.",
+          variant: "destructive"
+        });
       }
     }
+  };
+
+  const handleGroqSpeechResult = async (result: GroqSpeechResult) => {
+    // Get the CURRENT word from the live state
+    const liveCurrentWord = personalizedWords[currentWordIndex];
+    
+    // Early exit if we're no longer listening or if currentWord is null
+    if (!liveCurrentWord || isGeneratingFeedback) {
+      console.log('⚠️ Ignoring Groq speech result - no current word or already generating feedback');
+      return;
+    }
+    
+    setIsGeneratingFeedback(true);
+    setIsGroqListening(false);
+    const targetWord = liveCurrentWord.word.toLowerCase();
+    
+    console.log('🎯 handleGroqSpeechResult called:', {
+      currentWordIndex,
+      currentWord: liveCurrentWord?.word,
+      targetWord,
+      transcript: result.text,
+      confidence: result.confidence,
+      currentAttempt
+    });
+    
+    // Enhanced pronunciation analysis using Groq's high-quality transcription
+    const analysis = PronunciationAnalyzer.analyzePronunciation(
+      targetWord, 
+      result.text, 
+      result.confidence
+    );
+
+    // Boost accuracy for high-quality Groq transcriptions
+    if (result.confidence > 0.8 && analysis.accuracy > 70) {
+      analysis.accuracy = Math.min(100, analysis.accuracy + 10);
+    }
+
+    const attemptData = {
+      word: liveCurrentWord.word,
+      transcript: result.text,
+      accuracy: analysis.accuracy,
+      correct: analysis.isCorrect,
+      confidence: result.confidence,
+      attempt: currentAttempt,
+      timestamp: new Date(),
+      phonemeAccuracy: analysis.phonemeAccuracy,
+      suggestions: analysis.suggestions,
+      source: 'groq-whisper',
+      duration: result.duration
+    };
+
+    setAttempts([...attempts, attemptData]);
+
+    // Generate AI-powered feedback
+    const childAge = childProfile?.childBirthYear ? 
+      new Date().getFullYear() - childProfile.childBirthYear : 5;
+    
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    while (retryCount < maxRetries) {
+      try {
+        const aiFeedback = await aiSpeechService.generateEncouragingFeedback(
+          childProfile?.childName || 'friend',
+          liveCurrentWord.word,
+          result.text,
+          analysis.accuracy,
+          currentAttempt,
+          childAge,
+          childProfile?.interests
+        );
+        
+        // Add Groq-specific technical feedback
+        if (result.confidence > 0.9) {
+          aiFeedback.technicalTip = "Excellent clarity! Your voice was crystal clear.";
+        } else if (result.confidence > 0.7) {
+          aiFeedback.technicalTip = "Good pronunciation! Try speaking a bit more clearly.";
+        }
+        
+        setFeedback(aiFeedback);
+        break;
+      } catch (error) {
+        retryCount++;
+        if (retryCount >= maxRetries) {
+          console.error('Failed to generate AI feedback after retries:', error);
+          setFeedback({
+            message: "Great attempt!",
+            encouragement: "Keep practicing! You're doing wonderfully! " + cheerfulCharacter,
+            emotionalTone: "supportive"
+          });
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
+        }
+      }
+    }
+
+    setShowFeedback(true);
+    setIsGeneratingFeedback(false);
+
+    // Update scoring system
+    let pointsEarned = analysis.accuracy;
+    if (analysis.isCorrect && currentAttempt === 1) {
+      pointsEarned += 20; // Bonus for first try
+      setStreak(streak + 1);
+      setMaxStreak(Math.max(maxStreak, streak + 1));
+    } else if (analysis.isCorrect) {
+      pointsEarned += 10; // Smaller bonus for later attempts
+      setStreak(streak + 1);
+      setMaxStreak(Math.max(maxStreak, streak + 1));
+    } else {
+      setStreak(0); // Reset streak
+    }
+
+    // Award stars based on performance
+    if (analysis.accuracy >= 90) setStars(stars + 3);
+    else if (analysis.accuracy >= 70) setStars(stars + 2);
+    else if (analysis.accuracy >= 50) setStars(stars + 1);
+
+    const newScore = score + pointsEarned;
+    setScore(newScore);
+    setTotalAccuracy(Math.round(newScore / ((currentWordIndex + 1) * 100) * 100));
+
+    // Auto-advance logic
+    setTimeout(() => {
+      setShowFeedback(false);
+      
+      if (analysis.isCorrect) {
+        console.log('✅ Correct answer - advancing to next word');
+        if (currentWordIndex < personalizedWords.length - 1) {
+          setCurrentWordIndex(currentWordIndex + 1);
+          setCurrentAttempt(1);
+        } else {
+          completeGame();
+        }
+      } else if (currentAttempt < maxAttempts) {
+        console.log(`🔄 Attempt ${currentAttempt} failed - allowing retry`);
+        setCurrentAttempt(currentAttempt + 1);
+        toast({
+          title: `Try ${currentAttempt + 1} of ${maxAttempts}!`,
+          description: "You can do it! " + cheerfulCharacter,
+        });
+      } else {
+        console.log('⏭️ All attempts used - auto-advancing to next word');
+        toast({
+          title: "Let's try the next word!",
+          description: "Don't worry, practice makes perfect! " + cheerfulCharacter,
+        });
+        
+        if (currentWordIndex < personalizedWords.length - 1) {
+          setCurrentWordIndex(currentWordIndex + 1);
+          setCurrentAttempt(1);
+        } else {
+          completeGame();
+        }
+      }
+    }, 3000);
   };
 
   const startListening = async () => {
-    if (speechRecognitionRef.current && !isListening) {
-      try {
-        await speechRecognitionRef.current.startListening();
-      } catch (error) {
-        console.error('Error starting recognition:', error);
-      }
-    }
+    // Legacy method - now redirects to Groq
+    await startEnhancedListening();
   };
 
   const startHybridListening = async () => {
-    if (hybridSpeechRef.current && !isListening && currentWord) {
-      try {
-        // Set the target word for pronunciation assessment
-        hybridSpeechRef.current.setTargetWord(currentWord.word);
-        await hybridSpeechRef.current.startListening();
-      } catch (error) {
-        console.error('Error starting hybrid recognition:', error);
-        toast({
-          title: "Enhanced Recognition Unavailable",
-          description: "Falling back to standard recognition mode.",
-          variant: "default"
-        });
-        // Fallback to regular speech recognition
-        startListening();
-      }
-    }
+    // Legacy method - now redirects to Groq
+    await startEnhancedListening();
   };
 
   const stopListening = () => {
@@ -296,6 +346,23 @@ export default function WordPracticeGame({
     if (hybridSpeechRef.current && isListening) {
       hybridSpeechRef.current.stopListening();
     }
+    if (groqListeningControllerRef.current && isGroqListening) {
+      groqListeningControllerRef.current.stop();
+      setIsGroqListening(false);
+    }
+    setIsListening(false);
+  };
+
+  const cleanupSpeechRecognition = () => {
+    // Stop any ongoing speech recognition
+    stopListening();
+    
+    // Reset speech recognition state
+    setIsListening(false);
+    setIsGroqListening(false);
+    setIsGeneratingFeedback(false);
+    
+    console.log('🧹 Cleaning up speech recognition before word advance');
   };
 
   const handleSpeechResult = async (
@@ -304,8 +371,27 @@ export default function WordPracticeGame({
     alternatives?: Array<{ transcript: string; confidence: number }>,
     microsoftResult?: any
   ) => {
+    // Get the CURRENT word from the live state, not the closure
+    const liveCurrentWord = personalizedWords[currentWordIndex];
+    
+    // Early exit if we're no longer listening or if currentWord is null
+    if (!liveCurrentWord || isGeneratingFeedback) {
+      console.log('⚠️ Ignoring speech result - no current word or already generating feedback');
+      return;
+    }
+    
     setIsGeneratingFeedback(true);
-    const targetWord = currentWord.word.toLowerCase();
+    const targetWord = liveCurrentWord.word.toLowerCase();
+    
+    // Debug logging to track word synchronization
+    console.log('🎯 handleSpeechResult called:', {
+      currentWordIndex,
+      currentWord: liveCurrentWord?.word,
+      targetWord,
+      transcript,
+      currentAttempt,
+      closureWord: currentWord?.word // Show what the closure thinks currentWord is
+    });
     
     // Use Microsoft Speech result if available, otherwise use standard analysis
     let analysis;
@@ -329,7 +415,7 @@ export default function WordPracticeGame({
     }
 
     const attemptData = {
-      word: currentWord.word,
+      word: liveCurrentWord.word, // Use live word, not closure word
       transcript,
       accuracy: analysis.accuracy,
       correct: analysis.isCorrect,
@@ -353,7 +439,7 @@ export default function WordPracticeGame({
       try {
         const aiFeedback = await aiSpeechService.generateEncouragingFeedback(
           childProfile?.childName || 'friend',
-          currentWord.word,
+          liveCurrentWord.word, // Use live word for AI feedback
           transcript,
           analysis.accuracy,
           currentAttempt,
@@ -427,6 +513,8 @@ export default function WordPracticeGame({
       if (analysis.isCorrect) {
         // Correct answer - move to next word
         console.log('✅ Correct answer - advancing to next word');
+        cleanupSpeechRecognition();
+        
         if (currentWordIndex < personalizedWords.length - 1) {
           setCurrentWordIndex(currentWordIndex + 1);
           setCurrentAttempt(1);
@@ -444,6 +532,8 @@ export default function WordPracticeGame({
       } else {
         // Used all attempts - move to next word automatically
         console.log('⏭️ All attempts used - auto-advancing to next word');
+        cleanupSpeechRecognition();
+        
         toast({
           title: "Let's try the next word!",
           description: "Don't worry, practice makes perfect! " + cheerfulCharacter,
@@ -461,8 +551,26 @@ export default function WordPracticeGame({
   };
 
   const handleHybridSpeechResult = async (result: HybridSpeechResult) => {
+    // Get the CURRENT word from the live state, not the closure
+    const liveCurrentWord = personalizedWords[currentWordIndex];
+    
+    // Early exit if we're no longer listening or if currentWord is null
+    if (!liveCurrentWord || isGeneratingFeedback) {
+      console.log('⚠️ Ignoring hybrid speech result - no current word or already generating feedback');
+      return;
+    }
+    
     setIsGeneratingFeedback(true);
-    const targetWord = currentWord.word.toLowerCase();
+    const targetWord = liveCurrentWord.word.toLowerCase();
+    
+    console.log('🎯 handleHybridSpeechResult called:', {
+      currentWordIndex,
+      currentWord: liveCurrentWord?.word,
+      targetWord,
+      transcript: result.transcript,
+      currentAttempt,
+      closureWord: currentWord?.word // Show what the closure thinks currentWord is
+    });
     
     // Use hybrid pronunciation analysis (prioritizes Microsoft assessment if available)
     const analysis = HybridPronunciationAnalyzer.analyzePronunciation(
@@ -474,7 +582,7 @@ export default function WordPracticeGame({
     );
 
     const attemptData = {
-      word: currentWord.word,
+      word: liveCurrentWord.word, // Use live word, not closure word
       transcript: result.transcript,
       accuracy: analysis.accuracy,
       correct: analysis.isCorrect,
@@ -499,8 +607,8 @@ export default function WordPracticeGame({
     while (retryCount < maxRetries) {
       try {
         const feedbackPrompt = result.microsoftAssessment 
-          ? `${currentWord.word} (pronounced: ${result.transcript}, Microsoft pronunciation score: ${result.microsoftAssessment.pronunciationScore})`
-          : `${currentWord.word} (pronounced: ${result.transcript})`;
+          ? `${liveCurrentWord.word} (pronounced: ${result.transcript}, Microsoft pronunciation score: ${result.microsoftAssessment.pronunciationScore})`
+          : `${liveCurrentWord.word} (pronounced: ${result.transcript})`;
           
         const aiFeedback = await aiSpeechService.generateEncouragingFeedback(
           childProfile?.childName || 'friend',
@@ -569,6 +677,7 @@ export default function WordPracticeGame({
       setShowFeedback(false);
       
       if (analysis.isCorrect) {
+        cleanupSpeechRecognition();
         if (currentWordIndex < personalizedWords.length - 1) {
           setCurrentWordIndex(currentWordIndex + 1);
           setCurrentAttempt(1);
@@ -582,6 +691,7 @@ export default function WordPracticeGame({
           description: "You can do it! " + cheerfulCharacter,
         });
       } else {
+        cleanupSpeechRecognition();
         toast({
           title: "Let's try the next word!",
           description: "Don't worry, practice makes perfect! " + cheerfulCharacter,
@@ -693,6 +803,8 @@ export default function WordPracticeGame({
     const newScore = Math.max(0, score - 30);
     setScore(newScore);
     setStreak(0); // Reset streak
+    
+    cleanupSpeechRecognition();
     
     toast({
       title: "Word Skipped",
@@ -1013,6 +1125,9 @@ export default function WordPracticeGame({
                   <span className="text-sm font-medium text-blue-600">{currentWord.therapyFocus}</span>
                 </div>
               )}
+              <div className="inline-block px-4 py-2 bg-green-50 border border-green-200 rounded-full">
+                <span className="text-sm font-medium text-green-600">🚀 Groq Whisper</span>
+              </div>
             </div>
 
             {/* Attempt indicator */}
@@ -1041,16 +1156,16 @@ export default function WordPracticeGame({
             </button>
             
             <motion.button
-              onClick={isListening ? stopListening : (useEnhancedSpeech ? startEnhancedListening : startListening)}
+              onClick={isListening || isGroqListening ? stopListening : startEnhancedListening}
               disabled={showFeedback || isGeneratingFeedback}
               className={`w-full py-6 px-6 rounded-xl flex items-center justify-center gap-3 text-lg font-bold transition-all transform hover:scale-105 ${
-                isListening 
+                isListening || isGroqListening
                   ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse shadow-lg' 
                   : 'bg-gradient-to-r from-[#F5B82E] to-orange-400 hover:shadow-xl text-white'
               } disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
               whileTap={{ scale: 0.95 }}
             >
-              {isListening ? (
+              {isListening || isGroqListening ? (
                 <>
                   <motion.div
                     animate={{ scale: [1, 1.2, 1] }}
@@ -1084,23 +1199,6 @@ export default function WordPracticeGame({
                 </div>
               </motion.div>
             )}
-
-            {/* Speech Recognition Mode Toggle */}
-            <div className="flex items-center justify-center gap-2 py-2">
-              <button
-                onClick={() => setUseEnhancedSpeech(!useEnhancedSpeech)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all text-sm ${
-                  useEnhancedSpeech 
-                    ? 'bg-green-100 text-green-700 border border-green-200' 
-                    : 'bg-gray-100 text-gray-600 border border-gray-200'
-                }`}
-              >
-                <Zap className={`w-4 h-4 ${useEnhancedSpeech ? 'text-green-600' : 'text-gray-400'}`} />
-                <span className="font-medium">
-                  {useEnhancedSpeech ? '🚀 Enhanced Mode' : '📢 Basic Mode'}
-                </span>
-              </button>
-            </div>
 
             <button
               onClick={skipWord}

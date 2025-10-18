@@ -20,6 +20,7 @@ import EmotionalSupport from "@/pages/emotional-support";
 import EmotionalSupportVoice from "@/pages/emotional-support-voice";
 import SpeechTest from "@/pages/SpeechTest";
 import QuickSpeechTest from "@/pages/QuickSpeechTest";
+import GroqTestPage from "@/components/GroqTestPage";
 import Assessment from "@/pages/assessment";
 import Achievements from "@/pages/achievements";
 import Settings from "@/pages/settings";
@@ -146,6 +147,11 @@ export default function App() {
             {/* Quick Speech Test Route (Debug) */}
             <Route path="/quick-test">
               <QuickSpeechTest />
+            </Route>
+            
+            {/* Groq Test Route (Debug) */}
+            <Route path="/groq-test">
+              <GroqTestPage />
             </Route>
             
             {/* 404 Route */}
