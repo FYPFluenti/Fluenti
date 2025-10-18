@@ -72,10 +72,7 @@ export default function Home() {
           console.log('Redirecting to adult dashboard');
           setLocation('/adult-dashboard');
           break;
-        case 'guardian':
-          console.log('Redirecting to guardian dashboard');
-          setLocation('/guardian-dashboard');
-          break;
+        
         default:
           console.log('Unknown user type, redirecting to child dashboard');
           setLocation('/child-dashboard');

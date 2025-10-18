@@ -21,7 +21,7 @@ export default function HeaderControls({
           <DarkModeToggle />
         </div>
         
-        {/* Preferences Button - Exact match */}
+        {/* Preferences Button */}
         <button
           onClick={() => setShowPreferences(!showPreferences)}
           className="p-2 rounded-full hover:bg-muted transition"
