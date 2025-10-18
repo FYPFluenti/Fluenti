@@ -452,28 +452,37 @@ export default function WordPracticeGame({
     setShowFeedback(true);
     setIsGeneratingFeedback(false);
 
-    // Update scoring system
+    // Update scoring system (FIXED: Using functional updates to prevent stale state)
     let pointsEarned = analysis.accuracy;
     if (analysis.isCorrect && currentAttempt === 1) {
       pointsEarned += 20; // Bonus for first try
-      setStreak(streak + 1);
-      setMaxStreak(Math.max(maxStreak, streak + 1));
+      setStreak(prevStreak => {
+        const newStreak = prevStreak + 1;
+        setMaxStreak(prevMax => Math.max(prevMax, newStreak));
+        return newStreak;
+      });
     } else if (analysis.isCorrect) {
       pointsEarned += 10; // Smaller bonus for later attempts
-      setStreak(streak + 1);
-      setMaxStreak(Math.max(maxStreak, streak + 1));
+      setStreak(prevStreak => {
+        const newStreak = prevStreak + 1;
+        setMaxStreak(prevMax => Math.max(prevMax, newStreak));
+        return newStreak;
+      });
     } else {
       setStreak(0); // Reset streak
     }
 
-    // Award stars based on performance
-    if (analysis.accuracy >= 90) setStars(stars + 3);
-    else if (analysis.accuracy >= 70) setStars(stars + 2);
-    else if (analysis.accuracy >= 50) setStars(stars + 1);
+    // Award stars based on performance (FIXED: Using functional update)
+    if (analysis.accuracy >= 90) setStars(prevStars => prevStars + 3);
+    else if (analysis.accuracy >= 70) setStars(prevStars => prevStars + 2);
+    else if (analysis.accuracy >= 50) setStars(prevStars => prevStars + 1);
 
-    const newScore = score + pointsEarned;
-    setScore(newScore);
-    setTotalAccuracy(Math.round(newScore / ((currentWordIndex + 1) * 100) * 100));
+    // Update score (FIXED: Using functional update)
+    setScore(prevScore => {
+      const newScore = prevScore + pointsEarned;
+      setTotalAccuracy(Math.round(newScore / ((currentWordIndex + 1) * 100) * 100));
+      return newScore;
+    });
 
     // Auto-advance logic
     setTimeout(() => {
@@ -700,11 +709,11 @@ export default function WordPracticeGame({
   // Session Summary Modal
   if (showSessionSummary && sessionSummary) {
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
         <motion.div
           initial={{ scale: 0.8, opacity: 0, y: 50 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
-          className="bg-card border-2 border-[#F5B82E] rounded-3xl p-8 max-w-lg w-full text-center overflow-y-auto max-h-[90vh]"
+          className="bg-white rounded-3xl p-8 max-w-lg w-full text-center overflow-y-auto max-h-[90vh] shadow-2xl border border-gray-200"
         >
           {/* Celebration Header */}
           <motion.div
@@ -713,10 +722,10 @@ export default function WordPracticeGame({
             transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
             className="mb-6"
           >
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#F5B82E] to-orange-400 flex items-center justify-center mx-auto mb-4">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#ff6b1d] to-[#ff8a4a] flex items-center justify-center mx-auto mb-4 shadow-lg">
               <Trophy className="w-12 h-12 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-[#F5B82E] mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
               {sessionSummary.title}
             </h1>
           </motion.div>
@@ -729,39 +738,41 @@ export default function WordPracticeGame({
             className="mb-6"
           >
             <div className="text-6xl mb-4">{cheerfulCharacter}</div>
-            <p className="text-lg text-foreground mb-4">
+            <p className="text-lg text-gray-700 mb-4">
               {sessionSummary.message}
             </p>
           </motion.div>
 
           {/* Stats Display */}
           <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className="bg-muted rounded-lg p-4">
-              <div className="text-2xl font-bold text-[#F5B82E]">{score}</div>
-              <div className="text-sm text-muted-foreground">Total Points</div>
+            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 shadow-sm">
+              <div className="text-3xl font-bold text-[#ff6b1d]">{score}</div>
+              <div className="text-sm text-gray-600">Total Points</div>
             </div>
-            <div className="bg-muted rounded-lg p-4">
+            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 shadow-sm">
               <div className="flex items-center justify-center">
                 {[...Array(Math.min(3, Math.floor(stars / 10)))].map((_, i) => (
-                  <Star key={i} className="w-6 h-6 text-[#F5B82E] fill-[#F5B82E]" />
+                  <Star key={i} className="w-6 h-6 text-[#ff6b1d] fill-[#ff6b1d]" />
                 ))}
               </div>
-              <div className="text-sm text-muted-foreground">Stars Earned</div>
+              <div className="text-sm text-gray-600">Stars Earned</div>
             </div>
-            <div className="bg-muted rounded-lg p-4">
-              <div className="text-2xl font-bold text-[#F5B82E]">{maxStreak}</div>
-              <div className="text-sm text-muted-foreground">Best Streak</div>
+            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 shadow-sm">
+              <div className="text-3xl font-bold text-[#ff6b1d]">{maxStreak}</div>
+              <div className="text-sm text-gray-600">Best Streak</div>
             </div>
-            <div className="bg-muted rounded-lg p-4">
-              <div className="text-2xl font-bold text-[#F5B82E]">{totalAccuracy}%</div>
-              <div className="text-sm text-muted-foreground">Accuracy</div>
+            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 shadow-sm">
+              <div className="text-3xl font-bold text-[#ff6b1d]">{totalAccuracy}%</div>
+              <div className="text-sm text-gray-600">Accuracy</div>
             </div>
           </div>
 
           {/* Achievements */}
           <div className="mb-6">
-            <h3 className="text-lg font-bold mb-3 flex items-center justify-center gap-2">
-              <Award className="w-5 h-5 text-[#F5B82E]" />
+            <h3 className="text-lg font-bold mb-3 flex items-center justify-center gap-2 text-gray-900">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-500 rounded-lg flex items-center justify-center">
+                <Award className="w-5 h-5 text-white" />
+              </div>
               Amazing Achievements!
             </h3>
             <div className="space-y-2">
@@ -771,10 +782,12 @@ export default function WordPracticeGame({
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.7 + index * 0.1 }}
-                  className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-3"
+                  className="bg-green-50 border border-green-200 rounded-2xl p-4 flex items-center gap-3 shadow-sm"
                 >
-                  <Check className="w-5 h-5 text-green-500" />
-                  <span className="text-sm">{achievement}</span>
+                  <div className="w-6 h-6 bg-green-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Check className="w-4 h-4 text-white" />
+                  </div>
+                  <span className="text-sm text-gray-700 text-left">{achievement}</span>
                 </motion.div>
               ))}
             </div>
@@ -785,9 +798,9 @@ export default function WordPracticeGame({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 1 }}
-            className="mb-6 p-4 bg-[#F5B82E]/10 rounded-lg border border-[#F5B82E]/20"
+            className="mb-6 p-4 bg-gradient-to-r from-orange-50 to-yellow-50 rounded-2xl border border-orange-200 shadow-sm"
           >
-            <p className="text-foreground font-medium">
+            <p className="text-gray-700 font-medium">
               {sessionSummary.encouragement}
             </p>
           </motion.div>
@@ -795,13 +808,15 @@ export default function WordPracticeGame({
           {/* Next Goals */}
           {sessionSummary.nextGoals && sessionSummary.nextGoals.length > 0 && (
             <div className="mb-6">
-              <h4 className="font-bold mb-2 flex items-center justify-center gap-2">
-                <Target className="w-4 h-4 text-[#F5B82E]" />
+              <h4 className="font-bold mb-3 flex items-center justify-center gap-2 text-gray-900">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-blue-500 rounded-lg flex items-center justify-center">
+                  <Target className="w-4 h-4 text-white" />
+                </div>
                 Next Time Let's Try:
               </h4>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {sessionSummary.nextGoals.map((goal: string, index: number) => (
-                  <div key={index} className="text-sm text-muted-foreground">
+                  <div key={index} className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-xl p-3 text-left">
                     • {goal}
                   </div>
                 ))}
@@ -824,7 +839,7 @@ export default function WordPracticeGame({
                 // Then navigate to speech therapy page to see all games
                 setLocation('/speech-therapy');
               }}
-              className="flex-1 bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white py-3 px-6 rounded-xl font-bold hover:shadow-lg transition-all"
+              className="flex-1 bg-gradient-to-r from-[#ff6b1d] to-[#ff8a4a] text-white py-4 px-6 rounded-2xl font-bold text-lg hover:shadow-xl transition-all transform hover:scale-105"
             >
               Continue Learning! 🚀
             </button>
@@ -1051,7 +1066,7 @@ export default function WordPracticeGame({
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.8, y: 50, opacity: 0 }}
               onClick={(e) => e.stopPropagation()}
-              className="bg-white/95 backdrop-blur border-4 border-[#F5B82E] rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl"
+              className="bg-white rounded-3xl p-8 max-w-lg w-full text-center shadow-2xl border border-gray-200"
             >
               {/* Animated Character */}
               <motion.div
@@ -1060,20 +1075,20 @@ export default function WordPracticeGame({
                 transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
                 className="mb-6"
               >
-                <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                  feedback.emotionalTone === 'excited' ? 'bg-green-100 border-4 border-green-300' :
-                  feedback.emotionalTone === 'proud' ? 'bg-purple-100 border-4 border-purple-300' :
-                  feedback.emotionalTone === 'encouraging' ? 'bg-yellow-100 border-4 border-yellow-300' :
-                  'bg-blue-100 border-4 border-blue-300'
+                <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg ${
+                  feedback.emotionalTone === 'excited' ? 'bg-gradient-to-br from-green-400 to-green-500' :
+                  feedback.emotionalTone === 'proud' ? 'bg-gradient-to-br from-[#ff6b1d] to-[#ff8a4a]' :
+                  feedback.emotionalTone === 'encouraging' ? 'bg-gradient-to-br from-yellow-400 to-orange-400' :
+                  'bg-gradient-to-br from-blue-400 to-blue-500'
                 }`}>
                   {feedback.emotionalTone === 'excited' ? (
-                    <PartyPopper className="w-12 h-12 text-green-600" />
+                    <PartyPopper className="w-10 h-10 text-white" />
                   ) : feedback.emotionalTone === 'proud' ? (
-                    <Trophy className="w-12 h-12 text-purple-600" />
+                    <Trophy className="w-10 h-10 text-white" />
                   ) : feedback.emotionalTone === 'encouraging' ? (
-                    <Smile className="w-12 h-12 text-yellow-600" />
+                    <Smile className="w-10 h-10 text-white" />
                   ) : (
-                    <Heart className="w-12 h-12 text-blue-600" />
+                    <Heart className="w-10 h-10 text-white" />
                   )}
                 </div>
                 
@@ -1100,31 +1115,35 @@ export default function WordPracticeGame({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
               >
-                <h3 className="text-2xl font-bold mb-3 text-[#F5B82E]">
+                <h3 className="text-2xl font-bold mb-4 text-gray-900">
                   {feedback.message}
                 </h3>
 
-                <p className="text-lg text-foreground mb-4 bg-[#F5B82E]/10 p-4 rounded-lg border border-[#F5B82E]/20">
+                <p className="text-lg text-gray-700 mb-6 bg-gray-50 p-4 rounded-2xl border border-gray-200">
                   {feedback.encouragement}
                 </p>
 
                 {feedback.technicalTip && (
-                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-2xl">
                     <div className="flex items-center gap-2 mb-2">
-                      <Brain className="w-4 h-4 text-blue-600" />
-                      <span className="text-sm font-bold text-blue-700">Helpful Tip:</span>
+                      <div className="w-6 h-6 bg-blue-500 rounded-lg flex items-center justify-center">
+                        <Brain className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-sm font-bold text-blue-900">Helpful Tip:</span>
                     </div>
-                    <p className="text-sm text-blue-600">{feedback.technicalTip}</p>
+                    <p className="text-sm text-blue-700">{feedback.technicalTip}</p>
                   </div>
                 )}
 
                 {feedback.nextSteps && (
-                  <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-2xl">
                     <div className="flex items-center gap-2 mb-2">
-                      <Target className="w-4 h-4 text-green-600" />
-                      <span className="text-sm font-bold text-green-700">Next Step:</span>
+                      <div className="w-6 h-6 bg-green-500 rounded-lg flex items-center justify-center">
+                        <Target className="w-4 h-4 text-white" />
+                      </div>
+                      <span className="text-sm font-bold text-green-900">Next Step:</span>
                     </div>
-                    <p className="text-sm text-green-600">{feedback.nextSteps}</p>
+                    <p className="text-sm text-green-700">{feedback.nextSteps}</p>
                   </div>
                 )}
               </motion.div>
@@ -1134,9 +1153,9 @@ export default function WordPracticeGame({
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.6 }}
-                className="mb-4"
+                className="mb-6"
               >
-                <div className="flex items-center justify-center gap-2 mb-3">
+                <div className="flex items-center justify-center gap-2 mb-4">
                   {[...Array(5)].map((_, i) => (
                     <motion.div
                       key={i}
@@ -1145,20 +1164,20 @@ export default function WordPracticeGame({
                       transition={{ delay: 0.8 + i * 0.1 }}
                     >
                       <Star
-                        className={`w-6 h-6 ${
+                        className={`w-7 h-7 ${
                           i < Math.floor((attempts[attempts.length - 1]?.accuracy || 0) / 20)
-                            ? 'text-[#F5B82E] fill-[#F5B82E]'
-                            : 'text-muted-foreground/30'
+                            ? 'text-[#ff6b1d] fill-[#ff6b1d]'
+                            : 'text-gray-300'
                         }`}
                       />
                     </motion.div>
                   ))}
                 </div>
 
-                <div className="bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white py-3 px-6 rounded-xl">
+                <div className="bg-gradient-to-r from-[#ff6b1d] to-[#ff8a4a] text-white py-4 px-6 rounded-2xl shadow-lg">
                   <p className="text-sm font-medium">Points Earned</p>
-                  <p className="text-2xl font-bold">
-                    +{attempts[attempts.length - 1]?.accuracy || 0} 🎯
+                  <p className="text-3xl font-bold flex items-center justify-center gap-2">
+                    +{attempts[attempts.length - 1]?.accuracy || 0} <span>🎯</span>
                   </p>
                 </div>
               </motion.div>
@@ -1169,7 +1188,7 @@ export default function WordPracticeGame({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 1 }}
                 onClick={() => setShowFeedback(false)}
-                className="w-full bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white py-4 px-6 rounded-xl font-bold text-lg hover:shadow-lg transition-all transform hover:scale-105"
+                className="w-full bg-gradient-to-r from-[#ff6b1d] to-[#ff8a4a] text-white py-4 px-6 rounded-2xl font-bold text-lg hover:shadow-xl transition-all transform hover:scale-105"
                 whileTap={{ scale: 0.95 }}
               >
                 {currentWordIndex >= personalizedWords.length - 1 && currentAttempt >= maxAttempts ? 
