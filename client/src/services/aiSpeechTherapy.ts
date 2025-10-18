@@ -47,17 +47,12 @@ class AISpeechTherapyService {
     
     while (retryCount < maxRetries) {
       try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
         const response = await fetch('/api/games/generate-words', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
+          credentials: 'include', // Use httpOnly cookies for auth
           body: JSON.stringify({
             childProfile,
             sessionType
@@ -106,17 +101,12 @@ class AISpeechTherapyService {
     
     while (retryCount < maxRetries) {
       try {
-        const token = localStorage.getItem('authToken');
-        if (!token) {
-          throw new Error('No authentication token found');
-        }
-
         const response = await fetch('/api/games/generate-feedback', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           },
+          credentials: 'include', // Use httpOnly cookies for auth
           body: JSON.stringify({
             childName,
             targetWord,
@@ -164,11 +154,8 @@ class AISpeechTherapyService {
       });
       
       if (response.ok) {
-        const data = await response.json();
-        if (data.token) {
-          localStorage.setItem('authToken', data.token);
-          console.log('✅ Auth token refreshed successfully');
-        }
+        console.log('✅ Auth token refreshed successfully');
+        // No need to store token in localStorage - using httpOnly cookies
       } else {
         console.warn('❌ Failed to refresh token, user may need to log in again');
         // Redirect to login or show error
@@ -196,13 +183,12 @@ class AISpeechTherapyService {
     nextGoals: string[];
   }> {
     try {
-      const token = localStorage.getItem('authToken');
       const response = await fetch('/api/games/generate-session-summary', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
+        credentials: 'include', // Use httpOnly cookies for auth
         body: JSON.stringify({
           childName,
           wordsAttempted,

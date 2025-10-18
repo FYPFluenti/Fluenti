@@ -76,12 +76,11 @@ export default function WordPracticeGame({
     const initializeGame = async () => {
       try {
         // Fetch child's onboarding data
-        const token = localStorage.getItem('authToken');
         const onboardingResponse = await fetch('/api/onboarding', {
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
-          }
+          },
+          credentials: 'include' // Use httpOnly cookies for auth
         });
 
         if (onboardingResponse.ok) {
@@ -770,13 +769,12 @@ export default function WordPracticeGame({
         }
       };
 
-      const token = localStorage.getItem('authToken');
       const response = await fetch(`/api/games/session/${sessionId}/complete`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
+        credentials: 'include', // Use httpOnly cookies for auth
         body: JSON.stringify({
           score,
           accuracy: totalAccuracy,

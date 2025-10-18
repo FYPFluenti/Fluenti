@@ -69,12 +69,11 @@ export default function OnboardingStatistics() {
 
   const fetchUserOnboardingData = async () => {
     try {
-      const token = localStorage.getItem('authToken');
       const response = await fetch('/api/onboarding', {
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
-        }
+        },
+        credentials: 'include' // Use httpOnly cookies for auth
       });
 
       if (response.ok) {

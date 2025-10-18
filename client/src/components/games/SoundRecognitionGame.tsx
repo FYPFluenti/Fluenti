@@ -157,13 +157,12 @@ export default function SoundRecognitionGame({
     };
 
     try {
-      const token = localStorage.getItem('authToken');
       const response = await fetch(`/api/games/session/${sessionId}/complete`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
+        credentials: 'include', // Use httpOnly cookies for auth
         body: JSON.stringify({
           score,
           accuracy,
