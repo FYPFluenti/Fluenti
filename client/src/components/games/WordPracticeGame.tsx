@@ -23,9 +23,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { aiSpeechService, PersonalizedWord, SpeechFeedback, ChildProfile } from '@/services/aiSpeechTherapy';
-import { RealTimeSpeechRecognition, PronunciationAnalyzer, SpeechRecognitionResult } from '@/services/realTimeSpeechRecognition';
-import { HybridSpeechRecognition, HybridPronunciationAnalyzer, HybridSpeechResult } from '@/services/hybridSpeechService';
-import { microsoftSpeechService } from '@/services/microsoftSpeechService';
+import { PronunciationAnalyzer } from '@/services/realTimeSpeechRecognition';
 import { groqSpeechService, GroqSpeechResult } from '@/services/groqSpeechService';
 
 interface WordPracticeGameProps {
@@ -62,14 +60,119 @@ export default function WordPracticeGame({
   const [maxStreak, setMaxStreak] = useState(0);
   const [cheerfulCharacter, setCheerfulCharacter] = useState('🌟');
   const [isGroqListening, setIsGroqListening] = useState(false);
+  const [hasMicrophonePermission, setHasMicrophonePermission] = useState<boolean | null>(null);
   
-  const speechRecognitionRef = useRef<RealTimeSpeechRecognition | null>(null);
-  const hybridSpeechRef = useRef<HybridSpeechRecognition | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const groqListeningControllerRef = useRef<{ stop: () => void } | null>(null);
 
   const currentWord = personalizedWords[currentWordIndex];
   const maxAttempts = 3;
+
+  // Check microphone permissions on mount
+  useEffect(() => {
+    const checkMicrophonePermission = async () => {
+      try {
+        // Check if mediaDevices is available
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          console.error('❌ MediaDevices API not supported');
+          setHasMicrophonePermission(false);
+          toast({
+            title: "Browser Not Supported",
+            description: "Your browser doesn't support microphone access. Please use Chrome, Edge, or Firefox.",
+            variant: "destructive"
+          });
+          return;
+        }
+
+        console.log('🎤 Requesting microphone access...');
+
+        // Request microphone permission FIRST
+        // Note: enumerateDevices() won't show device labels until permission is granted
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        
+        console.log('✅ Microphone stream obtained:', {
+          active: stream.active,
+          tracks: stream.getTracks().length
+        });
+
+        // Now enumerate devices AFTER permission is granted
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const audioInputs = devices.filter(device => device.kind === 'audioinput');
+        
+        console.log('🎤 Available audio input devices:', {
+          count: audioInputs.length,
+          devices: audioInputs.map(d => ({ label: d.label, id: d.deviceId.substring(0, 8) }))
+        });
+
+        // Check if all devices are Stereo Mix (system audio)
+        const allStereoMix = audioInputs.every(d => {
+          const label = d.label.toLowerCase();
+          return label.includes('stereo mix') || 
+                 label.includes('wave out') || 
+                 label.includes('what u hear');
+        });
+
+        if (allStereoMix) {
+          console.error('❌ Only "Stereo Mix" detected - no real microphone available!');
+          stream.getTracks().forEach(track => track.stop());
+          setHasMicrophonePermission(false);
+          
+          toast({
+            title: "⚠️ No Real Microphone Found",
+            description: "Only 'Stereo Mix' (system audio) is enabled. Please enable your real microphone in Windows Sound Settings → Recording tab → Show Disabled Devices → Enable your microphone.",
+            variant: "destructive",
+            duration: 20000
+          });
+          return;
+        }
+
+        // Stop the stream after checking
+        stream.getTracks().forEach(track => track.stop());
+        
+        console.log('✅ Microphone permission granted');
+        setHasMicrophonePermission(true);
+        
+        // Show success message
+        toast({
+          title: "Microphone Ready! 🎤",
+          description: "You can now start practicing!",
+          variant: "default",
+          duration: 3000
+        });
+        
+      } catch (error: any) {
+        console.error('❌ Microphone access error:', error);
+        setHasMicrophonePermission(false);
+        
+        // Provide specific error messages based on error type
+        let title = "Microphone Access Required";
+        let description = "Please allow microphone access to play this game.";
+        
+        if (error.name === 'NotFoundError') {
+          title = "No Microphone Found";
+          description = "Please connect a microphone or headset, then refresh the page. Check Windows Sound Settings to ensure a microphone is recognized.";
+        } else if (error.name === 'NotAllowedError') {
+          title = "Permission Denied";
+          description = "Click the 🔒 icon in your address bar → Site Settings → Microphone → Allow, then refresh the page.";
+        } else if (error.name === 'NotReadableError') {
+          title = "Microphone In Use";
+          description = "Another app (like Zoom, Teams, or Skype) is using your microphone. Please close it and refresh the page.";
+        } else if (error.name === 'OverconstrainedError') {
+          title = "Microphone Not Compatible";
+          description = "Your microphone doesn't support the required audio settings. Try a different microphone.";
+        }
+        
+        toast({
+          title,
+          description,
+          variant: "destructive",
+          duration: 15000
+        });
+      }
+    };
+
+    checkMicrophonePermission();
+  }, []);
 
   // Load child profile and generate personalized words
   useEffect(() => {
@@ -140,32 +243,83 @@ export default function WordPracticeGame({
   }, [gameData]);
 
   const startEnhancedListening = async () => {
-    if (!isListening && currentWord && !isGeneratingFeedback) {
-      try {
-        console.log('🎯 Starting Groq Whisper speech recognition for:', currentWord.word);
-        setIsGroqListening(true);
-        
-        // Use Groq's Whisper for transcription
-        const result = await groqSpeechService.recordAndTranscribe(5000); // 5 second recording
-        
-        if (result && result.text && result.text.trim() !== '') {
-          // Process the Groq result
-          await handleGroqSpeechResult(result);
-        } else {
-          toast({
-            title: "No speech detected",
-            description: "Please try speaking clearly into your microphone.",
-            variant: "default"
-          });
-          setIsGroqListening(false);
-        }
-        
-      } catch (error) {
-        console.error('Groq speech recognition error:', error);
+    if (isGroqListening || !currentWord || isGeneratingFeedback) {
+      console.log('⚠️ Cannot start listening - already in progress or no current word');
+      return;
+    }
+
+    // Check microphone permission first
+    if (hasMicrophonePermission === false) {
+      toast({
+        title: "Microphone Access Denied",
+        description: "Please enable microphone access in your browser settings and refresh the page.",
+        variant: "destructive",
+        duration: 10000
+      });
+      return;
+    }
+
+    // If permission check is still pending, wait a moment
+    if (hasMicrophonePermission === null) {
+      toast({
+        title: "Please Wait",
+        description: "Checking microphone access...",
+        variant: "default",
+        duration: 2000
+      });
+      return;
+    }
+
+    try {
+      console.log('� Starting Groq Whisper speech recognition for:', currentWord.word);
+      setIsGroqListening(true);
+      setIsListening(true);
+      
+      // Use Groq's Whisper for transcription (5 second recording max)
+      const result = await groqSpeechService.recordAndTranscribe(5000);
+      
+      if (result && result.text && result.text.trim() !== '') {
+        // Process the Groq result
+        await handleGroqSpeechResult(result);
+      } else {
+        toast({
+          title: "No speech detected",
+          description: "Please try speaking clearly into your microphone.",
+          variant: "default"
+        });
         setIsGroqListening(false);
+        setIsListening(false);
+      }
+      
+    } catch (error) {
+      console.error('❌ Groq speech recognition error:', error);
+      setIsGroqListening(false);
+      setIsListening(false);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (errorMessage.includes('Permission denied') || errorMessage.includes('NotAllowedError')) {
+        toast({
+          title: "Microphone Permission Denied",
+          description: "Please allow microphone access in your browser settings.",
+          variant: "destructive"
+        });
+      } else if (errorMessage.includes('not found') || errorMessage.includes('NotFoundError')) {
+        toast({
+          title: "No Microphone Found",
+          description: "Please connect a microphone and try again.",
+          variant: "destructive"
+        });
+      } else if (errorMessage.includes('not readable') || errorMessage.includes('NotReadableError')) {
+        toast({
+          title: "Microphone In Use",
+          description: "Your microphone might be used by another application. Please close other apps and try again.",
+          variant: "destructive"
+        });
+      } else {
         toast({
           title: "Speech Recognition Error",
-          description: "Please check your microphone and try again.",
+          description: errorMessage || "Please check your microphone and try again.",
           variant: "destructive"
         });
       }
@@ -328,28 +482,13 @@ export default function WordPracticeGame({
     }, 3000);
   };
 
-  const startListening = async () => {
-    // Legacy method - now redirects to Groq
-    await startEnhancedListening();
-  };
-
-  const startHybridListening = async () => {
-    // Legacy method - now redirects to Groq
-    await startEnhancedListening();
-  };
-
   const stopListening = () => {
-    if (speechRecognitionRef.current && isListening) {
-      speechRecognitionRef.current.stopListening();
-    }
-    if (hybridSpeechRef.current && isListening) {
-      hybridSpeechRef.current.stopListening();
-    }
     if (groqListeningControllerRef.current && isGroqListening) {
       groqListeningControllerRef.current.stop();
       setIsGroqListening(false);
     }
     setIsListening(false);
+    console.log('🛑 Stopped listening');
   };
 
   const cleanupSpeechRecognition = () => {
@@ -364,347 +503,7 @@ export default function WordPracticeGame({
     console.log('🧹 Cleaning up speech recognition before word advance');
   };
 
-  const handleSpeechResult = async (
-    transcript: string, 
-    confidence: number, 
-    alternatives?: Array<{ transcript: string; confidence: number }>,
-    microsoftResult?: any
-  ) => {
-    // Get the CURRENT word from the live state, not the closure
-    const liveCurrentWord = personalizedWords[currentWordIndex];
-    
-    // Early exit if we're no longer listening or if currentWord is null
-    if (!liveCurrentWord || isGeneratingFeedback) {
-      console.log('⚠️ Ignoring speech result - no current word or already generating feedback');
-      return;
-    }
-    
-    setIsGeneratingFeedback(true);
-    const targetWord = liveCurrentWord.word.toLowerCase();
-    
-    // Debug logging to track word synchronization
-    console.log('🎯 handleSpeechResult called:', {
-      currentWordIndex,
-      currentWord: liveCurrentWord?.word,
-      targetWord,
-      transcript,
-      currentAttempt,
-      closureWord: currentWord?.word // Show what the closure thinks currentWord is
-    });
-    
-    // Use Microsoft Speech result if available, otherwise use standard analysis
-    let analysis;
-    if (microsoftResult) {
-      console.log('🎯 Using Microsoft Speech assessment result');
-      analysis = {
-        accuracy: Math.round(microsoftResult.pronunciationScore),
-        phonemeAccuracy: microsoftResult.phonemeDetails?.map((p: any) => Math.round(p.accuracy)) || [],
-        suggestions: microsoftResult.suggestions || ['Keep practicing!'],
-        isCorrect: microsoftResult.isCorrect,
-        source: 'microsoft'
-      };
-    } else {
-      // Use advanced pronunciation analysis
-      analysis = PronunciationAnalyzer.analyzePronunciation(
-        targetWord, 
-        transcript, 
-        confidence, 
-        alternatives
-      );
-    }
 
-    const attemptData = {
-      word: liveCurrentWord.word, // Use live word, not closure word
-      transcript,
-      accuracy: analysis.accuracy,
-      correct: analysis.isCorrect,
-      confidence,
-      attempt: currentAttempt,
-      timestamp: new Date(),
-      phonemeAccuracy: analysis.phonemeAccuracy,
-      suggestions: analysis.suggestions
-    };
-
-    setAttempts([...attempts, attemptData]);
-
-    // Generate AI-powered feedback with retry mechanism
-    const childAge = childProfile?.childBirthYear ? 
-      new Date().getFullYear() - childProfile.childBirthYear : 5;
-    
-    let retryCount = 0;
-    const maxRetries = 2;
-    
-    while (retryCount < maxRetries) {
-      try {
-        const aiFeedback = await aiSpeechService.generateEncouragingFeedback(
-          childProfile?.childName || 'friend',
-          liveCurrentWord.word, // Use live word for AI feedback
-          transcript,
-          analysis.accuracy,
-          currentAttempt,
-          childAge,
-          childProfile?.interests
-        );
-        
-        setFeedback(aiFeedback);
-        break;
-      } catch (error) {
-        retryCount++;
-        if (retryCount >= maxRetries) {
-          console.error('Failed to generate AI feedback after retries:', error);
-          toast({
-            title: "Unable to Generate Personalized Feedback",
-            description: "AI service temporarily unavailable. Please try again.",
-            variant: "destructive"
-          });
-          // Show generic loading message instead of proceeding without feedback
-          setFeedback({
-            message: "Loading your personalized feedback...",
-            encouragement: "Please wait a moment while we prepare your response.",
-            emotionalTone: "supportive"
-          });
-          return; // Don't proceed with the game flow
-        }
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
-      }
-    }
-
-    setShowFeedback(true);
-    setIsGeneratingFeedback(false);
-
-    // Update scoring with more nuanced system
-    let pointsEarned = analysis.accuracy;
-    if (analysis.isCorrect && currentAttempt === 1) {
-      pointsEarned += 20; // Bonus for first try
-      setStreak(streak + 1);
-      setMaxStreak(Math.max(maxStreak, streak + 1));
-    } else if (analysis.isCorrect) {
-      pointsEarned += 10; // Smaller bonus for later attempts
-      setStreak(streak + 1);
-      setMaxStreak(Math.max(maxStreak, streak + 1));
-    } else {
-      setStreak(0); // Reset streak
-    }
-
-    // Award stars based on performance
-    if (analysis.accuracy >= 90) setStars(stars + 3);
-    else if (analysis.accuracy >= 70) setStars(stars + 2);
-    else if (analysis.accuracy >= 50) setStars(stars + 1);
-
-    const newScore = score + pointsEarned;
-    setScore(newScore);
-    setTotalAccuracy(Math.round(newScore / ((currentWordIndex + 1) * 100) * 100));
-
-    // Auto-advance logic
-    setTimeout(() => {
-      setShowFeedback(false);
-      
-      console.log('🎯 Auto-advance decision:', {
-        currentAttempt,
-        maxAttempts,
-        isCorrect: analysis.isCorrect,
-        accuracy: analysis.accuracy,
-        shouldTryAgain: currentAttempt < maxAttempts && !analysis.isCorrect,
-        shouldAdvance: analysis.isCorrect || currentAttempt >= maxAttempts
-      });
-      
-      if (analysis.isCorrect) {
-        // Correct answer - move to next word
-        console.log('✅ Correct answer - advancing to next word');
-        cleanupSpeechRecognition();
-        
-        if (currentWordIndex < personalizedWords.length - 1) {
-          setCurrentWordIndex(currentWordIndex + 1);
-          setCurrentAttempt(1);
-        } else {
-          completeGame();
-        }
-      } else if (currentAttempt < maxAttempts) {
-        // Give another try
-        console.log(`🔄 Attempt ${currentAttempt} failed - allowing retry`);
-        setCurrentAttempt(currentAttempt + 1);
-        toast({
-          title: `Try ${currentAttempt + 1} of ${maxAttempts}!`,
-          description: "You can do it! " + cheerfulCharacter,
-        });
-      } else {
-        // Used all attempts - move to next word automatically
-        console.log('⏭️ All attempts used - auto-advancing to next word');
-        cleanupSpeechRecognition();
-        
-        toast({
-          title: "Let's try the next word!",
-          description: "Don't worry, practice makes perfect! " + cheerfulCharacter,
-          variant: "default"
-        });
-        
-        if (currentWordIndex < personalizedWords.length - 1) {
-          setCurrentWordIndex(currentWordIndex + 1);
-          setCurrentAttempt(1);
-        } else {
-          completeGame();
-        }
-      }
-    }, 3000); // Longer display time for AI feedback
-  };
-
-  const handleHybridSpeechResult = async (result: HybridSpeechResult) => {
-    // Get the CURRENT word from the live state, not the closure
-    const liveCurrentWord = personalizedWords[currentWordIndex];
-    
-    // Early exit if we're no longer listening or if currentWord is null
-    if (!liveCurrentWord || isGeneratingFeedback) {
-      console.log('⚠️ Ignoring hybrid speech result - no current word or already generating feedback');
-      return;
-    }
-    
-    setIsGeneratingFeedback(true);
-    const targetWord = liveCurrentWord.word.toLowerCase();
-    
-    console.log('🎯 handleHybridSpeechResult called:', {
-      currentWordIndex,
-      currentWord: liveCurrentWord?.word,
-      targetWord,
-      transcript: result.transcript,
-      currentAttempt,
-      closureWord: currentWord?.word // Show what the closure thinks currentWord is
-    });
-    
-    // Use hybrid pronunciation analysis (prioritizes Microsoft assessment if available)
-    const analysis = HybridPronunciationAnalyzer.analyzePronunciation(
-      targetWord,
-      result.transcript,
-      result.confidence,
-      result.alternatives,
-      result.microsoftAssessment
-    );
-
-    const attemptData = {
-      word: liveCurrentWord.word, // Use live word, not closure word
-      transcript: result.transcript,
-      accuracy: analysis.accuracy,
-      correct: analysis.isCorrect,
-      confidence: result.confidence,
-      attempt: currentAttempt,
-      timestamp: new Date(),
-      phonemeAccuracy: analysis.phonemeAccuracy,
-      suggestions: analysis.suggestions,
-      assessmentSource: analysis.source,
-      microsoftScore: result.microsoftAssessment?.pronunciationScore
-    };
-
-    setAttempts([...attempts, attemptData]);
-
-    // Generate AI-powered feedback with enhanced Microsoft data
-    const childAge = childProfile?.childBirthYear ? 
-      new Date().getFullYear() - childProfile.childBirthYear : 5;
-    
-    let retryCount = 0;
-    const maxRetries = 2;
-    
-    while (retryCount < maxRetries) {
-      try {
-        const feedbackPrompt = result.microsoftAssessment 
-          ? `${liveCurrentWord.word} (pronounced: ${result.transcript}, Microsoft pronunciation score: ${result.microsoftAssessment.pronunciationScore})`
-          : `${liveCurrentWord.word} (pronounced: ${result.transcript})`;
-          
-        const aiFeedback = await aiSpeechService.generateEncouragingFeedback(
-          childProfile?.childName || 'friend',
-          feedbackPrompt,
-          result.transcript,
-          analysis.accuracy,
-          currentAttempt,
-          childAge,
-          childProfile?.interests
-        );
-        
-        // Enhance feedback with Microsoft-specific insights
-        if (result.microsoftAssessment && analysis.detailedFeedback) {
-          aiFeedback.technicalTip = analysis.detailedFeedback;
-        }
-        
-        setFeedback(aiFeedback);
-        break;
-      } catch (error) {
-        retryCount++;
-        if (retryCount >= maxRetries) {
-          console.error('Failed to generate AI feedback after retries:', error);
-          setFeedback({
-            message: "Great attempt! Keep practicing!",
-            encouragement: "You're doing wonderfully! " + cheerfulCharacter,
-            emotionalTone: "supportive",
-            technicalTip: analysis.detailedFeedback
-          });
-        } else {
-          await new Promise(resolve => setTimeout(resolve, 500 * retryCount));
-        }
-      }
-    }
-
-    setShowFeedback(true);
-    setIsGeneratingFeedback(false);
-
-    // Enhanced scoring with Microsoft assessment bonus
-    let pointsEarned = analysis.accuracy;
-    if (result.microsoftAssessment?.pronunciationScore) {
-      pointsEarned += (result.microsoftAssessment.pronunciationScore - 50) * 0.5; // Bonus for high Microsoft scores
-    }
-    
-    if (analysis.isCorrect && currentAttempt === 1) {
-      pointsEarned += 20;
-      setStreak(streak + 1);
-      setMaxStreak(Math.max(maxStreak, streak + 1));
-    } else if (analysis.isCorrect) {
-      pointsEarned += 10;
-      setStreak(streak + 1);
-      setMaxStreak(Math.max(maxStreak, streak + 1));
-    } else {
-      setStreak(0);
-    }
-
-    if (analysis.accuracy >= 90) setStars(stars + 3);
-    else if (analysis.accuracy >= 70) setStars(stars + 2);
-    else if (analysis.accuracy >= 50) setStars(stars + 1);
-
-    const newScore = score + pointsEarned;
-    setScore(newScore);
-    setTotalAccuracy(Math.round(newScore / ((currentWordIndex + 1) * 100) * 100));
-
-    // Auto-advance with same logic as regular handler
-    setTimeout(() => {
-      setShowFeedback(false);
-      
-      if (analysis.isCorrect) {
-        cleanupSpeechRecognition();
-        if (currentWordIndex < personalizedWords.length - 1) {
-          setCurrentWordIndex(currentWordIndex + 1);
-          setCurrentAttempt(1);
-        } else {
-          completeGame();
-        }
-      } else if (currentAttempt < maxAttempts) {
-        setCurrentAttempt(currentAttempt + 1);
-        toast({
-          title: `Try ${currentAttempt + 1} of ${maxAttempts}!`,
-          description: "You can do it! " + cheerfulCharacter,
-        });
-      } else {
-        cleanupSpeechRecognition();
-        toast({
-          title: "Let's try the next word!",
-          description: "Don't worry, practice makes perfect! " + cheerfulCharacter,
-        });
-        
-        if (currentWordIndex < personalizedWords.length - 1) {
-          setCurrentWordIndex(currentWordIndex + 1);
-          setCurrentAttempt(1);
-        } else {
-          completeGame();
-        }
-      }
-    }, 3000);
-  };
 
   const completeGame = async () => {
     // Generate AI session summary with retry mechanism

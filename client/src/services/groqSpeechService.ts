@@ -109,17 +109,100 @@ export class GroqSpeechService {
    */
   async recordAndTranscribe(maxDuration: number = 10000): Promise<GroqSpeechResult> {
     return new Promise(async (resolve, reject) => {
+      let stream: MediaStream | null = null;
+      
       try {
         console.log('🎙️ Starting audio recording for Groq transcription...');
         
-        const stream = await navigator.mediaDevices.getUserMedia({ 
+        // Check if mediaDevices API is available
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error('MediaDevices API not supported in this browser');
+        }
+
+        // Check for available audio devices
+        try {
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const audioDevices = devices.filter(d => d.kind === 'audioinput');
+          
+          if (audioDevices.length === 0) {
+            throw new Error('No microphone devices found');
+          }
+          
+          console.log(`✅ Found ${audioDevices.length} audio input device(s):`);
+          audioDevices.forEach((device, index) => {
+            const label = device.label || 'Unknown Device';
+            const isStereoMix = label.toLowerCase().includes('stereo mix') || 
+                               label.toLowerCase().includes('wave out') ||
+                               label.toLowerCase().includes('what u hear');
+            
+            console.log(`  ${index + 1}. ${label} (${device.deviceId.substring(0, 12)}...) ${isStereoMix ? '⚠️ NOT A MICROPHONE' : ''}`);
+          });
+          
+          // Warn if all devices are Stereo Mix
+          const allStereoMix = audioDevices.every(d => {
+            const label = d.label.toLowerCase();
+            return label.includes('stereo mix') || 
+                   label.includes('wave out') || 
+                   label.includes('what u hear');
+          });
+          
+          if (allStereoMix) {
+            console.warn('⚠️⚠️⚠️ WARNING: All detected devices are system audio (Stereo Mix)!');
+            console.warn('⚠️ This will record computer output, NOT your microphone!');
+            console.warn('⚠️ Please enable your real microphone in Windows Sound Settings.');
+            throw new Error('No real microphone found. Only "Stereo Mix" detected. Please enable your microphone in Windows Sound Settings → Recording tab.');
+          }
+        } catch (deviceError) {
+          console.error('❌ Error enumerating devices:', deviceError);
+          // Re-throw if it's our custom error
+          if (deviceError instanceof Error && deviceError.message.includes('Stereo Mix')) {
+            throw deviceError;
+          }
+          // Continue anyway for other errors - getUserMedia will provide a better error
+        }
+        
+        // Request microphone access with constraints
+        // Note: Without deviceId constraint, browser picks the DEFAULT device
+        stream = await navigator.mediaDevices.getUserMedia({ 
           audio: {
             sampleRate: 16000,
             channelCount: 1,
             echoCancellation: true,
-            noiseSuppression: true
+            noiseSuppression: true,
+            autoGainControl: true
           } 
+        }).catch((error) => {
+          // Provide more specific error messages
+          if (error.name === 'NotAllowedError') {
+            throw new Error('Microphone permission denied. Please allow microphone access.');
+          } else if (error.name === 'NotFoundError') {
+            throw new Error('No microphone found. Please connect a microphone.');
+          } else if (error.name === 'NotReadableError') {
+            throw new Error('Microphone is already in use by another application.');
+          } else if (error.name === 'OverconstrainedError') {
+            throw new Error('Your microphone doesn\'t support the required audio settings.');
+          } else {
+            throw new Error(`Microphone access failed: ${error.message || 'Unknown error'}`);
+          }
         });
+
+        if (!stream) {
+          throw new Error('Failed to get media stream');
+        }
+
+        // Log which device is actually being used
+        const audioTrack = stream.getAudioTracks()[0];
+        if (audioTrack) {
+          console.log('✅ Microphone access granted');
+          console.log('🎤 Using device:', audioTrack.label);
+          console.log('🎤 Device settings:', audioTrack.getSettings());
+        }
+
+        // Check if MediaRecorder is supported
+        if (!window.MediaRecorder) {
+          stream.getTracks().forEach(track => track.stop());
+          throw new Error('MediaRecorder API not supported in this browser');
+        }
 
         const mediaRecorder = new MediaRecorder(stream, {
           mimeType: 'audio/webm;codecs=opus'
@@ -135,7 +218,9 @@ export class GroqSpeechService {
 
         mediaRecorder.onstop = async () => {
           try {
-            stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+            if (stream) {
+              stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+            }
             
             if (audioChunks.length === 0) {
               reject(new Error('No audio data recorded'));
@@ -154,7 +239,9 @@ export class GroqSpeechService {
         };
 
         mediaRecorder.onerror = (error) => {
-          stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+          if (stream) {
+            stream.getTracks().forEach((track: MediaStreamTrack) => track.stop());
+          }
           reject(new Error(`Recording failed: ${error}`));
         };
 
@@ -171,7 +258,14 @@ export class GroqSpeechService {
         }, maxDuration);
 
       } catch (error) {
-        reject(new Error(`Failed to start recording: ${error instanceof Error ? error.message : 'Unknown error'}`));
+        // Clean up stream if error occurs
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+        
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        console.error('❌ Recording error:', errorMessage);
+        reject(new Error(errorMessage));
       }
     });
   }

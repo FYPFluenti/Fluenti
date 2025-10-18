@@ -18,8 +18,8 @@ import SpeechTherapy from "@/pages/speech-therapy";
 import ProgressDashboard from "@/pages/progress-dashboard";
 import EmotionalSupport from "@/pages/emotional-support";
 import EmotionalSupportVoice from "@/pages/emotional-support-voice";
-import SpeechTest from "@/pages/SpeechTest";
-import QuickSpeechTest from "@/pages/QuickSpeechTest";
+// import SpeechTest from "@/pages/SpeechTest"; // Disabled - using Groq only
+// import QuickSpeechTest from "@/pages/QuickSpeechTest"; // Disabled - using Groq only
 import GroqTestPage from "@/components/GroqTestPage";
 import Assessment from "@/pages/assessment";
 import Achievements from "@/pages/achievements";
@@ -139,15 +139,14 @@ export default function App() {
               </ProtectedRoute>
             </Route>
             
-            {/* Speech Test Route (Debug) */}
-            <Route path="/speech-test">
+            {/* Microsoft Speech Test Routes (Disabled - using Groq only) */}
+            {/* <Route path="/speech-test">
               <SpeechTest />
             </Route>
             
-            {/* Quick Speech Test Route (Debug) */}
             <Route path="/quick-test">
               <QuickSpeechTest />
-            </Route>
+            </Route> */}
             
             {/* Groq Test Route (Debug) */}
             <Route path="/groq-test">
