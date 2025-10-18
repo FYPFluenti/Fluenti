@@ -216,6 +216,45 @@ class AISpeechTherapyService {
 
 
 
+  /**
+   * Validate pronunciation using AI-powered phonetic analysis
+   * Returns detailed analysis of whether the pronunciation is correct
+   */
+  async validatePronunciation(
+    targetWord: string,
+    spokenWord: string,
+    confidence: number
+  ): Promise<{
+    isCorrect: boolean;
+    accuracy: number;
+    feedback: string;
+    phonemeErrors: string[];
+    suggestions: string[];
+  }> {
+    try {
+      const response = await fetch('/api/games/validate-pronunciation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          targetWord,
+          spokenWord,
+          confidence
+        })
+      });
+
+      if (response.ok) {
+        return await response.json();
+      } else {
+        throw new Error(`Validation failed: ${response.status}`);
+      }
+    } catch (error) {
+      console.error('Error validating pronunciation:', error);
+      throw new Error('Unable to validate pronunciation. Please try again.');
+    }
+  }
 }
 
 export const aiSpeechService = new AISpeechTherapyService();

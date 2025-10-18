@@ -493,6 +493,47 @@ router.post('/generate-session-summary', async (req: Request, res: Response) => 
   }
 });
 
+// AI pronunciation validation endpoint - Uses phonetic analysis
+router.post('/validate-pronunciation', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({ 
+        error: 'AI service not configured. Please contact administrator.' 
+      });
+    }
+
+    const { targetWord, spokenWord, confidence } = req.body;
+
+    if (!targetWord || !spokenWord) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: targetWord and spokenWord' 
+      });
+    }
+
+    // Use AI to validate pronunciation with phonetic analysis
+    const validation = await validatePronunciationWithAI(targetWord, spokenWord, confidence);
+    
+    if (!validation) {
+      return res.status(500).json({ 
+        error: 'Unable to validate pronunciation at this time. Please try again.' 
+      });
+    }
+    
+    res.json(validation);
+  } catch (error) {
+    console.error('Error validating pronunciation:', error);
+    res.status(500).json({ 
+      error: 'AI service temporarily unavailable. Please try again in a moment.' 
+    });
+  }
+});
+
 // AI Helper Functions
 async function generateAIPersonalizedWords(childProfile: any, sessionType: string) {
   const childAge = childProfile?.childBirthYear ? 
@@ -747,6 +788,92 @@ function analyzeSpeechChallenges(childProfile: any): string[] {
   }
   
   return challenges;
+}
+
+// AI-powered pronunciation validation using phonetic analysis
+async function validatePronunciationWithAI(
+  targetWord: string,
+  spokenWord: string,
+  confidence: number
+): Promise<{
+  isCorrect: boolean;
+  accuracy: number;
+  feedback: string;
+  phonemeErrors: string[];
+  suggestions: string[];
+}> {
+  const prompt = `
+You are an expert speech-language pathologist specializing in pronunciation analysis. 
+Analyze whether a child's pronunciation is EXACTLY correct or contains errors.
+
+Target word: "${targetWord}"
+Child said: "${spokenWord}"
+Speech recognition confidence: ${confidence}
+
+Your task:
+1. Compare the PHONETIC pronunciation of both words
+2. Determine if they are THE SAME WORD (exact pronunciation)
+3. Identify if the child added extra sounds, syllables, or morphemes
+4. Be STRICT: "sun" is NOT the same as "sunny" (added /i/ sound)
+5. Be STRICT: "dog" is NOT the same as "doggie" (added /i/ sound)
+6. Accept minor phonetic variations that don't change the word (e.g., "ket" for "cat" due to accent)
+7. Reject any additions like diminutives, plurals, or different words
+
+Phonetic Analysis Rules:
+- "sun" /sʌn/ vs "sunny" /ˈsʌni/ → DIFFERENT (extra syllable)
+- "dog" /dɔg/ vs "doggie" /ˈdɔgi/ → DIFFERENT (extra syllable)
+- "cat" /kæt/ vs "kat" /kæt/ → SAME (phonetically identical)
+- "tree" /tri/ vs "three" /θri/ → DIFFERENT (different phonemes)
+- "sun" /sʌn/ vs "son" /sʌn/ → SAME (homophones, same pronunciation)
+
+Return JSON:
+{
+  "isCorrect": boolean (true only if EXACTLY the same word phonetically),
+  "accuracy": number (0-100, how close the pronunciation is),
+  "feedback": "Explain why it's correct or incorrect in child-friendly terms",
+  "phonemeErrors": ["list specific sound errors"],
+  "suggestions": ["simple tips for improvement"]
+}
+
+Be STRICT: If the child added extra sounds or syllables, mark as incorrect.`;
+
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert speech-language pathologist with deep knowledge of phonetics and pronunciation analysis. You use strict criteria to evaluate if pronunciations match exactly. Always return valid JSON format."
+        },
+        {
+          role: "user",
+          content: prompt
+        }
+      ],
+      temperature: 0.3, // Low temperature for consistent, strict analysis
+      max_tokens: 600,
+      response_format: { type: "json_object" }
+    });
+
+    const response = completion.choices[0]?.message?.content;
+    if (response) {
+      const result = JSON.parse(response);
+      console.log(`🔍 AI Pronunciation Validation: "${targetWord}" vs "${spokenWord}" → ${result.isCorrect ? 'CORRECT ✅' : 'INCORRECT ❌'} (${result.accuracy}%)`);
+      return result;
+    }
+
+    // Fallback if no response
+    return {
+      isCorrect: false,
+      accuracy: 0,
+      feedback: 'Unable to analyze pronunciation. Please try again.',
+      phonemeErrors: [],
+      suggestions: []
+    };
+  } catch (error) {
+    console.error('Error calling OpenAI for pronunciation validation:', error);
+    throw error;
+  }
 }
 
 export default router;

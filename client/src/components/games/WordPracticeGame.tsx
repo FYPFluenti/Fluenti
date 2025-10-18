@@ -349,16 +349,45 @@ export default function WordPracticeGame({
       currentAttempt
     });
     
-    // Enhanced pronunciation analysis using Groq's high-quality transcription
-    const analysis = PronunciationAnalyzer.analyzePronunciation(
-      targetWord, 
-      result.text, 
-      result.confidence
-    );
+    // Use AI-powered pronunciation validation instead of hardcoded logic
+    let analysis: {
+      accuracy: number;
+      phonemeAccuracy: number[];
+      suggestions: string[];
+      isCorrect: boolean;
+    };
 
-    // Boost accuracy for high-quality Groq transcriptions
-    if (result.confidence > 0.8 && analysis.accuracy > 70) {
-      analysis.accuracy = Math.min(100, analysis.accuracy + 10);
+    try {
+      console.log('🤖 Calling AI pronunciation validator...');
+      const validation = await aiSpeechService.validatePronunciation(
+        targetWord,
+        result.text.trim(),
+        result.confidence
+      );
+
+      console.log('✅ AI Validation Result:', validation);
+
+      analysis = {
+        accuracy: validation.accuracy,
+        phonemeAccuracy: validation.phonemeErrors.length > 0 
+          ? new Array(targetWord.length).fill(Math.max(50, 100 - validation.phonemeErrors.length * 20))
+          : new Array(targetWord.length).fill(100),
+        suggestions: validation.suggestions,
+        isCorrect: validation.isCorrect
+      };
+
+      // Show AI feedback immediately
+      if (!validation.isCorrect && validation.feedback) {
+        console.log('❌ Pronunciation incorrect:', validation.feedback);
+      }
+    } catch (error) {
+      console.error('⚠️ AI validation failed, using fallback analysis:', error);
+      // Fallback to basic analysis if AI fails
+      analysis = PronunciationAnalyzer.analyzePronunciation(
+        targetWord, 
+        result.text, 
+        result.confidence
+      );
     }
 
     const attemptData = {
@@ -371,7 +400,7 @@ export default function WordPracticeGame({
       timestamp: new Date(),
       phonemeAccuracy: analysis.phonemeAccuracy,
       suggestions: analysis.suggestions,
-      source: 'groq-whisper',
+      source: 'groq-whisper-ai-validated',
       duration: result.duration
     };
 
