@@ -2,340 +2,355 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { User, Bell, Lock, Trash2, RotateCcw, Globe, Moon, Sun } from "lucide-react";
+import {
+  Bell,
+  Lock,
+  Trash2,
+  RotateCcw,
+  Shield,
+  Zap,
+  Palette,
+} from "lucide-react";
 import SharedSidebarEmotional from "@/components/layout/SharedSidebarEmotional";
 import FeedbackModal from "@/components/layout/FeedbackModel";
 import PageHeader from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
-interface User {
+/**
+ * Proper user type interface used across the settings page
+ */
+interface UserProfile {
   firstName?: string;
   lastName?: string;
   email?: string;
+  userType?: "adult" | "child" | string;
   profilePicture?: string;
 }
 
 export default function AdultSettings() {
   const { user, isAuthenticated, isLoading } = useAuth() as {
-    user: User;
+    user: UserProfile | null;
     isAuthenticated: boolean;
     isLoading: boolean;
   };
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [showFeedback, setShowFeedback] = useState(false);
 
-  // Settings state
+  // UI state (kept only those used)
+  const [showFeedback, setShowFeedback] = useState(false);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
-  const [language, setLanguage] = useState<'en' | 'ur'>(
-    (localStorage.getItem('language') as 'en' | 'ur') || 'en'
+  const [darkMode, setDarkMode] = useState(
+    localStorage.getItem("darkMode") === "true"
   );
 
   useEffect(() => {
+    // redirect to login if not authenticated
     if (!isLoading && !isAuthenticated) {
       setLocation("/login");
     }
   }, [isLoading, isAuthenticated, setLocation]);
 
   useEffect(() => {
-    // Load dark mode preference
-    const savedDarkMode = localStorage.getItem('darkMode') === 'true';
-    setDarkMode(savedDarkMode);
-    if (savedDarkMode) {
-      document.documentElement.classList.add('dark');
+    // verify user type — only allow adult users here
+    if (!isLoading && isAuthenticated && user) {
+      if (user.userType && user.userType !== "adult") {
+        // redirect non-adults to their dashboard (child)
+        setLocation("/child-dashboard");
+      }
     }
-  }, []);
+  }, [isLoading, isAuthenticated, user, setLocation]);
 
-  const handleDarkModeToggle = () => {
-    const newValue = !darkMode;
-    setDarkMode(newValue);
-    localStorage.setItem('darkMode', String(newValue));
-    if (newValue) {
-      document.documentElement.classList.add('dark');
+  useEffect(() => {
+    // apply dark mode preference on mount
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
     } else {
-      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove("dark");
     }
+  }, [darkMode]);
+
+  // Derived display name (full name preferred, fallback to email)
+  const displayName =
+    [user?.firstName?.trim(), user?.lastName?.trim()].filter(Boolean).join(
+      " "
+    ) || user?.email || "User";
+
+  // Handlers
+  const handleToggleDark = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    localStorage.setItem("darkMode", String(next));
+    toast({
+      title: "Appearance updated",
+      description: next ? "Dark mode enabled" : "Light mode enabled",
+    });
   };
 
-  const handleLanguageChange = (newLang: 'en' | 'ur') => {
-    setLanguage(newLang);
-    localStorage.setItem('language', newLang);
+  const handleToggleAnalytics = () => {
+    setAnalyticsEnabled((v) => !v);
     toast({
-      title: "Language Updated",
-      description: `Language changed to ${newLang === 'en' ? 'English' : 'Urdu'}`,
+      title: analyticsEnabled ? "Analytics disabled" : "Analytics enabled",
+    });
+  };
+
+  const handleToggleNotifications = () => {
+    setNotificationsEnabled((v) => !v);
+    toast({
+      title: notificationsEnabled ? "Notifications off" : "Notifications on",
+    });
+  };
+
+  const handleToggleEmailNotifications = () => {
+    setEmailNotifications((v) => !v);
+    toast({
+      title: emailNotifications ? "Email updates off" : "Email updates on",
     });
   };
 
   const handleResetChatHistory = async () => {
-    if (window.confirm("Are you sure you want to reset your chat history? This cannot be undone.")) {
-      try {
-        // TODO: Implement API call to reset chat history
-        toast({
-          title: "Chat History Reset",
-          description: "Your chat history has been successfully reset.",
-        });
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: "Failed to reset chat history. Please try again.",
-          variant: "destructive",
-        });
-      }
+    if (
+      !window.confirm(
+        "Reset chat history? This cannot be undone. Do you want to continue?"
+      )
+    )
+      return;
+
+    try {
+      // TODO: call API to reset chat history
+      toast({
+        title: "Chat history reset",
+        description: "Your conversation history has been cleared.",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to reset chat history. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleDeleteAccount = async () => {
-    const confirmed = window.confirm(
-      "⚠️ WARNING: This will permanently delete your account and all associated data. This action cannot be undone. Are you absolutely sure?"
+    const confirm1 = window.confirm(
+      "Delete account? This will permanently remove your data. Continue?"
     );
-    
-    if (confirmed) {
-      const doubleConfirm = window.confirm(
-        "This is your final confirmation. Type 'DELETE' in the next prompt to proceed."
-      );
-      
-      if (doubleConfirm) {
-        try {
-          // TODO: Implement API call to delete account
-          toast({
-            title: "Account Deleted",
-            description: "Your account has been permanently deleted.",
-          });
-          setTimeout(() => setLocation("/"), 2000);
-        } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to delete account. Please contact support.",
-            variant: "destructive",
-          });
-        }
-      }
+    if (!confirm1) return;
+
+    const confirm2 = window.confirm(
+      "Final confirmation: This action is irreversible. Click OK to proceed."
+    );
+    if (!confirm2) return;
+
+    try {
+      // TODO: call API to delete account
+      toast({
+        title: "Account deleted",
+        description:
+          "Your account has been scheduled for deletion. You will be signed out.",
+      });
+      // sign-out or redirect
+      setTimeout(() => setLocation("/"), 1200);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to delete account. Contact support.",
+        variant: "destructive",
+      });
     }
   };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-4 border-[#ff6b1d] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-[#ff6b1d]">Loading...</p>
-        </div>
+        <div className="text-foreground/80">Loading…</div>
       </div>
     );
   }
 
-  if (!isAuthenticated) return null;
+  if (!isAuthenticated || !user) return null;
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
       {/* Sidebar */}
-      <SharedSidebarEmotional 
+      <SharedSidebarEmotional
         onFeedbackOpen={() => setShowFeedback(true)}
         currentPage="settings"
       />
 
-      {/* Feedback Modal */}
-      <FeedbackModal 
-        isOpen={showFeedback}
-        onClose={() => setShowFeedback(false)}
-      />
+      {/* Feedback modal */}
+      <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
 
-      {/* Main Content */}
+      {/* Main */}
       <main className="ml-20 w-full">
         <PageHeader />
 
-        <div className="max-w-4xl mx-auto px-6 py-8">
-          {/* Profile Header */}
-          <motion.section 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-10"
-          >
-            <div className="flex items-center gap-4 mb-6">
-              {user?.profilePicture ? (
-                <img 
-                  src={user.profilePicture} 
-                  alt="Profile" 
-                  className="w-20 h-20 rounded-full object-cover border-2 border-[#ff6b1d]"
+        <div className="max-w-4xl mx-auto px-6 pb-24">
+          {/* Profile header */}
+          <section className="mb-8">
+            <div className="flex items-center gap-4">
+              {user.profilePicture ? (
+                <img
+                  src={user.profilePicture}
+                  alt={displayName}
+                  className="w-16 h-16 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#ff6b1d] to-[#ff8c42] flex items-center justify-center text-white text-2xl font-bold">
-                  {user?.firstName?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || "U"}
+                <div className="w-16 h-16 rounded-full bg-muted grid place-items-center text-xl font-semibold">
+                  {displayName[0]?.toUpperCase() || "U"}
                 </div>
               )}
               <div>
-                <h1 className="text-2xl font-bold">
-                  {user?.firstName} {user?.lastName}
-                </h1>
-                <p className="text-muted-foreground">{user?.email}</p>
+                <div className="text-lg font-medium">{displayName}</div>
+                <div className="text-sm text-muted-foreground">{user.email}</div>
               </div>
             </div>
-            <div className="h-px bg-border" />
-          </motion.section>
+            <div className="mt-6 h-px bg-border" />
+          </section>
 
-          {/* Privacy & Analytics */}
-          <motion.section 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mb-10"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <Lock className="w-6 h-6 text-[#ff6b1d]" />
-              <h2 className="text-2xl font-bold">Privacy & Analytics</h2>
-            </div>
+          {/* Privacy & analytics */}
+          <section className="mb-8">
+            <h2 className="text-2xl font-bold mb-1">Privacy settings</h2>
             <p className="text-muted-foreground mb-6">
-              Manage your data collection and privacy preferences
+              Manage your cookie and tracking preferences
             </p>
 
-            <Card className="bg-card border-border">
-              <CardContent className="p-6 space-y-6">
-                {/* Necessary cookies (locked) */}
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">Necessary Cookies</h3>
+            <div className="space-y-4">
+              <Card>
+                <CardContent className="flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold">Necessary cookies</div>
                     <p className="text-sm text-muted-foreground">
-                      Required for the website to function properly. Cannot be disabled.
+                      Required for the website to function properly.
                     </p>
                   </div>
-                  <button
-                    disabled
-                    className="relative inline-flex h-6 w-12 cursor-not-allowed rounded-full bg-[#ff6b1d] opacity-50"
-                    role="switch"
-                    aria-checked="true"
-                    aria-label="Necessary cookies (required)"
-                  >
-                    <span className="absolute top-1 left-7 inline-block h-4 w-4 rounded-full bg-white transition" />
-                  </button>
-                </div>
+                  <div className="inline-flex items-center">
+                    <button
+                      disabled
+                      className="relative inline-flex h-6 w-12 rounded-full bg-muted cursor-not-allowed"
+                      aria-checked="true"
+                    >
+                      <span className="absolute top-1 left-7 inline-block h-4 w-4 rounded-full bg-white" />
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
 
-                {/* Analytics cookies */}
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">Analytics Cookies</h3>
+              <Card>
+                <CardContent className="flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold">Analytics</div>
                     <p className="text-sm text-muted-foreground">
-                      Help us understand how you use Fluenti to improve your experience.
+                      Help us improve Fluenti (anonymous).
                     </p>
                   </div>
-                  <button
-                    onClick={() => setAnalyticsEnabled(!analyticsEnabled)}
-                    className={`relative inline-flex h-6 w-12 rounded-full transition ${
-                      analyticsEnabled ? "bg-[#ff6b1d]" : "bg-muted"
-                    }`}
-                    role="switch"
-                    aria-checked={analyticsEnabled}
-                  >
-                    <span
-                      className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
-                        analyticsEnabled ? "left-7" : "left-1"
+                  <div>
+                    <button
+                      onClick={handleToggleAnalytics}
+                      className={`relative inline-flex h-6 w-12 rounded-full transition ${
+                        analyticsEnabled ? "bg-[#ff6b1d]" : "bg-muted"
                       }`}
-                    />
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="mt-8 h-px bg-border" />
-          </motion.section>
+                      role="switch"
+                      aria-checked={analyticsEnabled}
+                    >
+                      <span
+                        className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
+                          analyticsEnabled ? "left-7" : "left-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
 
           {/* Notifications */}
-          <motion.section 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="mb-10"
-          >
+          <section className="mb-8">
             <div className="flex items-center gap-3 mb-4">
-              <Bell className="w-6 h-6 text-[#ff6b1d]" />
+              <Bell className="w-5 h-5" />
               <h2 className="text-2xl font-bold">Notifications</h2>
             </div>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-muted-foreground mb-4">
               Control how you receive updates and reminders
             </p>
 
-            <Card className="bg-card border-border">
-              <CardContent className="p-6 space-y-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">Push Notifications</h3>
+            <Card>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold">Push Notifications</div>
                     <p className="text-sm text-muted-foreground">
-                      Receive notifications about session reminders and progress updates.
+                      Session reminders & progress updates.
                     </p>
                   </div>
-                  <button
-                    onClick={() => setNotificationsEnabled(!notificationsEnabled)}
-                    className={`relative inline-flex h-6 w-12 rounded-full transition ${
-                      notificationsEnabled ? "bg-[#ff6b1d]" : "bg-muted"
-                    }`}
-                    role="switch"
-                    aria-checked={notificationsEnabled}
-                  >
-                    <span
-                      className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
-                        notificationsEnabled ? "left-7" : "left-1"
+                  <div>
+                    <button
+                      onClick={handleToggleNotifications}
+                      className={`relative inline-flex h-6 w-12 rounded-full transition ${
+                        notificationsEnabled ? "bg-[#ff6b1d]" : "bg-muted"
                       }`}
-                    />
-                  </button>
+                      role="switch"
+                      aria-checked={notificationsEnabled}
+                    >
+                      <span
+                        className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
+                          notificationsEnabled ? "left-7" : "left-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">Email Notifications</h3>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-semibold">Email Notifications</div>
                     <p className="text-sm text-muted-foreground">
-                      Get weekly progress reports and tips via email.
+                      Weekly progress reports by email.
                     </p>
                   </div>
-                  <button
-                    onClick={() => setEmailNotifications(!emailNotifications)}
-                    className={`relative inline-flex h-6 w-12 rounded-full transition ${
-                      emailNotifications ? "bg-[#ff6b1d]" : "bg-muted"
-                    }`}
-                    role="switch"
-                    aria-checked={emailNotifications}
-                  >
-                    <span
-                      className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
-                        emailNotifications ? "left-7" : "left-1"
+                  <div>
+                    <button
+                      onClick={handleToggleEmailNotifications}
+                      className={`relative inline-flex h-6 w-12 rounded-full transition ${
+                        emailNotifications ? "bg-[#ff6b1d]" : "bg-muted"
                       }`}
-                    />
-                  </button>
+                      role="switch"
+                      aria-checked={emailNotifications}
+                    >
+                      <span
+                        className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
+                          emailNotifications ? "left-7" : "left-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
+          </section>
 
-            <div className="mt-8 h-px bg-border" />
-          </motion.section>
-
-          {/* Appearance & Language */}
-          <motion.section 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mb-10"
-          >
+          {/* Appearance */}
+          <section className="mb-8">
             <div className="flex items-center gap-3 mb-4">
-              <Globe className="w-6 h-6 text-[#ff6b1d]" />
-              <h2 className="text-2xl font-bold">Appearance & Language</h2>
+              <Palette className="w-5 h-5" />
+              <h2 className="text-2xl font-bold">Appearance</h2>
             </div>
-            <p className="text-muted-foreground mb-6">
-              Customize how Fluenti looks and the language you prefer
-            </p>
+            <p className="text-muted-foreground mb-4">Theme</p>
 
-            <Card className="bg-card border-border">
-              <CardContent className="p-6 space-y-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <h3 className="font-semibold mb-1">Dark Mode</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Switch between light and dark themes.
-                    </p>
-                  </div>
+            <Card>
+              <CardContent className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold">Dark mode</div>
+                  <p className="text-sm text-muted-foreground">
+                    Use a darker theme to reduce eye strain.
+                  </p>
+                </div>
+                <div>
                   <button
-                    onClick={handleDarkModeToggle}
+                    onClick={handleToggleDark}
                     className={`relative inline-flex h-6 w-12 rounded-full transition ${
                       darkMode ? "bg-[#ff6b1d]" : "bg-muted"
                     }`}
@@ -343,103 +358,69 @@ export default function AdultSettings() {
                     aria-checked={darkMode}
                   >
                     <span
-                      className={`absolute top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white transition ${
+                      className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
                         darkMode ? "left-7" : "left-1"
                       }`}
-                    >
-                      {darkMode ? (
-                        <Moon className="w-3 h-3 text-[#ff6b1d]" />
-                      ) : (
-                        <Sun className="w-3 h-3 text-[#ff6b1d]" />
-                      )}
-                    </span>
+                    />
                   </button>
-                </div>
-
-                <div>
-                  <h3 className="font-semibold mb-3">Preferred Language</h3>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => handleLanguageChange('en')}
-                      className={`px-6 py-2 rounded-lg border-2 transition ${
-                        language === 'en'
-                          ? "border-[#ff6b1d] bg-[#ff6b1d]/10 text-[#ff6b1d] font-semibold"
-                          : "border-border hover:border-[#ff6b1d]/50"
-                      }`}
-                    >
-                      English
-                    </button>
-                    <button
-                      onClick={() => handleLanguageChange('ur')}
-                      className={`px-6 py-2 rounded-lg border-2 transition ${
-                        language === 'ur'
-                          ? "border-[#ff6b1d] bg-[#ff6b1d]/10 text-[#ff6b1d] font-semibold"
-                          : "border-border hover:border-[#ff6b1d]/50"
-                      }`}
-                    >
-                      اردو (Urdu)
-                    </button>
-                  </div>
                 </div>
               </CardContent>
             </Card>
-
-            <div className="mt-8 h-px bg-border" />
-          </motion.section>
+          </section>
 
           {/* Danger Zone */}
-          <motion.section 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="mb-10"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <Trash2 className="w-6 h-6 text-red-500" />
-              <h2 className="text-2xl font-bold text-red-500">Danger Zone</h2>
-            </div>
-            <p className="text-muted-foreground mb-6">
-              Irreversible and destructive actions
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-2">Danger zone</h2>
+            <p className="text-muted-foreground mb-4">
+              Irreversible actions — proceed with caution
             </p>
 
-            <Card className="bg-card border-red-200 dark:border-red-900">
-              <CardContent className="p-6 space-y-6">
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
+            <div className="space-y-4">
+              <Card>
+                <CardContent>
+                  <div className="flex items-start gap-4 mb-4">
                     <RotateCcw className="w-5 h-5 text-orange-500" />
-                    <h3 className="font-semibold">Reset Chat History</h3>
+                    <div>
+                      <div className="font-semibold">Reset chat history</div>
+                      <p className="text-sm text-muted-foreground">
+                        Clear all conversation history for your account.
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Clear all your conversation history. Fluenti will not remember past sessions.
-                  </p>
-                  <button
-                    onClick={handleResetChatHistory}
-                    className="px-4 py-2 rounded-lg border-2 border-orange-500 text-orange-500 hover:bg-orange-500 hover:text-white transition font-semibold"
-                  >
-                    Reset Chat History
-                  </button>
-                </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleResetChatHistory}
+                      className="px-4 py-2 rounded-xl bg-orange-500 text-white hover:bg-orange-600"
+                    >
+                      Reset chat history
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
 
-                <div className="h-px bg-border" />
-
-                <div>
-                  <div className="flex items-center gap-3 mb-2">
+              <Card>
+                <CardContent>
+                  <div className="flex items-start gap-4 mb-4">
                     <Trash2 className="w-5 h-5 text-red-500" />
-                    <h3 className="font-semibold text-red-500">Delete Account</h3>
+                    <div>
+                      <div className="font-semibold text-red-600">Delete account</div>
+                      <p className="text-sm text-muted-foreground">
+                        Permanently delete your account and all associated data.
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Permanently delete your account and all associated data. This action cannot be undone.
-                  </p>
-                  <button
-                    onClick={handleDeleteAccount}
-                    className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition font-semibold"
-                  >
-                    Delete My Account
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.section>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleDeleteAccount}
+                      className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700"
+                    >
+                      Delete my account
+                    </button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </section>
         </div>
       </main>
     </div>
