@@ -10,12 +10,12 @@ const UserSchema = new mongoose.Schema({
   profileImageUrl: { type: String },
   userType: { 
     type: String, 
-    enum: ['child', 'adult', 'guardian'], 
+    enum: ['child', 'adult'], 
     default: 'child' 
   },
   language: { 
     type: String, 
-    enum: ['english', 'urdu', 'both'], 
+    enum: ['english'], 
     default: 'english' 
   },
   // OAuth fields
