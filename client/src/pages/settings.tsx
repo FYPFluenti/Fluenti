@@ -81,7 +81,7 @@ export default function Settings() {
             <div className="flex items-start gap-4 mb-5">
               <button
                 disabled
-                className="relative inline-flex h-6 w-12 cursor-not-allowed rounded-full bg-[#ff6b1d] aria-checked:bg-primary transition"
+                className="relative inline-flex h-6 w-12 cursor-not-allowed rounded-full bg-[#ff6b1d] transition"
                 role="switch"
                 aria-checked="true"
                 aria-label="Necessary cookies (required)"
