@@ -13,8 +13,7 @@ const avatarUrls = {
 };
 
 const EmotionalSupportVoice = () => {
-  const language = localStorage.getItem('language') || 'en';
-  const supportLanguage = language === 'ur' ? 'urdu' : 'english';
+  const language = 'english';
   const [history, setHistory] = useState<{ user: string; ai: string }[]>([]);
   const [emotion, setEmotion] = useState('');
   const [response, setResponse] = useState('');

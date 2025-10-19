@@ -4,7 +4,6 @@
 if (typeof window !== 'undefined') {
   const OriginalWebSocket = window.WebSocket;
   
-  // Enhanced console error suppression
   const originalConsoleError = console.error;
   console.error = function(...args) {
     const message = args.join(' ');
@@ -20,7 +19,6 @@ if (typeof window !== 'undefined') {
     originalConsoleError.apply(console, args);
   };
   
-  // Enhanced window.onerror suppression
   const originalOnError = window.onerror;
   window.onerror = function(message, source, lineno, colno, error) {
     if (typeof message === 'string' && 

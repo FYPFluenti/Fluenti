@@ -1,6 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-// Enhanced error suppression for better UX
 const originalConsoleError = console.error;
 console.error = function(...args) {
   const message = args.join(' ');

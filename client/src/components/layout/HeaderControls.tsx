@@ -55,7 +55,6 @@ export default function HeaderControls({
                 aria-label="Select conversation language"
               >
                 <option value="en">English</option>
-                <option value="ur">Urdu</option>
               </select>
             </div>
           </div>

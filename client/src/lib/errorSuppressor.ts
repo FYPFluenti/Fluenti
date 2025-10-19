@@ -6,7 +6,6 @@ if (typeof window !== 'undefined') {
   const originalError = console.error;
   const originalWarn = console.warn;
   
-  // Enhanced console.error suppression
   console.error = function(...args) {
     const message = args.join(' ');
     

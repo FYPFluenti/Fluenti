@@ -57,7 +57,6 @@ export default function Home() {
   
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // ✅ STEP 1: Redirect authenticated users to appropriate dashboard
   useEffect(() => {
     if (!isLoading && isAuthenticated && user) {
       const userType = (user as any)?.userType;
@@ -97,7 +96,6 @@ export default function Home() {
     );
   }
   
-  // ✅ FIXED: Landing page for non-authenticated users
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-white relative overflow-hidden">
@@ -869,14 +867,12 @@ export default function Home() {
       </div>
     </div>
   </footer>
+  
       </div>
-      ); // ✅ Close the return statement for landing page
+      );
   }
 
-  // ✅ FIXED: Dashboard for authenticated users (removed duplicate header)
-  const userType = (user as any)?.userType || 'child';
-
-  return (
+  const userType = (user as any)?.userType || 'child';  return (
     <div className="h-screen font-sans flex bg-background text-foreground overflow-hidden">
       {/* Sidebar */}
       <aside className="w-20 bg-background flex flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-50 border-r border-border">

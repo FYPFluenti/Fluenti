@@ -23,7 +23,6 @@ export default function ReadyPlayerAvatar({
     large: 'w-80 h-80'
   };
 
-  // ✅ Use the VIEWER, not the creator
   const viewerUrl = `https://demo.readyplayer.me/avatar?frameApi=1&clearColor=transparent&cameraInitialDistance=2.5&cameraTarget=0,0.65,0.15&environment=${environment}&animationName=idle&avatar=${avatarUrl}`;
 
   return (
@@ -65,7 +64,7 @@ export default function ReadyPlayerAvatar({
         style={{ 
           border: 'none',
           background: 'transparent',
-          pointerEvents: 'none' // ✅ This prevents interaction with the iframe
+          pointerEvents: 'none'
         }}
       />
     </div>
