@@ -1,7 +1,7 @@
 /**
- * Simple Word Practice Speech Service
- * Uses the same clean, reliable approach as Emotional Support
- * Completely separate from the complex childSpeechService
+ * Word Practice Speech Service
+ * Uses dedicated /api/speech/child-transcribe endpoint
+ * Same STT chain as Emotional Support but separate endpoint without therapy processing
  */
 
 export interface WordPracticeSpeechResult {
@@ -20,24 +20,25 @@ export class WordPracticeSpeechService {
   }
 
   /**
-   * EXACT SAME transcription as Emotional Support - uses identical endpoint and format
-   * This ensures 100% identical STT processing with Emotional Support
+   * Dedicated Child Speech STT for Word Practice Game
+   * Uses the same STT chain as Emotional Support but through dedicated endpoint
+   * NO therapy processing - pure STT only
    */
   async transcribeAudio(audioBlob: Blob, targetWord?: string): Promise<WordPracticeSpeechResult> {
     try {
-      console.log('🎤 Word Practice - Starting IDENTICAL STT to Emotional Support...');
+      console.log('🎤 Word Practice - Starting dedicated Child Speech STT...');
       console.log('🎯 Target word:', targetWord);
       
-      // Create form data EXACTLY like Emotional Support
+      // Create form data for child-transcribe endpoint
       const formData = new FormData();
-      formData.append('mode', 'voice'); // Same as Emotional Support
-      formData.append('language', 'en'); // Same as Emotional Support
-      formData.append('audio', audioBlob, 'voice.wav'); // Same filename as Emotional Support
-      formData.append('requestTTS', 'false'); // Don't need TTS response, just transcription
-      // Note: We don't send history or therapy context - just pure STT
+      formData.append('audio', audioBlob, 'audio.wav');
+      formData.append('language', 'en');
+      if (targetWord) {
+        formData.append('targetWord', targetWord);
+      }
 
-      // Use EXACT SAME endpoint as Emotional Support
-      const response = await fetch(`${this.baseUrl}/api/emotional-support`, {
+      // Use dedicated child speech endpoint (NOT emotional support)
+      const response = await fetch(`${this.baseUrl}/api/speech/child-transcribe`, {
         method: 'POST',
         body: formData,
         credentials: 'include' // Use httpOnly cookies for auth
@@ -54,16 +55,16 @@ export class WordPracticeSpeechService {
         throw new Error(data.error || 'Transcription failed');
       }
 
-      // Extract transcription from Emotional Support response format
+      // Extract transcription from child-transcribe response format
       const result: WordPracticeSpeechResult = {
         text: data.transcription || '',
-        confidence: 0.9, // Emotional Support doesn't return confidence, use default
+        confidence: data.confidence || 0.9,
         language: data.language || 'en',
-        targetWord: targetWord, // We track our own target word
-        method: 'emotional_support_stt' // Indicate we're using same STT as Emotional Support
+        targetWord: data.targetWord || targetWord,
+        method: data.method || 'child_speech_stt'
       };
 
-      console.log('✅ Word Practice IDENTICAL STT successful (same as Emotional Support):', {
+      console.log('✅ Word Practice Child Speech STT successful:', {
         text: result.text,
         confidence: result.confidence,
         targetWord: result.targetWord,
@@ -73,7 +74,7 @@ export class WordPracticeSpeechService {
       return result;
 
     } catch (error) {
-      console.error('❌ Word Practice STT error:', error);
+      console.error('❌ Word Practice Child Speech STT error:', error);
       throw new Error(`Word Practice transcription failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
