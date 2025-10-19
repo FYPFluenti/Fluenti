@@ -4,6 +4,12 @@ import { ThreeAvatar } from '@/components/ui/three-avatar';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition_simple';
 import { Mic, MicOff, Waves, Heart, Brain, Shield } from 'lucide-react';
 
+interface SessionData {
+  sessionId?: string;
+  userId?: string;
+  sessionKey?: string;
+}
+
 const EmotionalSupportVoice = () => {
   const language = localStorage.getItem('language') || 'en';
   const supportLanguage = language === 'ur' ? 'urdu' : 'english';
@@ -12,6 +18,7 @@ const EmotionalSupportVoice = () => {
   const [response, setResponse] = useState('');
   const [serviceStatus, setServiceStatus] = useState<'checking' | 'online' | 'offline'>('checking');
   const [audioBase64, setAudioBase64] = useState<string>('');
+  const [sessionData, setSessionData] = useState<SessionData>({});
   const { startRecording, stopRecording, isRecording } = useSpeechRecognition();
 
   // Check therapy service status on mount
@@ -43,14 +50,40 @@ const EmotionalSupportVoice = () => {
       formData.append('audio', blob, 'voice.wav');
       formData.append('history', JSON.stringify(history));
       formData.append('requestTTS', 'true'); // Request audio response
+      
+      // **NEW: Add session data for continuity (same as chat mode)**
+      // Always send session data, even if undefined - backend will create new session if needed
+      formData.append('sessionId', sessionData.sessionId || '');
+      formData.append('userId', sessionData.userId || '');
+      if (sessionData.sessionKey) {
+        formData.append('sessionKey', sessionData.sessionKey);
+      }
 
-      console.log('🎙️ Sending voice input to therapy service...');
+      console.log('🎙️ Sending voice input to therapy service with session data:', {
+        sessionId: sessionData.sessionId,
+        userId: sessionData.userId,
+        sessionKey: sessionData.sessionKey
+      });
       const res = await fetch('/api/emotional-support', { method: 'POST', body: formData });
       const data = await res.json();
       
       console.log('📥 Therapy service response:', data);
       
       if (data.success) {
+        // **NEW: Update session data for continuity (same as chat mode)**
+        if (data.sessionId || data.userId || data.sessionKey) {
+          setSessionData({
+            sessionId: data.sessionId || sessionData.sessionId,
+            userId: data.userId || sessionData.userId,
+            sessionKey: data.sessionKey || sessionData.sessionKey
+          });
+          console.log('📝 Session data updated:', {
+            sessionId: data.sessionId || sessionData.sessionId,
+            userId: data.userId || sessionData.userId,
+            sessionKey: data.sessionKey || sessionData.sessionKey
+          });
+        }
+        
         // Handle successful therapy response
         setEmotion(data.emotion || 'neutral');
         setResponse(data.response || 'Processing your voice...');

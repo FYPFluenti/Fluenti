@@ -1105,7 +1105,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { mode, language, sessionId, userId, history } = req.body;
       let text = req.body.text;
 
-      console.log('🎙️ Processing emotional support request - Mode:', mode, 'Language:', language);
+      console.log('🎙️ Processing emotional support request - Mode:', mode, 'Language:', language, 'SessionId:', sessionId, 'UserId:', userId);
 
       // Handle voice mode with audio processing (STT)
       if (mode === 'voice' && req.file) {
@@ -1158,6 +1158,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           console.log('🤖 Sending to therapy service:', text.substring(0, 50) + '...');
 
+          // **FIXED: Use consistent session/user management like chat mode**
+          // Handle empty strings from FormData and convert to null/undefined
+          const cleanSessionId = sessionId && sessionId.trim() !== '' ? sessionId : null;
+          const cleanUserId = userId && userId.trim() !== '' ? userId : null;
+          
+          // Don't generate new random userId - use provided one or create stable fallback
+          const stableUserId = cleanUserId || `voice_user_${cleanSessionId || 'default'}`;
+          const stableSessionId = cleanSessionId; // Use provided sessionId as-is (may be null for new sessions)
+
+          console.log('📝 Session context - UserId:', stableUserId, 'SessionId:', stableSessionId, 'Original sessionId:', sessionId, 'Original userId:', userId);
+
           // Call Python therapy service (same as emotional-support-chat)
           const pythonServiceResponse = await fetch('http://localhost:5001/api/therapy/chat', {
             method: 'POST',
@@ -1166,8 +1177,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             },
             body: JSON.stringify({
               message: text.trim(),
-              sessionId: sessionId,
-              userId: userId || `voice_user_${Date.now()}`,
+              sessionId: stableSessionId, // Will be null for new sessions - therapy service handles this
+              userId: stableUserId, // Now consistent across voice messages
               language: language || 'en'
             })
           });
