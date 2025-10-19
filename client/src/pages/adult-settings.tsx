@@ -17,9 +17,7 @@ import PageHeader from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
-/**
- * Proper user type interface used across the settings page
- */
+
 interface UserProfile {
   firstName?: string;
   lastName?: string;
@@ -57,7 +55,7 @@ export default function AdultSettings() {
     // verify user type — only allow adult users here
     if (!isLoading && isAuthenticated && user) {
       if (user.userType && user.userType !== "adult") {
-        // redirect non-adults to their dashboard (child)
+    
         setLocation("/child-dashboard");
       }
     }
@@ -218,8 +216,8 @@ export default function AdultSettings() {
             </p>
 
             <div className="space-y-4">
-              <Card>
-                <CardContent className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center justify-between">
                   <div>
                     <div className="font-semibold">Necessary cookies</div>
                     <p className="text-sm text-muted-foreground">
@@ -235,11 +233,11 @@ export default function AdultSettings() {
                       <span className="absolute top-1 left-7 inline-block h-4 w-4 rounded-full bg-white" />
                     </button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
-              <Card>
-                <CardContent className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center justify-between">
                   <div>
                     <div className="font-semibold">Analytics</div>
                     <p className="text-sm text-muted-foreground">
@@ -262,23 +260,22 @@ export default function AdultSettings() {
                       />
                     </button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           </section>
 
           {/* Notifications */}
           <section className="mb-8">
             <div className="flex items-center gap-3 mb-4">
-              <Bell className="w-5 h-5" />
               <h2 className="text-2xl font-bold">Notifications</h2>
             </div>
             <p className="text-muted-foreground mb-4">
               Control how you receive updates and reminders
             </p>
 
-            <Card>
-              <CardContent className="space-y-4">
+            <div>
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-semibold">Push Notifications</div>
@@ -328,45 +325,11 @@ export default function AdultSettings() {
                     </button>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </section>
-
-          {/* Appearance */}
-          <section className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <Palette className="w-5 h-5" />
-              <h2 className="text-2xl font-bold">Appearance</h2>
+              </div>
             </div>
-            <p className="text-muted-foreground mb-4">Theme</p>
-
-            <Card>
-              <CardContent className="flex items-center justify-between">
-                <div>
-                  <div className="font-semibold">Dark mode</div>
-                  <p className="text-sm text-muted-foreground">
-                    Use a darker theme to reduce eye strain.
-                  </p>
-                </div>
-                <div>
-                  <button
-                    onClick={handleToggleDark}
-                    className={`relative inline-flex h-6 w-12 rounded-full transition ${
-                      darkMode ? "bg-[#ff6b1d]" : "bg-muted"
-                    }`}
-                    role="switch"
-                    aria-checked={darkMode}
-                  >
-                    <span
-                      className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
-                        darkMode ? "left-7" : "left-1"
-                      }`}
-                    />
-                  </button>
-                </div>
-              </CardContent>
-            </Card>
           </section>
+
+          
 
           {/* Danger Zone */}
           <section className="mb-12">
@@ -376,30 +339,9 @@ export default function AdultSettings() {
             </p>
 
             <div className="space-y-4">
-              <Card>
-                <CardContent>
-                  <div className="flex items-start gap-4 mb-4">
-                    <RotateCcw className="w-5 h-5 text-orange-500" />
-                    <div>
-                      <div className="font-semibold">Reset chat history</div>
-                      <p className="text-sm text-muted-foreground">
-                        Clear all conversation history for your account.
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex gap-3">
-                    <button
-                      onClick={handleResetChatHistory}
-                      className="px-4 py-2 rounded-xl bg-orange-500 text-white hover:bg-orange-600"
-                    >
-                      Reset chat history
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent>
+            
+              <div>
+                <div>
                   <div className="flex items-start gap-4 mb-4">
                     <Trash2 className="w-5 h-5 text-red-500" />
                     <div>
@@ -417,8 +359,8 @@ export default function AdultSettings() {
                       Delete my account
                     </button>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
           </section>
         </div>
