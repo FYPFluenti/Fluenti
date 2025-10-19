@@ -12,7 +12,6 @@ import SpeechTherapy from "@/pages/speech-therapy";
 import ProgressDashboard from "@/pages/progress-dashboard";
 import EmotionalSupport from "@/pages/emotional-support";
 import EmotionalSupportVoice from "@/pages/emotional-support-voice";
-import Achievements from "@/pages/achievements";
 import Settings from "@/pages/settings";
 import VoiceModel from "@/pages/voice-model";
 import AdultHistory from "@/pages/adult-history";
@@ -85,11 +84,6 @@ export default function App() {
               </ProtectedRoute>
             </Route>
             
-            <Route path="/achievements">
-              <ProtectedRoute>
-                <Achievements />
-              </ProtectedRoute>
-            </Route>
             
             <Route path="/settings">
               <ProtectedRoute>
