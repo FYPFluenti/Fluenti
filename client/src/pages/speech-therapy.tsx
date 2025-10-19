@@ -269,15 +269,44 @@ export default function SpeechTherapyPage() {
     }
 
     try {
+      // ✅ Check server connection first
+      try {
+        const healthCheck = await fetch('/api/health', {
+          credentials: 'include',
+          signal: AbortSignal.timeout(5000) // 5 second timeout
+        });
+        
+        if (!healthCheck.ok) {
+          throw new Error('Server not responding');
+        }
+      } catch (healthError) {
+        toast({
+          title: "🔌 Server Connection Lost",
+          description: "The server is not responding. Please check if the server is running (npm run dev in terminal).",
+          variant: "destructive",
+          duration: 10000
+        });
+        return;
+      }
+
       // Fetch game-specific data (cookies sent automatically)
       const gameDataRes = await fetch(`/api/games/game-data/${game.id}`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        signal: AbortSignal.timeout(10000) // 10 second timeout
       });
 
       if (!gameDataRes.ok) {
+        // ✅ Specific error messages
+        if (gameDataRes.status === 401) {
+          throw new Error('Please log in again to continue.');
+        } else if (gameDataRes.status === 404) {
+          throw new Error('This game is not available yet.');
+        } else if (gameDataRes.status >= 500) {
+          throw new Error('Server error. Please try again in a moment.');
+        }
         throw new Error('Failed to fetch game data');
       }
 
@@ -293,7 +322,8 @@ export default function SpeechTherapyPage() {
         body: JSON.stringify({
           gameId: game.id,
           gameName: game.title
-        })
+        }),
+        signal: AbortSignal.timeout(10000)
       });
 
       if (!sessionRes.ok) {
@@ -313,10 +343,31 @@ export default function SpeechTherapyPage() {
 
     } catch (error) {
       console.error('Error starting game:', error);
+      
+      // ✅ Specific error messages based on error type
+      let errorTitle = "Error";
+      let errorMessage = "Failed to start game. Please try again.";
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorTitle = "🔌 Connection Failed";
+        errorMessage = "Cannot connect to server. Make sure the server is running:\n1. Open terminal\n2. Run: npm run dev\n3. Try again";
+      } else if (error instanceof Error) {
+        if (error.message.includes('timed out') || error.message.includes('timeout')) {
+          errorTitle = "⏱️ Request Timeout";
+          errorMessage = "Server took too long to respond. Please try again.";
+        } else if (error.message.includes('Server not responding')) {
+          errorTitle = "🔌 Server Down";
+          errorMessage = "The server is not running. Please start it with 'npm run dev' in terminal.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast({
-        title: "Error",
-        description: "Failed to start game. Please try again.",
-        variant: "destructive"
+        title: errorTitle,
+        description: errorMessage,
+        variant: "destructive",
+        duration: 10000
       });
     }
   };

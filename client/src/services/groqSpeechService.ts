@@ -114,6 +114,21 @@ export class GroqSpeechService {
       try {
         console.log('🎙️ Starting audio recording for Groq transcription...');
         
+        // ✅ CRITICAL: Check if TTS is currently speaking before recording
+        if ('speechSynthesis' in window && speechSynthesis.speaking) {
+          console.log('⚠️ Detected ongoing TTS - cancelling and waiting...');
+          speechSynthesis.cancel();
+          // Wait for TTS to fully stop
+          await new Promise(resolve => setTimeout(resolve, 800));
+        }
+        
+        // ✅ ADDITIONAL: Check for system audio output
+        console.log('🔍 Pre-recording audio check:', {
+          ttsActive: 'speechSynthesis' in window ? speechSynthesis.speaking : 'N/A',
+          timestamp: new Date().toISOString(),
+          userAgent: navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Other'
+        });
+        
         // Check if mediaDevices API is available
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           throw new Error('MediaDevices API not supported in this browser');
@@ -245,14 +260,148 @@ export class GroqSpeechService {
           reject(new Error(`Recording failed: ${error}`));
         };
 
+        // ⚠️ ADD VOICE DETECTION: Stop early if silence detected
+        let silenceTimeout: NodeJS.Timeout | null = null;
+        const silenceThreshold = 0.004; // FURTHER LOWERED threshold for quiet single words
+        const shortSilenceDuration = 1500; // 1.5s for single words (faster)
+        const longSilenceDuration = 3500; // 3.5s for multiple words  
+        const warmupPeriod = 1200; // Reduced warmup for faster response
+
         // Start recording
         mediaRecorder.start();
         console.log('🔴 Recording started...');
+        console.log('🎙️ Recording settings:', {
+          maxDuration: maxDuration + 'ms',
+          silenceThreshold: silenceThreshold,
+          shortSilenceDuration: shortSilenceDuration + 'ms (single words)',
+          longSilenceDuration: longSilenceDuration + 'ms (multiple words)', 
+          warmupPeriod: warmupPeriod + 'ms'
+        });
+        let recordingStartTime = Date.now();
+        
+        // ✅ CRITICAL: Additional check for system audio interference
+        let volumeSamples: number[] = [];
+        let consecutiveLowVolume = 0;
+        let speechDetected = false; // Track if we've detected actual speech
+        let highVolumeDetected = false; // Track if we've seen volume above speech threshold
+        let maxVolumeInSession = 0; // Track maximum volume seen in entire session
+        const minimumRecordingDuration = 1800; // Reduced to 1.8s for single words
+        
+        // Create audio context for volume detection
+        const audioContext = new AudioContext();
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 2048;
+        source.connect(analyser);
+        
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        
+        const checkVolume = () => {
+          analyser.getByteTimeDomainData(dataArray);
+          
+          // Calculate average volume
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            const normalized = Math.abs(dataArray[i] - 128) / 128;
+            sum += normalized;
+          }
+          const average = sum / dataArray.length;
+          
+          // Store volume samples for analysis
+          volumeSamples.push(average);
+          if (volumeSamples.length > 50) {
+            volumeSamples.shift(); // Keep only last 50 samples
+          }
+          
+          // Track maximum volume in session
+          maxVolumeInSession = Math.max(maxVolumeInSession, average);
+          
+          // 🎯 CRITICAL: Detect if we've seen actual speech volume
+          const speechVolumeThreshold = 0.012; // Lowered threshold for quieter speech
+          if (average > speechVolumeThreshold) {
+            speechDetected = true;
+            highVolumeDetected = true;
+            console.log(`🎤 SPEECH DETECTED! Volume: ${average.toFixed(4)} (above ${speechVolumeThreshold})`);
+          }
+          
+          // Skip silence detection during warmup period
+          const recordingTime = Date.now() - recordingStartTime;
+          if (recordingTime < warmupPeriod) {
+            console.log(`🔥 Warmup: ${Math.round((warmupPeriod - recordingTime) / 100) / 10}s remaining, volume: ${average.toFixed(4)}`);
+            if (mediaRecorder.state === 'recording') {
+              requestAnimationFrame(checkVolume);
+            }
+            return;
+          }
+          
+          // Log volume periodically for debugging
+          if (Math.floor(recordingTime / 500) !== Math.floor((recordingTime - 100) / 500)) {
+            console.log(`🎙️ Recording: ${Math.round(recordingTime / 100) / 10}s, volume: ${average.toFixed(4)}, threshold: ${silenceThreshold}, speechDetected: ${speechDetected}`);
+          }
+          
+          if (average < silenceThreshold) {
+            consecutiveLowVolume++;
+            
+            // 🎯 CRITICAL: Don't stop too early - ensure minimum recording duration
+            if (recordingTime < minimumRecordingDuration) {
+              console.log(`⏳ Too early to stop (${Math.round(recordingTime)}ms < ${minimumRecordingDuration}ms), continuing...`);
+              if (mediaRecorder.state === 'recording') {
+                requestAnimationFrame(checkVolume);
+              }
+              return;
+            }
+            
+            // 🎯 ADAPTIVE SILENCE DURATION: Use shorter timeout if we've detected ANY speech during session
+            // This includes speech detected during warmup or recording phases
+            const hasDetectedAnySpeech = speechDetected || maxVolumeInSession > 0.012;
+            const adaptiveSilenceDuration = hasDetectedAnySpeech ? shortSilenceDuration : longSilenceDuration;
+            
+            // Silence detected - start countdown
+            if (!silenceTimeout) {
+              console.log(`🔇 Silence detected (${consecutiveLowVolume} samples), using ${adaptiveSilenceDuration}ms timeout (speechDetected: ${speechDetected}, maxVolume: ${maxVolumeInSession.toFixed(4)})`);
+              silenceTimeout = setTimeout(() => {
+                if (mediaRecorder.state === 'recording') {
+                  mediaRecorder.stop();
+                  audioContext.close();
+                  console.log(`⏹️ Recording stopped (adaptive silence: ${adaptiveSilenceDuration}ms)`);
+                  
+                  // Log final volume analysis
+                  const avgVolume = volumeSamples.reduce((a, b) => a + b, 0) / volumeSamples.length;
+                  console.log('📊 Final volume analysis:', {
+                    averageVolume: avgVolume.toFixed(4),
+                    maxVolume: Math.max(...volumeSamples).toFixed(4),
+                    samplesCount: volumeSamples.length,
+                    consecutiveLow: consecutiveLowVolume,
+                    speechDetected: speechDetected,
+                    highVolumeDetected: highVolumeDetected,
+                    recordingDuration: `${Math.round(recordingTime)}ms`,
+                    adaptiveTimeout: `${adaptiveSilenceDuration}ms`
+                  });
+                }
+              }, adaptiveSilenceDuration);
+            }
+          } else {
+            consecutiveLowVolume = 0;
+            // Voice detected - cancel silence timeout
+            if (silenceTimeout) {
+              console.log(`🎤 Voice detected (volume: ${average.toFixed(4)}), cancelling silence timeout`);
+              clearTimeout(silenceTimeout);
+              silenceTimeout = null;
+            }
+          }
+          
+          if (mediaRecorder.state === 'recording') {
+            requestAnimationFrame(checkVolume);
+          }
+        };
+        
+        checkVolume();
 
-        // Auto-stop after maxDuration
-        setTimeout(() => {
+        // Auto-stop after maxDuration (fallback)
+        const maxTimeout = setTimeout(() => {
           if (mediaRecorder.state === 'recording') {
             mediaRecorder.stop();
+            audioContext.close();
             console.log('⏹️ Recording stopped (timeout)');
           }
         }, maxDuration);

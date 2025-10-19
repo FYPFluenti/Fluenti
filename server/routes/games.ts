@@ -643,7 +643,7 @@ Return JSON with:
     console.log('🤖 Generating feedback for:', { targetWord, userAttempt, accuracy });
     
     const completion = await groq.chat.completions.create({
-      model: "openai/gpt-oss-120b",
+      model: "llama-3.3-70b-versatile", // ✅ SWITCH TO FASTER MODEL (less tokens)
       messages: [
         {
           role: "system",
@@ -655,7 +655,7 @@ Return JSON with:
         }
       ],
       temperature: 0.8,
-      max_completion_tokens: 1500, // Increased from 500 to prevent truncation
+      max_completion_tokens: 600, // ✅ REDUCED from 1500 to save tokens
       response_format: { type: "json_object" }
     });
 
@@ -682,9 +682,26 @@ Return JSON with:
 
     return null;
   } catch (error) {
-    console.error('❌ Error calling Groq (openai/gpt-oss-120b) for feedback generation:');
+    // ✅ ENHANCED ERROR HANDLING FOR RATE LIMITS
+    console.error('❌ Error calling Groq (llama-3.3-70b-versatile) for feedback generation:');
     console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
     console.error('Error message:', error instanceof Error ? error.message : String(error));
+    
+    // Check if it's a rate limit error
+    if (error instanceof Error && error.message.includes('rate_limit_exceeded')) {
+      console.error('⚠️ RATE LIMIT EXCEEDED - Using fallback feedback');
+      // Return fallback feedback instead of throwing
+      return {
+        message: accuracy >= 70 
+          ? 'Great job! Keep practicing!' 
+          : 'Nice try! You\'re improving!',
+        encouragement: 'You\'re doing amazing work!',
+        technicalTip: 'Listen carefully and try again',
+        emotionalTone: 'supportive',
+        nextSteps: 'Keep going!'
+      };
+    }
+    
     throw error;
   }
 }
@@ -897,7 +914,7 @@ Be STRICT: If the child added extra sounds or syllables, mark as incorrect.`;
 
   try {
     const completion = await groq.chat.completions.create({
-      model: "openai/gpt-oss-120b",
+      model: "llama-3.3-70b-versatile", // ✅ SWITCH TO FASTER MODEL (less tokens)
       messages: [
         {
           role: "system",
@@ -909,7 +926,7 @@ Be STRICT: If the child added extra sounds or syllables, mark as incorrect.`;
         }
       ],
       temperature: 0.3, // Low temperature for consistent, strict analysis
-      max_completion_tokens: 1500, // Increased from 600 to prevent truncation
+      max_completion_tokens: 800, // ✅ REDUCED from 1500 to save tokens
       response_format: { type: "json_object" }
     });
 
@@ -944,11 +961,599 @@ Be STRICT: If the child added extra sounds or syllables, mark as incorrect.`;
       suggestions: []
     };
   } catch (error) {
-    console.error('❌ Error calling Groq (openai/gpt-oss-120b) for pronunciation validation:');
+    // ✅ ENHANCED ERROR HANDLING FOR RATE LIMITS
+    console.error('❌ Error calling Groq (llama-3.3-70b-versatile) for pronunciation validation:');
     console.error('Error type:', error instanceof Error ? error.constructor.name : typeof error);
     console.error('Error message:', error instanceof Error ? error.message : String(error));
+    
+    // Check if it's a rate limit error
+    if (error instanceof Error && error.message.includes('rate_limit_exceeded')) {
+      console.error('⚠️ RATE LIMIT EXCEEDED - Using fallback validation');
+      // Return fallback validation instead of throwing
+      return {
+        isCorrect: false,
+        accuracy: 50, // Moderate score for fallback
+        feedback: 'Keep practicing! Our AI is resting, but you\'re doing great!',
+        phonemeErrors: [],
+        suggestions: ['Try again', 'Speak clearly', 'Take your time']
+      };
+    }
+    
     throw error;
   }
 }
 
+// ============================================================================
+// SAVE PROGRESS, REWARDS, AND SESSION SUMMARIES
+// ============================================================================
+
+/**
+ * POST /api/games/save-progress
+ * Save child's gameplay progress to database
+ */
+router.post('/save-progress', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { sessionData } = req.body;
+
+    if (!sessionData) {
+      return res.status(400).json({ error: 'Session data required' });
+    }
+
+    // Import ChildProgress model
+    const { ChildProgress } = await import('../models/ChildProgress');
+
+    // Find or create child progress document
+    let progress = await ChildProgress.findOne({ userId });
+
+    if (!progress) {
+      progress = new ChildProgress({
+        userId,
+        childName: sessionData.childName || 'Child'
+      });
+    }
+
+    // Update progress using the model method (if available)
+    if (typeof (progress as any).updateAfterSession === 'function') {
+      await (progress as any).updateAfterSession(sessionData);
+    }
+
+    console.log('💾 Progress saved for user:', userId);
+
+    res.json({
+      success: true,
+      progress: {
+        totalSessions: progress.overallStats?.totalSessions || 0,
+        totalScore: progress.overallStats?.totalScore || 0,
+        currentLevel: progress.overallStats?.currentLevel || 1,
+        consecutiveDays: progress.dailyEngagement?.consecutiveDays || 0
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error saving progress:', error);
+    res.status(500).json({ 
+      error: 'Failed to save progress',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * POST /api/games/save-reward
+ * Save unlocked reward to database
+ */
+router.post('/save-reward', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { rewardData } = req.body;
+
+    if (!rewardData) {
+      return res.status(400).json({ error: 'Reward data required' });
+    }
+
+    // Import Reward model
+    const { Reward } = await import('../models/Reward');
+
+    // Create new reward document
+    const reward = new Reward({
+      userId,
+      ...rewardData
+    });
+
+    await reward.save();
+
+    // Also update ChildProgress collections
+    const { ChildProgress } = await import('../models/ChildProgress');
+    const progress = await ChildProgress.findOne({ userId });
+
+    if (progress && progress.collections) {
+      // Add to appropriate collection
+      if (rewardData.rewardType === 'character' && progress.collections.companions) {
+        progress.collections.companions.push({
+          id: reward._id.toString(),
+          name: rewardData.rewardName,
+          emoji: rewardData.icon,
+          rarity: rewardData.rarity,
+          unlockedAt: new Date(),
+          timesUsed: 0
+        });
+      } else if (rewardData.rewardType === 'badge' && progress.collections.badges) {
+        progress.collections.badges.push({
+          id: reward._id.toString(),
+          name: rewardData.rewardName,
+          icon: rewardData.icon,
+          description: rewardData.description,
+          rarity: rewardData.rarity,
+          unlockedAt: new Date()
+        });
+      }
+
+      await progress.save();
+    }
+
+    console.log('🎁 Reward saved:', rewardData.rewardName);
+
+    res.json({
+      success: true,
+      reward: {
+        id: reward._id,
+        name: rewardData.rewardName,
+        rarity: rewardData.rarity
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error saving reward:', error);
+    res.status(500).json({ 
+      error: 'Failed to save reward',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * POST /api/games/save-session-summary
+ * Save complete session summary to database
+ */
+router.post('/save-session-summary', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { summaryData } = req.body;
+
+    if (!summaryData) {
+      return res.status(400).json({ error: 'Summary data required' });
+    }
+
+    // Import SessionSummary model
+    const { SessionSummary } = await import('../models/SessionSummary');
+
+    // Create new session summary document
+    const summary = new SessionSummary({
+      userId,
+      ...summaryData
+    });
+
+    await summary.save();
+
+    console.log('📊 Session summary saved:', summaryData.sessionId);
+
+    res.json({
+      success: true,
+      summary: {
+        id: summary._id,
+        sessionId: summaryData.sessionId,
+        score: summaryData.stats.totalScore,
+        accuracy: summaryData.stats.accuracy
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error saving session summary:', error);
+    res.status(500).json({ 
+      error: 'Failed to save session summary',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /api/games/child-progress
+ * Get complete child progress data
+ */
+router.get('/child-progress', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { ChildProgress } = await import('../models/ChildProgress');
+    const progress = await ChildProgress.findOne({ userId });
+
+    if (!progress) {
+      return res.json({ exists: false });
+    }
+
+    res.json({
+      exists: true,
+      progress: progress.toObject()
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching child progress:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch progress',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /api/games/rewards-collection
+ * Get all unlocked rewards for the child
+ */
+router.get('/rewards-collection', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { Reward } = await import('../models/Reward');
+    const rewards = await Reward.find({ userId }).sort({ unlockedAt: -1 });
+
+    res.json({
+      rewards,
+      count: rewards.length
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching rewards:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch rewards',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /api/games/session-history
+ * Get session history for the child
+ */
+router.get('/session-history', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { limit = 10 } = req.query;
+
+    const { SessionSummary } = await import('../models/SessionSummary');
+    const sessions = await SessionSummary
+      .find({ userId })
+      .sort({ completedAt: -1 })
+      .limit(Number(limit));
+
+    res.json({
+      sessions,
+      count: sessions.length
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching session history:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch session history',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// 🏆 DAILY QUEST ROUTES
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * GET /api/games/daily-quest
+ * Get or create today's daily quest for the user
+ */
+router.get('/daily-quest', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    console.log('🏆 Fetching daily quest for user:', userId);
+
+    const DailyQuest = (await import('../models/DailyQuest')).default;
+    const { generateDailyQuest, getQuestThemeForDate } = await import('../services/dailyQuestService');
+
+    // Check if force refresh is requested (for testing/debugging)
+    const forceRefresh = req.query.refresh === 'true';
+    
+    if (forceRefresh) {
+      console.log('🔄 Force refresh requested - deleting old quest');
+      await DailyQuest.deleteMany({ 
+        userId,
+        questDate: { 
+          $gte: new Date(new Date().setHours(0, 0, 0, 0))
+        }
+      });
+    }
+
+    // Try to get today's quest
+    let todayQuest = await DailyQuest.getTodayQuest(userId);
+
+    // If no quest exists, create one
+    if (!todayQuest) {
+      console.log('📝 Creating new daily quest for user:', userId);
+      
+      // Optional: Get child profile for difficulty adjustment
+      let childProfile = null;
+      try {
+        const ChildProgress = (await import('../models/ChildProgress')).ChildProgress;
+        const progress = await ChildProgress.findOne({ userId });
+        if (progress) {
+          childProfile = {
+            level: progress.overallStats?.currentLevel || 1
+          };
+        }
+      } catch (err) {
+        console.warn('⚠️ Could not fetch child profile for difficulty adjustment');
+      }
+
+      // Generate quest data
+      const questData = generateDailyQuest(userId, childProfile);
+      
+      // Create in database
+      todayQuest = await DailyQuest.create(questData);
+      console.log('✅ Daily quest created:', {
+        theme: todayQuest.theme,
+        emoji: todayQuest.emoji,
+        targetScore: todayQuest.targetScore,
+        difficulty: todayQuest.difficulty
+      });
+    } else {
+      console.log('✅ Found existing daily quest:', {
+        theme: todayQuest.theme,
+        emoji: todayQuest.emoji,
+        cached: true,
+        questDate: todayQuest.questDate
+      });
+    }
+
+    // Get current streak
+    const streak = await DailyQuest.getStreak(userId);
+
+    res.json({
+      quest: todayQuest,
+      streak,
+      hasQuest: true
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching daily quest:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch daily quest',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * POST /api/games/daily-quest/complete
+ * Mark daily quest as completed
+ */
+router.post('/daily-quest/complete', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { sessionId, score, accuracy } = req.body;
+
+    if (!sessionId || score === undefined || accuracy === undefined) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: sessionId, score, accuracy' 
+      });
+    }
+
+    console.log('🏆 Completing daily quest for user:', userId, { sessionId, score, accuracy });
+
+    const DailyQuest = (await import('../models/DailyQuest')).default;
+    const { calculateStreakBonus } = await import('../services/dailyQuestService');
+
+    // Get today's quest
+    const todayQuest = await DailyQuest.getTodayQuest(userId);
+
+    if (!todayQuest) {
+      return res.status(404).json({ error: 'No daily quest found for today' });
+    }
+
+    if (todayQuest.isCompleted) {
+      return res.status(400).json({ 
+        error: 'Quest already completed today',
+        quest: todayQuest
+      });
+    }
+
+    // Check if requirements met
+    const meetsRequirements = todayQuest.checkCompletion(score, accuracy);
+
+    if (!meetsRequirements) {
+      return res.status(400).json({ 
+        error: 'Quest requirements not met',
+        required: {
+          score: todayQuest.targetScore,
+          accuracy: todayQuest.targetAccuracy
+        },
+        achieved: {
+          score,
+          accuracy
+        }
+      });
+    }
+
+    // Get current streak before completion
+    const currentStreak = await DailyQuest.getStreak(userId);
+    const newStreak = currentStreak + 1;
+    const streakBonus = calculateStreakBonus(newStreak);
+
+    // Complete the quest
+    await todayQuest.complete(sessionId, score, accuracy, streakBonus);
+
+    console.log('✅ Daily quest completed! Streak:', newStreak, 'Bonus:', streakBonus);
+
+    // Save bonus reward to rewards collection
+    try {
+      const Reward = (await import('../models/Reward')).Reward;
+      await Reward.create({
+        userId,
+        sessionId,
+        rewardType: todayQuest.bonusReward.type,
+        rewardName: todayQuest.bonusReward.name,
+        rarity: todayQuest.bonusReward.rarity,
+        icon: todayQuest.bonusReward.icon,
+        description: todayQuest.bonusReward.description,
+        achievement: `Daily Quest Completed: ${todayQuest.theme}`,
+        gameMode: 'daily_quest',
+        metadata: {
+          questTheme: todayQuest.theme,
+          score,
+          accuracy,
+          streak: newStreak,
+          streakBonus
+        }
+      });
+      console.log('✅ Bonus reward saved to database');
+    } catch (err) {
+      console.error('⚠️ Error saving bonus reward:', err);
+    }
+
+    res.json({
+      success: true,
+      quest: todayQuest,
+      newStreak,
+      streakBonus,
+      bonusReward: todayQuest.bonusReward
+    });
+
+  } catch (error) {
+    console.error('❌ Error completing daily quest:', error);
+    res.status(500).json({ 
+      error: 'Failed to complete daily quest',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /api/games/daily-quest/streak
+ * Get user's current daily quest streak
+ */
+router.get('/daily-quest/streak', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const DailyQuest = (await import('../models/DailyQuest')).default;
+    const { calculateStreakBonus } = await import('../services/dailyQuestService');
+
+    const streak = await DailyQuest.getStreak(userId);
+    const bonusPoints = calculateStreakBonus(streak);
+
+    // Get total completed quests
+    const totalCompleted = await DailyQuest.countDocuments({ 
+      userId, 
+      isCompleted: true 
+    });
+
+    res.json({
+      streak,
+      bonusPoints,
+      totalCompleted
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching streak:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch streak',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+/**
+ * GET /api/games/daily-quest/history
+ * Get user's daily quest completion history
+ */
+router.get('/daily-quest/history', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || (req as any).user?._id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { limit = 30 } = req.query;
+
+    const DailyQuest = (await import('../models/DailyQuest')).default;
+    
+    const history = await DailyQuest
+      .find({ userId })
+      .sort({ questDate: -1 })
+      .limit(Number(limit));
+
+    const completedCount = await DailyQuest.countDocuments({ 
+      userId, 
+      isCompleted: true 
+    });
+
+    const totalCount = await DailyQuest.countDocuments({ userId });
+
+    res.json({
+      history,
+      stats: {
+        completed: completedCount,
+        total: totalCount,
+        completionRate: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching quest history:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch quest history',
+      message: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 export default router;
+
