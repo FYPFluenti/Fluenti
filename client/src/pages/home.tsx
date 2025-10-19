@@ -755,7 +755,7 @@ export default function Home() {
           
           <div id="faq-content-5" className="hidden mt-6 pl-0">
             <p className="text-lg text-gray-700 leading-relaxed">
-              yes! fluenti supports multiple languages including english, urdu, arabic, and spanish. our ai adapts to different 
+              yes! fluenti currently supports english with more languages coming soon. our ai adapts to different 
               accents and dialects, making it perfect for diverse learners and accent modification goals.
             </p>
           </div>
@@ -1212,7 +1212,6 @@ export default function Home() {
                 aria-label="Select conversation language"
               >
                 <option value="en">English</option>
-                <option value="ur">Urdu</option>
               </select>
             </div>
           </div>
