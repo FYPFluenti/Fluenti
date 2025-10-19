@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
+import { motion } from "framer-motion";
+import { User, Bell, Lock, Trash2, RotateCcw, Globe, Moon, Sun } from "lucide-react";
+import SharedSidebar from "@/components/layout/SharedSidebar";
+import FeedbackModal from "@/components/layout/FeedbackModel";
+import PageHeader from "@/components/layout/PageHeader";
+import { Card, CardContent } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+
 import {
   Gamepad2,
   LineChart,
@@ -15,7 +23,11 @@ export default function Settings() {
     isLoading: boolean;
   };
   const [, setLocation] = useLocation();
-
+  const [showFeedback, setShowFeedback] = useState(false);
+   const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [darkMode, setDarkMode] = useState(false);
   // toggles (persist to your API in onChange)
   const [analyticsOn, setAnalyticsOn] = useState(true);
 
@@ -34,41 +46,17 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
-      {/* Sidebar (same as child-dashboard) */}
-      <aside className="w-20 bg-background flex flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-40 border-r border-border">
-        <div className="w-6 h-6 rounded-full bg-orange-400" />
-        {[
-          { icon: Gamepad2, label: "Games", path: "/speech-therapy", id: "games" },
-          { icon: LineChart, label: "Progress", path: "/progress-dashboard", id: "progress" },
-          { icon: Smile, label: "Feedback", path: "/child-dashboard#feedback", id: "feedback" },
-        ].map(({ icon: Icon, label, path, id }) => (
-          <div key={id} className="relative group">
-            <button
-              onClick={() => setLocation(path)}
-              className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-muted transition"
-              aria-label={label}
-            >
-              <Icon className="w-6 h-6" />
-            </button>
-            <div className="pointer-events-none absolute left-[38px] bottom-0 opacity-0 group-hover:opacity-100 translate-x-2 group-hover:translate-x-3 transition bg-popover text-popover-foreground text-sm font-medium px-3 py-1 rounded-lg border border-border shadow">
-              {label}
-            </div>
-          </div>
-        ))}
-      </aside>
+       {/* Sidebar */}
+              <SharedSidebar 
+                onFeedbackOpen={() => setShowFeedback(true)}
+                currentPage="dashboard"
+              />
 
       {/* Main */}
       <main className="ml-20 w-full">
+        
         {/* Header actions (right) */}
-        <header className="flex justify-end items-center gap-4 px-6 py-6">
-          <button
-            onClick={() => setLocation("/child-dashboard?prefs=1")}
-            className="p-2 rounded-full hover:bg-muted transition"
-            aria-label="Preferences"
-          >
-            <SlidersHorizontal className="w-5 h-5" />
-          </button>
-        </header>
+       <PageHeader />
 
         <div className="max-w-4xl mx-auto px-6 pb-24">
           {/* Profile header */}
@@ -93,13 +81,13 @@ export default function Settings() {
             <div className="flex items-start gap-4 mb-5">
               <button
                 disabled
-                className="relative inline-flex h-6 w-12 cursor-not-allowed rounded-full bg-muted aria-checked:bg-primary transition"
+                className="relative inline-flex h-6 w-12 cursor-not-allowed rounded-full bg-[#ff6b1d] aria-checked:bg-primary transition"
                 role="switch"
                 aria-checked="true"
                 aria-label="Necessary cookies (required)"
                 title="Necessary cookies (required)"
               >
-                <span className="pointer-events-none absolute top-1 left-1 inline-block h-4 w-4 rounded-full bg-foreground/60" />
+                <span className="pointer-events-none absolute top-1 left-7 inline-block h-4 w-4 rounded-full bg-white" />
               </button>
               <div>
                 <div className="font-semibold">necessary cookies</div>
@@ -114,7 +102,7 @@ export default function Settings() {
               <button
                 onClick={() => setAnalyticsOn(v => !v)}
                 className={`relative inline-flex h-6 w-12 rounded-full transition ${
-                  analyticsOn ? "bg-foreground" : "bg-muted"
+                  analyticsOn ? "bg-[#ff6b1d]" : "bg-muted"
                 }`}
                 role="switch"
                 aria-checked={analyticsOn ? "true" : "false"}
@@ -122,7 +110,7 @@ export default function Settings() {
                 title={`Toggle analytics cookies ${analyticsOn ? 'off' : 'on'}`}
               >
                 <span
-                  className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-background transition ${
+                  className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
                     analyticsOn ? "left-7" : "left-1"
                   }`}
                 />
@@ -138,35 +126,73 @@ export default function Settings() {
             <div className="mt-8 h-px bg-border" />
           </section>
 
-          {/* Usage analytics */}
-          <section className="mb-12">
-            <h2 className="text-2xl font-bold mb-1">usage analytics</h2>
-            <p className="text-muted-foreground mb-4">how much you’ve used calmi</p>
-
-            <div className="rounded-2xl border border-border bg-card text-card-foreground p-5">
-              <div className="inline-flex items-center gap-2 bg-muted px-2.5 py-1 rounded-lg text-sm mb-4">
-                free
-              </div>
-
-              <div className="flex items-center justify-between text-sm mb-2">
-                <span className="text-muted-foreground">text usage</span>
-                <span className="font-medium">1%</span>
-              </div>
-
-              <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden mb-6">
-                <div className="h-full w-[1%] bg-[#F5B82E]" />
-              </div>
-
-              <button
-                className="inline-flex items-center justify-center rounded-xl bg-[#F5B82E] text-black font-semibold px-4 py-2 hover:opacity-90 transition"
-                onClick={() => setLocation("/pricing")}
-              >
-                upgrade
-              </button>
+         {/* Notifications */}
+          <motion.section 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-10"
+          >
+            <div className="flex items-center gap-3 mb-4">
+      
+              <h2 className="text-2xl font-bold">notifications</h2>
             </div>
+            <p className="text-muted-foreground mb-6">
+              Control how you receive updates and reminders
+            </p>
+
+            <Card className="bg-card border-border">
+              <CardContent className="p-6 space-y-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-1">Push Notifications</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Receive notifications about session reminders and progress updates.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setNotificationsEnabled(!notificationsEnabled)}
+                    className={`relative inline-flex h-6 w-12 rounded-full transition ${
+                      notificationsEnabled ? "bg-[#ff6b1d]" : "bg-muted"
+                    }`}
+                    role="switch"
+                    aria-checked={notificationsEnabled}
+                  >
+                    <span
+                      className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
+                        notificationsEnabled ? "left-7" : "left-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-semibold mb-1">Email Notifications</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Get weekly progress reports and tips via email.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setEmailNotifications(!emailNotifications)}
+                    className={`relative inline-flex h-6 w-12 rounded-full transition ${
+                      emailNotifications ? "bg-[#ff6b1d]" : "bg-muted"
+                    }`}
+                    role="switch"
+                    aria-checked={emailNotifications}
+                  >
+                    <span
+                      className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
+                        emailNotifications ? "left-7" : "left-1"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </CardContent>
+            </Card>
 
             <div className="mt-8 h-px bg-border" />
-          </section>
+          </motion.section>
 
           {/* Danger zone */}
           <section className="mb-6">
@@ -176,21 +202,7 @@ export default function Settings() {
             </p>
 
             <div className="space-y-6">
-              <div>
-                <button
-                  className="px-4 py-2 rounded-xl border border-border hover:bg-muted transition"
-                  onClick={() => {
-                    // TODO: call your API to reset chat history
-                  }}
-                >
-                  reset chat history
-                </button>
-                <p className="text-sm text-muted-foreground mt-2 max-w-prose">
-                  this will reset all of your previous conversations and you start from a clean slate.
-                  calmi will not remember what you’ve talked about earlier.
-                </p>
-              </div>
-
+          
               <div>
                 <button
                   className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition"
