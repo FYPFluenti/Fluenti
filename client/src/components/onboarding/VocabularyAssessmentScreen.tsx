@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, ArrowRight } from 'lucide-react';
 
 interface VocabularyAssessmentScreenProps {
   data: any;
@@ -33,15 +32,6 @@ export default function VocabularyAssessmentScreen({ data, onNext, onBack }: Voc
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center max-w-lg mx-auto">
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-        className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-full mx-auto mb-6 flex items-center justify-center"
-      >
-        <MessageCircle className="w-10 h-10 text-white" />
-      </motion.div>
-
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -86,7 +76,6 @@ export default function VocabularyAssessmentScreen({ data, onNext, onBack }: Voc
           }`}
         >
           Continue
-          <ArrowRight className="w-5 h-5" />
         </motion.button>
       </motion.div>
     </div>
