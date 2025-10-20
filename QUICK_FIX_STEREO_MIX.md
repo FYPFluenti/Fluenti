@@ -1,3 +1,9 @@
+---
+noteId: "e1ecc040ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # QUICK FIX: "Thank You" Transcription Error
 
 ## TL;DR - 3-Minute Fix
