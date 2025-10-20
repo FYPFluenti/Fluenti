@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { HelpCircle, ArrowRight } from 'lucide-react';
 
 interface SpeechTherapyScreenProps {
   data: any;
@@ -26,17 +25,6 @@ export default function SpeechTherapyScreen({ data, onNext, onBack, onSkip }: Sp
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center max-w-lg mx-auto">
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-        className="w-24 h-24 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full mx-auto mb-6 flex items-center justify-center"
-      >
-        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center">
-          <HelpCircle className="w-10 h-10 text-blue-500" />
-        </div>
-      </motion.div>
-
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -96,7 +84,7 @@ export default function SpeechTherapyScreen({ data, onNext, onBack, onSkip }: Sp
             }`}
           >
             Continue
-            <ArrowRight className="w-5 h-5" />
+
           </motion.button>
 
           <motion.button
