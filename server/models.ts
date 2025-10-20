@@ -26,6 +26,13 @@ const UserSchema = new mongoose.Schema({
     enum: ['email', 'google', 'facebook'], 
     default: 'email' 
   },
+  // Email verification fields
+  emailVerified: { type: Boolean, default: false },
+  emailVerificationToken: { type: String, select: false },
+  emailVerificationExpiry: { type: Date, select: false },
+  // Password reset fields
+  passwordResetToken: { type: String, select: false },
+  passwordResetExpiry: { type: Date, select: false },
   // User Settings
   settings: {
     // Privacy Settings

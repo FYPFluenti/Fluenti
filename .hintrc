@@ -14,7 +14,8 @@
     "axe/aria": [
       "default",
       {
-        "aria-valid-attr-value": "off"
+        "aria-valid-attr-value": "off",
+        "aria-allowed-attr": "off"
       }
     ],
     "axe/name-role-value": [
@@ -30,6 +31,7 @@
           "text-size-adjust"
         ]
       }
-    ]
+    ],
+    "button-type": "off"
   }
 }

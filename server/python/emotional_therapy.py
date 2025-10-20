@@ -1731,7 +1731,7 @@ Your personalized crisis intervention response:"""
 
         # Crisis situations always get crisis response
         if crisis_level in [CrisisLevel.MEDIUM, CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
-            print(f"🚨 CRISIS RESPONSE TYPE SELECTED: {crisis_level.value}")
+            print(f" CRISIS RESPONSE TYPE SELECTED: {crisis_level.value}")
             return "crisis"
 
         # Simple greetings and casual interactions
@@ -1882,7 +1882,7 @@ Your personalized crisis intervention response:"""
     def _add_crisis_resources(self, response: str, crisis_level: CrisisLevel) -> str:
         """Add crisis resources only for actual crisis situations"""
         if crisis_level == CrisisLevel.CRITICAL:
-            resources = """\n\n🚨 IMMEDIATE CRISIS SUPPORT (PAKISTAN):
+            resources = """\n\n IMMEDIATE CRISIS SUPPORT (PAKISTAN):
 • 1166 - National Emergency Helpline  
 • 1019 - Mental Health Crisis Line (24/7)
 • 0800-00-100 - Rozan Crisis Helpline"""

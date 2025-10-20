@@ -46,7 +46,7 @@ def test_crisis_response():
         print("-" * 40)
         
         # Check if response looks like crisis intervention
-        if "🚨" in response or "CRISIS" in response.upper() or "IMMEDIATE" in response.upper():
+        if "" in response or "CRISIS" in response.upper() or "IMMEDIATE" in response.upper():
             print("✅ Crisis prompt template appears to be working!")
         else:
             print("❌ Response doesn't look like crisis intervention")

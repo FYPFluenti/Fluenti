@@ -235,6 +235,86 @@ router.patch('/:settingKey', tokenBasedAuth, async (req: AuthenticatedRequest, r
   }
 });
 
+// Update user profile endpoint
+router.put('/profile', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    console.log('🔧 Updating user profile for:', req.user?.id);
+    console.log('📝 Profile update data:', req.body);
+
+    const { firstName, lastName, profilePicture } = req.body;
+
+    if (!firstName && !lastName && !profilePicture) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least one field is required to update profile'
+      });
+    }
+
+    const user = await User.findOne({ id: req.user?.id });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    // Update only provided fields
+    if (firstName !== undefined) {
+      if (typeof firstName !== 'string' || firstName.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'First name must be a non-empty string'
+        });
+      }
+      user.firstName = firstName.trim();
+    }
+
+    if (lastName !== undefined) {
+      if (typeof lastName !== 'string' || lastName.trim().length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Last name must be a non-empty string'
+        });
+      }
+      user.lastName = lastName.trim();
+    }
+
+    if (profilePicture !== undefined) {
+      if (profilePicture && typeof profilePicture !== 'string') {
+        return res.status(400).json({
+          success: false,
+          message: 'Profile picture must be a valid URL string'
+        });
+      }
+      user.profileImageUrl = profilePicture;
+    }
+
+    user.updatedAt = new Date();
+    await user.save();
+
+    console.log('✅ Profile updated successfully');
+
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        profilePicture: user.profileImageUrl,
+        userType: user.userType
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error updating user profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update profile'
+    });
+  }
+});
+
 // Delete account endpoint (danger zone)
 router.delete('/account', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
   try {
