@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Volume2, ArrowRight } from 'lucide-react';
 
 interface HearingAssessmentScreenProps {
   data: any;
@@ -51,25 +50,13 @@ export default function HearingAssessmentScreen({ data, onNext, onBack }: Hearin
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center max-w-lg mx-auto">
-      {/* Progress tabs */}
-      <div className="flex justify-center mb-6">
-        <div className="flex bg-gray-100 dark:bg-gray-700 rounded-full p-1">
-          <div className="bg-[#F5B82E] text-white px-4 py-2 rounded-full text-sm font-medium">
-            Hearing
-          </div>
-          <div className="text-gray-500 px-4 py-2 text-sm font-medium">
-            Pragmatics
-          </div>
-        </div>
-      </div>
-
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
         className="w-24 h-24 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full mx-auto mb-6 flex items-center justify-center"
       >
-        <Volume2 className="w-12 h-12 text-white" />
+        
       </motion.div>
 
       <motion.div
@@ -147,7 +134,7 @@ export default function HearingAssessmentScreen({ data, onNext, onBack }: Hearin
           }`}
         >
           Continue
-          <ArrowRight className="w-5 h-5" />
+
         </motion.button>
       </motion.div>
     </div>
