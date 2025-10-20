@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowRight } from 'lucide-react';
 
 interface PlayAssessmentScreenProps {
   data: any;
@@ -59,31 +58,8 @@ export default function PlayAssessmentScreen({ data, onNext, onBack, step }: Pla
     }
   };
 
-  const getProgressTabs = () => {
-    const tabs = ['Pragmatics', 'Play', 'Comprehension'];
-    return tabs.map((tab, index) => (
-      <div
-        key={tab}
-        className={`px-3 py-2 text-xs font-medium rounded-full ${
-          tab === 'Play' 
-            ? 'bg-[#F5B82E] text-white'
-            : 'text-gray-500'
-        }`}
-      >
-        {tab}
-      </div>
-    ));
-  };
-
   return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center max-w-lg mx-auto">
-      {/* Progress tabs */}
-      <div className="flex justify-center mb-2">
-        <div className="flex bg-gray-100 dark:bg-gray-700 rounded-full p-1 gap-1">
-          {getProgressTabs()}
-        </div>
-      </div>
-
       <div className="text-sm text-gray-500 mb-6">{step} of 5</div>
 
       <motion.div
@@ -171,7 +147,7 @@ export default function PlayAssessmentScreen({ data, onNext, onBack, step }: Pla
           }`}
         >
           {step === 5 ? 'Complete Assessment' : 'Continue'}
-          <ArrowRight className="w-5 h-5" />
+
         </motion.button>
       </motion.div>
     </div>
