@@ -1,3 +1,9 @@
+---
+noteId: "e1ec7220ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # JWT Secrets - Quick Reference
 
 ## 🔐 Your Generated JWT Secrets
