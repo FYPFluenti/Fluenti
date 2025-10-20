@@ -1,3 +1,9 @@
+---
+noteId: "e1ed3570ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # 🧪 Testing Guide: AI Pronunciation Validation
 
 ## 🚀 Quick Start
