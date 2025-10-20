@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
 import SharedSidebar from "@/components/layout/SharedSidebar";
+import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import FeedbackModal from "@/components/layout/FeedbackModel";
 import PageHeader from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -54,14 +55,16 @@ export default function Settings() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
-       {/* Sidebar */}
+       {/* Desktop Sidebar */}
+       <div className="hidden lg:block">
               <SharedSidebar 
                 onFeedbackOpen={() => setShowFeedback(true)}
-                currentPage="dashboard"
+                currentPage="settings"
               />
+        </div>
 
       {/* Main */}
-      <main className="ml-20 w-full">
+      <main className="lg:ml-20 w-full pb-20 lg:pb-0">
         
         {/* Header actions (right) */}
        <PageHeader />
@@ -227,6 +230,21 @@ export default function Settings() {
           </section>
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav 
+        onFeedbackOpen={() => setShowFeedback(true)}
+        currentPage="settings"
+        userType="child"
+      />
+
+      {/* Feedback Modal */}
+      {showFeedback && (
+        <FeedbackModal 
+          isOpen={showFeedback}
+          onClose={() => setShowFeedback(false)}
+        />
+      )}
     </div>
   );
 }
