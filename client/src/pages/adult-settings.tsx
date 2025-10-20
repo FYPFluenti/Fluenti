@@ -12,6 +12,7 @@ import {
   Palette,
 } from "lucide-react";
 import SharedSidebarEmotional from "@/components/layout/SharedSidebarEmotional";
+import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import FeedbackModal from "@/components/layout/FeedbackModel";
 import PageHeader from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
@@ -172,17 +173,19 @@ export default function AdultSettings() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
-      {/* Sidebar */}
-      <SharedSidebarEmotional
-        onFeedbackOpen={() => setShowFeedback(true)}
-        currentPage="settings"
-      />
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <SharedSidebarEmotional
+          onFeedbackOpen={() => setShowFeedback(true)}
+          currentPage="settings"
+        />
+      </div>
 
       {/* Feedback modal */}
       <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
 
       {/* Main */}
-      <main className="ml-20 w-full">
+      <main className="lg:ml-20 w-full pb-20 lg:pb-0">
         <PageHeader />
 
         <div className="max-w-4xl mx-auto px-6 pb-24">
@@ -365,6 +368,13 @@ export default function AdultSettings() {
           </section>
         </div>
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav 
+        onFeedbackOpen={() => setShowFeedback(true)}
+        currentPage="settings"
+        userType="adult"
+      />
     </div>
   );
 }
