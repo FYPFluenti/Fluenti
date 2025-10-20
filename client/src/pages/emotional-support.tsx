@@ -164,10 +164,6 @@ Your wellbeing is important.`,
         </div>
         
         <div className="flex-1 flex flex-col max-w-4xl mx-auto p-6 overflow-hidden">
-          {/* Header */}
-          <div className="mb-6 flex-shrink-0">
-          </div>
-
         {/* Service Status Alert */}
         {serviceStatus === 'unhealthy' && (
           <div className="mb-4 space-y-4">
@@ -199,7 +195,7 @@ Your wellbeing is important.`,
         )}
 
           {/* Chat Messages */}
-          <div className="flex-1 border rounded-lg p-4 mb-4 overflow-y-auto bg-muted/20 min-h-0">
+          <div className="flex-1 rounded-lg p-4 mb-4 overflow-y-auto bg-muted/20 min-h-0">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
