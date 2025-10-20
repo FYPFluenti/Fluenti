@@ -1,3 +1,9 @@
+---
+noteId: "e1ece750ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # Quick Setup Guide for New Security Features
 
 ## 🚀 Getting Started
