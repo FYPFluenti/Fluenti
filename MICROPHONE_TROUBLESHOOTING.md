@@ -1,3 +1,9 @@
+---
+noteId: "e1ec9931ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # Microphone Not Found - Troubleshooting Guide
 
 ## Error: "No Microphone Found" or "Requested device not found"
