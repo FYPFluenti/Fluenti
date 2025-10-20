@@ -1,10 +1,12 @@
 import { useAuth } from "@/hooks/useAuth";
+import { useTherapyHistory } from "@/hooks/useTherapyHistory";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Calendar, Clock, Brain, MessageSquare } from "lucide-react";
+import { Calendar, Clock, Brain, MessageSquare, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import { AdultSettings } from "@/components/dashboard/AdultSettings";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import SharedSidebarEmotional from "@/components/layout/SharedSidebarEmotional";
 import FeedbackModal from "@/components/layout/FeedbackModel";
 import PageHeader from "@/components/layout/PageHeader";
@@ -27,6 +29,12 @@ export default function AdultHistory() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [language, setLanguage] = useState<'en' | 'ur'>('en');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'therapy' | 'support'>('all');
+  
+  // Use the therapy history hook to fetch real data
+  const { sessions, loading, error, total, hasMore, loadMore, refresh } = useTherapyHistory({
+    limit: 20,
+    type: selectedFilter
+  });
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -50,66 +58,25 @@ export default function AdultHistory() {
     return null;
   }
 
-  const historyData = [
-    {
-      id: 1,
-      type: 'therapy',
-      title: 'Stress Management Session',
-      date: '2025-08-17',
-      time: '14:30',
-      duration: '45 min',
-      mood: 'anxious → calm',
-      notes: 'Explored work-related stress and coping strategies. Practiced mindfulness techniques.'
-    },
-    {
-      id: 2,
-      type: 'support',
-      title: 'Emotional Support Chat',
-      date: '2025-08-16',
-      time: '10:15',
-      duration: '20 min',
-      mood: 'sad → hopeful',
-      notes: 'Discussed relationship concerns and communication strategies'
-    },
-    {
-      id: 3,
-      type: 'therapy',
-      title: 'Anxiety Management',
-      date: '2025-08-15',
-      time: '16:45',
-      duration: '30 min',
-      mood: 'worried → relaxed',
-      notes: 'Learned breathing exercises and cognitive reframing techniques'
-    },
-    {
-      id: 4,
-      type: 'support',
-      title: 'Daily Check-in',
-      date: '2025-08-14',
-      time: '11:20',
-      duration: '15 min',
-      mood: 'neutral → positive',
-      notes: 'Reflected on daily achievements and gratitude practice'
-    },
-    {
-      id: 5,
-      type: 'therapy',
-      title: 'Self-Confidence Building',
-      date: '2025-08-13',
-      time: '09:30',
-      duration: '35 min',
-      mood: 'insecure → confident',
-      notes: 'Worked on positive self-talk and identifying personal strengths'
-    },
-  ];
-
-  const getFilteredHistory = () => {
-    if (selectedFilter === 'all') return historyData;
-    return historyData.filter(item => item.type === selectedFilter || 
-      (selectedFilter === 'therapy' && item.type === 'therapy') ||
-      (selectedFilter === 'support' && item.type === 'support')
-    );
+  // Format session data for display
+  const formatSessionForDisplay = (session: any) => {
+    const sessionDate = new Date(session.date);
+    return {
+      ...session,
+      time: sessionDate.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      }),
+      formattedDate: sessionDate.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      })
+    };
   };
+
+  const displaySessions = sessions.map(formatSessionForDisplay);
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -142,8 +109,16 @@ export default function AdultHistory() {
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-6xl mx-auto space-y-6">
+            {/* Header with Stats */}
+            <div className="mb-6">
+              <h1 className="text-2xl font-bold text-foreground mb-2">Session History</h1>
+              <p className="text-muted-foreground">
+                {loading ? 'Loading...' : `${total} total sessions recorded`}
+              </p>
+            </div>
+
             {/* Filter Tabs */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-6">
               {[
                 { key: 'all', label: 'All Sessions', icon: Calendar },
                 { key: 'therapy', label: 'Therapy Sessions', icon: Brain },
@@ -152,7 +127,8 @@ export default function AdultHistory() {
                 <button
                   key={key}
                   onClick={() => setSelectedFilter(key as any)}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+                  disabled={loading}
+                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                     selectedFilter === key
                       ? 'bg-[#ff6b1d] text-white shadow-lg'
                       : 'bg-muted text-foreground hover:bg-muted/80'
@@ -166,25 +142,61 @@ export default function AdultHistory() {
 
             {/* History Timeline */}
             <div className="space-y-4">
-              {getFilteredHistory().map((item) => (
-                <Card key={item.id} className="bg-card border-border shadow-lg hover:shadow-xl transition-shadow">
+              {loading && (
+                <div className="text-center py-8">
+                  <Loader2 className="w-8 h-8 mx-auto animate-spin text-[#ff6b1d] mb-4" />
+                  <p className="text-muted-foreground">Loading your session history...</p>
+                </div>
+              )}
+
+              {error && (
+                <div className="text-center py-8">
+                  <AlertCircle className="w-12 h-12 mx-auto text-red-500 mb-4" />
+                  <p className="text-red-600 mb-4">{error}</p>
+                  <Button onClick={refresh} variant="outline" className="text-[#ff6b1d] border-[#ff6b1d]">
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Try Again
+                  </Button>
+                </div>
+              )}
+
+              {!loading && !error && displaySessions.map((session) => (
+                <Card key={session.id} className="bg-card border-border shadow-lg hover:shadow-xl transition-shadow">
                   <CardContent className="p-6">
-                    <div>
-                      <h3 className="text-lg font-semibold text-foreground mb-1">
-                        {item.title}
-                      </h3>
-                      <p className="text-muted-foreground mb-2">
-                        {item.notes}
-                      </p>
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                        <div className="flex items-center space-x-1">
-                          <span>{new Date(item.date).toLocaleDateString()}</span>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          {session.riskLevel && session.riskLevel !== 'low' && (
+                            <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              session.riskLevel === 'high' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'
+                            }`}>
+                              {session.riskLevel} risk
+                            </div>
+                          )}
                         </div>
-                        <div className="flex items-center space-x-1">
-                          <span>{item.time}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <span>Duration: {item.duration}</span>
+                        <h3 className="text-lg font-semibold text-foreground mb-1">
+                          {session.title}
+                        </h3>
+                        <p className="text-muted-foreground mb-3">
+                          {session.notes}
+                        </p>
+                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                          <div className="flex items-center space-x-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>{session.formattedDate}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Clock className="w-4 h-4" />
+                            <span>{session.time}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <span>Duration: {session.duration}</span>
+                          </div>
+                          {session.score !== undefined && (
+                            <div className="flex items-center space-x-1">
+                              <span>Score: {session.score}%</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -193,7 +205,20 @@ export default function AdultHistory() {
               ))}
             </div>
 
-            {getFilteredHistory().length === 0 && (
+            {/* Load More Button */}
+            {hasMore && !loading && (
+              <div className="text-center mt-6">
+                <Button 
+                  onClick={loadMore}
+                  variant="outline"
+                  className="text-[#ff6b1d] border-[#ff6b1d] hover:bg-[#ff6b1d] hover:text-white"
+                >
+                  Load More Sessions
+                </Button>
+              </div>
+            )}
+
+            {!loading && !error && displaySessions.length === 0 && (
               <div className="text-center py-12">
                 <Brain className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium text-foreground mb-2">
