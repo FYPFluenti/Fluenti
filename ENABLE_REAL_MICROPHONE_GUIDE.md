@@ -1,3 +1,9 @@
+---
+noteId: "e1eb39a2ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # STEP-BY-STEP FIX: Enable Your Real Microphone
 
 ## Current Situation (From Your Logs)
