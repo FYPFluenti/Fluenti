@@ -1,3 +1,9 @@
+---
+noteId: "e1eb1292ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # Microsoft Speech API Setup Guide
 
 ## Step 1: Create Azure Account (FREE)
