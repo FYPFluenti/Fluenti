@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { ThumbsUp, ArrowRight } from 'lucide-react';
 
 interface PragmaticsAssessmentScreenProps {
   data: any;
@@ -57,31 +56,8 @@ export default function PragmaticsAssessmentScreen({ data, onNext, onBack, step 
     }
   };
 
-  const getProgressTabs = () => {
-    const tabs = ['Hearing', 'Pragmatics', 'Play', 'Communication'];
-    return tabs.map((tab, index) => (
-      <div
-        key={tab}
-        className={`px-3 py-2 text-xs font-medium rounded-full ${
-          tab === 'Pragmatics' 
-            ? 'bg-[#F5B82E] text-white'
-            : 'text-gray-500'
-        }`}
-      >
-        {tab}
-      </div>
-    ));
-  };
-
   return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center max-w-lg mx-auto">
-      {/* Progress tabs */}
-      <div className="flex justify-center mb-2">
-        <div className="flex bg-gray-100 dark:bg-gray-700 rounded-full p-1 gap-1">
-          {getProgressTabs()}
-        </div>
-      </div>
-
       <div className="text-sm text-gray-500 mb-6">{step} of 4</div>
 
       <motion.div
@@ -90,7 +66,7 @@ export default function PragmaticsAssessmentScreen({ data, onNext, onBack, step 
         transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
         className="w-24 h-24 bg-gradient-to-br from-green-500 to-teal-500 rounded-full mx-auto mb-6 flex items-center justify-center"
       >
-        <ThumbsUp className="w-12 h-12 text-white" />
+        <div aria-hidden="true" className="w-12 h-12" />
       </motion.div>
 
       <motion.div
@@ -168,7 +144,7 @@ export default function PragmaticsAssessmentScreen({ data, onNext, onBack, step 
           }`}
         >
           Continue
-          <ArrowRight className="w-5 h-5" />
+
         </motion.button>
       </motion.div>
     </div>
