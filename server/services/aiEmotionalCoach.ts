@@ -1,6 +1,13 @@
 import Groq from 'groq-sdk';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+let groq: Groq | null = null;
+
+function getGroqClient(): Groq {
+  if (!groq) {
+    groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  }
+  return groq;
+}
 
 export interface EmotionalState {
   emotion: 'excited' | 'frustrated' | 'bored' | 'confident' | 'tired' | 'anxious';
@@ -118,7 +125,7 @@ Be SPECIFIC in triggers and reasoning. This helps therapists understand the chil
   try {
     console.log('😊 Analyzing emotional state from', recentAttempts.length, 'attempts');
 
-    const completion = await groq.chat.completions.create({
+    const completion = await getGroqClient().chat.completions.create({
       model: "openai/gpt-oss-120b",
       messages: [
         {
@@ -258,7 +265,7 @@ Return ONLY the empathetic message (no JSON, no labels).`;
   try {
     console.log('💬 Generating empathetic response for emotion:', emotionalState.emotion);
 
-    const completion = await groq.chat.completions.create({
+    const completion = await getGroqClient().chat.completions.create({
       model: "openai/gpt-oss-120b",
       messages: [
         {
