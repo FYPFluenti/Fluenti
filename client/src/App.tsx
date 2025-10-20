@@ -112,6 +112,18 @@ export default function App() {
               </ProtectedRoute>
             </Route>
             
+            <Route path="/assessment">
+              <ProtectedRoute>
+                <Assessment />
+              </ProtectedRoute>
+            </Route>
+            
+            <Route path="/achievements">
+              <ProtectedRoute>
+                <Achievements />
+              </ProtectedRoute>
+            </Route>
+            
             <Route path="/adult-settings">
               <ProtectedRoute>
                 <AdultSettings />

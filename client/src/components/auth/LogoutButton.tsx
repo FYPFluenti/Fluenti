@@ -1,7 +1,7 @@
 import { LogOut } from 'lucide-react';
 import { useLocation } from 'wouter';
-import { useAuth } from '@/hooks/useAuth'; // ✅ Add this import
-import { useToast } from '@/hooks/use-toast'; // ✅ Add this import
+import { useAuth } from '@/hooks/useAuth'; 
+import { useToast } from '@/hooks/use-toast'; 
 import { Button } from '../ui/button';
 
 interface LogoutButtonProps {

@@ -268,7 +268,7 @@ export default function Signup() {
         queryClient.clear();
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
-        // Redirect to login page after 3 seconds to allow email verification
+        // Redirect to login page after 3 seconds
         setTimeout(() => {
           setLocation('/login');
         }, 3000);

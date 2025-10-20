@@ -109,9 +109,9 @@ export default function Settings() {
             </button>
           </section>
 
-          {/* Privacy & analytics */}
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold mb-1">Privacy settings</h2>
+          {/* Privacy settings */}
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-1">privacy settings</h2>
             <p className="text-muted-foreground mb-6">
               Manage your cookie and tracking preferences
             </p>
@@ -129,6 +129,8 @@ export default function Settings() {
                     <button
                       disabled
                       className="relative inline-flex h-6 w-12 rounded-full bg-muted cursor-not-allowed"
+                      role="switch"
+                      aria-checked={true}
                     >
                       <span className="absolute top-1 left-7 inline-block h-4 w-4 rounded-full bg-white" />
                     </button>
@@ -257,8 +259,6 @@ export default function Settings() {
           </section>
         </div>
       </main>
-      
-      {/* Feedback Modal */}
       <FeedbackModal 
         isOpen={showFeedback} 
         onClose={() => setShowFeedback(false)} 

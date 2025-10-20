@@ -60,7 +60,7 @@ const EmotionalSupportVoice = () => {
       formData.append('history', JSON.stringify(history));
       formData.append('requestTTS', 'true'); // Request audio response
       
-      // **NEW: Add session data for continuity (same as chat mode)**
+      // *NEW: Add session data for continuity (same as chat mode)*
       // Always send session data, even if undefined - backend will create new session if needed
       formData.append('sessionId', sessionData.sessionId || '');
       formData.append('userId', sessionData.userId || '');
@@ -68,7 +68,7 @@ const EmotionalSupportVoice = () => {
         formData.append('sessionKey', sessionData.sessionKey);
       }
 
-      console.log('🎙️ Sending voice input to therapy service with session data:', {
+      console.log('🎙 Sending voice input to therapy service with session data:', {
         sessionId: sessionData.sessionId,
         userId: sessionData.userId,
         sessionKey: sessionData.sessionKey
@@ -79,7 +79,7 @@ const EmotionalSupportVoice = () => {
       console.log('📥 Therapy service response:', data);
       
       if (data.success) {
-        // **NEW: Update session data for continuity (same as chat mode)**
+        // *NEW: Update session data for continuity (same as chat mode)*
         if (data.sessionId || data.userId || data.sessionKey) {
           setSessionData({
             sessionId: data.sessionId || sessionData.sessionId,
@@ -118,7 +118,7 @@ const EmotionalSupportVoice = () => {
         // Handle error response with crisis resources
         setResponse(data.response || 'Sorry, there was an error processing your voice input.');
         if (data.fallback) {
-          console.warn('⚠️ Using fallback response due to service issues');
+          console.warn('⚠ Using fallback response due to service issues');
         }
       }
     } catch (error) {
@@ -139,19 +139,19 @@ const EmotionalSupportVoice = () => {
       <div className="ml-20 flex-1 flex flex-col">
         <PageHeader />
         
-        {/* Service Status - Top Right */}
-        <div className="absolute top-6 right-6 z-20">
-          <div className={`flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-md border transition-all duration-300 ${
+        {/* Service Status */}
+        <div className="p-4 border-b border-border">
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-full transition-all duration-300 ${
             serviceStatus === 'online' 
-              ? 'bg-emerald-500/20 border-emerald-400/30 text-emerald-300' 
+              ? 'bg-emerald-500/20 border-emerald-400/30 text-emerald-600' 
               : serviceStatus === 'offline' 
-              ? 'bg-red-500/20 border-red-400/30 text-red-300'
-              : 'bg-amber-500/20 border-amber-400/30 text-amber-300'
+              ? 'bg-red-500/20 border-red-400/30 text-red-600'
+              : 'bg-amber-500/20 border-amber-400/30 text-amber-600'
           }`}>
             <div className={`w-2 h-2 rounded-full ${
-              serviceStatus === 'online' ? 'bg-emerald-400' :
-              serviceStatus === 'offline' ? 'bg-red-400' :
-              'bg-amber-400 animate-pulse'
+              serviceStatus === 'online' ? 'bg-emerald-500' :
+              serviceStatus === 'offline' ? 'bg-red-500' :
+              'bg-amber-500 animate-pulse'
             }`}></div>
             <span className="text-sm font-medium">
               {serviceStatus === 'checking' ? 'Connecting...' : serviceStatus}
@@ -175,30 +175,21 @@ const EmotionalSupportVoice = () => {
             
             {response && (
               <div className="mt-4 p-4 bg-card border border-border rounded-xl shadow-lg max-w-lg mx-auto">
-                <p className="text-sm text-muted-foreground mb-2">AI Response:</p>
-                <p className="text-foreground text-lg">{response}</p>
-                {emotion && (
-                  <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border">
-                    <Heart className="h-3 w-3 text-pink-400" />
-                    <p className="text-pink-300 text-xs">Emotion: {emotion}</p>
+                <div className="flex items-start gap-3">
+                  <div className="bg-cyan-500/20 p-2 rounded-lg">
+                    <Brain className="h-4 w-4 text-cyan-400" />
                   </div>
-                )}
-              </div>
-            )}
-
-            {/* Service Offline Warning */}
-            {serviceStatus === 'offline' && (
-              <div className="mt-4 bg-red-900/30 backdrop-blur-xl border border-red-500/30 rounded-2xl p-4 shadow-2xl max-w-md mx-auto">
-                <div className="flex items-center gap-2 mb-2">
-                  <Shield className="h-4 w-4 text-red-400" />
-                  <p className="text-red-300 font-medium text-sm">Service Unavailable</p>
+                  <div className="flex-1">
+                    <p className="text-cyan-600 text-sm font-medium mb-1">AI Therapist</p>
+                    <p className="text-foreground text-lg">{response}</p>
+                    {emotion && (
+                      <div className="flex items-center gap-2 mt-2 pt-2 border-t border-border">
+                        <Heart className="h-3 w-3 text-pink-500" />
+                        <p className="text-pink-600 text-xs">Emotion: {emotion}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <p className="text-red-200 text-xs mb-2">
-                  The therapy service is offline. Please check the connection.
-                </p>
-                <p className="text-red-100 text-xs">
-                  Crisis support: 988 (Suicide & Crisis Lifeline) or 911
-                </p>
               </div>
             )}
           </div>
@@ -209,11 +200,31 @@ const EmotionalSupportVoice = () => {
             <Button 
               onClick={() => isRecording ? stopRecording(handleRecordStop) : startRecording()}
               disabled={serviceStatus === 'offline'}
-              className={`w-full ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-[#ff6b1d] hover:bg-[#e55a1a]'}`}
+              className={`w-full ${isRecording ? 'bg-red-500 hover:bg-red-600' : 'bg-[#ff6b1d] hover:bg-[#e55a1a]'} disabled:opacity-50`}
               size="lg"
             >
-              {isRecording ? 'Stop Speaking' : 'Start Speaking'}
+              {isRecording ? (
+                <><MicOff className="h-5 w-5 mr-2" />Stop Speaking</>
+              ) : (
+                <><Mic className="h-5 w-5 mr-2" />Start Speaking</>
+              )}
             </Button>
+            
+            {/* Service Offline Warning */}
+            {serviceStatus === 'offline' && (
+              <div className="mt-4 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <Shield className="h-4 w-4 text-red-500" />
+                  <p className="text-red-700 font-medium text-sm">Service Unavailable</p>
+                </div>
+                <p className="text-red-600 text-xs mb-1">
+                  The therapy service is offline. Please check the connection.
+                </p>
+                <p className="text-red-600 text-xs">
+                  Crisis support: 988 (Suicide & Crisis Lifeline) or 911
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

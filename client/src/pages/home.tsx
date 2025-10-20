@@ -59,6 +59,7 @@ export default function Home() {
   
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
+  //  STEP 1: Redirect authenticated users - check onboarding for children only
   useEffect(() => {
     if (!isLoading && !isOnboardingLoading && isAuthenticated && user) {
       const userType = (user as any)?.userType;
@@ -883,11 +884,12 @@ export default function Home() {
   </footer>
   
       </div>
-      );
+      ); // Close the return statement for landing page
   }
 
+  // Dashboard for authenticated users (removed duplicate header)
   const userType = (user as any)?.userType || 'child';
-  
+
   return (
     <div className="h-screen font-sans flex bg-background text-foreground overflow-hidden">
       {/* Sidebar */}
