@@ -1,3 +1,9 @@
+---
+noteId: "e1ebaed1ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # 🚀 OpenAI → Groq AI Migration Complete
 
 ## Overview
