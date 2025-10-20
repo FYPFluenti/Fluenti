@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import { AdultSettings } from "@/components/dashboard/AdultSettings";
 import SharedSidebarEmotional from "@/components/layout/SharedSidebarEmotional";
+import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import FeedbackModal from "@/components/layout/FeedbackModel";
 import PageHeader from "@/components/layout/PageHeader";
 import ModelViewerAvatar from "@/components/ModelViewerAvatar";
@@ -57,15 +58,17 @@ export default function AdultDashboard() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="h-screen font-sans flex bg-background text-foreground overflow-hidden">
-      {/* Sidebar */}
-      <SharedSidebarEmotional 
-        onFeedbackOpen={() => setShowFeedback(true)}
-        currentPage="home"
-      />
+    <div className="min-h-screen lg:h-screen font-sans flex bg-background text-foreground lg:overflow-hidden">
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <SharedSidebarEmotional 
+          onFeedbackOpen={() => setShowFeedback(true)}
+          currentPage="home"
+        />
+      </div>
 
       {/* Main Content */}
-      <main className="ml-20 px-6 w-full h-screen overflow-hidden flex flex-col">
+      <main className="lg:ml-20 px-4 lg:px-6 w-full min-h-screen lg:h-screen lg:overflow-hidden flex flex-col pb-20 lg:pb-0">
         <PageHeader />
 
         <section className="text-center py-10 flex-1 flex items-center justify-center">
@@ -125,6 +128,13 @@ export default function AdultDashboard() {
           onLanguageChange={setLanguage}
         />
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav 
+        onFeedbackOpen={() => setShowFeedback(true)}
+        currentPage="dashboard"
+        userType="adult"
+      />
     </div>
   );
 }
