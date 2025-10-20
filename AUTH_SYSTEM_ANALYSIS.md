@@ -1,3 +1,9 @@
+---
+noteId: "e1eb1290ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # Authentication & Authorization System Analysis
 
 ## Overview
