@@ -25,10 +25,10 @@ export default function SharedSidebarEmotional({ onFeedbackOpen, currentPage }: 
   const sidebarItems = [
     { 
       icon: LineChart, 
-      label: "progress", 
-      id: "progress", 
-      path: "/progress-dashboard",
-      isActive: currentPage === "progress"
+      label: "history", 
+      id: "history", 
+      path: "/adult-history",
+      isActive: currentPage === "history"
     },
     { 
       icon: Smile, 
@@ -55,7 +55,7 @@ export default function SharedSidebarEmotional({ onFeedbackOpen, currentPage }: 
         className="relative group"
       >
         <button
-          onClick={() => setLocation("/child-dashboard")}
+          onClick={() => setLocation("/adult-dashboard")}
           aria-label="Go to home"
           className="w-12 h-12 grid place-items-center rounded-xl transition hover:bg-muted"
         >
@@ -141,7 +141,7 @@ export default function SharedSidebarEmotional({ onFeedbackOpen, currentPage }: 
         {showUserMenu && (
           <div className="absolute left-12 bottom-0 w-48 bg-popover border border-border rounded-xl shadow-lg p-4 z-50 space-y-2">
             <button 
-              onClick={() => setLocation("/settings")} 
+              onClick={() => setLocation("/adult-settings")} 
               className="w-full px-5 py-3 text-sm flex items-center gap-3 hover:bg-muted hover:brightness-90 rounded-lg"
             >
               <Settings className="w-5 h-5" />

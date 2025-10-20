@@ -10,6 +10,7 @@ vite.config.ts.*
 .env.local
 .env.production
 .env.development
+.env.example
 
 # Python virtual environment - Large files, don't commit
 .venv/
@@ -34,3 +35,14 @@ models/fluenti_therapeutic_model/
 *.safetensors
 *.pt
 *.pth
+
+# Server routes and authentication - Sensitive files
+server/routes/
+server/authRoutes.ts
+server/auth.ts
+
+# OAuth and API documentation
+OAUTH_SETUP_INSTRUCTIONS.md
+
+# Environment configuration
+client/src/config/env.ts

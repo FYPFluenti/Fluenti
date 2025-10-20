@@ -59,7 +59,7 @@ export default function Home() {
   
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // ✅ STEP 1: Redirect authenticated users - check onboarding for children only
+  //  STEP 1: Redirect authenticated users - check onboarding for children only
   useEffect(() => {
     if (!isLoading && !isOnboardingLoading && isAuthenticated && user) {
       const userType = (user as any)?.userType;
@@ -85,10 +85,7 @@ export default function Home() {
           console.log('Redirecting to adult dashboard');
           setLocation('/adult-dashboard');
           break;
-        case 'guardian':
-          console.log('Redirecting to guardian dashboard');
-          setLocation('/guardian-dashboard');
-          break;
+        
         default:
           console.log('Unknown user type, redirecting to child dashboard');
           setLocation('/child-dashboard');
@@ -113,7 +110,6 @@ export default function Home() {
     );
   }
   
-  // ✅ FIXED: Landing page for non-authenticated users
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-white relative overflow-hidden">
@@ -771,7 +767,7 @@ export default function Home() {
           
           <div id="faq-content-5" className="hidden mt-6 pl-0">
             <p className="text-lg text-gray-700 leading-relaxed">
-              yes! fluenti supports multiple languages including english, urdu, arabic, and spanish. our ai adapts to different 
+              yes! fluenti currently supports english with more languages coming soon. our ai adapts to different 
               accents and dialects, making it perfect for diverse learners and accent modification goals.
             </p>
           </div>
@@ -886,6 +882,7 @@ export default function Home() {
       </div>
     </div>
   </footer>
+  
       </div>
       ); // Close the return statement for landing page
   }
@@ -1229,7 +1226,6 @@ export default function Home() {
                 aria-label="Select conversation language"
               >
                 <option value="en">English</option>
-                <option value="ur">Urdu</option>
               </select>
             </div>
           </div>

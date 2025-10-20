@@ -21,7 +21,7 @@ export default function HeaderControls({
           <DarkModeToggle />
         </div>
         
-        {/* Preferences Button - Exact match */}
+        {/* Preferences Button */}
         <button
           onClick={() => setShowPreferences(!showPreferences)}
           className="p-2 rounded-full hover:bg-muted transition"
@@ -55,7 +55,6 @@ export default function HeaderControls({
                 aria-label="Select conversation language"
               >
                 <option value="en">English</option>
-                <option value="ur">Urdu</option>
               </select>
             </div>
           </div>

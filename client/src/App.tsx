@@ -13,7 +13,6 @@ import OnboardingPage from "@/pages/onboarding";
 import OnboardingStatistics from "@/pages/onboarding-statistics";
 import ChildDashboard from "@/pages/child-dashboard";
 import AdultDashboard from "@/pages/adult-dashboard";
-import GuardianDashboard from "@/pages/guardian-dashboard";
 import SpeechTherapy from "@/pages/speech-therapy";
 import ProgressDashboard from "@/pages/progress-dashboard";
 import EmotionalSupport from "@/pages/emotional-support";
@@ -25,6 +24,10 @@ import Assessment from "@/pages/assessment";
 import Achievements from "@/pages/achievements";
 import Settings from "@/pages/settings";
 import VoiceModel from "@/pages/voice-model";
+import AdultHistory from "@/pages/adult-history";
+import AdultSettings from "@/pages/adult-settings";
+
+
 
 // Protected Route Component
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -42,8 +45,8 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-background">
-          <Switch>
-            {/* Public Routes */}
+        <Switch>
+              {/* Public Routes */}
             <Route path="/" component={Home} />
             <Route path="/login" component={Login} />
             <Route path="/signup" component={Signup} />
@@ -84,12 +87,6 @@ export default function App() {
               </ProtectedRoute>
             </Route>
             
-            <Route path="/guardian-dashboard">
-              <ProtectedRoute allowedUserTypes={['guardian']}>
-                <GuardianDashboard />
-              </ProtectedRoute>
-            </Route>
-            
             {/* Protected Feature Routes */}
             <Route path="/speech-therapy">
               <ProtectedRoute>
@@ -127,9 +124,22 @@ export default function App() {
               </ProtectedRoute>
             </Route>
             
+            <Route path="/adult-settings">
+              <ProtectedRoute>
+                <AdultSettings />
+              </ProtectedRoute>
+            </Route>
+            
+            
             <Route path="/settings">
               <ProtectedRoute>
                 <Settings />
+              </ProtectedRoute>
+            </Route>
+
+            <Route path="/adult-history">
+              <ProtectedRoute>
+                <AdultHistory />
               </ProtectedRoute>
             </Route>
             
