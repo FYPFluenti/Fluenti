@@ -1,3 +1,9 @@
+---
+noteId: "e1eb39a1ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # Crisis Detection and Urgent Support Styling Fixes - Summary
 
 ## Problem Statement
