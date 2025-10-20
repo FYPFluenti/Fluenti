@@ -126,8 +126,19 @@ export default function Signup() {
         queryClient.clear();
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
+        // Redirect directly to appropriate dashboard based on user type
+        const userType = data.user?.userType;
         setTimeout(() => {
-          setLocation('/');
+          switch (userType) {
+            case 'child':
+              setLocation('/child-dashboard');
+              break;
+            case 'adult':
+              setLocation('/adult-dashboard');
+              break;
+            default:
+              setLocation('/child-dashboard');
+          }
         }, 1000);
       } else {
         setError(data.message || 'Google signup failed. Please try again.');
@@ -180,8 +191,19 @@ export default function Signup() {
               queryClient.clear();
               await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
               
+              // Redirect directly to appropriate dashboard based on user type
+              const userType = data.user?.userType;
               setTimeout(() => {
-                setLocation('/');
+                switch (userType) {
+                  case 'child':
+                    setLocation('/child-dashboard');
+                    break;
+                  case 'adult':
+                    setLocation('/adult-dashboard');
+                    break;
+                  default:
+                    setLocation('/child-dashboard');
+                }
               }, 1000);
             } else {
               setError(data.message || 'Facebook signup failed. Please try again.');
@@ -273,9 +295,19 @@ export default function Signup() {
         queryClient.clear();
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
-        // Redirect to home - it handles user type routing
+        // Redirect directly to appropriate dashboard based on user type
+        const userType = data.user.userType;
         setTimeout(() => {
-          setLocation('/');
+          switch (userType) {
+            case 'child':
+              setLocation('/child-dashboard');
+              break;
+            case 'adult':
+              setLocation('/adult-dashboard');
+              break;
+            default:
+              setLocation('/child-dashboard');
+          }
         }, 1000);
         
       } else {
