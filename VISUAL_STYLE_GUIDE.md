@@ -1,3 +1,9 @@
+---
+noteId: "e1ed5c81ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # 🎨 Quick Visual Reference - Theme Updates
 
 ## Color Palette
