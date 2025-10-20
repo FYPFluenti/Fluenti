@@ -7,6 +7,7 @@ import type { Express } from "express";
 import connectDB from "./mongodb";
 import authRoutes from "./routes/auth";
 import feedbackRoutes from "./routes/feedback";
+import settingsRoutes from "./routes/settings";
 
 
 const app = express();
@@ -25,6 +26,9 @@ app.use("/api/auth", authRoutes);
 
 // Register feedback routes (after JSON parsing middleware)
 app.use("/api/feedback", feedbackRoutes);
+
+// Register settings routes (after JSON parsing middleware)
+app.use("/api/settings", settingsRoutes);
 
 // Ensure UTF-8 encoding
 app.use((req, res, next) => {

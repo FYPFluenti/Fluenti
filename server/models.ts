@@ -26,6 +26,28 @@ const UserSchema = new mongoose.Schema({
     enum: ['email', 'google', 'facebook'], 
     default: 'email' 
   },
+  // User Settings
+  settings: {
+    // Privacy Settings
+    analyticsEnabled: { type: Boolean, default: true },
+    necessaryCookies: { type: Boolean, default: true }, // Always true, but stored for completeness
+    
+    // Notification Settings
+    pushNotifications: { type: Boolean, default: true },
+    emailNotifications: { type: Boolean, default: true },
+    
+    // Theme and Display Settings
+    theme: { 
+      type: String, 
+      enum: ['light', 'dark', 'system'], 
+      default: 'system' 
+    },
+    language: { 
+      type: String, 
+      enum: ['english', 'urdu'], 
+      default: 'english' 
+    }
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
