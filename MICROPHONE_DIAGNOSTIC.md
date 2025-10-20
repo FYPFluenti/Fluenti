@@ -1,3 +1,9 @@
+---
+noteId: "e1ec7221ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # Quick Microphone Diagnostic Guide
 
 ## The Issue: "Available audio input devices: 0"
