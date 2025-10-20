@@ -337,15 +337,15 @@ export default function Signup() {
         {/* Content */}
         <div className="relative z-10 flex flex-col justify-center items-start px-16 text-slate-800">
           <div className="mb-8">
-            <h1 className="text-5xl font-bold tracking-tight mb-4">fluenti</h1>
+            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4">fluenti</h1>
             <div className="w-20 h-1 bg-orange-400 rounded-full"></div>
           </div>
           
-          <h2 className="text-3xl font-light leading-relaxed mb-6 max-w-md">
+          <h2 className="text-xl md:text-2xl lg:text-3xl font-light leading-relaxed mb-6 max-w-md">
             Join thousands improving their communication
           </h2>
           
-          <p className="text-xl text-slate-600 leading-relaxed max-w-lg">
+          <p className="text-lg md:text-xl text-slate-600 leading-relaxed max-w-lg">
             Create your account and start your personalized speech therapy journey with AI-powered tools and expert guidance.
           </p>
           
