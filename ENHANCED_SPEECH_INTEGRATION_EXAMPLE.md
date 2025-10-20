@@ -1,3 +1,9 @@
+---
+noteId: "e1eb60b0ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 // Example integration in WordPracticeGame.tsx
 
 import { EnhancedSpeechRecognitionService } from '@/services/enhancedSpeechRecognition';
