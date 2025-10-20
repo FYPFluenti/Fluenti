@@ -1,3 +1,9 @@
+---
+noteId: "e1ed3571ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # Quick Testing Guide - Groq Speech Recognition
 
 ## Before You Start
