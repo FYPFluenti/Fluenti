@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation } from 'wouter';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ArrowRight, Calendar, Clock, Users, Heart, Brain, Gamepad2 } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { User } from '@/types/auth';
 
@@ -48,7 +47,7 @@ interface OnboardingData {
   isCompleted?: boolean;
 }
 
-const TOTAL_STEPS = 21; // Added ReportScreen
+const TOTAL_STEPS = 21;
 
 export default function OnboardingPage() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -56,6 +55,7 @@ export default function OnboardingPage() {
   const { toast } = useToast();
   
   const [currentStep, setCurrentStep] = useState(1);
+  const [isCompleted, setIsCompleted] = useState(false);
   const [onboardingData, setOnboardingData] = useState<OnboardingData>({
     interests: [],
     assessmentResponses: {
@@ -66,14 +66,12 @@ export default function OnboardingPage() {
     }
   });
 
-  // Redirect if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       setLocation('/login');
     }
   }, [isLoading, isAuthenticated, setLocation]);
 
-  // Load existing onboarding data if any
   useEffect(() => {
     const typedUser = user as User;
     if (isAuthenticated && typedUser?.id) {
@@ -83,7 +81,6 @@ export default function OnboardingPage() {
 
   const loadOnboardingData = async () => {
     try {
-      // Get auth token from localStorage
       const authToken = localStorage.getItem('authToken');
       
       const response = await fetch('/api/onboarding', {
@@ -98,10 +95,7 @@ export default function OnboardingPage() {
         if (data) {
           setOnboardingData(data);
           setCurrentStep(data.currentStep || 1);
-          console.log('✅ Onboarding data loaded successfully');
         }
-      } else {
-        console.log('No existing onboarding data found');
       }
     } catch (error) {
       console.error('Failed to load onboarding data:', error);
@@ -110,7 +104,6 @@ export default function OnboardingPage() {
 
   const saveOnboardingData = async (data: Partial<OnboardingData>, step: number) => {
     try {
-      // Get auth token from localStorage
       const authToken = localStorage.getItem('authToken');
       
       const response = await fetch('/api/onboarding', {
@@ -124,12 +117,8 @@ export default function OnboardingPage() {
       });
       
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Save failed:', response.status, errorText);
         throw new Error(`Failed to save onboarding data: ${response.status}`);
       }
-      
-      console.log('✅ Onboarding data saved successfully');
     } catch (error) {
       console.error('Failed to save onboarding data:', error);
       toast({
@@ -146,15 +135,13 @@ export default function OnboardingPage() {
     
     let nextStep = currentStep + 1;
     
-    // Skip booking screen (step 9) if user is not seeking speech therapy (step 8)
     if (currentStep === 8 && updatedData.seekingSpeechTherapy === false) {
-      nextStep = 10; // Skip step 9 (BookingEvaluationScreen) and go to step 10
+      nextStep = 10;
     }
     
     await saveOnboardingData(updatedData, nextStep);
     
     if (nextStep > TOTAL_STEPS) {
-      // Complete onboarding
       await completeOnboarding(updatedData);
     } else {
       setCurrentStep(nextStep);
@@ -165,7 +152,6 @@ export default function OnboardingPage() {
     if (currentStep > 1) {
       let previousStep = currentStep - 1;
       
-      // If on step 10 and user is not seeking therapy, skip back to step 8 (not step 9)
       if (currentStep === 10 && onboardingData.seekingSpeechTherapy === false) {
         previousStep = 8;
       }
@@ -185,7 +171,6 @@ export default function OnboardingPage() {
     }
   };
 
-  // Handle "Maybe later" from welcome screen - redirect to child dashboard
   const handleMaybeLater = () => {
     toast({
       title: "No worries!",
@@ -194,14 +179,11 @@ export default function OnboardingPage() {
     setLocation('/child-dashboard');
   };
 
-  // Handle "Start practicing" from report screen - redirect to child dashboard  
   const handleStartPracticing = async () => {
     await completeOnboarding(onboardingData);
   };
 
-  // Handle "Learn more" from report screen
   const handleLearnMore = () => {
-    // For now, show a toast. Later can redirect to educational content
     toast({
       title: "Learn More",
       description: "Educational resources will be available soon!",
@@ -211,11 +193,15 @@ export default function OnboardingPage() {
   const completeOnboarding = async (finalData: OnboardingData) => {
     try {
       await saveOnboardingData({ ...finalData, isCompleted: true }, TOTAL_STEPS + 1);
-      toast({
-        title: "Welcome!",
-        description: "Your setup is complete. Let's start your child's learning journey!",
-      });
-      setLocation('/child-dashboard');
+      setIsCompleted(true);
+      
+      setTimeout(() => {
+        toast({
+          title: "Welcome to Fluenti!",
+          description: "Your personalized learning journey starts now.",
+        });
+        setLocation('/child-dashboard');
+      }, 2500);
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
     }
@@ -227,16 +213,38 @@ export default function OnboardingPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-[#F5B82E] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading...</p>
+          <div className="w-8 h-8 border-4 border-gray-300 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     );
   }
 
   if (!isAuthenticated) return null;
+
+  if (isCompleted) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+        <div className="max-w-lg w-full text-center">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
+              <span className="text-white text-lg"></span>
+            </div>
+          </div>
+          <h2 className="text-3xl font-bold mb-3 text-gray-900">All Set!</h2>
+          <p className="text-gray-600 text-lg mb-6">
+            Thank you for completing the assessment. We've created a personalized experience for your child.
+          </p>
+          <div className="flex items-center justify-center gap-2 text-gray-500">
+            <div className="w-5 h-5 border-2 border-gray-400 border-t-gray-900 rounded-full animate-spin"></div>
+            <span>Taking you to your dashboard...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const renderCurrentStep = () => {
     const stepProps = {
@@ -277,53 +285,44 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800 flex flex-col">
-      {/* Progress Bar */}
-      <div className="w-full bg-white/50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-2xl mx-auto px-4 py-4">
+    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-8">
+      <div className="w-full max-w-md">
+        {/* Simple progress indicator */}
+        <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              {currentStep > 1 && (
-                <button
-                  onClick={handleBack}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-              )}
-              <span className="text-sm font-medium text-muted-foreground">
-                Step {currentStep} of {TOTAL_STEPS}
-              </span>
-            </div>
-            <div className="text-sm font-medium text-[#F5B82E]">
-              {getProgressPercentage()}%
+            {currentStep > 1 && (
+              <button
+                onClick={handleBack}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Go back"
+              >
+                ←
+              </button>
+            )}
+            <div className="text-sm text-gray-500 ml-auto">
+              {currentStep} / {TOTAL_STEPS}
             </div>
           </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-            <div 
-              className="bg-gradient-to-r from-[#F5B82E] to-orange-400 h-2 rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${getProgressPercentage()}%` }}
+          <div className="w-full bg-gray-200 rounded-full h-1">
+            <motion.div 
+              className="bg-gray-800 h-1 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${getProgressPercentage()}%` }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
             />
           </div>
         </div>
-      </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-2xl">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStep}
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -50 }}
-              transition={{ duration: 0.3 }}
-              className="w-full"
-            >
-              {renderCurrentStep()}
-            </motion.div>
-          </AnimatePresence>
-        </div>
+        {/* Main content */}
+        <motion.div
+          key={currentStep}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+        >
+          {renderCurrentStep()}
+        </motion.div>
       </div>
     </div>
   );
