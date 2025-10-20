@@ -1,6 +1,5 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { CheckCircle, AlertTriangle, ArrowRight, BookOpen, Play, FileText, Shield, TrendingUp, Clock } from 'lucide-react';
 import { AssessmentAnalyzer, type AssessmentData } from '@/lib/assessmentAnalyzer';
 
 interface ReportScreenProps {
@@ -24,9 +23,9 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
 
   const getRiskIcon = (riskLevel: 'low' | 'moderate' | 'high') => {
     switch (riskLevel) {
-      case 'high': return <AlertTriangle className="w-4 h-4" />;
-      case 'moderate': return <Clock className="w-4 h-4" />;
-      case 'low': return <CheckCircle className="w-4 h-4" />;
+      case 'high': return <span className="w-4 h-4 inline-block text-center font-bold">!</span>;
+      case 'moderate': return <span className="w-4 h-4 inline-block text-center font-bold">~</span>;
+      case 'low': return <span className="w-4 h-4 inline-block text-center font-bold">+</span>;
     }
   };
 
@@ -47,7 +46,6 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
         className="text-center mb-8"
       >
         <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center">
-          <FileText className="w-10 h-10 text-white" />
         </div>
         
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
@@ -101,7 +99,6 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
               className={`border-l-4 ${getRiskLevelColor(category.riskLevel)} p-4 rounded-r-xl`}
             >
               <div className="flex items-start gap-3">
-                <span className="text-2xl">{category.icon}</span>
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="font-bold text-gray-800 dark:text-white">{category.name}</h3>
@@ -113,7 +110,6 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
                     </div>
                     {/* Milestone alignment percentage */}
                     <div className="ml-auto flex items-center gap-1 text-xs text-gray-500">
-                      <TrendingUp className="w-3 h-3" />
                       {Math.round(category.milestoneAlignment)}% aligned
                     </div>
                   </div>
@@ -152,7 +148,6 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
           className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-6 mb-8"
         >
           <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-            <ArrowRight className="w-5 h-5 text-blue-600" />
             Recommended Next Steps
           </h2>
           <ul className="space-y-2">
@@ -179,9 +174,7 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
           onClick={onStartPracticing}
           className="w-full bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 hover:shadow-lg transition-all duration-200"
         >
-          <Play className="w-5 h-5" />
           Start practicing
-          <ArrowRight className="w-5 h-5" />
         </motion.button>
 
         <motion.button
@@ -190,7 +183,6 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
           onClick={onLearnMore}
           className="w-full bg-white dark:bg-gray-700 border-2 border-[#F5B82E] text-[#F5B82E] py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 hover:bg-[#F5B82E] hover:text-white transition-all duration-200"
         >
-          <BookOpen className="w-5 h-5" />
           Learn more
         </motion.button>
       </motion.div>
@@ -203,7 +195,6 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
         className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-600 flex justify-center gap-6 text-sm text-gray-500 dark:text-gray-400"
       >
         <button className="hover:text-[#F5B82E] transition-colors duration-200 flex items-center gap-1">
-          <Shield className="w-4 h-4" />
           Privacy & Terms
         </button>
         <button className="hover:text-[#F5B82E] transition-colors duration-200">
