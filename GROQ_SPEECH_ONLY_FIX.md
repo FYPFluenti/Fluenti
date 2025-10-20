@@ -1,3 +1,9 @@
+---
+noteId: "e1ebfcf1ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # Groq Speech Service - Microphone Error Fix
 
 ## Problem Analysis
