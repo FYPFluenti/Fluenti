@@ -1,3 +1,9 @@
+---
+noteId: "e1ebd5e1ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # Groq Whisper Transcription Issues - "Thank You" Problem
 
 ## The Problem
