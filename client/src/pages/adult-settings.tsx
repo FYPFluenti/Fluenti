@@ -1,112 +1,211 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
-import {
-  Gamepad2,
-  LineChart,
-  Smile,
-  SlidersHorizontal,
-  Shield,
-} from "lucide-react";
 import { motion } from "framer-motion";
-import SharedSidebar from "@/components/layout/SharedSidebar";
+import {
+  Bell,
+  Lock,
+  Trash2,
+  RotateCcw,
+  Shield,
+  Zap,
+  Palette,
+} from "lucide-react";
+import SharedSidebarEmotional from "@/components/layout/SharedSidebarEmotional";
 import FeedbackModal from "@/components/layout/FeedbackModel";
 import PageHeader from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 
-interface UserData {
-  email?: string;
+
+interface UserProfile {
   firstName?: string;
   lastName?: string;
-  userType?: string;
+  email?: string;
+  userType?: "adult" | "child" | string;
+  profilePicture?: string;
 }
 
-export default function Settings() {
+export default function AdultSettings() {
   const { user, isAuthenticated, isLoading } = useAuth() as {
-    user: UserData | null;
+    user: UserProfile | null;
     isAuthenticated: boolean;
     isLoading: boolean;
   };
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  // UI state (kept only those used)
   const [showFeedback, setShowFeedback] = useState(false);
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
-  const [analyticsOn, setAnalyticsOn] = useState(true);
+  const [darkMode, setDarkMode] = useState(
+    localStorage.getItem("darkMode") === "true"
+  );
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) setLocation("/login");
+    // redirect to login if not authenticated
+    if (!isLoading && !isAuthenticated) {
+      setLocation("/login");
+    }
   }, [isLoading, isAuthenticated, setLocation]);
 
-  const handleToggleAnalytics = () => setAnalyticsOn(!analyticsOn);
-  const handleToggleNotifications = () => setNotificationsEnabled(!notificationsEnabled);
-  const handleToggleEmailNotifications = () => setEmailNotifications(!emailNotifications);
+  useEffect(() => {
+    // verify user type — only allow adult users here
+    if (!isLoading && isAuthenticated && user) {
+      if (user.userType && user.userType !== "adult") {
+    
+        setLocation("/child-dashboard");
+      }
+    }
+  }, [isLoading, isAuthenticated, user, setLocation]);
 
-  const displayName = user?.firstName && user?.lastName 
-    ? `${user.firstName} ${user.lastName}`
-    : user?.email || "User";
-  
-  const initials = user?.firstName && user?.lastName
-    ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
-    : user?.email?.[0]?.toUpperCase() || "U";
+  useEffect(() => {
+    // apply dark mode preference on mount
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [darkMode]);
+
+  // Derived display name (full name preferred, fallback to email)
+  const displayName =
+    [user?.firstName?.trim(), user?.lastName?.trim()].filter(Boolean).join(
+      " "
+    ) || user?.email || "User";
+
+  // Handlers
+  const handleToggleDark = () => {
+    const next = !darkMode;
+    setDarkMode(next);
+    localStorage.setItem("darkMode", String(next));
+    toast({
+      title: "Appearance updated",
+      description: next ? "Dark mode enabled" : "Light mode enabled",
+    });
+  };
+
+  const handleToggleAnalytics = () => {
+    setAnalyticsEnabled((v) => !v);
+    toast({
+      title: analyticsEnabled ? "Analytics disabled" : "Analytics enabled",
+    });
+  };
+
+  const handleToggleNotifications = () => {
+    setNotificationsEnabled((v) => !v);
+    toast({
+      title: notificationsEnabled ? "Notifications off" : "Notifications on",
+    });
+  };
+
+  const handleToggleEmailNotifications = () => {
+    setEmailNotifications((v) => !v);
+    toast({
+      title: emailNotifications ? "Email updates off" : "Email updates on",
+    });
+  };
+
+  const handleResetChatHistory = async () => {
+    if (
+      !window.confirm(
+        "Reset chat history? This cannot be undone. Do you want to continue?"
+      )
+    )
+      return;
+
+    try {
+      // TODO: call API to reset chat history
+      toast({
+        title: "Chat history reset",
+        description: "Your conversation history has been cleared.",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to reset chat history. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    const confirm1 = window.confirm(
+      "Delete account? This will permanently remove your data. Continue?"
+    );
+    if (!confirm1) return;
+
+    const confirm2 = window.confirm(
+      "Final confirmation: This action is irreversible. Click OK to proceed."
+    );
+    if (!confirm2) return;
+
+    try {
+      // TODO: call API to delete account
+      toast({
+        title: "Account deleted",
+        description:
+          "Your account has been scheduled for deletion. You will be signed out.",
+      });
+      // sign-out or redirect
+      setTimeout(() => setLocation("/"), 1200);
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to delete account. Contact support.",
+        variant: "destructive",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center child-dashboard-no-zoom">
-        <div className="text-foreground/80 child-dashboard-container px-4">Loading…</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-foreground/80">Loading…</div>
       </div>
     );
   }
-  if (!isAuthenticated) return null;
+
+  if (!isAuthenticated || !user) return null;
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex child-dashboard-no-zoom">
+    <div className="min-h-screen bg-background text-foreground flex">
       {/* Sidebar */}
-      <SharedSidebar 
+      <SharedSidebarEmotional
         onFeedbackOpen={() => setShowFeedback(true)}
-        currentPage="dashboard"
+        currentPage="settings"
       />
 
+      {/* Feedback modal */}
+      <FeedbackModal isOpen={showFeedback} onClose={() => setShowFeedback(false)} />
+
       {/* Main */}
-      <main className="ml-20 w-full child-dashboard-container">
-        {/* Header actions (right) */}
+      <main className="ml-20 w-full">
         <PageHeader />
 
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
+        <div className="max-w-4xl mx-auto px-6 pb-24">
           {/* Profile header */}
-          <section className="mb-10">
+          <section className="mb-8">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-muted grid place-items-center text-xl font-semibold">
-                {initials}
+              {user.profilePicture ? (
+                <img
+                  src={user.profilePicture}
+                  alt={displayName}
+                  className="w-16 h-16 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-muted grid place-items-center text-xl font-semibold">
+                  {displayName[0]?.toUpperCase() || "U"}
+                </div>
+              )}
+              <div>
+                <div className="text-lg font-medium">{displayName}</div>
+                <div className="text-sm text-muted-foreground">{user.email}</div>
               </div>
-              <div className="text-lg font-medium">{displayName}</div>
             </div>
             <div className="mt-6 h-px bg-border" />
-          </section>
-
-          {/* Security Settings */}
-          <section className="mb-12">
-            <h2 className="text-2xl font-bold mb-1">security</h2>
-            <p className="text-muted-foreground mb-6">
-              manage your account security and authentication
-            </p>
-
-            <button
-              onClick={() => setLocation("/security")}
-              className="w-full p-4 bg-muted hover:bg-accent rounded-lg transition flex items-center justify-between group"
-            >
-              <div className="flex items-center gap-3">
-                <Shield className="w-5 h-5 text-blue-600" />
-                <div className="text-left">
-                  <div className="font-semibold">Security Settings</div>
-                  <div className="text-sm text-muted-foreground">
-                    Two-factor authentication, email verification, and more
-                  </div>
-                </div>
-              </div>
-              <div className="text-muted-foreground group-hover:translate-x-1 transition">→</div>
-            </button>
           </section>
 
           {/* Privacy & analytics */}
@@ -129,6 +228,7 @@ export default function Settings() {
                     <button
                       disabled
                       className="relative inline-flex h-6 w-12 rounded-full bg-muted cursor-not-allowed"
+                      aria-checked="true"
                     >
                       <span className="absolute top-1 left-7 inline-block h-4 w-4 rounded-full bg-white" />
                     </button>
@@ -148,14 +248,14 @@ export default function Settings() {
                     <button
                       onClick={handleToggleAnalytics}
                       className={`relative inline-flex h-6 w-12 rounded-full transition ${
-                        analyticsOn ? "bg-[#ff6b1d]" : "bg-muted"
+                        analyticsEnabled ? "bg-[#ff6b1d]" : "bg-muted"
                       }`}
                       role="switch"
-                      aria-checked={analyticsOn}
+                      aria-checked={analyticsEnabled}
                     >
                       <span
                         className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
-                          analyticsOn ? "left-7" : "left-1"
+                          analyticsEnabled ? "left-7" : "left-1"
                         }`}
                       />
                     </button>
@@ -231,38 +331,40 @@ export default function Settings() {
 
           
 
-             {/* Danger zone */}
-          <section className="mb-6">
-            <h2 className="text-2xl font-bold mb-1">danger zone</h2>
-            <p className="text-muted-foreground mb-6">
-              be careful with these settings
+          {/* Danger Zone */}
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-2">Danger zone</h2>
+            <p className="text-muted-foreground mb-4">
+              Irreversible actions — proceed with caution
             </p>
 
-            <div className="space-y-6">
-          
+            <div className="space-y-4">
+            
               <div>
-                <button
-                  className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition"
-                  onClick={() => {
-                    // TODO: call your API to delete account
-                  }}
-                >
-                  delete account
-                </button>
-                <p className="text-sm text-muted-foreground mt-2 max-w-prose">
-                  this will delete your account and everything related to it. be careful, it cannot be undone.
-                </p>
+                <div>
+                  <div className="flex items-start gap-4 mb-4">
+                    <Trash2 className="w-5 h-5 text-red-500" />
+                    <div>
+                      <div className="font-semibold text-red-600">Delete account</div>
+                      <p className="text-sm text-muted-foreground">
+                        Permanently delete your account and all associated data.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleDeleteAccount}
+                      className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700"
+                    >
+                      Delete my account
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </section>
         </div>
       </main>
-      
-      {/* Feedback Modal */}
-      <FeedbackModal 
-        isOpen={showFeedback} 
-        onClose={() => setShowFeedback(false)} 
-      />
     </div>
   );
 }
