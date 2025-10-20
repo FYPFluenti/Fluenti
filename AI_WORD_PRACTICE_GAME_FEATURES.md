@@ -1,3 +1,9 @@
+---
+noteId: "e1eaeb80ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # Enhanced AI-Powered Word Practice Game
 
 ## Overview
