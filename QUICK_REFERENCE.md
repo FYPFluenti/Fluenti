@@ -1,3 +1,9 @@
+---
+noteId: "e1ecc042ad9f11f08c9a4dfd044ffb6d"
+tags: []
+
+---
+
 # 🚀 Quick Reference - Security Features
 
 ## 📍 Where to Find Everything
