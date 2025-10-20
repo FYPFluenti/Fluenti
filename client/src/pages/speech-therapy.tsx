@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 
 import SharedSidebar from '@/components/layout/SharedSidebar';
+import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import FeedbackModal from '@/components/layout/FeedbackModel';
 import PageHeader from '@/components/layout/PageHeader';
 
@@ -304,14 +305,16 @@ export default function SpeechTherapyPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar */}
-      <SharedSidebar 
-        onFeedbackOpen={() => setShowFeedback(true)}
-        currentPage="games"
-      />
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <SharedSidebar 
+          onFeedbackOpen={() => setShowFeedback(true)}
+          currentPage="games"
+        />
+      </div>
 
       {/* Main Content */}
-      <main className="ml-20 p-6">
+      <main className="lg:ml-20 p-4 lg:p-6 pb-20 lg:pb-6">
         {/* Header */}
         <PageHeader className="flex justify-end items-center mb-6 -mt-2" />
 
@@ -564,6 +567,13 @@ export default function SpeechTherapyPage() {
       <FeedbackModal 
         isOpen={showFeedback} 
         onClose={() => setShowFeedback(false)} 
+      />
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav 
+        onFeedbackOpen={() => setShowFeedback(true)}
+        currentPage="games"
+        userType="child"
       />
     </div>
   );
