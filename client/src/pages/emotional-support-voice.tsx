@@ -312,7 +312,7 @@ const EmotionalSupportVoice = () => {
               ) : (
                 <div className="flex items-center justify-center">
                   <p className="text-muted-foreground text-center max-w-md">
-                    Click "Start Speaking" to begin your conversation with the AI therapist
+                    Welcome to Fluenti - Your AI companion for emotional wellness. Click "Start Speaking" to share what's on your mind.
                   </p>
                 </div>
               )}
