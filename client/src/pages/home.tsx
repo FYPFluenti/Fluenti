@@ -124,10 +124,10 @@ export default function Home() {
         {/* Logo */}
         <div className="flex items-center space-x-2">
           <div className="relative group">
-            <FluentiLogo className="w-14 h-14 text-[#ff6b1d] transition-transform duration-300 group-hover:scale-110" />
+            <FluentiLogo className="w-12 h-12 lg:w-14 lg:h-14 text-[#ff6b1d] transition-transform duration-300 group-hover:scale-110" />
             <div className="absolute inset-0 bg-[#ff6b1d]/20 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </div>
-          <span className="text-4xl font-bold text-gray-900 tracking-tight">fluenti</span>
+          <span className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight">fluenti</span>
         </div>
         
         {/* Actions */}
@@ -159,7 +159,7 @@ export default function Home() {
         {/* Left Side - Text Content */}
         <div className="space-y-8">
           <div className="space-y-6">
-            <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 leading-tight tracking-tight">
+            <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 leading-tight tracking-tight">
               it's not therapy.
               <br />
               it's just{" "}
@@ -421,22 +421,22 @@ export default function Home() {
         </p>
       </div>
       
-      <div className="grid md:grid-cols-4 gap-8 text-center">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
         <div>
-          <div className="text-4xl font-bold mb-2">10,000+</div>
-          <p className="opacity-90">active users</p>
+          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">10,000+</div>
+          <p className="opacity-90 text-sm md:text-base">active users</p>
         </div>
         <div>
-          <div className="text-4xl font-bold mb-2">87%</div>
-          <p className="opacity-90">improvement rate</p>
+          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">87%</div>
+          <p className="opacity-90 text-sm md:text-base">improvement rate</p>
         </div>
         <div>
-          <div className="text-4xl font-bold mb-2">50+</div>
-          <p className="opacity-90">languages supported</p>
+          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">50+</div>
+          <p className="opacity-90 text-sm md:text-base">languages supported</p>
         </div>
         <div>
-          <div className="text-4xl font-bold mb-2">4.9★</div>
-          <p className="opacity-90">user rating</p>
+          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">4.9★</div>
+          <p className="opacity-90 text-sm md:text-base">user rating</p>
         </div>
       </div>
     </div>
@@ -526,7 +526,7 @@ export default function Home() {
       
       {/* Header with Increased Distance */}
       <div className="text-center mb-32"> 
-        <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 tracking-tight">
+        <h2 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-900 tracking-tight">
           frequently asked questions
         </h2>
       </div>
@@ -766,10 +766,10 @@ export default function Home() {
   {/* 7. CTA SECTION - Final call to action */}
   <section className="py-24 bg-gray-50 relative z-10">
     <div className="max-w-4xl mx-auto px-6 text-center">
-      <h2 className="text-4xl font-bold text-gray-900 mb-6">
+      <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
         ready to speak with confidence?
       </h2>
-      <p className="text-xl text-gray-600 mb-10">
+      <p className="text-lg md:text-xl text-gray-600 mb-10">
         join thousands improving their communication with fluenti
       </p>
       
@@ -873,9 +873,9 @@ export default function Home() {
   }
 
   const userType = (user as any)?.userType || 'child';  return (
-    <div className="h-screen font-sans flex bg-background text-foreground overflow-hidden">
-      {/* Sidebar */}
-      <aside className="w-20 bg-background flex flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-50 border-r border-border">
+    <div className="min-h-screen lg:h-screen font-sans flex bg-background text-foreground lg:overflow-hidden">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex w-20 bg-background flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-50 border-r border-border">
         {/* Logo */}
         <div
           onMouseEnter={() => setHovered("home")}
@@ -985,7 +985,7 @@ export default function Home() {
       </aside>
 
       {/* Main Content */}
-      <main className="ml-20 px-6 w-full h-screen overflow-hidden flex flex-col">
+      <main className="lg:ml-20 px-4 lg:px-6 w-full min-h-screen lg:h-screen lg:overflow-hidden flex flex-col pb-20 lg:pb-0">
         {/* Welcome Section */}
         <div className="py-8 flex-shrink-0">
           <h1 className="text-3xl font-bold text-foreground mb-2">
