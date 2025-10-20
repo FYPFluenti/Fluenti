@@ -564,8 +564,7 @@ export default function Signup() {
               >
                 <option value="">Select language</option>
                 <option value="english">English</option>
-                <option value="urdu">Urdu</option>
-                <option value="both">Both</option>
+                
               </select>
             </div>
 
