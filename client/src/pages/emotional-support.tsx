@@ -140,23 +140,32 @@ Your wellbeing is important.`,
       />
 
       {/* Main Content */}
-      <div className="ml-20 flex-1 flex flex-col h-screen overflow-hidden">
+      <div className="ml-20 flex-1 flex flex-col h-screen overflow-hidden relative">
         <PageHeader />
+        
+        {/* Service Status - Top Right Corner (below header) */}
+        <div className="absolute top-20 right-4 z-10">
+          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
+            serviceStatus === 'healthy' 
+              ? 'bg-emerald-500/20 border border-emerald-400/30 text-emerald-600' 
+              : serviceStatus === 'unhealthy' 
+              ? 'bg-red-500/20 border border-red-400/30 text-red-600'
+              : 'bg-amber-500/20 border border-amber-400/30 text-amber-600'
+          }`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${
+              serviceStatus === 'healthy' ? 'bg-emerald-500' :
+              serviceStatus === 'unhealthy' ? 'bg-red-500' :
+              'bg-amber-500 animate-pulse'
+            }`}></div>
+            <span>
+              {serviceStatus === 'unknown' ? 'Checking...' : serviceStatus === 'healthy' ? 'online' : 'offline'}
+            </span>
+          </div>
+        </div>
         
         <div className="flex-1 flex flex-col max-w-4xl mx-auto p-6 overflow-hidden">
           {/* Header */}
           <div className="mb-6 flex-shrink-0">
-          
-            
-            <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <div className={`w-2 h-2 rounded-full ${
-                  serviceStatus === 'healthy' ? 'bg-green-500' : 
-                  serviceStatus === 'unhealthy' ? 'bg-red-500' : 'bg-yellow-500'
-                }`} />
-                Service: {serviceStatus === 'healthy' ? 'Online' : serviceStatus === 'unhealthy' ? 'Offline' : 'Checking...'}
-              </span>
-            </div>
           </div>
 
         {/* Service Status Alert */}
