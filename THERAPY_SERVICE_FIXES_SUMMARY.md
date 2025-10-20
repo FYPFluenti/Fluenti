@@ -1,6 +1,6 @@
 # Therapy Service Issue Fixes Summary
 
-## 🚨 Critical Issues Fixed:
+##  Critical Issues 
 
 ### 1. **Crisis Detection False Positives**
 **Problem:** System detected "critical" level for casual mentions like "today"
@@ -31,7 +31,7 @@
 
 **Changes in:** `emotional_therapy.py` lines ~28-32, ~1300-1320
 
-## ⚠️ Warning Issues Fixed:
+## ⚠️ Warning Issues 
 
 ### 4. **Development Server in Production**
 **Problem:** Flask development server not suitable for production

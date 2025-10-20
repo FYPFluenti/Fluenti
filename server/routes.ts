@@ -1158,7 +1158,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           console.log('🤖 Sending to therapy service:', text.substring(0, 50) + '...');
 
-          // **FIXED: Use consistent session/user management like chat mode**
+          // ** Use consistent session/user management like chat mode**
           // Handle empty strings from FormData and convert to null/undefined
           const cleanSessionId = sessionId && sessionId.trim() !== '' ? sessionId : null;
           const cleanUserId = userId && userId.trim() !== '' ? userId : null;
@@ -1256,8 +1256,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         response: `I apologize, but I'm having technical difficulties right now. Please try again in a moment.
 
 If you're in immediate crisis, please contact:
-• **988** - Suicide & Crisis Lifeline (call or text, 24/7)
-• **911** - Emergency Services
+• 988 - Suicide & Crisis Lifeline (call or text, 24/7)
+• 911 - Emergency Services
 
 Your wellbeing is important. Please don't hesitate to reach out for professional help if needed.`,
         details: error instanceof Error ? error.message : 'Unknown error',
@@ -1328,8 +1328,8 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
         chatResponse: `I apologize, but I'm having technical difficulties right now. Please try again in a moment.
 
 If you're in immediate crisis, please contact:
-• **988** - Suicide & Crisis Lifeline (call or text, 24/7)
-• **911** - Emergency Services
+• 988 - Suicide & Crisis Lifeline (call or text, 24/7)
+• 911 - Emergency Services
 
 Your wellbeing is important. Please don't hesitate to reach out for professional help if needed.`,
         fallback: true

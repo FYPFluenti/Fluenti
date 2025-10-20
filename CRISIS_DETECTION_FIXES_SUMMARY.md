@@ -61,7 +61,7 @@ flexible_crisis_patterns = [
 // NEW: Prominent alert banner with animations
 <div className="flex items-center gap-2 mb-3 px-3 py-2 bg-red-600 text-white rounded-md shadow-md">
   <AlertTriangle className="w-5 h-5 animate-bounce" />
-  <span className="text-sm font-bold tracking-wide">🚨 URGENT SUPPORT NEEDED 🚨</span>
+  <span className="text-sm font-bold tracking-wide"> URGENT SUPPORT NEEDED </span>
 </div>
 ```
 

@@ -112,11 +112,11 @@ export default function App() {
               </ProtectedRoute>
             </Route>
             
-            <Route path="/assessment">
+           {/* <Route path="/assessment">
               <ProtectedRoute>
                 <Assessment />
               </ProtectedRoute>
-            </Route>
+            </Route>*/}
             
             <Route path="/achievements">
               <ProtectedRoute>

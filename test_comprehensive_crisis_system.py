@@ -45,7 +45,7 @@ def simulate_crisis_detection(text, user_id=None):
         for pattern in all_patterns:
             if pattern in text_lower:
                 crisis_score += pattern_data['score']
-                detected_indicators.append(f"🚨 {pattern} (CRITICAL: {pattern_type})")
+                detected_indicators.append(f" {pattern} (CRITICAL: {pattern_type})")
 
     # Enhanced flexible pattern matching (from our fix)
     flexible_crisis_patterns = [
@@ -58,7 +58,7 @@ def simulate_crisis_detection(text, user_id=None):
     for pattern_regex, score, pattern_name in flexible_crisis_patterns:
         if re.search(pattern_regex, text_lower, re.IGNORECASE):
             crisis_score += score
-            detected_indicators.append(f"🚨 FLEXIBLE MATCH: {pattern_name} (Score: +{score})")
+            detected_indicators.append(f" FLEXIBLE MATCH: {pattern_name} (Score: +{score})")
 
     # Determine crisis level
     if crisis_score >= 10.0:
@@ -93,7 +93,7 @@ def simulate_frontend_response(crisis_level, user_message, bot_response):
         alert_banner = {
             'classes': 'flex items-center gap-2 mb-3 px-3 py-2 bg-red-600 text-white rounded-md shadow-md',
             'icon': 'AlertTriangle w-5 h-5 animate-bounce',
-            'text': '🚨 URGENT SUPPORT NEEDED 🚨'
+            'text': ' URGENT SUPPORT NEEDED '
         }
     
     # Simulate crisis level badge
@@ -172,7 +172,7 @@ def test_comprehensive_system():
         
         # Step 2: Simulate therapy response
         if crisis_level == 'critical':
-            bot_response = f"🚨 **URGENT SUPPORT NEEDED** 🚨\n\nI hear that you're in severe distress. Your safety is my top priority. Please reach out to emergency services or a crisis hotline immediately.\n\n🚨 **IMMEDIATE CRISIS RESOURCES:**\n• **988** - Suicide & Crisis Lifeline (call or text, 24/7)\n• **Text HOME to 741741** - Crisis Text Line\n• **911** - Emergency Services"
+            bot_response = f" URGENT SUPPORT NEEDED \n\nI hear that you're in severe distress. Your safety is my top priority. Please reach out to emergency services or a crisis hotline immediately.\n\n **IMMEDIATE CRISIS RESOURCES:**\n• 988 - Suicide & Crisis Lifeline (call or text, 24/7)\n• Text HOME to 741741 - Crisis Text Line\n• 911 - Emergency Services"
         else:
             bot_response = "I'm here to listen and support you. How are you feeling today?"
         
@@ -206,7 +206,7 @@ def test_comprehensive_system():
     else:
         print("❌ SOME TESTS FAILED! Please review the crisis detection patterns.")
     
-    print(f"\n🚨 CRISIS DETECTION IMPROVEMENTS MADE:")
+    print(f"\n CRISIS DETECTION IMPROVEMENTS MADE:")
     print("1. ✅ Added missing patterns: 'feel like dying', 'wanna just die', 'ill kill myself'")
     print("2. ✅ Enhanced flexible regex matching for variations") 
     print("3. ✅ Improved CSS styling with animations and visual alerts")

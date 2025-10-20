@@ -3,6 +3,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Heart, MessageCircle } from 'lucide-react';
+import SharedSidebarEmotional from '@/components/layout/SharedSidebarEmotional';
+import FeedbackModal from '@/components/layout/FeedbackModel';
+import PageHeader from '@/components/layout/PageHeader';
 
 interface Message {
   id: string;
@@ -19,13 +22,14 @@ interface SessionData {
   sessionKey?: string;
 }
 
-const EmotionalSupportChat = () => {
+const EmotionalSupport = () => {
   const language = localStorage.getItem('language') || 'en';
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionData, setSessionData] = useState<SessionData>({});
   const [serviceStatus, setServiceStatus] = useState<'unknown' | 'healthy' | 'unhealthy'>('unknown');
+  const [showFeedback, setShowFeedback] = useState(false);
 
   // Check service health on component mount
   useEffect(() => {
@@ -112,8 +116,9 @@ const EmotionalSupportChat = () => {
         ai: `I'm sorry, I'm having trouble responding right now. Please try again.
 
 If you're in immediate crisis, please contact:
-• **988** - Suicide & Crisis Lifeline (call or text, 24/7)
-• **911** - Emergency Services
+• 1019 - Mental Health Crisis Line (24/7)
+• 1166 - National Emergency Helpline
+• 0800-00-100 - Rozan Crisis Helpline
 
 Your wellbeing is important.`,
         timestamp: new Date(),
@@ -127,29 +132,39 @@ Your wellbeing is important.`,
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-4xl mx-auto p-6">
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Heart className="w-6 h-6 text-red-500" />
-            <h1 className="text-2xl font-bold">Emotional Support Chat</h1>
+    <div className="min-h-screen max-h-screen flex bg-background overflow-hidden">
+      {/* Sidebar */}
+      <SharedSidebarEmotional 
+        onFeedbackOpen={() => setShowFeedback(true)}
+        currentPage="chat"
+      />
+
+      {/* Main Content */}
+      <div className="ml-20 flex-1 flex flex-col h-screen overflow-hidden">
+        <PageHeader />
+        
+        <div className="flex-1 flex flex-col max-w-4xl mx-auto p-6 overflow-hidden">
+          {/* Header */}
+          <div className="mb-6 flex-shrink-0">
+            <div className="flex items-center gap-3 mb-4">
+              <Heart className="w-6 h-6 text-red-500" />
+              <h1 className="text-2xl font-bold">Emotional Support Chat</h1>
+            </div>
+            
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+              <span>Language: {language === 'ur' ? 'اردو' : 'English'}</span>
+              <span className="flex items-center gap-1">
+                <div className={`w-2 h-2 rounded-full ${
+                  serviceStatus === 'healthy' ? 'bg-green-500' : 
+                  serviceStatus === 'unhealthy' ? 'bg-red-500' : 'bg-yellow-500'
+                }`} />
+                Service: {serviceStatus === 'healthy' ? 'Online' : serviceStatus === 'unhealthy' ? 'Offline' : 'Checking...'}
+              </span>
+              {sessionData.sessionId && (
+                <span>Session: {sessionData.sessionId.slice(-8)}</span>
+              )}
+            </div>
           </div>
-          
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>Language: {language === 'ur' ? 'اردو' : 'English'}</span>
-            <span className="flex items-center gap-1">
-              <div className={`w-2 h-2 rounded-full ${
-                serviceStatus === 'healthy' ? 'bg-green-500' : 
-                serviceStatus === 'unhealthy' ? 'bg-red-500' : 'bg-yellow-500'
-              }`} />
-              Service: {serviceStatus === 'healthy' ? 'Online' : serviceStatus === 'unhealthy' ? 'Offline' : 'Checking...'}
-            </span>
-            {sessionData.sessionId && (
-              <span>Session: {sessionData.sessionId.slice(-8)}</span>
-            )}
-          </div>
-        </div>
 
         {/* Service Status Alert */}
         {serviceStatus === 'unhealthy' && (
@@ -158,13 +173,13 @@ Your wellbeing is important.`,
             <AlertDescription className="text-red-800">
               The therapy service is currently unavailable. If you're in crisis, please contact:
               <br />
-              <strong>988</strong> - Suicide & Crisis Lifeline or <strong>911</strong> - Emergency Services
+              <strong>1019</strong> - Mental Health Crisis Line or <strong>1166</strong> - National Emergency
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Chat Messages */}
-        <div className="flex-1 border rounded-lg p-4 mb-4 min-h-[400px] max-h-[600px] overflow-y-auto bg-muted/20">
+          {/* Chat Messages */}
+          <div className="flex-1 border rounded-lg p-4 mb-4 overflow-y-auto bg-muted/20 min-h-0">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -246,23 +261,25 @@ Your wellbeing is important.`,
           )}
         </div>
 
-        {/* Input */}
-        <div className="space-y-2">
-          {/* Crisis Resources Banner */}
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-3">
-            <div className="flex items-center justify-center gap-2 text-xs">
-              <Heart className="w-3 h-3 text-blue-600" />
-              <span className="text-blue-800">
-                <span className="font-medium">Crisis Resources:</span>
-                <span className="mx-2">•</span>
-                <span className="font-semibold">988</span> <span className="text-blue-600">(Crisis Lifeline)</span>
-                <span className="mx-2">•</span>  
-                <span className="font-semibold">911</span> <span className="text-blue-600">(Emergency)</span>
-              </span>
+          {/* Input */}
+          <div className="space-y-2 flex-shrink-0">
+            {/* Crisis Resources Banner */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-3">
+              <div className="flex items-center justify-center gap-2 text-xs">
+                <Heart className="w-3 h-3 text-blue-600" />
+                <span className="text-blue-800">
+                  <span className="font-medium">Crisis Resources:</span>
+                  <span className="mx-2">•</span>
+                  <span className="font-semibold">1019</span> <span className="text-blue-600">(Mental Health Crisis)</span>
+                  <span className="mx-2">•</span>  
+                  <span className="font-semibold">1166</span> <span className="text-blue-600">(Emergency)</span>
+                  <span className="mx-2">•</span>
+                  <span className="font-semibold">0800-00-100</span> <span className="text-blue-600">(Rozan Crisis)</span>
+                </span>
+              </div>
             </div>
-          </div>
-          
-          <div className="flex gap-2">
+            
+            <div className="flex gap-2">
             <Input 
               value={input} 
               onChange={(e) => setInput(e.target.value)} 
@@ -277,11 +294,18 @@ Your wellbeing is important.`,
             >
               {isLoading ? 'Sending...' : 'Send'}
             </Button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Feedback Modal */}
+      <FeedbackModal 
+        isOpen={showFeedback} 
+        onClose={() => setShowFeedback(false)} 
+      />
     </div>
   );
 };
 
-export default EmotionalSupportChat;
+export default EmotionalSupport;

@@ -74,7 +74,7 @@ def test_enhanced_crisis_patterns():
     print("✅ Enhanced flexible pattern matching catches variations")
     print("✅ CSS styling enhanced with animations and better visibility")
     
-    print("\n🚨 URGENT SUPPORT MESSAGE STYLING:")
+    print("\n URGENT SUPPORT MESSAGE STYLING:")
     print("✅ Red gradient background with pulse animation")
     print("✅ Bold alert banner with bouncing icon")
     print("✅ Enhanced crisis level badges")

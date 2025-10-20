@@ -102,9 +102,19 @@
     border-color: inherit;
   }
 
+  html {
+    @apply overflow-x-hidden;
+    text-size-adjust: 100%;
+    touch-action: manipulation;
+  }
+
   body {
     @apply antialiased bg-background text-foreground;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+    width: 100%;
   }
 
   h1, h2, h3, h4, h5, h6 {

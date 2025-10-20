@@ -233,7 +233,7 @@ const response = await fetch('/api/speech/session', {
 
 ---
 
-## 🚨 Authorization Failures
+##  Authorization Failures
 
 ### **Unauthorized User Scenarios**
 

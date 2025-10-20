@@ -113,7 +113,7 @@ export default function Home() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-white relative overflow-hidden">
-        {/* FIXED: 3D Background - Only Behind Hero Section */}
+        {/*  3D Background - Only Behind Hero Section */}
         <div className="absolute inset-0 w-full h-screen z-0"> {/* CHANGED: fixed → absolute, h-full → h-screen */}
           <Spline 
             scene="https://prod.spline.design/d1ABYikBmZ80miSz/scene.splinecode"

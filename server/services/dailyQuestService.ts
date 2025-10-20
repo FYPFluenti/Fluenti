@@ -71,7 +71,7 @@ const QUEST_THEMES: DailyQuestTheme[] = [
     emoji: "🌴",
     description: "Swing through the trees and help jungle friends communicate!",
     difficulty: "easy",
-    challengeMode: "memory_master", // ✅ Fixed: was "memory_match"
+    challengeMode: "memory_master", //  was "memory_match"
     targetScore: 200,
     targetAccuracy: 70,
     reward: {
@@ -87,7 +87,7 @@ const QUEST_THEMES: DailyQuestTheme[] = [
     emoji: "❄️",
     description: "Help arctic animals prepare for winter!",
     difficulty: "medium",
-    challengeMode: "speed_round", // ✅ Fixed: was "time_trial"
+    challengeMode: "speed_round", //  was "time_trial"
     targetScore: 280,
     targetAccuracy: 75,
     reward: {
@@ -103,7 +103,7 @@ const QUEST_THEMES: DailyQuestTheme[] = [
     emoji: "🐉",
     description: "Train baby dragons to breathe fire... I mean, speak clearly!",
     difficulty: "hard",
-    challengeMode: "perfect_streak", // ✅ Fixed: was "no_mistakes"
+    challengeMode: "perfect_streak", //  was "no_mistakes"
     targetScore: 350,
     targetAccuracy: 85,
     reward: {
@@ -119,7 +119,7 @@ const QUEST_THEMES: DailyQuestTheme[] = [
     emoji: "🧚",
     description: "Help fairies practice their magical spells (words)!",
     difficulty: "easy",
-    challengeMode: "rhyme_time", // ✅ Fixed: was "rhythm_match"
+    challengeMode: "rhyme_time", //  was "rhythm_match"
     targetScore: 220,
     targetAccuracy: 70,
     reward: {
@@ -135,7 +135,7 @@ const QUEST_THEMES: DailyQuestTheme[] = [
     emoji: "🏴‍☠️",
     description: "Solve word riddles to unlock the treasure chest!",
     difficulty: "medium",
-    challengeMode: "phoneme_focus", // ✅ Fixed: was "puzzle_solve"
+    challengeMode: "phoneme_focus", //  was "puzzle_solve"
     targetScore: 290,
     targetAccuracy: 80,
     reward: {
@@ -151,7 +151,7 @@ const QUEST_THEMES: DailyQuestTheme[] = [
     emoji: "🌈",
     description: "Cross the rainbow by mastering colorful words!",
     difficulty: "easy",
-    challengeMode: "silly_sentences", // ✅ Fixed: was "color_match"
+    challengeMode: "silly_sentences", //  was "color_match"
     targetScore: 240,
     targetAccuracy: 70,
     reward: {
@@ -199,7 +199,7 @@ const QUEST_THEMES: DailyQuestTheme[] = [
     emoji: "🦸",
     description: "Train to become a Speech Superhero!",
     difficulty: "hard",
-    challengeMode: "perfect_streak", // ✅ Fixed: was "hero_challenge"
+    challengeMode: "perfect_streak", //  was "hero_challenge"
     targetScore: 340,
     targetAccuracy: 80,
     reward: {
@@ -215,7 +215,7 @@ const QUEST_THEMES: DailyQuestTheme[] = [
     emoji: "🎪",
     description: "Perform amazing word tricks under the big top!",
     difficulty: "medium",
-    challengeMode: "silly_sentences", // ✅ Fixed: was "performance"
+    challengeMode: "silly_sentences", //  was "performance"
     targetScore: 260,
     targetAccuracy: 75,
     reward: {
@@ -231,7 +231,7 @@ const QUEST_THEMES: DailyQuestTheme[] = [
     emoji: "🏰",
     description: "Help the royal family prepare for the grand ball!",
     difficulty: "medium",
-    challengeMode: "phoneme_focus", // ✅ Fixed: was "royal_speech"
+    challengeMode: "phoneme_focus", //  was "royal_speech"
     targetScore: 285,
     targetAccuracy: 80,
     reward: {
@@ -247,7 +247,7 @@ const QUEST_THEMES: DailyQuestTheme[] = [
     emoji: "🎵",
     description: "Help musicians practice their songs with perfect words!",
     difficulty: "easy",
-    challengeMode: "rhyme_time", // ✅ Fixed: was "sing_along"
+    challengeMode: "rhyme_time", //  was "sing_along"
     targetScore: 230,
     targetAccuracy: 70,
     reward: {

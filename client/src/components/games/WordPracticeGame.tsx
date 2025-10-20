@@ -1021,7 +1021,7 @@ export default function WordPracticeGame({
       const recentFailCount = recentAttempts.filter(a => !a.correct).length;
       setRecentFailures(recentFailCount);
       
-      // 🚨 TRIGGER EMOTIONAL SUPPORT MODAL after 3 consecutive failures
+      //  TRIGGER EMOTIONAL SUPPORT MODAL after 3 consecutive failures
       if (recentFailCount >= 3 && recentAttempts.length >= 3) {
         const lastThree = recentAttempts.slice(-3);
         const allFailed = lastThree.every(a => !a.correct);
@@ -1459,7 +1459,7 @@ export default function WordPracticeGame({
     // 🛑 Stop AI generating state
     AudioStateController.stopAIGenerating();
 
-    // Update scoring system (FIXED: Using functional updates to prevent stale state)
+    // Update scoring system ( Using functional updates to prevent stale state)
     let pointsEarned = analysis.accuracy;
     if (analysis.isCorrect && currentAttempt === 1) {
       pointsEarned += 20; // Bonus for first try
@@ -1479,12 +1479,12 @@ export default function WordPracticeGame({
       setStreak(0); // Reset streak
     }
 
-    // Award stars based on performance (FIXED: Using functional update)
+    // Award stars based on performance ( Using functional update)
     if (analysis.accuracy >= 90) setStars(prevStars => prevStars + 3);
     else if (analysis.accuracy >= 70) setStars(prevStars => prevStars + 2);
     else if (analysis.accuracy >= 50) setStars(prevStars => prevStars + 1);
 
-    // Update score (FIXED: Using functional update)
+    // Update score ( Using functional update)
     setScore(prevScore => {
       const newScore = prevScore + pointsEarned;
       const newAccuracy = Math.round(newScore / ((currentWordIndex + 1) * 100) * 100);
