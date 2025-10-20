@@ -1,6 +1,13 @@
 import Groq from 'groq-sdk';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+let groq: Groq | null = null;
+
+function getGroqClient(): Groq {
+  if (!groq) {
+    groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  }
+  return groq;
+}
 
 export interface SurpriseReward {
   type: 'character' | 'badge' | 'animation' | 'theme' | 'game_mode' | 'power_up';
@@ -140,7 +147,7 @@ Return JSON:
     console.log('🎁 Generating surprise reward for achievement:', achievement);
     console.log('👤 Child interests:', childProfile.interests);
 
-    const completion = await groq.chat.completions.create({
+    const completion = await getGroqClient().chat.completions.create({
       model: "openai/gpt-oss-120b",
       messages: [
         {
