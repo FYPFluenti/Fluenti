@@ -1,6 +1,13 @@
 import Groq from 'groq-sdk';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+let groq: Groq | null = null;
+
+function getGroqClient(): Groq {
+  if (!groq) {
+    groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  }
+  return groq;
+}
 
 export interface StoryWord {
   word: string;
@@ -146,7 +153,7 @@ IMPORTANT: Generate EXACTLY ${wordCount} complete word objects in the words arra
     console.log('🎨 Generating story adventure for:', childProfile.childName);
     console.log('📚 Theme preferences based on interests:', childProfile.interests);
 
-    const completion = await groq.chat.completions.create({
+    const completion = await getGroqClient().chat.completions.create({
       model: "openai/gpt-oss-120b",
       messages: [
         {
@@ -222,7 +229,7 @@ Example: "As the dragon flies away, ${childName} spots a mysterious CASTLE in th
 Return ONLY the transition text (no JSON, no quotation marks).`;
 
   try {
-    const completion = await groq.chat.completions.create({
+    const completion = await getGroqClient().chat.completions.create({
       model: "openai/gpt-oss-120b",
       messages: [
         {
@@ -284,7 +291,7 @@ Return JSON:
 }`;
 
   try {
-    const completion = await groq.chat.completions.create({
+    const completion = await getGroqClient().chat.completions.create({
       model: "openai/gpt-oss-120b",
       messages: [
         {
