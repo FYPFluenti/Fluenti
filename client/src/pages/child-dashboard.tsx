@@ -10,6 +10,7 @@ import FluentiLogo from "@/components/FluentiLogo";
 import voiceModel from "./voice-model";
 import ModelViewerAvatar from "@/components/ModelViewerAvatar";
 import SharedSidebar from "@/components/layout/SharedSidebar";
+import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import FeedbackModal from "@/components/layout/FeedbackModel";
 import PageHeader from "@/components/layout/PageHeader";
 import { LogoutButton } from "@/components/auth/LogoutButton";
@@ -61,15 +62,17 @@ export default function ChildDashboard() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="h-screen font-sans flex bg-background text-foreground overflow-hidden">
-      {/* Sidebar */}
-      <SharedSidebar 
-        onFeedbackOpen={() => setShowFeedback(true)}
-        currentPage="dashboard"
-      />
+    <div className="min-h-screen lg:h-screen font-sans flex bg-background text-foreground lg:overflow-hidden">
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <SharedSidebar 
+          onFeedbackOpen={() => setShowFeedback(true)}
+          currentPage="dashboard"
+        />
+      </div>
 
       {/* Main Content */}
-      <main className="ml-20 px-6 w-full h-screen overflow-hidden flex flex-col">
+      <main className="lg:ml-20 px-4 lg:px-6 w-full min-h-screen lg:h-screen lg:overflow-hidden flex flex-col pb-20 lg:pb-0">
         <PageHeader />
 
         <section className="text-center py-10 flex-1 flex items-center justify-center">
@@ -170,6 +173,21 @@ export default function ChildDashboard() {
         {/* Voice UI Modal */}
         
       </main>
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav 
+        onFeedbackOpen={() => setShowFeedback(true)}
+        currentPage="dashboard"
+        userType="child"
+      />
+
+      {/* Feedback Modal */}
+      {showFeedback && (
+        <FeedbackModal 
+          isOpen={showFeedback}
+          onClose={() => setShowFeedback(false)}
+        />
+      )}
     </div>
   );
 }
