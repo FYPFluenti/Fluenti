@@ -19,7 +19,7 @@ export default function PhonologicalAwarenessGame({ onComplete, userLevel }: Pho
       id: '1',
       type: 'rhyme_detection',
       instruction: 'Do these words rhyme?',
-      stimuli: { word1: 'cat', word2: 'hat', images: ['🐱', '👒'] },
+      stimuli: { word1: 'cat', word2: 'hat', images: ['🐱', '👒'] as string[] },
       correct_answer: true,
       difficulty: 1
     },
@@ -27,7 +27,7 @@ export default function PhonologicalAwarenessGame({ onComplete, userLevel }: Pho
       id: '2',
       type: 'initial_sound',
       instruction: 'What sound does this word start with?',
-      stimuli: { word: 'ball', image: '⚽', options: ['b', 'd', 'p'] },
+      stimuli: { word: 'ball', image: '⚽', options: ['b', 'd', 'p'] as string[] },
       correct_answer: 'b',
       difficulty: 2
     },
@@ -35,7 +35,7 @@ export default function PhonologicalAwarenessGame({ onComplete, userLevel }: Pho
       id: '3',
       type: 'syllable_counting',
       instruction: 'How many syllables does this word have?',
-      stimuli: { word: 'butterfly', image: '🦋', options: [1, 2, 3, 4] },
+      stimuli: { word: 'butterfly', image: '🦋', options: [1, 2, 3, 4] as number[] },
       correct_answer: 3,
       difficulty: 3
     },
@@ -43,7 +43,7 @@ export default function PhonologicalAwarenessGame({ onComplete, userLevel }: Pho
       id: '4',
       type: 'sound_blending',
       instruction: 'What word do these sounds make?',
-      stimuli: { sounds: ['c', 'a', 't'], options: ['cat', 'cut', 'cot'] },
+      stimuli: { sounds: ['c', 'a', 't'] as string[], options: ['cat', 'cut', 'cot'] as string[] },
       correct_answer: 'cat',
       difficulty: 2
     }
@@ -114,19 +114,19 @@ export default function PhonologicalAwarenessGame({ onComplete, userLevel }: Pho
         return (
           <div className="text-center space-y-6">
             <div className="flex justify-center gap-8 mb-6">
-              <div className="text-6xl">{currentTask.stimuli.images[0]}</div>
-              <div className="text-6xl">{currentTask.stimuli.images[1]}</div>
+              <div className="text-6xl">{currentTask.stimuli.images?.[0]}</div>
+              <div className="text-6xl">{currentTask.stimuli.images?.[1]}</div>
             </div>
             <div className="flex justify-center gap-4 mb-6">
               <button
-                onClick={() => playAudio(currentTask.stimuli.word1)}
+                onClick={() => playAudio(currentTask.stimuli.word1 || '')}
                 className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
               >
                 <Volume2 className="w-4 h-4" />
                 {currentTask.stimuli.word1}
               </button>
               <button
-                onClick={() => playAudio(currentTask.stimuli.word2)}
+                onClick={() => playAudio(currentTask.stimuli.word2 || '')}
                 className="flex items-center gap-2 bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
               >
                 <Volume2 className="w-4 h-4" />
@@ -156,14 +156,14 @@ export default function PhonologicalAwarenessGame({ onComplete, userLevel }: Pho
             <div className="text-8xl mb-4">{currentTask.stimuli.image}</div>
             <div className="text-4xl font-bold mb-6">{currentTask.stimuli.word}</div>
             <button
-              onClick={() => playAudio(currentTask.stimuli.word)}
+              onClick={() => playAudio(currentTask.stimuli.word || '')}
               className="flex items-center gap-2 bg-blue-500 text-white px-6 py-3 rounded-lg mx-auto mb-6 hover:bg-blue-600"
             >
               <Volume2 className="w-5 h-5" />
               Hear the word
             </button>
             <div className="flex justify-center gap-4">
-              {currentTask.stimuli.options.map((option: string) => (
+              {(currentTask.stimuli.options as string[] | undefined)?.map((option: string) => (
                 <button
                   key={option}
                   onClick={() => handleResponse(option)}
@@ -182,7 +182,7 @@ export default function PhonologicalAwarenessGame({ onComplete, userLevel }: Pho
             <div className="text-8xl mb-4">{currentTask.stimuli.image}</div>
             <div className="text-4xl font-bold mb-6">{currentTask.stimuli.word}</div>
             <button
-              onClick={() => playAudio(currentTask.stimuli.word)}
+              onClick={() => playAudio(currentTask.stimuli.word || '')}
               className="flex items-center gap-2 bg-blue-500 text-white px-6 py-3 rounded-lg mx-auto mb-6 hover:bg-blue-600"
             >
               <Volume2 className="w-5 h-5" />
@@ -190,7 +190,7 @@ export default function PhonologicalAwarenessGame({ onComplete, userLevel }: Pho
             </button>
             <div className="text-lg mb-4">Clap for each syllable!</div>
             <div className="flex justify-center gap-4">
-              {currentTask.stimuli.options.map((option: number) => (
+              {(currentTask.stimuli.options as number[] | undefined)?.map((option: number) => (
                 <button
                   key={option}
                   onClick={() => handleResponse(option)}
@@ -208,7 +208,7 @@ export default function PhonologicalAwarenessGame({ onComplete, userLevel }: Pho
           <div className="text-center space-y-6">
             <div className="text-2xl mb-6">Listen to each sound:</div>
             <div className="flex justify-center gap-4 mb-8">
-              {currentTask.stimuli.sounds.map((sound: string, index: number) => (
+              {currentTask.stimuli.sounds?.map((sound: string, index: number) => (
                 <button
                   key={index}
                   onClick={() => playAudio(sound)}
@@ -220,7 +220,7 @@ export default function PhonologicalAwarenessGame({ onComplete, userLevel }: Pho
             </div>
             <div className="text-lg mb-6">What word do they make together?</div>
             <div className="flex justify-center gap-4">
-              {currentTask.stimuli.options.map((option: string) => (
+              {(currentTask.stimuli.options as string[] | undefined)?.map((option: string) => (
                 <button
                   key={option}
                   onClick={() => handleResponse(option)}

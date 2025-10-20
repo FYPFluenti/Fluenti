@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useOnboardingStatus } from "@/hooks/useOnboarding";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { motion } from "framer-motion";
 import FluentiLogo from "@/components/FluentiLogo";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import ModelViewerAvatar from "@/components/ModelViewerAvatar";
+import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import { UserTypeCard } from "@/components/UserTypeCard";
 import FeatureCard from "@/components/FeatureCard";
 import Spline from '@splinetool/react-spline';
@@ -46,6 +48,7 @@ export default function Home() {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [, setLocation] = useLocation();
+  const { onboardingStatus, isLoading: isOnboardingLoading } = useOnboardingStatus();
   
   // State variables
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -57,11 +60,23 @@ export default function Home() {
   
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
+  //  STEP 1: Redirect authenticated users - check onboarding for children only
   useEffect(() => {
-    if (!isLoading && isAuthenticated && user) {
+    if (!isLoading && !isOnboardingLoading && isAuthenticated && user) {
       const userType = (user as any)?.userType;
-      console.log('User type detected:', userType); // For debugging
+      console.log('User type detected:', userType);
+      console.log('Onboarding status:', onboardingStatus);
       
+      // Check if CHILD user needs onboarding first
+      const needsOnboarding = onboardingStatus ? !onboardingStatus.isCompleted : true;
+      
+      if (needsOnboarding && userType === 'child') {
+        console.log('Child user needs onboarding, redirecting to onboarding flow');
+        setLocation('/onboarding');
+        return;
+      }
+      
+      // Redirect to appropriate dashboard based on user type
       switch (userType) {
         case 'child':
           console.log('Redirecting to child dashboard');
@@ -77,7 +92,7 @@ export default function Home() {
           setLocation('/child-dashboard');
       }
     }
-  }, [isAuthenticated, isLoading, user, setLocation]);
+  }, [isAuthenticated, isLoading, isOnboardingLoading, user, onboardingStatus, setLocation]);
 
   // Feedback submit function
   const submitFeedback = () => {
@@ -99,7 +114,7 @@ export default function Home() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-white relative overflow-hidden">
-        {/* FIXED: 3D Background - Only Behind Hero Section */}
+        {/*  3D Background - Only Behind Hero Section */}
         <div className="absolute inset-0 w-full h-screen z-0"> {/* CHANGED: fixed → absolute, h-full → h-screen */}
           <Spline 
             scene="https://prod.spline.design/d1ABYikBmZ80miSz/scene.splinecode"
@@ -854,25 +869,29 @@ export default function Home() {
             </ul>
           </div>
           
-          {/* Copyright */}
-          <div className="text-right">
-            <p className="text-gray-600 text-sm leading-relaxed">
-              © 2025 fluenti inc
-              <br />
-              by samaha munir & fluenti team
-            </p>
-          </div>
           
         </div>
+      </div>
+    </div>
+    
+    {/* Copyright - Below Footer */}
+    <div className="border-t border-gray-200 py-4">
+      <div className="max-w-7xl mx-auto px-6">
+        <p className="text-center text-gray-600 text-sm">
+          © 2025 fluenti inc by fluenti team
+        </p>
       </div>
     </div>
   </footer>
   
       </div>
-      );
+      ); // Close the return statement for landing page
   }
 
-  const userType = (user as any)?.userType || 'child';  return (
+  // Dashboard for authenticated users (removed duplicate header)
+  const userType = (user as any)?.userType || 'child';
+
+  return (
     <div className="min-h-screen lg:h-screen font-sans flex bg-background text-foreground lg:overflow-hidden">
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex w-20 bg-background flex-col items-center py-6 space-y-6 fixed top-0 left-0 h-screen z-50 border-r border-border">
@@ -1246,6 +1265,12 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Mobile Bottom Navigation */}
+      <MobileBottomNav 
+        currentPage="dashboard"
+        userType={userType}
+      />
     </div>
   );
 } 

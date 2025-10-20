@@ -6,12 +6,22 @@ import { Toaster } from "@/components/ui/toaster";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
 import Signup from "@/pages/signup";
+import VerifyEmail from "@/pages/verify-email";
+import ResetPassword from "@/pages/reset-password";
+import SecuritySettings from "@/pages/security-settings";
+import OnboardingPage from "@/pages/onboarding";
+import OnboardingStatistics from "@/pages/onboarding-statistics";
 import ChildDashboard from "@/pages/child-dashboard";
 import AdultDashboard from "@/pages/adult-dashboard";
 import SpeechTherapy from "@/pages/speech-therapy";
 import ProgressDashboard from "@/pages/progress-dashboard";
 import EmotionalSupport from "@/pages/emotional-support";
 import EmotionalSupportVoice from "@/pages/emotional-support-voice";
+// import SpeechTest from "@/pages/SpeechTest"; // Disabled - using Groq only
+// import QuickSpeechTest from "@/pages/QuickSpeechTest"; // Disabled - using Groq only
+import GroqTestPage from "@/components/GroqTestPage";
+import Assessment from "@/pages/assessment";
+import Achievements from "@/pages/achievements";
 import Settings from "@/pages/settings";
 import VoiceModel from "@/pages/voice-model";
 import AdultHistory from "@/pages/adult-history";
@@ -40,6 +50,30 @@ export default function App() {
             <Route path="/" component={Home} />
             <Route path="/login" component={Login} />
             <Route path="/signup" component={Signup} />
+            <Route path="/verify-email" component={VerifyEmail} />
+            <Route path="/reset-password" component={ResetPassword} />
+            
+            {/* Protected Settings Routes */}
+            <Route path="/security">
+              <ProtectedRoute>
+                <SecuritySettings />
+              </ProtectedRoute>
+            </Route>
+            
+            {/* Onboarding Route */}
+            <Route path="/onboarding">
+              <ProtectedRoute>
+                <OnboardingPage />
+              </ProtectedRoute>
+            </Route>
+            
+            {/* Onboarding Statistics Route (Admin) */}
+            <Route path="/onboarding-statistics">
+              <ProtectedRoute>
+                <OnboardingStatistics />
+              </ProtectedRoute>
+            </Route>
+            
             {/* Protected Dashboard Routes */}
             <Route path="/child-dashboard">
               <ProtectedRoute allowedUserTypes={['child']}>
@@ -78,6 +112,18 @@ export default function App() {
               </ProtectedRoute>
             </Route>
             
+           {/* <Route path="/assessment">
+              <ProtectedRoute>
+                <Assessment />
+              </ProtectedRoute>
+            </Route>*/}
+            
+            <Route path="/achievements">
+              <ProtectedRoute>
+                <Achievements />
+              </ProtectedRoute>
+            </Route>
+            
             <Route path="/adult-settings">
               <ProtectedRoute>
                 <AdultSettings />
@@ -101,6 +147,20 @@ export default function App() {
               <ProtectedRoute allowedUserTypes={['child']}>
                 <VoiceModel />
               </ProtectedRoute>
+            </Route>
+            
+            {/* Microsoft Speech Test Routes (Disabled - using Groq only) */}
+            {/* <Route path="/speech-test">
+              <SpeechTest />
+            </Route>
+            
+            <Route path="/quick-test">
+              <QuickSpeechTest />
+            </Route> */}
+            
+            {/* Groq Test Route (Debug) */}
+            <Route path="/groq-test">
+              <GroqTestPage />
             </Route>
             
             {/* 404 Route */}

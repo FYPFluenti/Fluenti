@@ -48,16 +48,59 @@ except ImportError as e:
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend communication
 
+#  Add request logging middleware to prevent duplication
+import uuid
+import logging
+from flask import g
+
+# Configure logging to reduce duplication
+logging.getLogger('werkzeug').setLevel(logging.WARNING)
+app.logger.setLevel(logging.INFO)
+
+@app.before_request
+def log_request():
+    """Log incoming requests with unique ID"""
+    g.request_id = str(uuid.uuid4())[:8]
+    
+    # Only log non-health check requests to reduce noise
+    if request.endpoint != 'health_check':
+        app.logger.info(f"[{g.request_id}] {request.method} {request.path}")
+
+@app.after_request 
+def log_response(response):
+    """Log outgoing responses"""
+    if hasattr(g, 'request_id') and request.endpoint != 'health_check':
+        app.logger.info(f"[{g.request_id}] Response: {response.status_code}")
+    return response
+
 # Store active sessions
 active_sessions: Dict[str, Any] = {}
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint"""
+    """Health check endpoint with AI crisis detection status"""
+    crisis_info = {}
+    
+    # Get crisis detection information
+    if therapy_bot and hasattr(therapy_bot, 'crisis_detector'):
+        detector = therapy_bot.crisis_detector
+        crisis_info = {
+            'detection_mode': getattr(detector, 'detection_mode', 'unknown'),
+            'ai_enabled': hasattr(detector, 'llm') and detector.llm is not None,
+            'llm_model': 'llama-3.3-70b-versatile' if hasattr(detector, 'llm') and detector.llm else None,
+            'hybrid_analysis': detector.detection_mode == 'hybrid' if hasattr(detector, 'detection_mode') else False
+        }
+    
     return jsonify({
         'status': 'healthy',
         'therapy_bot_available': therapy_bot is not None,
-        'interface_available': interface is not None
+        'interface_available': interface is not None,
+        'crisis_detection': crisis_info,
+        'emergency_contacts': {
+            '1019': 'Mental Health Crisis Line (24/7)',
+            '1166': 'National Emergency Helpline',
+            '0800-00-100': 'Rozan Crisis Helpline'
+        }
     })
 
 @app.route('/api/therapy/start-session', methods=['POST'])
@@ -68,8 +111,8 @@ def start_therapy_session():
             return jsonify({
                 'error': 'Therapy bot not available',
                 'available_resources': {
-                    '988': 'Suicide & Crisis Lifeline',
-                    '911': 'Emergency Services'
+                    '1019': 'Mental Health Crisis Line (24/7)',
+                    '1166': 'National Emergency Helpline'
                 }
             }), 503
 
@@ -118,7 +161,7 @@ def therapy_chat():
         if not therapy_bot:
             return jsonify({
                 'error': 'Therapy bot not available',
-                'response': "I'm currently unavailable. If you're in crisis, please contact 988 (Suicide & Crisis Lifeline) or 911 (Emergency Services)."
+                'response': "I'm currently unavailable. If you're in crisis, please contact 1019 (Mental Health Crisis Line) or 1166 (National Emergency Helpline)."
             }), 503
 
         data = request.json or {}
@@ -154,7 +197,7 @@ def therapy_chat():
             if TherapyInterface is None or therapy_bot is None:
                 return jsonify({
                     'error': 'Therapy service not properly initialized',
-                    'response': "I'm currently unavailable. If you're in crisis, please contact 988 (Suicide & Crisis Lifeline) or 911 (Emergency Services)."
+                    'response': "I'm currently unavailable. If you're in crisis, please contact 1019 (Mental Health Crisis Line) or 1166 (National Emergency Helpline)."
                 }), 503
             
             session_interface = TherapyInterface(therapy_bot)
@@ -193,6 +236,16 @@ def therapy_chat():
         crisis_level = session_interface.last_crisis_level
         is_crisis = crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL] if CrisisLevel else False
         
+        # Get AI crisis detection info if available
+        ai_detection_info = {}
+        if hasattr(session_interface.therapy_bot, 'crisis_detector'):
+            detector = session_interface.therapy_bot.crisis_detector
+            ai_detection_info = {
+                'detection_mode': getattr(detector, 'detection_mode', 'unknown'),
+                'ai_enabled': hasattr(detector, 'llm') and detector.llm is not None,
+                'hybrid_analysis': detector.detection_mode == 'hybrid' if hasattr(detector, 'detection_mode') else False
+            }
+        
         return jsonify({
             'success': True,
             'response': response,
@@ -201,7 +254,8 @@ def therapy_chat():
             'userId': user_id,
             'crisisLevel': crisis_level.value if crisis_level else 'none',
             'isCrisis': is_crisis,
-            'newSession': False
+            'newSession': False,
+            'aiDetection': ai_detection_info
         })
         
     except Exception as e:
@@ -209,7 +263,7 @@ def therapy_chat():
         traceback.print_exc()
         return jsonify({
             'error': 'Failed to process message',
-            'response': "I encountered a technical issue. Please try again. If you're in crisis, please contact 988 (Suicide & Crisis Lifeline) or 911 (Emergency Services).",
+            'response': "I encountered a technical issue. Please try again. If you're in crisis, please contact 1019 (Mental Health Crisis Line) or 1166 (National Emergency Helpline).",
             'details': str(e)
         }), 500
 
@@ -270,6 +324,63 @@ def list_active_sessions():
             'details': str(e)
         }), 500
 
+@app.route('/api/therapy/crisis-detection/config', methods=['GET', 'POST'])
+def crisis_detection_config():
+    """Get or set crisis detection configuration"""
+    try:
+        if not therapy_bot or not hasattr(therapy_bot, 'crisis_detector'):
+            return jsonify({
+                'error': 'Crisis detector not available'
+            }), 503
+            
+        detector = therapy_bot.crisis_detector
+        
+        if request.method == 'GET':
+            # Get current configuration
+            return jsonify({
+                'success': True,
+                'current_mode': getattr(detector, 'detection_mode', 'unknown'),
+                'ai_enabled': hasattr(detector, 'llm') and detector.llm is not None,
+                'llm_model': 'llama-3.3-70b-versatile' if hasattr(detector, 'llm') and detector.llm else None,
+                'available_modes': ['ai', 'pattern', 'hybrid'],
+                'recommended_mode': 'hybrid'
+            })
+        
+        elif request.method == 'POST':
+            # Set new configuration
+            data = request.json or {}
+            new_mode = data.get('mode')
+            
+            if new_mode not in ['ai', 'pattern', 'hybrid']:
+                return jsonify({
+                    'error': 'Invalid mode. Use: ai, pattern, or hybrid'
+                }), 400
+            
+            # Update detection mode
+            old_mode = getattr(detector, 'detection_mode', 'unknown')
+            detector.detection_mode = new_mode
+            
+            return jsonify({
+                'success': True,
+                'message': f'Crisis detection mode changed from {old_mode} to {new_mode}',
+                'old_mode': old_mode,
+                'new_mode': new_mode,
+                'ai_enabled': hasattr(detector, 'llm') and detector.llm is not None
+            })
+        
+        else:
+            # Handle unsupported methods (though Flask should prevent this)
+            return jsonify({
+                'error': 'Method not allowed'
+            }), 405
+            
+    except Exception as e:
+        print(f"❌ Error with crisis detection config: {e}")
+        return jsonify({
+            'error': 'Failed to configure crisis detection',
+            'details': str(e)
+        }), 500
+
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({
@@ -279,7 +390,9 @@ def not_found(error):
             'POST /api/therapy/start-session',
             'POST /api/therapy/chat',
             'POST /api/therapy/session-summary',
-            'GET /api/therapy/sessions'
+            'GET /api/therapy/sessions',
+            'GET /api/therapy/crisis-detection/config',
+            'POST /api/therapy/crisis-detection/config'
         ]
     }), 404
 
@@ -293,11 +406,13 @@ def internal_error(error):
 if __name__ == '__main__':
     print("🚀 Starting Emotional Therapy Service...")
     print("📋 Available endpoints:")
-    print("  GET  /health                      - Health check")
-    print("  POST /api/therapy/start-session   - Start new session")
-    print("  POST /api/therapy/chat            - Send message")
-    print("  POST /api/therapy/session-summary - Get session summary")
-    print("  GET  /api/therapy/sessions        - List active sessions")
+    print("  GET  /health                           - Health check")
+    print("  POST /api/therapy/start-session        - Start new session")
+    print("  POST /api/therapy/chat                 - Send message")
+    print("  POST /api/therapy/session-summary      - Get session summary")
+    print("  GET  /api/therapy/sessions             - List active sessions")
+    print("  GET  /api/therapy/crisis-detection/config  - Get crisis detection config")
+    print("  POST /api/therapy/crisis-detection/config - Set crisis detection mode")
     print()
     
     if therapy_bot:
@@ -305,23 +420,44 @@ if __name__ == '__main__':
     else:
         print("❌ Therapy bot failed to load - service will have limited functionality")
     
-    print("\n🌟 Starting Flask server on http://localhost:5001")
-    print("🔗 Frontend can now connect to this service")
-    print("💡 Press Ctrl+C to stop the service")
-    print("=" * 60)
+    #  Add production server option
+    use_production = os.getenv('THERAPY_PRODUCTION', 'false').lower() == 'true'
     
-    try:
-        # Run Flask app
-        app.run(
-            host='0.0.0.0',
-            port=5001,
-            debug=False,  # Disabled to prevent auto-restarts and improve performance
-            threaded=True,
-            use_reloader=False  # Explicitly disable the reloader
-        )
-    except KeyboardInterrupt:
-        print("\n🛑 Service stopped by user")
-        print("👋 Thank you for using the Emotional Therapy Service!")
-    except Exception as e:
-        print(f"\n❌ Service error: {e}")
-        print("💡 Check the error messages above for troubleshooting")
+    if use_production:
+        try:
+            from waitress import serve
+            print("🚀 Starting with Waitress production server...")
+            print("🌟 Server running on http://localhost:5001")
+            print("🔗 Frontend can now connect to this service")
+            print("💡 Press Ctrl+C to stop the service")
+            print("=" * 60)
+            
+            serve(app, host='0.0.0.0', port=5001, threads=6)
+            
+        except ImportError:
+            print("⚠️ Waitress not installed. Install with: pip install waitress")
+            print("🔄 Falling back to Flask development server...")
+            use_production = False
+    
+    if not use_production:
+        print("⚠️ Using Flask development server (not for production)")
+        print("🌟 Starting Flask server on http://localhost:5001")
+        print("🔗 Frontend can now connect to this service")
+        print("💡 Press Ctrl+C to stop the service")
+        print("=" * 60)
+        
+        try:
+            # Run Flask app -  Better configuration
+            app.run(
+                host='0.0.0.0',
+                port=5001,
+                debug=False,  # Disabled to prevent auto-restarts and improve performance
+                threaded=True,
+                use_reloader=False  # Explicitly disable the reloader
+            )
+        except KeyboardInterrupt:
+            print("\n🛑 Service stopped by user")
+            print("👋 Thank you for using the Emotional Therapy Service!")
+        except Exception as e:
+            print(f"\n❌ Service error: {e}")
+            print("💡 Check the error messages above for troubleshooting")

@@ -1,22 +1,30 @@
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from "express";
+import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import type { Express } from "express";
-import { connectDB } from "./db/connect";
+import connectDB from "./mongodb";
 import authRoutes from "./routes/auth";
+import feedbackRoutes from "./routes/feedback";
 
 
 const app = express();
 
- connectDB();
+connectDB();
   
-  // Register auth routes
-  app.use("/api/auth", authRoutes);
+// Add cookie parser middleware
+app.use(cookieParser());
 
 // Explicit UTF-8 support for Urdu text
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// Register auth routes (after JSON parsing middleware)
+app.use("/api/auth", authRoutes);
+
+// Register feedback routes (after JSON parsing middleware)
+app.use("/api/feedback", feedbackRoutes);
 
 // Ensure UTF-8 encoding
 app.use((req, res, next) => {

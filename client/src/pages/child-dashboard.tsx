@@ -4,10 +4,9 @@ import { useLocation } from "wouter";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
-import { Star, ThumbsUp, Clock, Mic, MicOff, User, Gamepad2, LineChart, Smile, Settings, SlidersHorizontal } from "lucide-react";
+import { Mic } from "lucide-react";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import FluentiLogo from "@/components/FluentiLogo";
-import voiceModel from "./voice-model";
 import ModelViewerAvatar from "@/components/ModelViewerAvatar";
 import SharedSidebar from "@/components/layout/SharedSidebar";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
@@ -36,9 +35,6 @@ export default function ChildDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showFeedback, setShowFeedback] = useState(false);
-  const [showChatUI, setShowChatUI] = useState(false);
-  const [showVoiceUI, setShowVoiceUI] = useState(false);
-  const [listening, setListening] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showPreferences, setShowPreferences] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
@@ -75,44 +71,49 @@ export default function ChildDashboard() {
       <main className="lg:ml-20 px-4 lg:px-6 w-full min-h-screen lg:h-screen lg:overflow-hidden flex flex-col pb-20 lg:pb-0">
         <PageHeader />
 
-        <section className="text-center py-10 flex-1 flex items-center justify-center">
+        <section className="text-center py-6 sm:py-10 flex-1 flex items-center justify-center">
           <motion.div 
             initial={{ opacity: 0, y: 40 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ duration: 0.5 }} 
-            className="max-w-xl mx-auto"
+            className="max-w-lg mx-auto w-full px-4"
           >
-            <div className="mx-auto mb-8">
-   
-  <ModelViewerAvatar
-    avatarUrl={avatarUrls.therapist}
-    size="large"
-    className="mx-auto mb-8"
-    //animate={true}
-/>
-</div>
-            <h2 className="text-2xl font-bold mb-4">Feeling stuck?</h2>
-            <div className="space-y-3">
-              <button 
+            <div className="mx-auto mb-6 sm:mb-8 flex justify-center">
+              <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 child-dashboard-avatar">
+                <ModelViewerAvatar
+                  avatarUrl={avatarUrls.therapist}
+                  size="large"
+                  className="w-full h-full"
+                  //animate={true}
+                />
+              </div>
+            </div>
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 flex items-center justify-center gap-2">
+              Ready to Practice Speaking? 
+              <Mic className="w-6 h-6 sm:w-7 sm:h-7 text-[#F5B82E]" />
+            </h2>
+            <div className="w-full space-y-4">
+              {/*<button 
                 onClick={() => setLocation('/voice-model')} 
-                className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all"
+                className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-full max-w-sm mx-auto flex items-center justify-between hover:bg-muted transition-all child-dashboard-button"
               >
                 <div>
-                  <h3 className="text-base font-semibold">voice mode</h3>
-                  <p className="text-sm text-muted-foreground">Say Hi to Your Avatar</p>
+                  <h3 className="text-base font-semibold">Start Speech Practice</h3>
+                  <p className="text-sm text-muted-foreground">Talk with your AI friend!</p>
                 </div>
-                <ArrowRight className="w-5 h-5" />
+                <ArrowRight className="w-5 h-5 flex-shrink-0" />
+              </button>*/}
+
+              <button 
+                onClick={() => setLocation('/onboarding')} 
+                className="border rounded-xl px-4 py-3 text-left shadow bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white border-[#F5B82E] w-full max-w-sm mx-auto flex items-center justify-between hover:shadow-lg transition-all duration-200"
+              >
+                <div>
+                  <h3 className="text-base font-semibold">Take Assessment</h3>
+                  <p className="text-sm text-white/90">Get personalized learning recommendations!</p>
+                </div>
+                <ArrowRight className="w-5 h-5 flex-shrink-0" />
               </button>
-              {/* <button 
-                onClick={() => setShowChatUI(true)} 
-                className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[300px] mx-auto flex items-center justify-between hover:bg-muted transition-all"
-              >
-                <div>
-                  <h3 className="text-base font-semibold">text mode</h3>
-                  <p className="text-sm text-muted-foreground">Need a break from talking?</p>
-                </div>
-                <ArrowRight className="w-5 h-5" />
-              </button> */}
             </div>
           </motion.div>
         </section>
@@ -122,56 +123,7 @@ export default function ChildDashboard() {
           onClose={() => setShowFeedback(false)} 
         />
 
-        {/* Chat UI Modal */}
-        {showChatUI && (
-          <div className="fixed inset-0 bg-background flex flex-col items-center justify-center">
-            <button
-              onClick={() => setShowChatUI(false)}
-              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
-            >
-              ✕
-            </button>
 
-            <div className="absolute left-0 top-0 bottom-0 w-16 flex flex-col items-center py-6 gap-8 bg-background border-r border-border">
-              <span className="w-8 h-8 rounded-full bg-[#F5B82E]" />
-              <Star className="w-6 h-6 text-muted-foreground" />
-              <Clock className="w-6 h-6 text-muted-foreground" />
-              <ThumbsUp className="w-6 h-6 text-muted-foreground" />
-              <User className="w-6 h-6 text-muted-foreground mt-auto" />
-            </div>
-
-            <div className="flex flex-col items-start pl-24 max-w-3xl w-full">
-              <div className="flex items-start gap-3 mb-6">
-                <span className="inline-block w-8 h-8 rounded-full bg-[#F5B82E]" />
-                <div className="bg-muted/40 text-foreground rounded-xl px-4 py-2 shadow-sm">
-                  hey there! what's on your mind today?
-                </div>
-              </div>
-
-              <div className="w-full flex items-center gap-3 border border-border rounded-xl bg-card p-3 shadow-sm">
-                <textarea
-                  placeholder="type your message..."
-                  rows={1}
-                  className="flex-1 resize-none bg-transparent outline-none text-foreground placeholder:text-muted-foreground/70"
-                />
-                <button className="w-10 h-10 rounded-full border border-border grid place-items-center text-muted-foreground hover:bg-muted">
-                  ✕
-                </button>
-                <button
-                  className="w-10 h-10 rounded-full grid place-items-center bg-[#F5B82E]"
-                  aria-label="send"
-                >
-                  <svg viewBox="0 0 24 24" className="w-5 h-5 text-black">
-                    <path fill="currentColor" d="M3 11l18-8-8 18-2-7-8-3z" />
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Voice UI Modal */}
-        
       </main>
 
       {/* Mobile Bottom Navigation */}

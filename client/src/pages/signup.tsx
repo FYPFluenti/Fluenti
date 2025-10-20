@@ -112,17 +112,8 @@ export default function Signup() {
       if (data.success && data.user) {
         setSuccess("Account created successfully with Google! Redirecting...");
         
-        // Store auth token
-        const authToken = data.authToken || data.user.id;
-        localStorage.setItem('authToken', authToken);
-        
-        // Trigger auth state update
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: 'authToken',
-          newValue: authToken,
-        }));
-        
-        // Clear and refresh queries
+        // No need to store token - it's in httpOnly cookie
+        // Just clear and refresh queries
         queryClient.clear();
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
@@ -177,17 +168,8 @@ export default function Signup() {
             if (data.success && data.user) {
               setSuccess("Account created successfully with Facebook! Redirecting...");
               
-              // Store auth token
-              const authToken = data.authToken || data.user.id;
-              localStorage.setItem('authToken', authToken);
-              
-              // Trigger auth state update
-              window.dispatchEvent(new StorageEvent('storage', {
-                key: 'authToken',
-                newValue: authToken,
-              }));
-              
-              // Clear and refresh queries
+              // No need to store token - it's in httpOnly cookie
+              // Just clear and refresh queries
               queryClient.clear();
               await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
               
@@ -279,36 +261,17 @@ export default function Signup() {
       const data = await response.json();
       
       if (data.success && data.user) {
-        setSuccess("Account created successfully! Redirecting...");
+        setSuccess("Account created successfully! Please check your email to verify your account before logging in.");
         
-        // Store auth token
-        const authToken = data.authToken || data.user.id;
-        localStorage.setItem('authToken', authToken);
-        
-        // Trigger auth state update
-        window.dispatchEvent(new StorageEvent('storage', {
-          key: 'authToken',
-          newValue: authToken,
-        }));
-        
-        // Clear and refresh queries
+        // No need to store token - it's in httpOnly cookie
+        // Just clear and refresh queries
         queryClient.clear();
         await queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
         
-        // Redirect directly to appropriate dashboard based on user type
-        const userType = data.user.userType;
+        // Redirect to login page after 3 seconds
         setTimeout(() => {
-          switch (userType) {
-            case 'child':
-              setLocation('/child-dashboard');
-              break;
-            case 'adult':
-              setLocation('/adult-dashboard');
-              break;
-            default:
-              setLocation('/child-dashboard');
-          }
-        }, 1000);
+          setLocation('/login');
+        }, 3000);
         
       } else {
         setError(data.message || 'Signup failed. Please try again.');
@@ -335,7 +298,7 @@ export default function Signup() {
         </div>
         
         {/* Content */}
-        <div className="relative z-10 flex flex-col justify-center items-start px-16 text-slate-800">
+        <div className="relative z-10 flex flex-col justify-start items-start px-16 pt-24 text-slate-800">
           <div className="mb-8">
             <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold tracking-tight mb-4">fluenti</h1>
             <div className="w-20 h-1 bg-orange-400 rounded-full"></div>
@@ -483,11 +446,8 @@ export default function Signup() {
             </div>
           </div>
 
-          {/* Your existing form content remains the same */}
+          {/* Signup Form */}
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {/* ... rest of your existing form fields ... */}
-            {/* I'm keeping the rest of your form implementation as-is */}
-            
             {/* Name Fields */}
             <div className="grid grid-cols-2 gap-4">
               <div>

@@ -3,6 +3,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Heart, MessageCircle } from 'lucide-react';
+import SharedSidebarEmotional from '@/components/layout/SharedSidebarEmotional';
+import FeedbackModal from '@/components/layout/FeedbackModel';
+import PageHeader from '@/components/layout/PageHeader';
 
 interface Message {
   id: string;
@@ -19,13 +22,14 @@ interface SessionData {
   sessionKey?: string;
 }
 
-const EmotionalSupportChat = () => {
+const EmotionalSupport = () => {
   const language = localStorage.getItem('language') || 'en';
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [sessionData, setSessionData] = useState<SessionData>({});
   const [serviceStatus, setServiceStatus] = useState<'unknown' | 'healthy' | 'unhealthy'>('unknown');
+  const [showFeedback, setShowFeedback] = useState(false);
 
   // Check service health on component mount
   useEffect(() => {
@@ -112,8 +116,9 @@ const EmotionalSupportChat = () => {
         ai: `I'm sorry, I'm having trouble responding right now. Please try again.
 
 If you're in immediate crisis, please contact:
-• **988** - Suicide & Crisis Lifeline (call or text, 24/7)
-• **911** - Emergency Services
+• 1019 - Mental Health Crisis Line (24/7)
+• 1166 - National Emergency Helpline
+• 0800-00-100 - Rozan Crisis Helpline
 
 Your wellbeing is important.`,
         timestamp: new Date(),
@@ -127,50 +132,76 @@ Your wellbeing is important.`,
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col max-w-4xl mx-auto p-6">
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center gap-3 mb-4">
-            <Heart className="w-6 h-6 text-red-500" />
-            <h1 className="text-2xl font-bold">Emotional Support Chat</h1>
-          </div>
-          
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-            <span>Language: {language === 'ur' ? 'اردو' : 'English'}</span>
-            <span className="flex items-center gap-1">
-              <div className={`w-2 h-2 rounded-full ${
-                serviceStatus === 'healthy' ? 'bg-green-500' : 
-                serviceStatus === 'unhealthy' ? 'bg-red-500' : 'bg-yellow-500'
-              }`} />
-              Service: {serviceStatus === 'healthy' ? 'Online' : serviceStatus === 'unhealthy' ? 'Offline' : 'Checking...'}
+    <div className="min-h-screen max-h-screen flex bg-background overflow-hidden">
+      {/* Sidebar */}
+      <SharedSidebarEmotional 
+        onFeedbackOpen={() => setShowFeedback(true)}
+        currentPage="chat"
+      />
+
+      {/* Main Content */}
+      <div className="ml-20 flex-1 flex flex-col h-screen overflow-hidden relative">
+        <PageHeader />
+        
+        {/* Service Status - Top Right Corner (below header) */}
+        <div className="absolute top-20 right-4 z-10">
+          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
+            serviceStatus === 'healthy' 
+              ? 'bg-emerald-500/20 border border-emerald-400/30 text-emerald-600' 
+              : serviceStatus === 'unhealthy' 
+              ? 'bg-red-500/20 border border-red-400/30 text-red-600'
+              : 'bg-amber-500/20 border border-amber-400/30 text-amber-600'
+          }`}>
+            <div className={`w-1.5 h-1.5 rounded-full ${
+              serviceStatus === 'healthy' ? 'bg-emerald-500' :
+              serviceStatus === 'unhealthy' ? 'bg-red-500' :
+              'bg-amber-500 animate-pulse'
+            }`}></div>
+            <span>
+              {serviceStatus === 'unknown' ? 'Checking...' : serviceStatus === 'healthy' ? 'online' : 'offline'}
             </span>
-            {sessionData.sessionId && (
-              <span>Session: {sessionData.sessionId.slice(-8)}</span>
-            )}
           </div>
         </div>
-
+        
+        <div className="flex-1 flex flex-col max-w-4xl mx-auto p-6 overflow-hidden">
         {/* Service Status Alert */}
         {serviceStatus === 'unhealthy' && (
-          <Alert className="mb-4 border-red-200 bg-red-50">
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-800">
-              The therapy service is currently unavailable. If you're in crisis, please contact:
-              <br />
-              <strong>988</strong> - Suicide & Crisis Lifeline or <strong>911</strong> - Emergency Services
-            </AlertDescription>
-          </Alert>
+          <div className="mb-4 space-y-4">
+            <Alert className="border-red-200 bg-red-50">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800">
+                The therapy service is currently unavailable. If you're in crisis, please contact:
+                <br />
+                <strong>1019</strong> - Mental Health Crisis Line or <strong>1166</strong> - National Emergency
+              </AlertDescription>
+            </Alert>
+            
+            {/* Crisis Resources Banner - Only when service is offline */}
+            <div className="bg-muted/40 backdrop-blur-sm border border-border/50 rounded-lg p-3">
+              <div className="flex items-center justify-center gap-2 text-xs">
+                <Heart className="w-3 h-3 text-blue-400" />
+                <span className="text-foreground/80">
+                  <span className="font-medium">Crisis Resources:</span>
+                  <span className="mx-2">•</span>
+                  <span className="font-semibold">1019</span> <span className="text-blue-400">(Mental Health Crisis)</span>
+                  <span className="mx-2">•</span>  
+                  <span className="font-semibold">1166</span> <span className="text-blue-400">(Emergency)</span>
+                  <span className="mx-2">•</span>
+                  <span className="font-semibold">0800-00-100</span> <span className="text-blue-400">(Rozan Crisis)</span>
+                </span>
+              </div>
+            </div>
+          </div>
         )}
 
-        {/* Chat Messages */}
-        <div className="flex-1 border rounded-lg p-4 mb-4 min-h-[400px] max-h-[600px] overflow-y-auto bg-muted/20">
+          {/* Chat Messages */}
+          <div className="flex-1 rounded-lg p-4 mb-4 overflow-y-auto bg-muted/20 min-h-0">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">Welcome to Emotional Support</h3>
-              <p>This is a safe space where you can share your thoughts and feelings.</p>
-              <p className="text-sm mt-2">Start a conversation by typing a message below.</p>
+              <h3 className="text-lg font-medium mb-2">Welcome to Fluenti</h3>
+              <p>Your AI-powered companion for emotional wellness and mental health support.</p>
+              <p className="text-sm mt-2">Share what's on your mind - I'm here to listen and help.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -187,16 +218,31 @@ Your wellbeing is important.`,
                   
                   {/* AI response */}
                   <div className="flex justify-start">
-                    <div className={`px-4 py-2 rounded-lg max-w-[80%] ${
+                    <div className={`px-4 py-3 rounded-xl max-w-[80%] ${
                       message.isCrisis 
-                        ? 'bg-red-50 border border-red-200' 
+                        ? 'bg-gradient-to-br from-red-25 via-red-50 to-red-25 border border-red-200/60 shadow-md backdrop-blur-sm' 
                         : 'bg-muted'
                     }`}>
                       {/* Crisis alert */}
                       {message.isCrisis && (
-                        <div className="flex items-center gap-2 mb-2 text-red-600">
-                          <AlertTriangle className="w-4 h-4" />
-                          <span className="text-xs font-medium">URGENT SUPPORT NEEDED</span>
+                        <div className="relative mb-4 p-4 bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-xl shadow-sm overflow-hidden">
+                          {/* Subtle animated background */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-100/20 to-transparent animate-pulse" />
+                          
+                          {/* Content */}
+                          <div className="relative flex items-start gap-3">
+                            <div className="flex-shrink-0 p-2 bg-red-100 rounded-full border border-red-200">
+                              <AlertTriangle className="w-5 h-5 text-red-600" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm font-semibold text-red-800 mb-1">
+                                Urgent Support Needed
+                              </h4>
+                              <p className="text-xs text-red-700/90 leading-relaxed">
+                                Crisis support resources are available 24/7. You don't have to face this alone.
+                              </p>
+                            </div>
+                          </div>
                         </div>
                       )}
                       
@@ -207,13 +253,19 @@ Your wellbeing is important.`,
                           {message.timestamp.toLocaleTimeString()}
                         </p>
                         {message.crisisLevel && message.crisisLevel !== 'none' && (
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            message.crisisLevel === 'critical' ? 'bg-red-100 text-red-800' :
-                            message.crisisLevel === 'high' ? 'bg-orange-100 text-orange-800' :
-                            message.crisisLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-blue-100 text-blue-800'
+                          <span className={`inline-flex items-center text-xs px-2.5 py-1 rounded-full font-medium border ${
+                            message.crisisLevel === 'critical' ? 'bg-red-100 text-red-800 border-red-200' :
+                            message.crisisLevel === 'high' ? 'bg-orange-100 text-orange-800 border-orange-200' :
+                            message.crisisLevel === 'medium' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                            'bg-blue-100 text-blue-800 border-blue-200'
                           }`}>
-                            {message.crisisLevel}
+                            <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                              message.crisisLevel === 'critical' ? 'bg-red-500' :
+                              message.crisisLevel === 'high' ? 'bg-orange-500' :
+                              message.crisisLevel === 'medium' ? 'bg-yellow-500' :
+                              'bg-blue-500'
+                            }`} />
+                            {message.crisisLevel.charAt(0).toUpperCase() + message.crisisLevel.slice(1)}
                           </span>
                         )}
                       </div>
@@ -225,14 +277,9 @@ Your wellbeing is important.`,
           )}
         </div>
 
-        {/* Input */}
-        <div className="space-y-2">
-          {/* Crisis Resources Banner */}
-          <div className="text-xs text-muted-foreground bg-muted/50 p-2 rounded text-center">
-            <strong>Crisis Resources:</strong> 988 (Suicide & Crisis Lifeline) • 911 (Emergency)
-          </div>
-          
-          <div className="flex gap-2">
+          {/* Input */}
+          <div className="flex-shrink-0">
+            <div className="flex gap-2">
             <Input 
               value={input} 
               onChange={(e) => setInput(e.target.value)} 
@@ -247,11 +294,18 @@ Your wellbeing is important.`,
             >
               {isLoading ? 'Sending...' : 'Send'}
             </Button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Feedback Modal */}
+      <FeedbackModal 
+        isOpen={showFeedback} 
+        onClose={() => setShowFeedback(false)} 
+      />
     </div>
   );
 };
 
-export default EmotionalSupportChat;
+export default EmotionalSupport;

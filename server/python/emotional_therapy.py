@@ -25,7 +25,15 @@ from datasets import load_dataset
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceBgeEmbeddings
+try:
+    from langchain_huggingface import HuggingFaceEmbeddings
+    EMBEDDINGS_CLASS = HuggingFaceEmbeddings
+    EMBEDDINGS_TYPE = 'new'
+except ImportError:
+    from langchain_community.embeddings import HuggingFaceBgeEmbeddings
+    EMBEDDINGS_CLASS = HuggingFaceBgeEmbeddings
+    EMBEDDINGS_TYPE = 'legacy'
+    print("⚠️ Using deprecated HuggingFaceBgeEmbeddings. Install langchain-huggingface for updated version.")
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # Sentiment analysis
@@ -204,7 +212,7 @@ class MongoDBStorage:
             if hasattr(self, 'crisis_logs'):
                 # Save to MongoDB
                 result = self.crisis_logs.insert_one(crisis_doc)
-                print(f"🚨 CRISIS EVENT LOGGED to MongoDB: {crisis_level} for user {user_id}")
+                print(f" CRISIS EVENT LOGGED to MongoDB: {crisis_level} for user {user_id}")
 
                 # Send immediate alert for high/critical crises
                 if crisis_level in ["high", "critical"]:
@@ -263,7 +271,7 @@ class MongoDBStorage:
                     {"$set": {"alert_sent": True, "alert_timestamp": datetime.now(timezone.utc)}}
                 )
 
-            print(f"🚨 CRISIS ALERT: {crisis_doc['crisis_level']} level crisis detected for {crisis_doc['user_login']}")
+            print(f" CRISIS ALERT: {crisis_doc['crisis_level']} level crisis detected for {crisis_doc['user_login']}")
             print(f"   Time: {crisis_doc['timestamp']}")
             print(f"   Session: {crisis_doc['session_id']}")
 
@@ -538,9 +546,12 @@ import json
 from datetime import datetime
 
 class CrisisDetector:
-    """Fully dynamic crisis detection system with zero hardcoded patterns"""
+    """Fully dynamic crisis detection system with AI-powered analysis"""
 
-    def __init__(self):
+    def __init__(self, llm=None, detection_mode="hybrid"):
+        self.llm = llm  # LLM for AI-powered crisis detection
+        self.detection_mode = detection_mode  # "ai", "pattern", or "hybrid"
+        
         # Core crisis severity indicators - these are fundamental psychological markers
         self.severity_markers = {
             'critical_risk': {
@@ -777,6 +788,14 @@ class CrisisDetector:
 
         return phrases
 
+    def _get_sentence_containing_word(self, text: str, word: str) -> str:
+        """Get the sentence containing a specific word"""
+        sentences = text.split('.')
+        for sentence in sentences:
+            if word in sentence.lower():
+                return sentence.strip()
+        return text  # Return full text if no sentence boundary found
+
     def _analyze_help_seeking_behavior(self, text: str, features: Dict[str, Any]) -> float:
         """Dynamically analyze help-seeking behavior"""
         help_score = 0.0
@@ -811,7 +830,7 @@ class CrisisDetector:
         return min(help_score / 5.0, 1.0)
 
     def _detect_crisis_indicators(self, text: str, contexts: Set[str], features: Dict[str, Any]) -> Tuple[float, List[str]]:
-        """Dynamically detect crisis indicators"""
+        """Dynamically detect crisis indicators with explicit suicide/self-harm detection"""
         text_lower = text.lower()
         crisis_score = 0.0
         detected_indicators = []
@@ -822,6 +841,107 @@ class CrisisDetector:
         # Emotional intensity analysis
         intensity_multiplier = 1.0 + (features['intensity_words'] * 0.2)
         temporal_urgency = 1.0 + (features['temporal_words'] * 0.3)
+
+        # CRITICAL: Explicit suicide/self-harm detection patterns -  More nuanced scoring
+        critical_patterns = {
+            'suicide_explicit': {
+                'patterns': ['kill myself', 'end my life', 'take my life', 'suicide', 'suicidal', 
+                           'want to die', 'wanna die', 'wish i was dead', 'better off dead',
+                           'should be dead', 'going to kill myself', 'plan to die',
+                           'feel like dying', 'wanna just die', 'ill kill myself', 'i will kill myself',
+                           'want death', 'wanna be dead'],
+                'score': 10.0,  # Immediate critical level
+                'variations': ['kill my self', 'end my own life', 'want to dies', 'wanna dies',
+                              'feel like dieing', 'feeling like dying', 'want 2 die', 'wanna 2 die',
+                              'gunna kill myself', 'gonna kill myself']
+            },
+            'self_harm_explicit': {
+                'patterns': ['cut myself', 'hurt myself', 'harm myself', 'self harm', 'cutting',
+                           'overdose', 'pills', 'razor', 'blade', 'cut my wrists'],
+                'score': 8.0,  # High level
+                'variations': []
+            },
+            'method_specific': {
+                'patterns': ['hanging', 'jump off', 'bridge', 'gun', 'poison', 'rope'],
+                'score': 12.0,  # Extremely critical - specific methods
+                'variations': []
+            },
+            'immediate_intent': {
+                'patterns': ['going to do it', 'ready to end', 'ready to die', 
+                           'have decided to die', 'made up my mind to', 'plan is to', 'will do it tonight'],
+                'score': 15.0,  # Maximum critical - immediate action
+                'variations': []
+            },
+            'temporal_crisis': {
+                'patterns': ['right now', 'tonight', 'today'],
+                'score': 2.0,  # Lower base score, needs context verification
+                'variations': []
+            },
+            #  Separate casual temporal references from crisis indicators
+            'temporal_casual': {
+                'patterns': ['today', 'yesterday', 'this morning', 'this afternoon', 'earlier'],
+                'score': 0.5,  # Much lower score for casual temporal references
+                'variations': []
+            }
+        }
+
+        # Check for critical patterns first -  Better context analysis
+        for pattern_type, pattern_data in critical_patterns.items():
+            all_patterns = pattern_data['patterns'] + pattern_data['variations']
+            for pattern in all_patterns:
+                if pattern in text_lower:
+                    #  Apply context reduction for casual temporal references
+                    score_multiplier = 1.0
+                    
+                    # Context analysis for temporal patterns
+                    if pattern_type in ['temporal_casual', 'temporal_crisis']:
+                        # Look for actual crisis indicators in the same sentence
+                        sentence_with_pattern = self._get_sentence_containing_word(text_lower, pattern)
+                        
+                        # Crisis context words that indicate real danger
+                        true_crisis_words = ['kill myself', 'end my life', 'suicide', 'die tonight', 
+                                           'hurt myself', 'cut myself', 'overdose', 'hanging']
+                        
+                        # Emotional state words (not crisis)
+                        emotional_state_words = ['feeling', 'emotionally', 'unstable', 'sad', 'depressed', 
+                                               'anxious', 'overwhelmed', 'struggling']
+                        
+                        has_crisis_context = any(crisis_word in sentence_with_pattern for crisis_word in true_crisis_words)
+                        has_emotional_context = any(emotional_word in sentence_with_pattern for emotional_word in emotional_state_words)
+                        
+                        if has_emotional_context and not has_crisis_context:
+                            score_multiplier = 0.1  # Just emotional description, not crisis
+                        elif not has_crisis_context:
+                            score_multiplier = 0.2  # General temporal reference
+                    
+                    adjusted_score = pattern_data['score'] * score_multiplier
+                    crisis_score += adjusted_score
+                    
+                    if adjusted_score > 2.0:  # Only log significant scores
+                        detected_indicators.append(f" {pattern} (CRITICAL: {pattern_type})")
+                        print(f" CRITICAL PATTERN DETECTED: '{pattern}' in '{text}' (Score: +{adjusted_score})")
+                    else:
+                        detected_indicators.append(f"{pattern} ({pattern_type})")
+                        print(f"ℹ️ Pattern detected: '{pattern}' (Score: +{adjusted_score})")
+
+        # Enhanced flexible pattern matching for variations
+        flexible_crisis_patterns = [
+            # Match variations of "want to die" / "wanna die"
+            (r'\b(wanna?|want\s+to)\s+\w*\s*die\b', 12.0, 'flexible_suicide_intent'),
+            # Match "feel like dying" variations  
+            (r'\bfeel\w*\s+like\s+dyin[g]?\b', 12.0, 'flexible_dying_feeling'),
+            # Match "kill myself" variations
+            (r'\b(i?ll|will|gonna|going\s+to)?\s*kill\s+(my)?self\b', 12.0, 'flexible_kill_self'),
+            # Match death wishes
+            (r'\b(wish|want)\w*\s+(i\s+)?(was|were)\s+dead\b', 10.0, 'flexible_death_wish'),
+        ]
+
+        import re
+        for pattern_regex, score, pattern_name in flexible_crisis_patterns:
+            if re.search(pattern_regex, text_lower, re.IGNORECASE):
+                crisis_score += score
+                detected_indicators.append(f" FLEXIBLE MATCH: {pattern_name} (Score: +{score})")
+                print(f" FLEXIBLE CRISIS PATTERN: '{pattern_regex}' matched in '{text}' (Score: +{score})")
 
         # Learn crisis patterns dynamically
         crisis_patterns = {
@@ -837,8 +957,13 @@ class CrisisDetector:
         for pattern_type, patterns in crisis_patterns.items():
             for pattern in patterns:
                 if pattern in text_lower:
-                    # Base score for pattern
-                    pattern_score = 1.0
+                    # Base score for pattern -  Lower scores for common words
+                    if pattern_type in ['absolute_language', 'self_reference_negative']:
+                        pattern_score = 0.3  # Very common words, low crisis weight
+                    elif pattern_type in ['isolation_language', 'pain_language']:
+                        pattern_score = 0.5  # Moderate weight
+                    else:
+                        pattern_score = 1.0  # Higher weight for more specific crisis language
 
                     # Adjust based on context
                     if contexts:
@@ -851,7 +976,9 @@ class CrisisDetector:
                     pattern_score *= intensity_multiplier * temporal_urgency
 
                     crisis_score += pattern_score
-                    detected_indicators.append(f"{pattern} ({pattern_type})")
+                    
+                    if pattern_score > 0.5:  # Only log significant scores
+                        detected_indicators.append(f"{pattern} ({pattern_type})")
 
                     # Learn this pattern
                     self.learned_patterns['crisis_indicators'][pattern]['severity'] = pattern_score
@@ -893,7 +1020,7 @@ class CrisisDetector:
 
     def _calculate_final_crisis_level(self, crisis_score: float, help_seeking_score: float,
                                     has_negation: bool, contexts: Set[str]) -> CrisisLevel:
-        """Dynamically calculate final crisis level"""
+        """Dynamically calculate final crisis level -  More balanced thresholds"""
 
         # Apply context-based adjustments
         if has_negation:
@@ -907,20 +1034,20 @@ class CrisisDetector:
         if self.current_user['time_of_day'] in ['night', 'early_morning']:
             crisis_score *= 1.1  # Slightly higher concern during vulnerable hours
 
-        # Determine level based on score
-        if crisis_score >= 8.0:
+        #  More conservative thresholds to prevent false positives
+        if crisis_score >= 20.0:  # Only truly critical patterns with multiple indicators
             return CrisisLevel.CRITICAL
-        elif crisis_score >= 5.0:
+        elif crisis_score >= 12.0:  # High risk patterns with clear intent
             return CrisisLevel.HIGH
-        elif crisis_score >= 2.5:
+        elif crisis_score >= 7.0:  # Medium concern patterns
             return CrisisLevel.MEDIUM
-        elif crisis_score >= 1.0:
+        elif crisis_score >= 3.0:  # Low concern patterns
             return CrisisLevel.LOW
         else:
             return CrisisLevel.NONE
 
     def detect_crisis_level(self, text: str, user_id: Optional[str] = None) -> CrisisLevel:
-        """Main dynamic crisis detection method"""
+        """Main crisis detection method - Configurable: AI/Pattern/Hybrid"""
         if not text or not text.strip():
             return CrisisLevel.NONE
 
@@ -928,6 +1055,94 @@ class CrisisDetector:
         if not user_id:
             user_id = self.current_user.get('login', 'anonymous_user')
 
+        if self.detection_mode == "ai":
+            # AI-only mode
+            try:
+                return self._ai_powered_crisis_detection(text)
+            except Exception as e:
+                print(f"⚠️ AI detection failed, falling back to pattern: {e}")
+                return self._pattern_based_crisis_detection(text, user_id)
+                
+        elif self.detection_mode == "pattern":
+            # Pattern-only mode
+            return self._pattern_based_crisis_detection(text, user_id)
+            
+        else:
+            # Hybrid mode (default)
+            ai_level = CrisisLevel.NONE
+            pattern_level = CrisisLevel.NONE
+
+            # Try AI-powered crisis detection
+            try:
+                ai_level = self._ai_powered_crisis_detection(text)
+                print(f"🤖 AI Analysis: {ai_level.value}")
+            except Exception as e:
+                print(f"⚠️ AI crisis detection failed: {e}")
+
+            # Always run pattern-based detection for comparison
+            pattern_level = self._pattern_based_crisis_detection(text, user_id)
+            print(f"📊 Pattern Analysis: {pattern_level.value}")
+
+            # Hybrid decision logic: Take the higher of the two levels for safety
+            crisis_levels = [CrisisLevel.NONE, CrisisLevel.LOW, CrisisLevel.MEDIUM, CrisisLevel.HIGH, CrisisLevel.CRITICAL]
+            
+            ai_index = crisis_levels.index(ai_level) if ai_level in crisis_levels else 0
+            pattern_index = crisis_levels.index(pattern_level) if pattern_level in crisis_levels else 0
+            
+            # Use the higher level (more conservative approach for safety)
+            final_level = crisis_levels[max(ai_index, pattern_index)]
+            
+            print(f"🔒 Final Decision: {final_level.value} (AI: {ai_level.value}, Pattern: {pattern_level.value})")
+            
+            return final_level
+
+    def _ai_powered_crisis_detection(self, text: str) -> CrisisLevel:
+        """AI-powered crisis detection using LLM analysis"""
+        if not hasattr(self, 'llm') or self.llm is None:
+            raise Exception("LLM not available")
+
+        crisis_analysis_prompt = f"""
+You are a mental health crisis assessment AI. Analyze the following message for suicide risk and crisis level.
+
+Message: "{text}"
+
+Instructions:
+1. Assess the immediate suicide/self-harm risk level
+2. Consider context, intent, and emotional state
+3. Look for both explicit and implicit crisis indicators
+4. Consider if this is genuine distress vs. casual expression
+
+Return ONLY one of these exact levels:
+- CRITICAL: Immediate suicide/self-harm intent or plan
+- HIGH: Strong suicidal ideation or distress  
+- MEDIUM: Moderate emotional distress or concerning thoughts
+- LOW: Mild emotional difficulties
+- NONE: No crisis indicators
+
+Crisis Level:"""
+
+        try:
+            response = self.llm.invoke(crisis_analysis_prompt)
+            ai_response = response.content.strip().upper() if hasattr(response, 'content') else str(response).strip().upper()
+            
+            # Parse AI response
+            if 'CRITICAL' in ai_response:
+                return CrisisLevel.CRITICAL
+            elif 'HIGH' in ai_response:
+                return CrisisLevel.HIGH
+            elif 'MEDIUM' in ai_response:
+                return CrisisLevel.MEDIUM
+            elif 'LOW' in ai_response:
+                return CrisisLevel.LOW
+            else:
+                return CrisisLevel.NONE
+                
+        except Exception as e:
+            print(f"❌ AI crisis analysis error: {e}")
+            raise e
+
+    def _pattern_based_crisis_detection(self, text: str, user_id: Optional[str] = None) -> CrisisLevel:
+        """Original pattern-based crisis detection as fallback"""
         # Extract linguistic features
         features = self._extract_linguistic_features(text)
 
@@ -958,13 +1173,13 @@ class CrisisDetector:
 
         # Log results
         if final_level in [CrisisLevel.CRITICAL, CrisisLevel.HIGH]:
-            print(f"🚨 CRISIS DETECTED: {final_level.value} (Score: {crisis_score:.2f})")
+            print(f"📊 Pattern Crisis Detection: {final_level.value} (Score: {crisis_score:.2f})")
             print(f"   Contexts: {contexts}")
             print(f"   Indicators: {indicators[:3]}")
         elif final_level in [CrisisLevel.MEDIUM, CrisisLevel.LOW]:
-            print(f"⚠️ Concern detected: {final_level.value} (Score: {crisis_score:.2f})")
+            print(f"⚠️ Pattern Concern detected: {final_level.value} (Score: {crisis_score:.2f})")
         else:
-            print(f"✅ No crisis detected (Score: {crisis_score:.2f}, Help-seeking: {help_seeking_score:.2f})")
+            print(f"✅ No pattern crisis detected (Score: {crisis_score:.2f}, Help-seeking: {help_seeking_score:.2f})")
 
         if contexts:
             print(f"🔍 Learned contexts: {contexts}")
@@ -1014,9 +1229,9 @@ class CrisisDetector:
         """Generate dynamic intervention suggestions"""
         interventions = {
             CrisisLevel.CRITICAL: [
-                "Contact 988 (Suicide & Crisis Lifeline) immediately",
-                "Go to the nearest emergency room",
-                "Call 911 if in immediate danger",
+                "Contact 1019 (Mental Health Crisis Line) immediately",
+                "Go to the nearest hospital emergency room",
+                "Call 1166 if in immediate danger",
                 "Have someone stay with you",
                 "Remove access to means of self-harm",
                 "Contact your therapist now"
@@ -1049,9 +1264,9 @@ class CrisisDetector:
 
         return interventions.get(crisis_level, interventions[CrisisLevel.LOW])
 
-# Initialize fully dynamic crisis detector
-crisis_detector = CrisisDetector()
-print("✅ Fully dynamic crisis detection with zero hardcoded patterns initialized!")
+# Initialize AI-powered crisis detector with hybrid mode
+crisis_detector = CrisisDetector(detection_mode="hybrid")
+print("✅ AI-powered crisis detection initialized (Hybrid mode: AI + Patterns)!")
 print(f"🕐 Session started at: {crisis_detector.current_user['timestamp']}")
 print(f"👤 User context: {crisis_detector.current_user['login']} ({crisis_detector.current_user['time_of_day']})")
 
@@ -1064,8 +1279,8 @@ class SessionMemory:
     conversation_summary: str = ""
     key_themes: Optional[List] = None
     user_preferences: Optional[Dict] = None
-    session_id: str = ""  # FIXED: Track specific session
-    created_at: str = ""  # FIXED: Track when session was created
+    session_id: str = ""  #  Track specific session
+    created_at: str = ""  #  Track when session was created
 
     def __post_init__(self):
         if self.issue_details is None:
@@ -1088,7 +1303,7 @@ class TherapyBot:
         self.storage = storage
         self.active_sessions: Dict[str, UserSession] = {}
 
-        # FIXED: Strict session memory isolation
+        #  Strict session memory isolation
         self.session_memories: Dict[str, SessionMemory] = {}
         self.user_preferences = {}
         self.conversation_analytics = {}
@@ -1106,6 +1321,13 @@ class TherapyBot:
                 self.llm = ChatGroq(model="llama-3.1-70b-versatile")
             except:
                 self.llm = None
+
+        # Pass LLM to crisis detector for AI-powered detection
+        if self.llm:
+            self.crisis_detector.llm = self.llm
+            print("🤖 AI-powered crisis detection enabled!")
+        else:
+            print("⚠️ Using pattern-based crisis detection only")
 
         # Initialize enhanced knowledge base
         self._initialize_enhanced_knowledge_base()
@@ -1196,12 +1418,19 @@ class TherapyBot:
 
             print(f"📚 Created {len(chunks)} enhanced knowledge chunks")
 
-            # Enhanced embeddings with better model
-            embeddings = HuggingFaceBgeEmbeddings(
-                model_name='BAAI/bge-small-en-v1.5',
-                model_kwargs={'device': 'cpu'},
-                encode_kwargs={'normalize_embeddings': True}
-            )
+            # Enhanced embeddings with better model -  Use global constants
+            try:
+                embeddings = EMBEDDINGS_CLASS(
+                    model_name='BAAI/bge-small-en-v1.5',
+                    model_kwargs={'device': 'cpu'},
+                    encode_kwargs={'normalize_embeddings': True}
+                )
+                if EMBEDDINGS_TYPE == 'legacy':
+                    print("⚠️ Using deprecated embeddings class. Consider upgrading to langchain-huggingface.")
+            except Exception as e:
+                print(f"⚠️ Error initializing embeddings: {e}")
+                # Fallback to basic embeddings if needed
+                raise
 
             # Create enhanced vector store with metadata
             self.vector_store = Chroma.from_texts(
@@ -1231,7 +1460,7 @@ class TherapyBot:
     def _setup_dynamic_prompts(self):
         """Setup dynamic therapeutic conversation prompts with strict session isolation"""
 
-        # FIXED: Casual prompt with session verification
+        #  Casual prompt with session verification
         self.casual_prompt = PromptTemplate(
             input_variables=["user_input", "conversation_history", "session_context"],
             template="""You are a warm, professional mental health support assistant. Keep this response natural and conversational.
@@ -1250,7 +1479,7 @@ Respond naturally like a skilled therapist would - warm, genuine, and appropriat
 Your natural response:"""
         )
 
-        # FIXED: Therapeutic prompt with strict session boundaries
+        #  Therapeutic prompt with strict session boundaries
         self.therapeutic_prompt = PromptTemplate(
             input_variables=["context", "conversation_history", "user_input", "crisis_level", "session_context", "conversation_summary"],
             template="""You are a highly skilled, empathetic mental health support assistant trained in evidence-based approaches.
@@ -1289,32 +1518,32 @@ Your empathetic, session-isolated response:"""
         # Crisis intervention prompt (only for actual crises)
         self.crisis_prompt = PromptTemplate(
             input_variables=["user_input", "crisis_level", "assessment_questions", "session_context"],
-            template="""🚨 CRISIS INTERVENTION PROTOCOL ACTIVATED 🚨
+            template=""" CRISIS INTERVENTION PROTOCOL ACTIVATED 
 
 CURRENT SESSION CONTEXT: {session_context}
 
 USER MESSAGE: {user_input}
 CRISIS LEVEL: {crisis_level}
 
-You are responding to someone who may be in immediate psychological distress or danger. Your response is CRITICAL.
+You are responding to someone who may be in immediate psychological distress or danger. Your response is CRITICAL and must be personalized to their specific situation.
 
 IMMEDIATE PRIORITIES:
-1. **Acknowledge their courage** in reaching out and validate their pain
-2. **Assess immediate safety** without being intrusive
-3. **Provide specific crisis resources** prominently and clearly
-4. **Instill hope** while taking their pain seriously
-5. **Encourage immediate professional contact**
+1. Acknowledge their courage in reaching out and validate their specific pain mentioned
+2. Assess immediate safety without being intrusive - ask gentle safety questions
+3. Connect with their specific emotions and situation they described
+4. Instill hope while taking their pain seriously
+5. Encourage immediate professional contact
 
-CRISIS RESOURCES TO INCLUDE:
-- **988** - Suicide & Crisis Lifeline (call or text, 24/7)
-- **Text HOME to 741741** - Crisis Text Line
-- **911** - If in immediate physical danger
+ASSESSMENT QUESTIONS TO CONSIDER: {assessment_questions}
 
-Your crisis intervention response:"""
+DO NOT include helpline numbers (they will be added automatically).
+Be personal, empathetic, and specific to what they shared. Keep response 4-6 lines.
+
+Your personalized crisis intervention response:"""
         )
 
     def _get_or_create_session_memory(self, user_id: str, session_id: str) -> SessionMemory:
-        """FIXED: Get or create session memory with strict isolation"""
+        """ Get or create session memory with strict isolation"""
         session_key = f"{user_id}_{session_id}"
         if session_key not in self.session_memories:
             self.session_memories[session_key] = SessionMemory(
@@ -1329,7 +1558,7 @@ Your crisis intervention response:"""
         return self.session_memories[session_key]
 
     def _verify_session_isolation(self, user_id: str, session_id: str) -> bool:
-        """FIXED: Verify that we're only accessing the correct session's memory"""
+        """ Verify that we're only accessing the correct session's memory"""
         session_key = f"{user_id}_{session_id}"
         current_memory = self.session_memories.get(session_key)
 
@@ -1348,7 +1577,7 @@ Your crisis intervention response:"""
         return True
 
     def _update_session_memory(self, user_id: str, session_id: str, user_input: str, bot_response: str):
-        """FIXED: Update session memory with strict isolation checks"""
+        """ Update session memory with strict isolation checks"""
         # Verify session isolation first
         if not self._verify_session_isolation(user_id, session_id):
             print(f"🔒 Session isolation enforced for {user_id}_{session_id}")
@@ -1380,7 +1609,7 @@ Your crisis intervention response:"""
         if memory.progress_notes is not None:
             memory.progress_notes.append({
                 'timestamp': datetime.now().isoformat(),
-                'session_id': session_id,  # FIXED: Track session ID
+                'session_id': session_id,  #  Track session ID
                 'user_input': user_input,
                 'bot_response': bot_response[:100],
                 'themes': self._extract_themes_from_text(user_input)
@@ -1411,7 +1640,7 @@ Your crisis intervention response:"""
         return themes
 
     def _create_session_context(self, user_id: str, session_id: str) -> str:
-        """FIXED: Create session context with strict isolation"""
+        """ Create session context with strict isolation"""
         # Verify session isolation
         if not self._verify_session_isolation(user_id, session_id):
             return "New isolated session"
@@ -1442,7 +1671,7 @@ Your crisis intervention response:"""
         return " | ".join(context_parts) if context_parts else "New conversation - no prior context"
 
     def _create_conversation_summary(self, user_id: str, session_id: str) -> str:
-        """FIXED: Create conversation summary with strict session isolation"""
+        """ Create conversation summary with strict session isolation"""
         # Verify session isolation
         if not self._verify_session_isolation(user_id, session_id):
             return "This is a new isolated session."
@@ -1480,14 +1709,14 @@ Your crisis intervention response:"""
         return ". ".join(summary_parts) if summary_parts else "We're building our conversation in this session."
 
     def _format_conversation_history(self, user_id: str, session_id: str, limit: int = 10) -> str:
-        """FIXED: Format conversation history with strict session isolation"""
+        """ Format conversation history with strict session isolation"""
         try:
             # ONLY get history from the current session
             history = self.storage.get_conversation_history(user_id, session_id, limit=limit)
             formatted_history = []
 
             for conv in history[-limit:]:
-                # FIXED: Keep full context from THIS session only
+                #  Keep full context from THIS session only
                 formatted_history.append(f"Human: {conv['user_input']}")
                 formatted_history.append(f"Assistant: {conv['bot_response']}")
 
@@ -1501,7 +1730,8 @@ Your crisis intervention response:"""
         user_input_lower = user_input.lower().strip()
 
         # Crisis situations always get crisis response
-        if crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
+        if crisis_level in [CrisisLevel.MEDIUM, CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
+            print(f"🚨 CRISIS RESPONSE TYPE SELECTED: {crisis_level.value}")
             return "crisis"
 
         # Simple greetings and casual interactions
@@ -1565,7 +1795,7 @@ Your crisis intervention response:"""
             return ""
 
     def generate_enhanced_response(self, user_input: str, user_id: str, session_id: str) -> Tuple[str, CrisisLevel]:
-        """FIXED: Generate responses with strict session isolation"""
+        """Generate responses with strict session isolation"""
         try:
             # Enhanced crisis detection
             crisis_level = self.crisis_detector.detect_crisis_level(user_input, user_id)
@@ -1576,11 +1806,12 @@ Your crisis intervention response:"""
 
             # Determine response type dynamically
             response_type = self._determine_response_type(user_input, crisis_level, conversation_count)
+            print(f" Response Type Determined: {response_type} (Crisis Level: {crisis_level.value})")
 
-            # FIXED: Get conversation history from THIS session only
+            #  Get conversation history from THIS session only
             conversation_history = self._format_conversation_history(user_id, session_id, limit=10)
 
-            # FIXED: Get session context and summary from THIS session only
+            # Get session context and summary from THIS session only
             session_context = self._create_session_context(user_id, session_id)
             conversation_summary = self._create_conversation_summary(user_id, session_id)
 
@@ -1589,6 +1820,7 @@ Your crisis intervention response:"""
 
             # Generate response based on type
             if response_type == "crisis":
+                print(f" USING CRISIS PROMPT for {crisis_level.value}")
                 assessment_questions = self.crisis_detector.get_safety_assessment_questions(crisis_level)
                 formatted_prompt = self.crisis_prompt.format(
                     user_input=user_input,
@@ -1596,6 +1828,7 @@ Your crisis intervention response:"""
                     assessment_questions=assessment_questions[:2],
                     session_context=session_context
                 )
+                print(f" Crisis prompt preview: {formatted_prompt[:200]}...")
 
             elif response_type == "casual":
                 formatted_prompt = self.casual_prompt.format(
@@ -1621,9 +1854,11 @@ Your crisis intervention response:"""
 
             # Minimal post-processing - only add resources for actual crises
             if crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
+                print(f" Adding crisis resources for {crisis_level.value}")
                 response = self._add_crisis_resources(response, crisis_level)
+                print(f" Crisis resources added, final response length: {len(response)}")
 
-            # FIXED: Update session memory after generating response
+            #  Update session memory after generating response
             self._update_session_memory(user_id, session_id, user_input, response)
 
             # Save conversation
@@ -1647,15 +1882,20 @@ Your crisis intervention response:"""
     def _add_crisis_resources(self, response: str, crisis_level: CrisisLevel) -> str:
         """Add crisis resources only for actual crisis situations"""
         if crisis_level == CrisisLevel.CRITICAL:
-            resources = """\n\n🚨 **IMMEDIATE CRISIS RESOURCES:**
-• **988** - Suicide & Crisis Lifeline (call or text, 24/7)
-• **Text HOME to 741741** - Crisis Text Line
-• **911** - Emergency Services"""
+            resources = """\n\n🚨 IMMEDIATE CRISIS SUPPORT (PAKISTAN):
+• 1166 - National Emergency Helpline  
+• 1019 - Mental Health Crisis Line (24/7)
+• 0800-00-100 - Rozan Crisis Helpline"""
 
         elif crisis_level == CrisisLevel.HIGH:
-            resources = """\n\n🆘 **URGENT SUPPORT:**
-• **988** - Suicide & Crisis Lifeline
-• **Text HOME to 741741** - Crisis Text Line"""
+            resources = """\n\n⚠️ URGENT SUPPORT (PAKISTAN):
+• 1019 - Mental Health Crisis Line
+• 0800-00-100 - Rozan Crisis Helpline"""
+
+        elif crisis_level == CrisisLevel.MEDIUM:
+            resources = """\n\n💙 SUPPORT AVAILABLE (PAKISTAN):
+• 1019 - Mental Health Crisis Line
+• 0800-00-100 - Rozan Crisis Helpline"""
 
         else:
             return response
@@ -1786,16 +2026,16 @@ How are you doing today?"""
 
         if not self.therapy_bot:
             error_msg = """I'm currently unavailable. If you're in crisis, please contact:
-• **988** - Suicide & Crisis Lifeline
-• **911** - Emergency Services"""
+• 988 - Suicide & Crisis Lifeline
+• 911 - Emergency Services"""
             return error_msg
 
         if not self.current_user_id or not self.current_session_id:
             error_msg = """Please start a new session first.
 
 If this is an emergency:
-• **Call 988** - Suicide & Crisis Lifeline
-• **Call 911** - Emergency Services"""
+• **Call 1019** - Mental Health Crisis Line
+• **Call 1166** - National Emergency Helpline"""
             return error_msg
 
         if not message.strip():
@@ -1816,7 +2056,7 @@ If this is an emergency:
 
             # Format response based on crisis level
             if crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
-                formatted_response = f"🚨 **URGENT SUPPORT NEEDED** 🚨\n\n{response}"
+                formatted_response = f" URGENT SUPPORT NEEDED \n\n{response}"
             else:
                 formatted_response = response
 
@@ -1827,8 +2067,8 @@ If this is an emergency:
             error_msg = f"""I encountered a technical issue. Please try again.
 
 If you're in crisis, please contact immediately:
-• **988** - Suicide & Crisis Lifeline
-• **911** - Emergency Services"""
+• 1019 - Mental Health Crisis Line
+• 1166 - National Emergency Helpline"""
 
             return error_msg
 
@@ -1849,7 +2089,7 @@ If you're in crisis, please contact immediately:
 
         # Crisis level indicators
         crisis_indicators = {
-            CrisisLevel.CRITICAL: "🚨 CRITICAL",
+            CrisisLevel.CRITICAL: " CRITICAL",
             CrisisLevel.HIGH: "⚠️ HIGH RISK",
             CrisisLevel.MEDIUM: "⚡ ELEVATED",
             CrisisLevel.LOW: "💙 MILD",
@@ -2118,7 +2358,7 @@ def run_console_therapy_session():
             # Handle special commands
             if user_input.lower() in ['quit', 'exit', 'bye']:
                 print("\n🤖 Bot: Thank you for sharing with me today. Take care, and remember that support is always available when you need it.")
-                print("\n🚨 Remember: If you're in crisis, contact 988 (Suicide & Crisis Lifeline) or 911")
+                print("\n Remember: If you're in crisis, contact 1019 (Mental Health Crisis Line) or 1166 (Emergency)")
                 break
 
             elif user_input.lower() == 'summary':

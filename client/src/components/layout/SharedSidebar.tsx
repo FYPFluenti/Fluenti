@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import FluentiLogo from '@/components/FluentiLogo';
 import { LogoutButton } from '../auth/LogoutButton';
+import OnboardingStatsIcon from '@/components/icons/OnboardingStatsIcon';
 
 interface SidebarProps {
   onFeedbackOpen?: () => void;
@@ -36,6 +37,13 @@ export default function SharedSidebar({ onFeedbackOpen, currentPage }: SidebarPr
       id: "progress", 
       path: "/progress-dashboard",
       isActive: currentPage === "progress"
+    },
+    { 
+      icon: OnboardingStatsIcon, 
+      label: "onboarding stats", 
+      id: "onboarding-stats", 
+      path: "/onboarding-statistics",
+      isActive: currentPage === "onboarding-stats"
     },
     { 
       icon: Smile, 

@@ -4,27 +4,11 @@ import { useState, useEffect } from "react";
 
 export function useAuth() {
   const queryClient = useQueryClient();
-  const [authToken, setAuthToken] = useState<string | null>(() => {
-    // Initialize with current localStorage value
-    return typeof window !== 'undefined' ? localStorage.getItem('authToken') : null;
-  });
   const [isInitialized, setIsInitialized] = useState(false);
   
-  // Monitor auth token changes
+  // Initialize on mount
   useEffect(() => {
     setIsInitialized(true);
-    const token = localStorage.getItem('authToken');
-    setAuthToken(token);
-    
-    // Listen for storage changes
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === 'authToken') {
-        setAuthToken(e.newValue);
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
   
   const { data: user, isLoading, error } = useQuery({
@@ -35,26 +19,21 @@ export function useAuth() {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     staleTime: Infinity,
-    // Only query if we have an auth token and we're initialized
-    enabled: !!authToken && isInitialized,
+    // Query is always enabled since we use httpOnly cookies
+    enabled: isInitialized,
   });
 
-  const isAuthenticated = !error && !!user && !!authToken;
+  const isAuthenticated = !error && !!user;
 
   const logout = async () => {
     try {
       // Call the logout API using apiRequest
-      await apiRequest('GET', '/api/logout');
-      
-      // Clear the auth token first
-      localStorage.removeItem('authToken');
-      setAuthToken(null);
+      await apiRequest('POST', '/api/auth/logout');
       
       // Clear query cache
       queryClient.clear();
       
-      // Clear other storage
-      localStorage.clear();
+      // Clear session storage (but not localStorage - we don't use it anymore)
       sessionStorage.clear();
       
       // Invalidate the user query to trigger a re-fetch
@@ -62,16 +41,14 @@ export function useAuth() {
       
     } catch (error) {
       console.error('Logout error:', error);
-      // Even if logout API fails, clear local storage
-      localStorage.removeItem('authToken');
-      setAuthToken(null);
+      // Even if logout API fails, clear cache
       queryClient.clear();
     }
   };
 
   return {
     user,
-    isLoading: !isInitialized || (isLoading && !!authToken),
+    isLoading: !isInitialized || isLoading,
     isAuthenticated,
     error,
     logout,

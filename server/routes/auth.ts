@@ -1,23 +1,14 @@
 import { Router, Request, Response } from 'express';
-import jwt from 'jsonwebtoken';
 import { OAuth2Client } from 'google-auth-library';
 import { User, IUser } from '../db/schema';
+import { generateAccessToken, generateRefreshToken, TOKEN_EXPIRY } from '../services/jwtService';
 
 const router = Router();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// Helper function to generate JWT token
-const generateAuthToken = (userId: string): string => {
-  return jwt.sign(
-    { userId }, 
-    process.env.JWT_SECRET || 'fallback-secret', 
-    { expiresIn: '7d' }
-  );
-};
-
 // Helper function to create user response
 const createUserResponse = (user: IUser) => ({
-  id: user._id,
+  id: user.id,
   firstName: user.firstName,
   lastName: user.lastName,
   email: user.email,
@@ -26,8 +17,38 @@ const createUserResponse = (user: IUser) => ({
   profilePicture: user.profilePicture
 });
 
-// Google OAuth Signup/Login
-router.post('/google', async (req: Request, res: Response) => {
+// Helper function to set JWT cookies
+const setAuthCookies = async (res: Response, user: IUser) => {
+  const accessToken = generateAccessToken({ 
+    userId: user.id, 
+    email: user.email,
+    userType: user.userType 
+  });
+  const refreshToken = generateRefreshToken({ 
+    userId: user.id,
+    email: user.email, 
+    userType: user.userType 
+  });
+  
+  user.refreshToken = refreshToken;
+  user.refreshTokenExpiry = new Date(Date.now() + TOKEN_EXPIRY.REFRESH_TOKEN_MS);
+  await user.save();
+  
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: TOKEN_EXPIRY.ACCESS_TOKEN_MS
+  });
+  
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+    maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS
+  });
+};// Google OAuth Handler
+const handleGoogleAuth = async (req: Request, res: Response) => {
   try {
     const { credential, userType, language } = req.body;
     
@@ -38,7 +59,6 @@ router.post('/google', async (req: Request, res: Response) => {
       });
     }
     
-    // Verify Google JWT token
     const ticket = await googleClient.verifyIdToken({
       idToken: credential,
       audience: process.env.GOOGLE_CLIENT_ID,
@@ -58,7 +78,6 @@ router.post('/google', async (req: Request, res: Response) => {
     const lastName = payload.family_name || '';
     const picture = payload.picture;
     
-    // Check if user already exists
     let user = await User.findOne({ 
       $or: [
         { email: email },
@@ -67,22 +86,20 @@ router.post('/google', async (req: Request, res: Response) => {
     });
     
     if (user) {
-      // Update existing user with Google ID if not present
       if (!user.googleId) {
         user.googleId = googleId;
         await user.save();
       }
       
-      const authToken = generateAuthToken(user._id);
+      await setAuthCookies(res, user);
+      
       return res.json({
         success: true,
         user: createUserResponse(user),
-        authToken: authToken,
         message: 'Successfully signed in with Google'
       });
     }
     
-    // For new users, require userType and language
     if (!userType || !language) {
       return res.status(400).json({
         success: false,
@@ -98,7 +115,6 @@ router.post('/google', async (req: Request, res: Response) => {
       });
     }
     
-    // Create new user
     user = new User({
       firstName,
       lastName,
@@ -112,13 +128,11 @@ router.post('/google', async (req: Request, res: Response) => {
     });
     
     await user.save();
-    
-    const authToken = generateAuthToken(user._id);
+    await setAuthCookies(res, user);
     
     res.json({
       success: true,
       user: createUserResponse(user),
-      authToken: authToken,
       message: 'Account created successfully with Google'
     });
     
@@ -129,10 +143,10 @@ router.post('/google', async (req: Request, res: Response) => {
       message: 'Google authentication failed. Please try again.'
     });
   }
-});
+};
 
-// Facebook OAuth Signup/Login
-router.post('/facebook', async (req: Request, res: Response) => {
+// Facebook OAuth Handler
+const handleFacebookAuth = async (req: Request, res: Response) => {
   try {
     const { accessToken, userID, userType, language } = req.body;
     
@@ -143,7 +157,6 @@ router.post('/facebook', async (req: Request, res: Response) => {
       });
     }
     
-    // Verify Facebook access token
     const response = await fetch(
       `https://graph.facebook.com/me?access_token=${accessToken}&fields=id,email,first_name,last_name,picture`
     );
@@ -169,7 +182,6 @@ router.post('/facebook', async (req: Request, res: Response) => {
       });
     }
     
-    // Check if user already exists
     let user = await User.findOne({ 
       $or: [
         { email: email },
@@ -178,22 +190,20 @@ router.post('/facebook', async (req: Request, res: Response) => {
     });
     
     if (user) {
-      // Update existing user with Facebook ID if not present
       if (!user.facebookId) {
         user.facebookId = facebookId;
         await user.save();
       }
       
-      const authToken = generateAuthToken(user._id);
+      await setAuthCookies(res, user);
+      
       return res.json({
         success: true,
         user: createUserResponse(user),
-        authToken: authToken,
         message: 'Successfully signed in with Facebook'
       });
     }
     
-    // For new users, require userType and language
     if (!userType || !language) {
       return res.status(400).json({
         success: false,
@@ -209,7 +219,6 @@ router.post('/facebook', async (req: Request, res: Response) => {
       });
     }
     
-    // Create new user
     user = new User({
       firstName,
       lastName,
@@ -223,13 +232,11 @@ router.post('/facebook', async (req: Request, res: Response) => {
     });
     
     await user.save();
-    
-    const authToken = generateAuthToken(user._id);
+    await setAuthCookies(res, user);
     
     res.json({
       success: true,
       user: createUserResponse(user),
-      authToken: authToken,
       message: 'Account created successfully with Facebook'
     });
     
@@ -240,6 +247,14 @@ router.post('/facebook', async (req: Request, res: Response) => {
       message: 'Facebook authentication failed. Please try again.'
     });
   }
-});
+};
+
+router.post('/google', handleGoogleAuth);
+router.post('/google-signup', handleGoogleAuth);
+router.post('/google-login', handleGoogleAuth);
+
+router.post('/facebook', handleFacebookAuth);
+router.post('/facebook-signup', handleFacebookAuth);
+router.post('/facebook-login', handleFacebookAuth);
 
 export default router;

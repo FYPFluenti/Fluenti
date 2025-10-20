@@ -324,9 +324,7 @@ export function useSpeechRecognition(language: string = 'en-US'): SpeechRecognit
 
       const response = await fetch('/api/emotional-support', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        },
+        credentials: 'include', // Use httpOnly cookies for auth
         body: formData
       });
 

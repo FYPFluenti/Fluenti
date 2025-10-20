@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
+import {
+  Gamepad2,
+  LineChart,
+  Smile,
+  SlidersHorizontal,
+  Shield,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import SharedSidebar from "@/components/layout/SharedSidebar";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
@@ -23,6 +30,7 @@ export default function Settings() {
     isLoading: boolean;
   };
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
   const [showFeedback, setShowFeedback] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [emailNotifications, setEmailNotifications] = useState(true);
@@ -46,8 +54,8 @@ export default function Settings() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground/80">Loading…</div>
+      <div className="min-h-screen bg-background flex items-center justify-center child-dashboard-no-zoom">
+        <div className="text-foreground/80 child-dashboard-container px-4">Loading…</div>
       </div>
     );
   }
@@ -65,11 +73,8 @@ export default function Settings() {
 
       {/* Main */}
       <main className="lg:ml-20 w-full pb-20 lg:pb-0">
-        
         {/* Header actions (right) */}
-       <PageHeader />
-
-        <div className="max-w-4xl mx-auto px-6 pb-24">
+         <PageHeader />        <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
           {/* Profile header */}
           <section className="mb-10">
             <div className="flex items-center gap-4">
@@ -81,9 +86,33 @@ export default function Settings() {
             <div className="mt-6 h-px bg-border" />
           </section>
 
-  {/* Privacy & analytics */}
-          <section className="mb-8">
-            <h2 className="text-2xl font-bold mb-1">Privacy settings</h2>
+          {/* Security Settings */}
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-1">security</h2>
+            <p className="text-muted-foreground mb-6">
+              manage your account security and authentication
+            </p>
+
+            <button
+              onClick={() => setLocation("/security")}
+              className="w-full p-4 bg-muted hover:bg-accent rounded-lg transition flex items-center justify-between group"
+            >
+              <div className="flex items-center gap-3">
+                <Shield className="w-5 h-5 text-blue-600" />
+                <div className="text-left">
+                  <div className="font-semibold">Security Settings</div>
+                  <div className="text-sm text-muted-foreground">
+                    Two-factor authentication, email verification, and more
+                  </div>
+                </div>
+              </div>
+              <div className="text-muted-foreground group-hover:translate-x-1 transition">→</div>
+            </button>
+          </section>
+
+          {/* Privacy settings */}
+          <section className="mb-12">
+            <h2 className="text-2xl font-bold mb-1">privacy settings</h2>
             <p className="text-muted-foreground mb-6">
               Manage your cookie and tracking preferences
             </p>
@@ -101,7 +130,8 @@ export default function Settings() {
                     <button
                       disabled
                       className="relative inline-flex h-6 w-12 rounded-full bg-muted cursor-not-allowed"
-                      aria-checked="true"
+                      role="switch"
+                      aria-checked={true}
                     >
                       <span className="absolute top-1 left-7 inline-block h-4 w-4 rounded-full bg-white" />
                     </button>
@@ -230,7 +260,6 @@ export default function Settings() {
           </section>
         </div>
       </main>
-
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav 
         onFeedbackOpen={() => setShowFeedback(true)}
