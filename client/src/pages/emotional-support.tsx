@@ -146,13 +146,9 @@ Your wellbeing is important.`,
         <div className="flex-1 flex flex-col max-w-4xl mx-auto p-6 overflow-hidden">
           {/* Header */}
           <div className="mb-6 flex-shrink-0">
-            <div className="flex items-center gap-3 mb-4">
-              <Heart className="w-6 h-6 text-red-500" />
-              <h1 className="text-2xl font-bold">Emotional Support Chat</h1>
-            </div>
+          
             
             <div className="flex items-center gap-4 text-sm text-muted-foreground">
-              <span>Language: {language === 'ur' ? 'اردو' : 'English'}</span>
               <span className="flex items-center gap-1">
                 <div className={`w-2 h-2 rounded-full ${
                   serviceStatus === 'healthy' ? 'bg-green-500' : 
@@ -160,22 +156,37 @@ Your wellbeing is important.`,
                 }`} />
                 Service: {serviceStatus === 'healthy' ? 'Online' : serviceStatus === 'unhealthy' ? 'Offline' : 'Checking...'}
               </span>
-              {sessionData.sessionId && (
-                <span>Session: {sessionData.sessionId.slice(-8)}</span>
-              )}
             </div>
           </div>
 
         {/* Service Status Alert */}
         {serviceStatus === 'unhealthy' && (
-          <Alert className="mb-4 border-red-200 bg-red-50">
-            <AlertTriangle className="h-4 w-4 text-red-600" />
-            <AlertDescription className="text-red-800">
-              The therapy service is currently unavailable. If you're in crisis, please contact:
-              <br />
-              <strong>1019</strong> - Mental Health Crisis Line or <strong>1166</strong> - National Emergency
-            </AlertDescription>
-          </Alert>
+          <div className="mb-4 space-y-4">
+            <Alert className="border-red-200 bg-red-50">
+              <AlertTriangle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800">
+                The therapy service is currently unavailable. If you're in crisis, please contact:
+                <br />
+                <strong>1019</strong> - Mental Health Crisis Line or <strong>1166</strong> - National Emergency
+              </AlertDescription>
+            </Alert>
+            
+            {/* Crisis Resources Banner - Only when service is offline */}
+            <div className="bg-muted/40 backdrop-blur-sm border border-border/50 rounded-lg p-3">
+              <div className="flex items-center justify-center gap-2 text-xs">
+                <Heart className="w-3 h-3 text-blue-400" />
+                <span className="text-foreground/80">
+                  <span className="font-medium">Crisis Resources:</span>
+                  <span className="mx-2">•</span>
+                  <span className="font-semibold">1019</span> <span className="text-blue-400">(Mental Health Crisis)</span>
+                  <span className="mx-2">•</span>  
+                  <span className="font-semibold">1166</span> <span className="text-blue-400">(Emergency)</span>
+                  <span className="mx-2">•</span>
+                  <span className="font-semibold">0800-00-100</span> <span className="text-blue-400">(Rozan Crisis)</span>
+                </span>
+              </div>
+            </div>
+          </div>
         )}
 
           {/* Chat Messages */}
@@ -183,9 +194,9 @@ Your wellbeing is important.`,
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
-              <h3 className="text-lg font-medium mb-2">Welcome to Emotional Support</h3>
-              <p>This is a safe space where you can share your thoughts and feelings.</p>
-              <p className="text-sm mt-2">Start a conversation by typing a message below.</p>
+              <h3 className="text-lg font-medium mb-2">Welcome to Fluenti</h3>
+              <p>Your AI-powered companion for emotional wellness and mental health support.</p>
+              <p className="text-sm mt-2">Share what's on your mind - I'm here to listen and help.</p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -262,23 +273,7 @@ Your wellbeing is important.`,
         </div>
 
           {/* Input */}
-          <div className="space-y-2 flex-shrink-0">
-            {/* Crisis Resources Banner */}
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-lg p-3">
-              <div className="flex items-center justify-center gap-2 text-xs">
-                <Heart className="w-3 h-3 text-blue-600" />
-                <span className="text-blue-800">
-                  <span className="font-medium">Crisis Resources:</span>
-                  <span className="mx-2">•</span>
-                  <span className="font-semibold">1019</span> <span className="text-blue-600">(Mental Health Crisis)</span>
-                  <span className="mx-2">•</span>  
-                  <span className="font-semibold">1166</span> <span className="text-blue-600">(Emergency)</span>
-                  <span className="mx-2">•</span>
-                  <span className="font-semibold">0800-00-100</span> <span className="text-blue-600">(Rozan Crisis)</span>
-                </span>
-              </div>
-            </div>
-            
+          <div className="flex-shrink-0">
             <div className="flex gap-2">
             <Input 
               value={input} 
