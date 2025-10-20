@@ -122,7 +122,7 @@ export class AssessmentAnalyzer {
     
     return {
       name: 'HEARING',
-      icon: '👂',
+      icon: '',
       description: "Children's brains need clear auditory input from birth to develop proper speech and language skills. Hearing difficulties can significantly impact communication development.",
       totalQuestions,
       concerningAnswers,
@@ -194,7 +194,7 @@ export class AssessmentAnalyzer {
     
     return {
       name: 'PRAGMATICS',
-      icon: '💬',
+      icon: '',
       description: "Social communication skills help children understand context, use appropriate language in different situations, and interact effectively with others.",
       totalQuestions,
       concerningAnswers,
@@ -271,7 +271,7 @@ export class AssessmentAnalyzer {
     
     return {
       name: 'PLAY',
-      icon: '🎮',
+      icon: '',
       description: "Play is essential for cognitive, social, and emotional development. It helps children learn problem-solving, creativity, and social interaction skills.",
       totalQuestions,
       concerningAnswers,
@@ -316,7 +316,7 @@ export class AssessmentAnalyzer {
     // Add TALKING category as a default positive indicator
     categories.push({
       name: 'TALKING',
-      icon: '🗣️',
+      icon: '',
       description: "As children gain mastery of language skills, they develop conversational abilities and expressive communication. This area will be assessed in more detail in future evaluations.",
       totalQuestions: 0,
       concerningAnswers: 0,
