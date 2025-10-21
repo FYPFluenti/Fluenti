@@ -19,6 +19,15 @@ import { generateTTSAudio } from "./services/ttsService";
 import { fastTranscribeAudio } from "./services/fastSTTService";
 import { processChildSpeechAudio } from "./services/childSpeechSTT";
 import { transcribeAudioWithGroq, assessPronunciationWithGroq } from "./services/groqSpeechService";
+import Groq from 'groq-sdk';
+
+// Initialize Groq client for AI title generation
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY || ''
+});
+
+// Simple in-memory cache for AI-generated titles
+const titleCache = new Map<string, string>();
 
 import { AuthService } from "./auth";
 import gamesRouter from "./routes/games";
@@ -1551,6 +1560,76 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
     }
   });
 
+  // AI-powered session title generation
+  async function generateAISessionTitle(session: any): Promise<string> {
+    try {
+      // If it's a crisis session, prioritize that
+      if (session.sessionType === 'crisis') {
+        return 'Crisis Support Session';
+      }
+
+      // Check cache first using session ID and message count as key
+      const cacheKey = `${session.id || session._id}_${session.messages?.length || 0}`;
+      if (titleCache.has(cacheKey)) {
+        return titleCache.get(cacheKey)!;
+      }
+
+      // If we have messages, use AI to generate a meaningful title
+      if (session.messages && session.messages.length > 0) {
+        const conversationContent = session.messages
+          .slice(0, 6) // Take first 6 messages for context
+          .map((msg: any) => `${msg.role}: ${msg.content}`)
+          .join('\n');
+
+        const completion = await groq.chat.completions.create({
+          messages: [
+            {
+              role: "system",
+              content: `You are a helpful assistant that creates short, meaningful titles for therapy and emotional support sessions. 
+              Generate a 2-5 word title that captures the main topic or emotional theme of the conversation. 
+              The title should be empathetic, professional, and specific to the conversation content.
+              
+              Examples:
+              - "Dealing with Work Stress"
+              - "Relationship Concerns"
+              - "Anxiety Management"
+              - "Self-Confidence Building"
+              - "Processing Grief"
+              - "Sleep Difficulties"
+              
+              Return only the title, nothing else.`
+            },
+            {
+              role: "user",
+              content: `Generate a title for this emotional support session:\n\n${conversationContent}`
+            }
+          ],
+          model: "llama-3.1-8b-instant",
+          temperature: 0.3,
+          max_tokens: 20
+        });
+
+        const aiTitle = completion.choices[0]?.message?.content?.trim();
+        if (aiTitle && aiTitle.length > 0 && aiTitle.length <= 50) {
+          const cleanTitle = aiTitle.replace(/['"]/g, ''); // Remove quotes if any
+          // Cache the generated title
+          titleCache.set(cacheKey, cleanTitle);
+          return cleanTitle;
+        }
+      }
+
+      // Fallback based on session type and mode
+      const fallbackTitle = session.mode === 'voice' ? 'Voice Support Session' : 'Chat Support Session';
+      titleCache.set(cacheKey, fallbackTitle);
+      return fallbackTitle;
+    } catch (error) {
+      console.error('Error generating AI session title:', error);
+      // Fallback to basic title
+      const fallbackTitle = session.mode === 'voice' ? 'Voice Support Session' : 'Chat Support Session';
+      return fallbackTitle;
+    }
+  }
+
   // Get user's therapy session history
   app.get('/api/therapy/history', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -1573,14 +1652,14 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
           const emotionalSessions = await mongoStorage.getUserEmotionalSessions(userId, Number(limit));
           const therapeuticSessions = await mongoStorage.getUserTherapeuticSessions(userId, Number(limit), Number(offset));
           
-          // Combine and format sessions
-          const formattedEmotional = emotionalSessions.map((session: any) => ({
+          // Combine and format sessions with AI-generated titles
+          const formattedEmotional = await Promise.all(emotionalSessions.map(async (session: any) => ({
             id: session.id || session._id, // Use the nanoid 'id' field first, fallback to _id
             sessionId: session.id || session._id, // Explicit sessionId for continuation
             userId: session.userId, // Include userId for session continuation
             type: 'support' as const,
             mode: session.mode || 'chat', // Add mode information
-            title: session.sessionType === 'crisis' ? 'Crisis Support Session' : 'Emotional Support Chat',
+            title: await generateAISessionTitle(session), // Use AI-generated title
             date: session.createdAt || session.timestamp || new Date(),
             duration: session.duration ? `${Math.round(session.duration / 1000 / 60)} min` : 'N/A',
             mood: session.emotionalState || 'neutral',
@@ -1589,7 +1668,7 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
             notes: session.messages && session.messages.length > 0 
               ? session.messages[0].content.substring(0, 100) + '...'
               : 'No messages recorded'
-          }));
+          })));
 
           const formattedTherapeutic = therapeuticSessions.sessions.map((session: any) => ({
             id: session._id || session.id,
@@ -1618,13 +1697,13 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
         // Get only emotional support sessions
         try {
           const emotionalSessions = await mongoStorage.getUserEmotionalSessions(userId, Number(limit));
-          sessions = emotionalSessions.map((session: any) => ({
+          sessions = await Promise.all(emotionalSessions.map(async (session: any) => ({
             id: session.id || session._id, // Use the nanoid 'id' field first, fallback to _id
             sessionId: session.id || session._id, // Explicit sessionId for continuation
             userId: session.userId, // Include userId for session continuation
             type: 'support' as const,
             mode: session.mode || 'chat', // Add mode information
-            title: session.sessionType === 'crisis' ? 'Crisis Support Session' : 'Emotional Support Chat',
+            title: await generateAISessionTitle(session), // Use AI-generated title
             date: session.createdAt || session.timestamp || new Date(),
             duration: session.duration ? `${Math.round(session.duration / 1000 / 60)} min` : 'N/A',
             mood: session.emotionalState || 'neutral',
@@ -1633,7 +1712,7 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
             notes: session.messages && session.messages.length > 0 
               ? session.messages[0].content.substring(0, 100) + '...'
               : 'No messages recorded'
-          }));
+          })));
           total = emotionalSessions.length;
         } catch (error) {
           console.error('❌ Error fetching emotional sessions:', error);
