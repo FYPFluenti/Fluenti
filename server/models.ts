@@ -220,6 +220,7 @@ const EmotionalSessionSchema = new mongoose.Schema({
     enum: ['chat', 'voice'],
     default: 'chat'
   },
+  title: { type: String }, // AI-generated title for the session
   messages: [{ 
     role: { type: String, enum: ['user', 'assistant'], required: true },
     content: { type: String, required: true },

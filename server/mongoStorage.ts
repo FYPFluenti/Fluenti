@@ -360,6 +360,17 @@ export const mongoStorage = {
     });
   },
 
+  async updateEmotionalSessionTitle(sessionId: string, title: string) {
+    return this._safeExecute(async () => {
+      const session = await EmotionalSession.findOneAndUpdate(
+        { id: sessionId },
+        { title: title },
+        { new: true }
+      );
+      return session;
+    });
+  },
+
   // Alias for compatibility with routes.ts
   async getEmotionalSessions(userId: string, limit = 10) {
     return this.getUserEmotionalSessions(userId, limit);

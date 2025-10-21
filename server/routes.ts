@@ -26,9 +26,6 @@ const groq = new Groq({
   apiKey: process.env.GROQ_API_KEY || ''
 });
 
-// Simple in-memory cache for AI-generated titles
-const titleCache = new Map<string, string>();
-
 import { AuthService } from "./auth";
 import gamesRouter from "./routes/games";
 import aiGameRouter from "./routes/aiGame";
@@ -1560,18 +1557,19 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
     }
   });
 
-  // AI-powered session title generation
-  async function generateAISessionTitle(session: any): Promise<string> {
+  // AI-powered session title generation with database persistence
+  async function generateAndSaveAISessionTitle(session: any): Promise<string> {
     try {
-      // If it's a crisis session, prioritize that
-      if (session.sessionType === 'crisis') {
-        return 'Crisis Support Session';
+      // If session already has a title saved in the database, use it
+      if (session.title && session.title.trim() !== '') {
+        return session.title;
       }
 
-      // Check cache first using session ID and message count as key
-      const cacheKey = `${session.id || session._id}_${session.messages?.length || 0}`;
-      if (titleCache.has(cacheKey)) {
-        return titleCache.get(cacheKey)!;
+      // If it's a crisis session, set and save that title
+      if (session.sessionType === 'crisis') {
+        const title = 'Crisis Support Session';
+        await mongoStorage.updateEmotionalSessionTitle(session.id || session._id, title);
+        return title;
       }
 
       // If we have messages, use AI to generate a meaningful title
@@ -1580,6 +1578,8 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
           .slice(0, 6) // Take first 6 messages for context
           .map((msg: any) => `${msg.role}: ${msg.content}`)
           .join('\n');
+
+        console.log(`🤖 Generating AI title for session ${session.id}...`);
 
         const completion = await groq.chat.completions.create({
           messages: [
@@ -1612,23 +1612,73 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
         const aiTitle = completion.choices[0]?.message?.content?.trim();
         if (aiTitle && aiTitle.length > 0 && aiTitle.length <= 50) {
           const cleanTitle = aiTitle.replace(/['"]/g, ''); // Remove quotes if any
-          // Cache the generated title
-          titleCache.set(cacheKey, cleanTitle);
+          
+          // Save the generated title to the database
+          await mongoStorage.updateEmotionalSessionTitle(session.id || session._id, cleanTitle);
+          console.log(`✅ AI title saved for session ${session.id}: "${cleanTitle}"`);
+          
           return cleanTitle;
         }
       }
 
       // Fallback based on session type and mode
       const fallbackTitle = session.mode === 'voice' ? 'Voice Support Session' : 'Chat Support Session';
-      titleCache.set(cacheKey, fallbackTitle);
+      
+      // Save the fallback title to the database
+      await mongoStorage.updateEmotionalSessionTitle(session.id || session._id, fallbackTitle);
+      
       return fallbackTitle;
     } catch (error) {
       console.error('Error generating AI session title:', error);
-      // Fallback to basic title
-      const fallbackTitle = session.mode === 'voice' ? 'Voice Support Session' : 'Chat Support Session';
-      return fallbackTitle;
+      // Fallback to basic title without saving (to avoid overwriting potential existing titles)
+      return session.mode === 'voice' ? 'Voice Support Session' : 'Chat Support Session';
     }
   }
+
+  // Bulk update titles for existing sessions (migration utility)
+  app.post('/api/therapy/generate-missing-titles', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'User not authenticated' });
+      }
+
+      console.log('🔄 Starting bulk title generation for user:', userId);
+
+      // Get all emotional sessions without titles
+      const sessions = await mongoStorage.getUserEmotionalSessions(userId, 100);
+      const sessionsWithoutTitles = sessions.filter((session: any) => !session.title || session.title.trim() === '');
+
+      console.log(`📋 Found ${sessionsWithoutTitles.length} sessions without titles`);
+
+      let updatedCount = 0;
+      for (const session of sessionsWithoutTitles) {
+        try {
+          await generateAndSaveAISessionTitle(session);
+          updatedCount++;
+        } catch (error) {
+          console.error(`❌ Failed to generate title for session ${session.id}:`, error);
+        }
+      }
+
+      console.log(`✅ Successfully generated titles for ${updatedCount} sessions`);
+
+      res.json({
+        success: true,
+        message: `Generated titles for ${updatedCount} sessions`,
+        totalProcessed: sessionsWithoutTitles.length,
+        updated: updatedCount
+      });
+
+    } catch (error) {
+      console.error("❌ Error in bulk title generation:", error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to generate titles',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 
   // Get user's therapy session history
   app.get('/api/therapy/history', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
@@ -1659,7 +1709,7 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
             userId: session.userId, // Include userId for session continuation
             type: 'support' as const,
             mode: session.mode || 'chat', // Add mode information
-            title: await generateAISessionTitle(session), // Use AI-generated title
+            title: await generateAndSaveAISessionTitle(session), // Use AI-generated title with DB persistence
             date: session.createdAt || session.timestamp || new Date(),
             duration: session.duration ? `${Math.round(session.duration / 1000 / 60)} min` : 'N/A',
             mood: session.emotionalState || 'neutral',
@@ -1703,7 +1753,7 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
             userId: session.userId, // Include userId for session continuation
             type: 'support' as const,
             mode: session.mode || 'chat', // Add mode information
-            title: await generateAISessionTitle(session), // Use AI-generated title
+            title: await generateAndSaveAISessionTitle(session), // Use AI-generated title with DB persistence
             date: session.createdAt || session.timestamp || new Date(),
             duration: session.duration ? `${Math.round(session.duration / 1000 / 60)} min` : 'N/A',
             mood: session.emotionalState || 'neutral',
