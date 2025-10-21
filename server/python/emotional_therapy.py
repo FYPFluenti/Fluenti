@@ -495,14 +495,7 @@ class DataLoader:
             except Exception as e:
                 print(f"⚠️ Could not load additional conversations: {e}")
 
-            # Dataset 5: Mental health support conversations
-            try:
-                print("Loading mental health support conversations...")
-                dataset5 = load_dataset("mental_health_dataset", split='train[:5000]')  # Limit to 5000
-                datasets.append(dataset5)
-                print(f"✅ Loaded {safe_dataset_len(dataset5)} mental health support conversations")
-            except Exception as e:
-                print(f"⚠️ Could not load mental health support dataset: {e}")
+
 
             # Dataset 6: Mental health support - LIMITED SIZE
             try:
@@ -531,14 +524,7 @@ class DataLoader:
             except Exception as e:
                 print(f"⚠️ Could not load Q&A dataset: {e}")
 
-            # Dataset 9: Conversational AI dataset
-            try:
-                print("Loading conversational AI dataset...")
-                dataset9 = load_dataset("daily_dialog", split='train[:3000]')  # Limited size
-                datasets.append(dataset9)
-                print(f"✅ Loaded {safe_dataset_len(dataset9)} conversational examples")
-            except Exception as e:
-                print(f"⚠️ Could not load conversational dataset: {e}")
+
 
             # Dataset 10: Mental health classification dataset
             try:
