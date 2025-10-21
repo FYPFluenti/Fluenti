@@ -16,47 +16,41 @@ export default function GenderSelectionScreen({ data, onNext, onBack, onSkip }: 
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center max-w-lg mx-auto">
+    <div className="text-center">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-8">
-          Is <span className="text-[#F5B82E]">{childName}</span> a girl or a boy?
+        <h1 className="text-2xl font-normal text-gray-900 mb-16">
+          is {childName} a girl or a boy?
         </h1>
 
-        <div className="flex flex-col sm:flex-row gap-6 mb-8">
+        <div className="flex flex-col gap-4 mb-16">
           {/* Girl Option */}
           <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.4 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => handleGenderSelect('girl')}
-            className="flex-1 bg-gradient-to-br from-pink-400 to-purple-500 text-white rounded-3xl p-8 hover:shadow-lg transition-all duration-200 min-h-[140px] flex items-center justify-center"
+            className="w-full bg-gray-50 hover:bg-gray-100 text-gray-900 rounded-full py-4 px-8 transition-all duration-200 border border-gray-200 hover:border-gray-300"
           >
-            <div>
-              <div className="text-6xl mb-3">👧</div>
-              <div className="text-xl font-bold">GIRL</div>
-            </div>
+            girl
           </motion.button>
 
           {/* Boy Option */}
           <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.6 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
             onClick={() => handleGenderSelect('boy')}
-            className="flex-1 bg-gradient-to-br from-blue-400 to-cyan-500 text-white rounded-3xl p-8 hover:shadow-lg transition-all duration-200 min-h-[140px] flex items-center justify-center"
+            className="w-full bg-gray-50 hover:bg-gray-100 text-gray-900 rounded-full py-4 px-8 transition-all duration-200 border border-gray-200 hover:border-gray-300"
           >
-            <div>
-              <div className="text-6xl mb-3">👦</div>
-              <div className="text-xl font-bold">BOY</div>
-            </div>
+            boy
           </motion.button>
         </div>
 
@@ -67,9 +61,9 @@ export default function GenderSelectionScreen({ data, onNext, onBack, onSkip }: 
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.99 }}
           onClick={onSkip}
-          className="w-full text-gray-500 dark:text-gray-400 font-medium py-3 px-6 rounded-2xl border-2 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 transition-colors"
+          className="w-full text-gray-500 font-medium py-3 px-6 hover:text-gray-700 transition-colors"
         >
-          Skip
+          skip
         </motion.button>
       </motion.div>
     </div>
