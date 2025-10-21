@@ -470,40 +470,50 @@ if __name__ == '__main__':
     else:
         print("❌ Therapy bot failed to load - service will have limited functionality")
     
-    #  Add production server option
-    use_production = os.getenv('THERAPY_PRODUCTION', 'false').lower() == 'true'
+    # Get port from environment (for deployment platforms)
+    port = int(os.environ.get('PORT', 5001))
     
-    if use_production:
+    # Auto-detect production environment
+    is_production = (
+        os.getenv('RENDER') or 
+        os.getenv('RAILWAY_ENVIRONMENT') or 
+        os.getenv('DYNO') or 
+        os.getenv('THERAPY_PRODUCTION', 'false').lower() == 'true'
+    )
+    
+    if is_production:
         try:
             from waitress import serve
             print("🚀 Starting with Waitress production server...")
-            print("🌟 Server running on http://localhost:5001")
-            print("🔗 Frontend can now connect to this service")
-            print("💡 Press Ctrl+C to stop the service")
+            print(f"🌟 Server running on port {port}")
+            print("🔗 Production environment detected")
             print("=" * 60)
             
-            serve(app, host='0.0.0.0', port=5001, threads=6)
+            serve(app, host='0.0.0.0', port=port, threads=6)
             
         except ImportError:
-            print("⚠️ Waitress not installed. Install with: pip install waitress")
-            print("🔄 Falling back to Flask development server...")
-            use_production = False
-    
-    if not use_production:
-        print("⚠️ Using Flask development server (not for production)")
-        print("🌟 Starting Flask server on http://localhost:5001")
-        print("🔗 Frontend can now connect to this service")
+            print("⚠️ Waitress not available, using Flask...")
+            app.run(
+                host='0.0.0.0',
+                port=port,
+                debug=False,
+                threaded=True,
+                use_reloader=False
+            )
+    else:
+        print("⚠️ Using Flask development server")
+        print(f"🌟 Starting Flask server on http://localhost:{port}")
+        print("🔗 Frontend can connect to this service")
         print("💡 Press Ctrl+C to stop the service")
         print("=" * 60)
         
         try:
-            # Run Flask app -  Better configuration
             app.run(
                 host='0.0.0.0',
-                port=5001,
-                debug=False,  # Disabled to prevent auto-restarts and improve performance
+                port=port,
+                debug=False,
                 threaded=True,
-                use_reloader=False  # Explicitly disable the reloader
+                use_reloader=False
             )
         except KeyboardInterrupt:
             print("\n🛑 Service stopped by user")
