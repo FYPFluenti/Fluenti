@@ -78,20 +78,51 @@ export default function InterestsSelectionScreen({ data, onNext, onBack, onSkip 
               onClick={() => handleInterestToggle(interest.id)}
               className={`relative p-6 rounded-2xl transition-all duration-200 ${
                 selectedInterests.includes(interest.id)
-                  ? `bg-gradient-to-br ${interest.color} text-white shadow-lg scale-105`
+                  ? `bg-black text-white shadow-lg scale-105`
                   : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
               }`}
             >
-              {selectedInterests.includes(interest.id) && (
-                <motion.div
-                  initial={{ scale: 0, rotate: -180 }}
-                  animate={{ scale: 1, rotate: 0 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 15 }}
-                  className="absolute -top-2 -right-2 w-7 h-7 bg-green-500 rounded-full flex items-center justify-center shadow-md"
-                >
-                </motion.div>
-              )}
-              
+              <span className="block mb-2">
+                {interest.id === 'animals' && (
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#34D399"/><text x="16" y="21" textAnchor="middle" fontSize="18" fill="#fff">🐻</text></svg>
+                )}
+                {interest.id === 'nature' && (
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#3B82F6"/><text x="16" y="21" textAnchor="middle" fontSize="18" fill="#fff">🌳</text></svg>
+                )}
+                {interest.id === 'vehicles' && (
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#F59E42"/><text x="16" y="21" textAnchor="middle" fontSize="18" fill="#fff">🚗</text></svg>
+                )}
+                {interest.id === 'books' && (
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#A78BFA"/><text x="16" y="21" textAnchor="middle" fontSize="18" fill="#fff">📚</text></svg>
+                )}
+                {interest.id === 'dinosaurs' && (
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#A3E635"/><text x="16" y="21" textAnchor="middle" fontSize="18" fill="#fff">🦖</text></svg>
+                )}
+                {interest.id === 'music' && (
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#EC4899"/><text x="16" y="21" textAnchor="middle" fontSize="18" fill="#fff">🎵</text></svg>
+                )}
+                {interest.id === 'space' && (
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#6366F1"/><text x="16" y="21" textAnchor="middle" fontSize="18" fill="#fff">🌌</text></svg>
+                )}
+                {interest.id === 'robots' && (
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#06B6D4"/><text x="16" y="21" textAnchor="middle" fontSize="18" fill="#fff">🤖</text></svg>
+                )}
+                {interest.id === 'colors' && (
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#F43F5E"/><text x="16" y="21" textAnchor="middle" fontSize="18" fill="#fff">🎨</text></svg>
+                )}
+                {interest.id === 'numbers' && (
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#8B5CF6"/><text x="16" y="21" textAnchor="middle" fontSize="18" fill="#fff">🔢</text></svg>
+                )}
+                {interest.id === 'shapes' && (
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#0EA5E9"/><text x="16" y="21" textAnchor="middle" fontSize="18" fill="#fff">🔺</text></svg>
+                )}
+                {interest.id === 'food' && (
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#FB923C"/><text x="16" y="21" textAnchor="middle" fontSize="18" fill="#fff">🍎</text></svg>
+                )}
+                {interest.id === 'jobs' && (
+                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="16" fill="#EF4444"/><text x="16" y="21" textAnchor="middle" fontSize="18" fill="#fff">👩‍🔧</text></svg>
+                )}
+              </span>
               <div className="text-sm font-semibold">{interest.name}</div>
             </motion.button>
           ))}
@@ -113,7 +144,7 @@ export default function InterestsSelectionScreen({ data, onNext, onBack, onSkip 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleContinue}
-            className="w-full bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white font-semibold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 hover:shadow-lg transition-all duration-200"
+            className="w-full bg-black text-white font-semibold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 hover:shadow-lg transition-all duration-200"
           >
             Continue
           </motion.button>
