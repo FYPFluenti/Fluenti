@@ -287,35 +287,10 @@ class MongoDBStorage:
         try:
             # First try to get from EmotionalSession collection (Node.js service)
             if hasattr(self, 'emotional_sessions'):
-                print(f"🔍 Querying EmotionalSession collection for:")
-                print(f"   - session_id: {session_id}")
-                print(f"   - user_id: {user_id}")
-                
                 emotional_session = self.emotional_sessions.find_one({
                     "id": session_id,
                     "userId": user_id
                 })
-                
-                print(f"📊 Query result: {emotional_session is not None}")
-                if emotional_session:
-                    print(f"📝 Session found with {len(emotional_session.get('messages', []))} messages")
-                else:
-                    # Try alternative query patterns
-                    print(f"🔍 Trying alternative queries...")
-                    
-                    # Try with _id instead of id
-                    alt_query1 = self.emotional_sessions.find_one({"_id": session_id, "userId": user_id})
-                    print(f"📊 Query with _id: {alt_query1 is not None}")
-                    
-                    # Try with any session that matches the session_id pattern
-                    alt_query2 = self.emotional_sessions.find_one({"id": session_id})
-                    print(f"📊 Query with id only: {alt_query2 is not None}")
-                    
-                    # Try finding any sessions for this user
-                    user_sessions = list(self.emotional_sessions.find({"userId": user_id}).limit(3))
-                    print(f"📊 Found {len(user_sessions)} sessions for user")
-                    for i, sess in enumerate(user_sessions):
-                        print(f"   Session {i+1}: id={sess.get('id', 'N/A')}, _id={sess.get('_id', 'N/A')}")
                 
                 if emotional_session and emotional_session.get('messages'):
                     print(f"✅ Found session in EmotionalSession collection: {len(emotional_session['messages'])} messages")

@@ -460,8 +460,8 @@ export function EmotionalChat({ language = 'english', onClose }: EmotionalChatPr
                             )}
                           </p>
                           <div className="flex items-center justify-between mt-1">
+                            {/* Removed timestamp display for cleaner interface */}
                             <span className="text-xs opacity-70">
-                              {message.timestamp.toLocaleTimeString()}
                               {/* Show connection type indicator */}
                               {message.sender === 'ai' && (
                                 <span className="ml-2 text-xs px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-600">

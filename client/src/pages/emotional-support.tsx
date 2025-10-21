@@ -323,12 +323,6 @@ Your wellbeing is important.`,
                       )}
                       
                       <div className="whitespace-pre-wrap">{message.ai}</div>
-                      
-                      <div className="flex items-center gap-2 mt-2">
-                        <p className="text-xs text-muted-foreground">
-                          {message.timestamp.toLocaleTimeString()}
-                        </p>
-                      </div>
                     </div>
                   </div>
                 </div>
