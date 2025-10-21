@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, Heart, MessageCircle } from 'lucide-react';
+import { AlertTriangle, Heart, MessageCircle, X } from 'lucide-react';
 import SharedSidebarEmotional from '@/components/layout/SharedSidebarEmotional';
 import FeedbackModal from '@/components/layout/FeedbackModel';
 import PageHeader from '@/components/layout/PageHeader';
@@ -241,31 +241,18 @@ Your wellbeing is important.`,
 
         {/* Session Continuation Banner */}
         {isContinuedSession && (
-          <div className="mb-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center gap-3">
-                <div className="flex-shrink-0">
-                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                    <MessageCircle className="w-4 h-4 text-blue-600" />
-                  </div>
-                </div>
-                <div className="flex-1">
-                  <h4 className="text-sm font-semibold text-blue-800">
-                    Continuing Previous Session
-                  </h4>
-                  <p className="text-xs text-blue-600 mt-1">
-                    {continuedSessionTitle} • Previous conversation restored
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsContinuedSession(false)}
-                  className="text-blue-600 hover:bg-blue-100"
-                >
-                  ×
-                </Button>
-              </div>
+          <div className="flex justify-center mb-4">
+            <div className="bg-gray-500/10 border border-gray-300/30 rounded-full px-4 py-2 flex items-center gap-2 max-w-fit">
+              <MessageCircle className="w-4 h-4 text-muted-foreground" />
+              <span className="text-muted-foreground text-sm font-medium">
+                Continuing: {continuedSessionTitle}
+              </span>
+              <button
+                onClick={() => setIsContinuedSession(false)}
+                className="text-gray-600 hover:text-gray-800 transition-colors ml-2"
+              >
+                <X className="h-3 w-3" />
+              </button>
             </div>
           </div>
         )}
@@ -321,7 +308,6 @@ Your wellbeing is important.`,
                           </div>
                         </div>
                       )}
-                      
                       <div className="whitespace-pre-wrap">{message.ai}</div>
                     </div>
                   </div>

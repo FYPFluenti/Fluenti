@@ -316,19 +316,17 @@ const EmotionalSupportVoice = () => {
 
         {/* Session Continuation Banner */}
         {isContinuedSession && (
-          <div className="mx-4 mb-2">
-            <div className="bg-cyan-500/10 border border-cyan-300/30 rounded-lg px-4 py-2 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <RotateCcw className="h-4 w-4 text-cyan-500" />
-                <span className="text-cyan-700 text-sm font-medium">
-                  Continuing: {continuedSessionTitle}
-                </span>
-              </div>
+          <div className="flex justify-center mx-4 mb-2">
+            <div className="bg-gray-500/10 border border-gray-300/30 rounded-full px-4 py-2 flex items-center gap-2 max-w-fit">
+              <RotateCcw className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground text-sm font-medium">
+                Continuing: {continuedSessionTitle}
+              </span>
               <button
                 onClick={() => setIsContinuedSession(false)}
-                className="text-cyan-600 hover:text-cyan-800 transition-colors"
+                className="text-gray-600 hover:text-gray-800 transition-colors ml-2"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3 w-3" />
               </button>
             </div>
           </div>
