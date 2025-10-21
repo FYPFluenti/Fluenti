@@ -215,6 +215,11 @@ const EmotionalSessionSchema = new mongoose.Schema({
     enum: ['chat', 'assessment', 'crisis'], 
     required: true 
   },
+  mode: {
+    type: String,
+    enum: ['chat', 'voice'],
+    default: 'chat'
+  },
   messages: [{ 
     role: { type: String, enum: ['user', 'assistant'], required: true },
     content: { type: String, required: true },

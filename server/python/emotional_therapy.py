@@ -92,6 +92,10 @@ class MongoDBStorage:
             self.sessions = self.db.sessions
             self.crisis_logs = self.db.crisis_logs
             self.user_profiles = self.db.user_profiles
+            
+            # Also connect to fluenti database for EmotionalSession collection
+            self.fluenti_db = self.client.fluenti
+            self.emotional_sessions = self.fluenti_db.emotionalsessions  # MongoDB collection name (pluralized)
 
             # Create indexes for better performance
             self._create_indexes()
@@ -281,6 +285,64 @@ class MongoDBStorage:
     def get_conversation_history(self, user_id: str, session_id: str, limit: int = 10) -> List[Dict]:
         """Retrieve conversation history from MongoDB"""
         try:
+            # First try to get from EmotionalSession collection (Node.js service)
+            if hasattr(self, 'emotional_sessions'):
+                print(f"🔍 Querying EmotionalSession collection for:")
+                print(f"   - session_id: {session_id}")
+                print(f"   - user_id: {user_id}")
+                
+                emotional_session = self.emotional_sessions.find_one({
+                    "id": session_id,
+                    "userId": user_id
+                })
+                
+                print(f"📊 Query result: {emotional_session is not None}")
+                if emotional_session:
+                    print(f"📝 Session found with {len(emotional_session.get('messages', []))} messages")
+                else:
+                    # Try alternative query patterns
+                    print(f"🔍 Trying alternative queries...")
+                    
+                    # Try with _id instead of id
+                    alt_query1 = self.emotional_sessions.find_one({"_id": session_id, "userId": user_id})
+                    print(f"📊 Query with _id: {alt_query1 is not None}")
+                    
+                    # Try with any session that matches the session_id pattern
+                    alt_query2 = self.emotional_sessions.find_one({"id": session_id})
+                    print(f"📊 Query with id only: {alt_query2 is not None}")
+                    
+                    # Try finding any sessions for this user
+                    user_sessions = list(self.emotional_sessions.find({"userId": user_id}).limit(3))
+                    print(f"📊 Found {len(user_sessions)} sessions for user")
+                    for i, sess in enumerate(user_sessions):
+                        print(f"   Session {i+1}: id={sess.get('id', 'N/A')}, _id={sess.get('_id', 'N/A')}")
+                
+                if emotional_session and emotional_session.get('messages'):
+                    print(f"✅ Found session in EmotionalSession collection: {len(emotional_session['messages'])} messages")
+                    formatted_conversations = []
+                    for msg in emotional_session['messages'][-limit:]:
+                        if msg.get('role') == 'user':
+                            # User message - prepare for next assistant response
+                            user_msg = {
+                                "user_id": user_id,
+                                "session_id": session_id,
+                                "timestamp": msg.get('timestamp', ''),
+                                "user_input": msg.get('content', ''),
+                                "bot_response": '',
+                                "crisis_level": 'none',
+                                "mood_score": None,
+                                "input_length": len(msg.get('content', '')),
+                                "response_length": 0
+                            }
+                            formatted_conversations.append(user_msg)
+                        elif msg.get('role') == 'assistant' and formatted_conversations:
+                            # Assistant message - add to last user message
+                            formatted_conversations[-1]['bot_response'] = msg.get('content', '')
+                            formatted_conversations[-1]['response_length'] = len(msg.get('content', ''))
+                    
+                    return formatted_conversations
+            
+            # Fallback to conversations collection (Python service)
             if hasattr(self, 'conversations'):
                 # Get from MongoDB
                 conversations = list(

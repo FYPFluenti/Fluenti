@@ -291,6 +291,7 @@ export const mongoStorage = {
   async createEmotionalSession(sessionData: {
     userId: string;
     sessionType?: 'chat' | 'assessment' | 'crisis';
+    mode?: 'chat' | 'voice';
     emotion?: string;
     response?: string;
     confidence?: number;
@@ -301,6 +302,7 @@ export const mongoStorage = {
         id: sessionId,
         userId: sessionData.userId,
         sessionType: sessionData.sessionType || 'chat',
+        mode: sessionData.mode || 'chat',
         messages: [],
         emotionalState: sessionData.emotion,
         riskLevel: 'low',
@@ -337,6 +339,16 @@ export const mongoStorage = {
       });
       
       await session.save();
+      return session;
+    });
+  },
+
+  async findEmotionalSession(sessionId: string, userId: string) {
+    return this._safeExecute(async () => {
+      const session = await EmotionalSession.findOne({ 
+        id: sessionId,
+        userId: userId 
+      });
       return session;
     });
   },

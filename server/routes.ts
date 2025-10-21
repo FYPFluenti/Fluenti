@@ -1214,6 +1214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const sessionData = await mongoStorage.createEmotionalSession({
                 userId: stableUserId,
                 sessionType: isCrisis ? 'crisis' : 'chat',
+                mode: 'voice',
                 emotion: crisisLevel
               });
 
@@ -1356,20 +1357,46 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
       
       // Save to EmotionalSession collection for history tracking
       try {
-        const sessionData = await mongoStorage.createEmotionalSession({
-          userId: finalUserId,
-          sessionType: therapyResponse.isCrisis ? 'crisis' : 'chat',
-          emotion: therapyResponse.crisisLevel || 'neutral'
-        });
+        let sessionObjectId: string | undefined;
+        
+        // If sessionId provided, try to continue existing session
+        if (sessionId) {
+          console.log('🔄 Attempting to continue existing session:', sessionId);
+          
+          // Check if session exists in EmotionalSession collection
+          try {
+            const existingSession = await mongoStorage.findEmotionalSession(sessionId, finalUserId);
+            
+            if (existingSession) {
+              console.log('✅ Found existing session to continue');
+              sessionObjectId = sessionId;
+            } else {
+              console.log('❌ Session not found, will create new session');
+            }
+          } catch (findError) {
+            console.log('⚠️ Error finding session, will create new session:', findError);
+          }
+        }
+        
+        // Create new session only if not continuing existing one
+        if (!sessionObjectId) {
+          const sessionData = await mongoStorage.createEmotionalSession({
+            userId: finalUserId,
+            sessionType: therapyResponse.isCrisis ? 'crisis' : 'chat',
+            mode: 'chat',
+            emotion: therapyResponse.crisisLevel || 'neutral'
+          });
+          sessionObjectId = sessionData?.id;
+        }
 
-        // Add the conversation messages to the session if it was created
-        if (sessionData && sessionData.id) {
-          await mongoStorage.addMessageToEmotionalSession(sessionData.id, {
+        // Add the conversation messages to the session
+        if (sessionObjectId) {
+          await mongoStorage.addMessageToEmotionalSession(sessionObjectId, {
             role: 'user',
             content: message.trim()
           });
 
-          await mongoStorage.addMessageToEmotionalSession(sessionData.id, {
+          await mongoStorage.addMessageToEmotionalSession(sessionObjectId, {
             role: 'assistant', 
             content: therapyResponse.response
           });
@@ -1548,8 +1575,11 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
           
           // Combine and format sessions
           const formattedEmotional = emotionalSessions.map((session: any) => ({
-            id: session._id || session.id,
+            id: session.id || session._id, // Use the nanoid 'id' field first, fallback to _id
+            sessionId: session.id || session._id, // Explicit sessionId for continuation
+            userId: session.userId, // Include userId for session continuation
             type: 'support' as const,
+            mode: session.mode || 'chat', // Add mode information
             title: session.sessionType === 'crisis' ? 'Crisis Support Session' : 'Emotional Support Chat',
             date: session.createdAt || session.timestamp || new Date(),
             duration: session.duration ? `${Math.round(session.duration / 1000 / 60)} min` : 'N/A',
@@ -1589,8 +1619,11 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
         try {
           const emotionalSessions = await mongoStorage.getUserEmotionalSessions(userId, Number(limit));
           sessions = emotionalSessions.map((session: any) => ({
-            id: session._id || session.id,
+            id: session.id || session._id, // Use the nanoid 'id' field first, fallback to _id
+            sessionId: session.id || session._id, // Explicit sessionId for continuation
+            userId: session.userId, // Include userId for session continuation
             type: 'support' as const,
+            mode: session.mode || 'chat', // Add mode information
             title: session.sessionType === 'crisis' ? 'Crisis Support Session' : 'Emotional Support Chat',
             date: session.createdAt || session.timestamp || new Date(),
             duration: session.duration ? `${Math.round(session.duration / 1000 / 60)} min` : 'N/A',

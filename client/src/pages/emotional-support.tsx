@@ -30,11 +30,56 @@ const EmotionalSupport = () => {
   const [sessionData, setSessionData] = useState<SessionData>({});
   const [serviceStatus, setServiceStatus] = useState<'unknown' | 'healthy' | 'unhealthy'>('unknown');
   const [showFeedback, setShowFeedback] = useState(false);
+  const [isContinuedSession, setIsContinuedSession] = useState(false);
+  const [continuedSessionTitle, setContinuedSessionTitle] = useState<string>('');
 
-  // Check service health on component mount
+  // Check service health and handle session continuation on component mount
   useEffect(() => {
     checkServiceHealth();
+    handleSessionContinuation();
   }, []);
+
+  const handleSessionContinuation = () => {
+    try {
+      const continuingSessionData = localStorage.getItem('continuingSession');
+      if (continuingSessionData) {
+        const sessionInfo = JSON.parse(continuingSessionData);
+        
+        // Set session data for continuation
+        setSessionData({
+          sessionId: sessionInfo.sessionId,
+          userId: sessionInfo.userId,
+          sessionKey: sessionInfo.sessionKey
+        });
+
+        // Restore previous messages if available
+        if (sessionInfo.messages && sessionInfo.messages.length > 0) {
+          const restoredMessages: Message[] = sessionInfo.messages.map((msg: any, index: number) => ({
+            id: `restored_${index}`,
+            user: msg.role === 'user' ? msg.content : '',
+            ai: msg.role === 'assistant' ? msg.content : '',
+            timestamp: new Date(msg.timestamp || Date.now()),
+            crisisLevel: 'none',
+            isCrisis: false
+          })).filter((msg: Message) => msg.user || msg.ai);
+
+          setMessages(restoredMessages);
+        }
+
+        // Set continuation indicators
+        setIsContinuedSession(true);
+        setContinuedSessionTitle(sessionInfo.title || 'Previous Session');
+
+        // Clear the continuation data
+        localStorage.removeItem('continuingSession');
+        
+        console.log('🔄 Continuing session:', sessionInfo.title);
+      }
+    } catch (error) {
+      console.error('Error handling session continuation:', error);
+      localStorage.removeItem('continuingSession'); // Clear invalid data
+    }
+  };
 
   const checkServiceHealth = async () => {
     try {
@@ -189,6 +234,37 @@ Your wellbeing is important.`,
                   <span className="mx-2">•</span>
                   <span className="font-semibold">0800-00-100</span> <span className="text-blue-400">(Rozan Crisis)</span>
                 </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Session Continuation Banner */}
+        {isContinuedSession && (
+          <div className="mb-4">
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <div className="flex-shrink-0">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <MessageCircle className="w-4 h-4 text-blue-600" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <h4 className="text-sm font-semibold text-blue-800">
+                    Continuing Previous Session
+                  </h4>
+                  <p className="text-xs text-blue-600 mt-1">
+                    {continuedSessionTitle} • Previous conversation restored
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsContinuedSession(false)}
+                  className="text-blue-600 hover:bg-blue-100"
+                >
+                  ×
+                </Button>
               </div>
             </div>
           </div>

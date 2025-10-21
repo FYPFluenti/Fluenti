@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTherapyHistory } from "@/hooks/useTherapyHistory";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Calendar, Clock, Brain, MessageSquare, AlertCircle, RefreshCw, Loader2 } from "lucide-react";
+import { Calendar, Clock, Brain, MessageSquare, AlertCircle, RefreshCw, Loader2, Play, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { AdultSettings } from "@/components/dashboard/AdultSettings";
 import { Card, CardContent } from "@/components/ui/card";
@@ -77,6 +77,38 @@ export default function AdultHistory() {
   };
 
   const displaySessions = sessions.map(formatSessionForDisplay);
+
+  // Function to continue a therapy session
+  const continueSession = (session: any) => {
+    // Store session data in localStorage for continuation
+    const sessionData = {
+      sessionId: session.sessionId || session.id,
+      userId: session.userId,
+      sessionKey: session.sessionKey,
+      type: session.type,
+      mode: session.mode, // Include mode for routing
+      title: session.title,
+      messages: session.messages || [],
+      lastActivity: new Date().toISOString()
+    };
+
+    localStorage.setItem('continuingSession', JSON.stringify(sessionData));
+    
+    // Navigate to appropriate therapy page based on session mode and type
+    if (session.type === 'support' || session.type === 'chat') {
+      // Check mode to decide between voice and chat interface
+      if (session.mode === 'voice') {
+        setLocation('/emotional-support-voice');
+      } else {
+        setLocation('/emotional-support'); // Default to chat mode
+      }
+    } else if (session.type === 'therapy') {
+      setLocation('/emotional-support'); // Can be changed to a specific therapy page if needed
+    } else {
+      // Default to emotional support chat
+      setLocation('/emotional-support');
+    }
+  };
 
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -161,7 +193,11 @@ export default function AdultHistory() {
               )}
 
               {!loading && !error && displaySessions.map((session) => (
-                <Card key={session.id} className="bg-card border-border shadow-lg hover:shadow-xl transition-shadow">
+                <Card 
+                  key={session.id} 
+                  className="bg-card border-border shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer group"
+                  onClick={() => continueSession(session)}
+                >
                   <CardContent className="p-6">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -173,10 +209,39 @@ export default function AdultHistory() {
                               {session.riskLevel} risk
                             </div>
                           )}
+                          {session.mode && (
+                            <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                              session.mode === 'voice' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
+                            }`}>
+                              {session.mode === 'voice' ? '🎤 Voice' : '💬 Chat'}
+                            </div>
+                          )}
+                          {session.messages && session.messages.length > 0 && (
+                            <div className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
+                              {session.messages.length} messages
+                            </div>
+                          )}
                         </div>
-                        <h3 className="text-lg font-semibold text-foreground mb-1">
-                          {session.title}
-                        </h3>
+                        <div className="flex items-center justify-between mb-1">
+                          <h3 className="text-lg font-semibold text-foreground group-hover:text-[#ff6b1d] transition-colors">
+                            {session.title}
+                          </h3>
+                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                continueSession(session);
+                              }}
+                              className="text-[#ff6b1d] hover:text-[#e55a1a] hover:bg-[#ff6b1d]/10"
+                            >
+                              <Play className="w-4 h-4 mr-1" />
+                              Continue
+                            </Button>
+                            <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-[#ff6b1d] transition-colors" />
+                          </div>
+                        </div>
                         <p className="text-muted-foreground mb-3">
                           {session.notes}
                         </p>
