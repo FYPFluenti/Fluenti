@@ -45,8 +45,8 @@ export default function SpeechTherapyScreen({ data, onNext, onBack, onSkip }: Sp
             onClick={() => handleOptionSelect(false)}
             className={`flex-1 rounded-3xl p-8 font-bold text-2xl transition-all duration-200 min-h-[120px] flex items-center justify-center ${
               seekingTherapy === false
-                ? 'bg-gradient-to-br from-green-400 to-green-600 text-white shadow-lg scale-105'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                ? 'bg-black text-white shadow-lg scale-105'
+                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
             NO
@@ -62,8 +62,8 @@ export default function SpeechTherapyScreen({ data, onNext, onBack, onSkip }: Sp
             onClick={() => handleOptionSelect(true)}
             className={`flex-1 rounded-3xl p-8 font-bold text-2xl transition-all duration-200 min-h-[120px] flex items-center justify-center ${
               seekingTherapy === true
-                ? 'bg-gradient-to-br from-blue-400 to-blue-600 text-white shadow-lg scale-105'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                ? 'bg-black text-white shadow-lg scale-105'
+                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
             YES
