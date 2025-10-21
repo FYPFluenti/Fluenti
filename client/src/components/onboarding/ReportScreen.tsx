@@ -45,13 +45,9 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
         animate={{ opacity: 1, y: 0 }}
         className="text-center mb-8"
       >
-        <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center">
-        </div>
-        
         <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
           Assessment Report
         </h1>
-        
         <div className="bg-gradient-to-r from-[#F5B82E] to-orange-400 text-transparent bg-clip-text font-bold text-lg">
           Report for: {report.childName} - {report.childAge.years} years, {report.childAge.months} months
         </div>
@@ -172,7 +168,7 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={onStartPracticing}
-          className="w-full bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 hover:shadow-lg transition-all duration-200"
+          className="w-full bg-black text-white py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 hover:shadow-lg transition-all duration-200"
         >
           Start practicing
         </motion.button>
