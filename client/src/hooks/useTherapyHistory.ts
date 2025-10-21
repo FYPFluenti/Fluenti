@@ -4,6 +4,7 @@ import { useAuth } from './useAuth';
 interface TherapySession {
   id: string;
   type: 'therapy' | 'support';
+  mode?: 'voice' | 'chat'; // Add mode property
   title: string;
   date: string | Date;
   duration: string;
@@ -31,6 +32,7 @@ interface TherapyHistoryResponse {
 interface UseTherapyHistoryOptions {
   limit?: number;
   type?: 'all' | 'therapy' | 'support';
+  mode?: 'all' | 'voice' | 'chat'; // Add mode filtering option
 }
 
 export function useTherapyHistory(options: UseTherapyHistoryOptions = {}) {

@@ -2,7 +2,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useTherapyHistory } from "@/hooks/useTherapyHistory";
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
-import { Calendar, Clock, Brain, MessageSquare, AlertCircle, RefreshCw, Loader2, Play, ChevronRight } from "lucide-react";
+import { Calendar, Clock, Brain, MessageSquare, AlertCircle, RefreshCw, Loader2, Play, ChevronRight, Mic, MessageCircle } from "lucide-react";
 import { motion } from "framer-motion";
 import { AdultSettings } from "@/components/dashboard/AdultSettings";
 import { Card, CardContent } from "@/components/ui/card";
@@ -28,13 +28,28 @@ export default function AdultHistory() {
   const [showAdultSettings, setShowAdultSettings] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [language, setLanguage] = useState<'en' | 'ur'>('en');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'therapy' | 'support'>('all');
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'voice' | 'chat'>('all');
   
-  // Use the therapy history hook to fetch real data
-  const { sessions, loading, error, total, hasMore, loadMore, refresh } = useTherapyHistory({
-    limit: 20,
-    type: selectedFilter
+  // Use the therapy history hook to fetch real data - always fetch all sessions for filtering
+  const { sessions: allSessions, loading, error, total: totalSessions, hasMore, loadMore, refresh } = useTherapyHistory({
+    limit: 50, // Fetch more sessions to ensure we have enough for client-side filtering
+    type: 'all' // Always fetch all sessions, filter on frontend
   });
+
+  // Apply client-side filtering based on session mode
+  const sessions = selectedFilter === 'all' 
+    ? allSessions 
+    : allSessions.filter(session => {
+        if (selectedFilter === 'voice') {
+          return session.mode === 'voice';
+        } else if (selectedFilter === 'chat') {
+          return session.mode === 'chat' || !session.mode; // Include sessions without mode (default to chat)
+        }
+        return true;
+      });
+
+  // Calculate filtered total
+  const total = selectedFilter === 'all' ? totalSessions : sessions.length;
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -153,8 +168,8 @@ export default function AdultHistory() {
             <div className="flex flex-wrap gap-2 mb-6">
               {[
                 { key: 'all', label: 'All Sessions', icon: Calendar },
-                { key: 'therapy', label: 'Therapy Sessions', icon: Brain },
-                { key: 'support', label: 'Support Chats', icon: MessageSquare },
+                { key: 'voice', label: 'Voice Sessions', icon: Mic },
+                { key: 'chat', label: 'Chat Sessions', icon: MessageCircle },
               ].map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
@@ -204,20 +219,28 @@ export default function AdultHistory() {
                         <div className="flex items-center gap-2 mb-2">
                           {session.riskLevel && session.riskLevel !== 'low' && (
                             <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              session.riskLevel === 'high' ? 'bg-red-100 text-red-600' : 'bg-yellow-100 text-yellow-600'
+                              session.riskLevel === 'high' ? 'bg-[#ff6b1d]/10 text-[#ff6b1d]' : 'bg-[#ff6b1d]/10 text-[#ff6b1d]'
                             }`}>
                               {session.riskLevel} risk
                             </div>
                           )}
                           {session.mode && (
-                            <div className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              session.mode === 'voice' ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'
-                            }`}>
-                              {session.mode === 'voice' ? '🎤 Voice' : '💬 Chat'}
+                            <div className="px-2 py-1 rounded-full text-xs font-medium bg-[#ff6b1d]/10 text-[#ff6b1d] flex items-center gap-1">
+                              {session.mode === 'voice' ? (
+                                <>
+                                  <Mic className="w-3 h-3" />
+                                  Voice
+                                </>
+                              ) : (
+                                <>
+                                  <MessageCircle className="w-3 h-3" />
+                                  Chat
+                                </>
+                              )}
                             </div>
                           )}
                           {session.messages && session.messages.length > 0 && (
-                            <div className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
+                            <div className="px-2 py-1 rounded-full text-xs font-medium bg-[#ff6b1d]/10 text-[#ff6b1d]">
                               {session.messages.length} messages
                             </div>
                           )}
@@ -287,10 +310,20 @@ export default function AdultHistory() {
               <div className="text-center py-12">
                 <Brain className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium text-foreground mb-2">
-                  No emotional therapy sessions found
+                  {selectedFilter === 'voice' 
+                    ? 'No voice sessions found'
+                    : selectedFilter === 'chat'
+                    ? 'No chat sessions found'
+                    : 'No emotional therapy sessions found'
+                  }
                 </h3>
                 <p className="text-muted-foreground">
-                  Start your emotional wellness journey to see your progress history here.
+                  {selectedFilter === 'voice'
+                    ? 'Start a voice conversation to see your voice sessions here.'
+                    : selectedFilter === 'chat'
+                    ? 'Start a chat conversation to see your chat sessions here.'
+                    : 'Start your emotional wellness journey to see your progress history here.'
+                  }
                 </p>
               </div>
             )}
