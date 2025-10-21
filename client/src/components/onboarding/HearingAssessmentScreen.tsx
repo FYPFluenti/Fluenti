@@ -51,15 +51,6 @@ export default function HearingAssessmentScreen({ data, onNext, onBack }: Hearin
   return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center max-w-lg mx-auto">
       <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-        className="w-24 h-24 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-full mx-auto mb-6 flex items-center justify-center"
-      >
-        
-      </motion.div>
-
-      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
@@ -79,8 +70,8 @@ export default function HearingAssessmentScreen({ data, onNext, onBack }: Hearin
             onClick={() => handleAnswerSelect('no')}
             className={`w-full p-4 rounded-2xl font-semibold text-lg transition-all duration-200 ${
               selectedAnswer === 'no'
-                ? 'bg-gradient-to-r from-red-400 to-red-600 text-white shadow-lg scale-105'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                ? 'bg-black text-white shadow-lg scale-105'
+                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
             NO
@@ -96,8 +87,8 @@ export default function HearingAssessmentScreen({ data, onNext, onBack }: Hearin
             onClick={() => handleAnswerSelect('yes')}
             className={`w-full p-4 rounded-2xl font-semibold text-lg transition-all duration-200 ${
               selectedAnswer === 'yes'
-                ? 'bg-gradient-to-r from-green-400 to-green-600 text-white shadow-lg scale-105'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                ? 'bg-black text-white shadow-lg scale-105'
+                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
             YES
@@ -113,8 +104,8 @@ export default function HearingAssessmentScreen({ data, onNext, onBack }: Hearin
             onClick={() => handleAnswerSelect('cant-tell')}
             className={`w-full p-4 rounded-2xl font-semibold text-lg transition-all duration-200 ${
               selectedAnswer === 'cant-tell'
-                ? 'bg-gradient-to-r from-gray-400 to-gray-600 text-white shadow-lg scale-105'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                ? 'bg-black text-white shadow-lg scale-105'
+                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
             Can't tell
@@ -129,8 +120,8 @@ export default function HearingAssessmentScreen({ data, onNext, onBack }: Hearin
           disabled={!selectedAnswer}
           className={`w-full py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 ${
             selectedAnswer
-              ? 'bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white hover:shadow-lg'
-              : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+              ? 'bg-black text-white hover:shadow-lg'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
         >
           Continue
