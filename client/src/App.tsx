@@ -19,7 +19,7 @@ import EmotionalSupport from "@/pages/emotional-support";
 import EmotionalSupportVoice from "@/pages/emotional-support-voice";
 // import SpeechTest from "@/pages/SpeechTest"; // Disabled - using Groq only
 // import QuickSpeechTest from "@/pages/QuickSpeechTest"; // Disabled - using Groq only
-import GroqTestPage from "@/components/GroqTestPage";
+// import GroqTestPage from "@/components/GroqTestPage"; // Disabled - component not found
 import Assessment from "@/pages/assessment";
 import Achievements from "@/pages/achievements";
 import Settings from "@/pages/settings";
@@ -158,10 +158,10 @@ export default function App() {
               <QuickSpeechTest />
             </Route> */}
             
-            {/* Groq Test Route (Debug) */}
-            <Route path="/groq-test">
+            {/* Groq Test Route (Debug) - Disabled */}
+            {/* <Route path="/groq-test">
               <GroqTestPage />
-            </Route>
+            </Route> */}
             
             {/* 404 Route */}
             <Route>
