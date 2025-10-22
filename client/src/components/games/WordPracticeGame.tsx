@@ -19,7 +19,8 @@ import {
   Target,
   Brain,
   Headphones,
-  Clock
+  Clock,
+  Play
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
@@ -2397,90 +2398,142 @@ export default function WordPracticeGame({
     return (
       <div className="min-h-screen bg-gradient-to-b from-purple-50 via-pink-50 to-blue-50 px-4 py-8">
         <div className="max-w-5xl mx-auto">
-          {/* Header */}
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mb-10"
-          >
-            <h1 className="text-5xl font-bold mb-3 flex items-center justify-center gap-3">
-              ✨ Choose Your Adventure, {childProfile?.childName || 'Friend'}! ✨
-            </h1>
-            <p className="text-xl text-gray-600">
-              What kind of word practice sounds fun today?
-            </p>
-          </motion.div>
+          {/* Game Mode Selection */}
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold text-foreground mb-2">What kind of word practice sounds fun today?</h2>
+            </div>
 
-          {/* Main Mode Cards - 3 Column Grid */}
-          <div className="grid md:grid-cols-3 gap-6 mb-8">
-            {/* Story Adventure Mode */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1 }}
-              className="relative"
-            >
-              <button
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Story Adventure */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="bg-card border border-border rounded-xl overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
                 onClick={() => {
                   setGameMode('story');
                   setShowModeSelector(false);
                   setShowStoryOpening(true);
                 }}
-                className="w-full bg-white border-4 border-purple-300 rounded-3xl p-8 text-center hover:shadow-2xl hover:border-purple-400 transition-all transform hover:scale-105 hover:-translate-y-2 relative overflow-hidden group"
               >
-                {/* Sparkle Effect */}
-                <div className="absolute top-2 right-2 text-2xl animate-pulse">✨</div>
-                <div className="absolute bottom-2 left-2 text-2xl animate-pulse">🌟</div>
-                
-                <div className="text-7xl mb-4">📖</div>
-                <h3 className="text-3xl font-bold text-purple-700 mb-3">STORY<br/>ADVENTURE</h3>
-                <p className="text-gray-700 text-base mb-4 leading-relaxed">
-                  Follow a magical quest! Help forest animals and unlock surprises!
-                </p>
-                <div className="bg-purple-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold inline-block mb-2">
-                  🌟 Recommended
+                {/* Game Header */}
+                <div className="bg-muted p-6 relative">
+                  <div className="flex justify-center mb-3">
+                    <div className="w-16 h-16 rounded-xl bg-[#ff6b1d]/10 flex items-center justify-center">
+                      <span className="text-4xl">📖</span>
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-bold text-center mb-2">Story Adventure</h3>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Follow a magical quest! Help forest animals and unlock surprises!
+                  </p>
                 </div>
-                <div className="text-xs text-gray-500 mt-2">⚡ Unlocked</div>
-              </button>
-            </motion.div>
 
-            {/* Challenge Mode (TEMPORARILY UNLOCKED) */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 }}
-              className="relative"
-            >
-              <button
+                {/* Game Details */}
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      <span>15 min</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#ff6b1d]">
+                      <Zap className="w-4 h-4" />
+                      <span className="font-medium">+50 XP</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-1 rounded-full text-xs font-medium text-[#ff6b1d] bg-[#ff6b1d]/10">
+                      Easy
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 text-[#ff6b1d] fill-[#ff6b1d]" />
+                      <Star className="w-4 h-4 text-[#ff6b1d] fill-[#ff6b1d]" />
+                      <Star className="w-4 h-4 text-muted-foreground/30" />
+                    </div>
+                  </div>
+
+                  <div className="text-center">
+                    <span className="inline-block bg-muted px-3 py-1 rounded-full text-xs font-medium text-muted-foreground">
+                      Pronunciation
+                    </span>
+                  </div>
+
+                  <button className="w-full bg-[#ff6b1d] hover:bg-[#e55a1a] text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <Play className="w-4 h-4" />
+                    Start Game
+                  </button>
+                </div>
+              </motion.div>
+
+              {/* Challenge Mode */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="bg-card border border-border rounded-xl overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
                 onClick={() => {
                   console.log('🎮 Challenge Mode clicked - showing mode selector');
-                  // ✅ FIX: Show mode selection screen instead of random pick
                   setShowChallengeModeSelector(true);
                 }}
-                className="w-full bg-white border-4 border-orange-300 rounded-3xl p-8 text-center hover:shadow-2xl hover:border-orange-400 transition-all transform hover:scale-105 hover:-translate-y-2 relative overflow-hidden"
               >
-                <div className="absolute top-2 right-2 text-2xl">⚡</div>
-                
-                <div className="text-7xl mb-4">🎯</div>
-                <h3 className="text-3xl font-bold text-orange-700 mb-3">CHALLENGE<br/>MODE</h3>
-                <p className="text-gray-700 text-base mb-4 leading-relaxed">
-                  Speed rounds & memory games with bonus points!
-                </p>
-                <div className="bg-green-100 text-green-700 px-4 py-2 rounded-full text-sm font-semibold inline-block mb-2">
-                  ✅ UNLOCKED (TEMP)
+                {/* Game Header */}
+                <div className="bg-muted p-6 relative">
+                  <div className="flex justify-center mb-3">
+                    <div className="w-16 h-16 rounded-xl bg-[#ff6b1d]/10 flex items-center justify-center">
+                      <Target className="w-8 h-8 text-[#ff6b1d]" />
+                    </div>
+                  </div>
+                  <h3 className="text-lg font-bold text-center mb-2">Challenge Mode</h3>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Speed rounds & memory games with bonus points!
+                  </p>
                 </div>
-                <div className="text-xs text-gray-500 mt-2">6 modes available</div>
-              </button>
-            </motion.div>
 
-            {/* 🏆 DAILY QUEST (Always Show - No Classic Mode Fallback) */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3 }}
-              className="relative"
-            >
-              <button
+                {/* Game Details */}
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      <span>12 min</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#ff6b1d]">
+                      <Zap className="w-4 h-4" />
+                      <span className="font-medium">+40 XP</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-1 rounded-full text-xs font-medium text-muted-foreground bg-muted">
+                      Medium
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 text-[#ff6b1d] fill-[#ff6b1d]" />
+                      <Star className="w-4 h-4 text-muted-foreground/30" />
+                      <Star className="w-4 h-4 text-muted-foreground/30" />
+                    </div>
+                  </div>
+
+                  <div className="text-center">
+                    <span className="inline-block bg-muted px-3 py-1 rounded-full text-xs font-medium text-muted-foreground">
+                      Speed
+                    </span>
+                  </div>
+
+                  <button className="w-full bg-[#ff6b1d] hover:bg-[#e55a1a] text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <Play className="w-4 h-4" />
+                    Start Game
+                  </button>
+                </div>
+              </motion.div>
+
+              {/* Daily Quest */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="bg-card border border-border rounded-xl overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg"
                 onClick={() => {
                   console.log('🏆 Daily Quest clicked:', { 
                     hasDailyChallenge: !!dailyChallenge,
@@ -2488,7 +2541,6 @@ export default function WordPracticeGame({
                     theme: dailyChallenge?.theme
                   });
                   
-                  // ✅ Start Daily Quest (Conquest Mode) with unique experience
                   if (dailyChallenge) {
                     console.log('✅ Starting Daily Quest (Conquest Mode):', {
                       theme: dailyChallenge.theme,
@@ -2499,7 +2551,6 @@ export default function WordPracticeGame({
                     setGameMode('conquest');
                     setShowModeSelector(false);
                   } else {
-                    // ❌ Don't use random fallback - show error instead
                     toast({
                       title: "Daily Quest Loading...",
                       description: "Please wait a moment and try again.",
@@ -2509,37 +2560,68 @@ export default function WordPracticeGame({
                     console.warn('⚠️ Daily quest not loaded yet');
                   }
                 }}
-                className={`w-full bg-gradient-to-br from-yellow-400 via-yellow-300 to-orange-300 border-4 border-yellow-400 rounded-3xl p-8 text-center hover:shadow-2xl transition-all transform hover:scale-105 hover:-translate-y-2 relative overflow-hidden ${!dailyChallenge ? 'animate-pulse' : ''}`}
               >
-                {/* NEW Badge (show if not completed today) */}
-                {!dailyChallenge && (
-                  <div className="absolute top-0 right-0 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs font-bold px-3 py-1 rounded-bl-xl shadow-lg">
-                    ✨ NEW
+                {/* Game Header */}
+                <div className="bg-muted p-6 relative">
+                  <div className="flex justify-center mb-3">
+                    <div className="w-16 h-16 rounded-xl bg-[#ff6b1d]/10 flex items-center justify-center">
+                      <Award className="w-8 h-8 text-[#ff6b1d]" />
+                    </div>
                   </div>
-                )}
-
-                {/* Sparkle Effects */}
-                <div className="absolute top-2 left-2 text-2xl animate-bounce">✨</div>
-                <div className="absolute bottom-2 right-2 text-2xl animate-bounce" style={{ animationDelay: '0.3s' }}>⭐</div>
-                
-                <div className="text-7xl mb-4">{dailyChallenge?.emoji || '🏆'}</div>
-                <h3 className="text-3xl font-bold text-yellow-900 mb-3">
-                  DAILY<br/>QUEST
-                </h3>
-                <p className="text-yellow-900 text-base mb-4 leading-relaxed font-semibold">
-                  {dailyChallenge ? dailyChallenge.description || 'Complete today\'s special challenge!' : 'New quest available! 🎁'}
-                </p>
-                
-                {/* Status Badge */}
-                <div className={`px-4 py-2 rounded-full text-sm font-bold inline-block ${
-                  dailyChallenge 
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
-                    : 'bg-gradient-to-r from-yellow-600 to-orange-600 text-white animate-pulse'
-                }`}>
-                  {dailyChallenge ? '🎯 Ready!' : '🎁 NEW TODAY'}
+                  <h3 className="text-lg font-bold text-center mb-2">Daily Quest</h3>
+                  <p className="text-sm text-muted-foreground text-center">
+                    Help marine animals find their way home!
+                  </p>
                 </div>
+
+                {/* Game Details */}
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      <span>18 min</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[#ff6b1d]">
+                      <Zap className="w-4 h-4" />
+                      <span className="font-medium">+60 XP</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="px-2 py-1 rounded-full text-xs font-medium text-foreground bg-accent/50">
+                      Hard
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Star className="w-4 h-4 text-[#ff6b1d] fill-[#ff6b1d]" />
+                      <Star className="w-4 h-4 text-[#ff6b1d] fill-[#ff6b1d]" />
+                      <Star className="w-4 h-4 text-[#ff6b1d] fill-[#ff6b1d]" />
+                    </div>
+                  </div>
+
+                  <div className="text-center">
+                    <span className="inline-block bg-muted px-3 py-1 rounded-full text-xs font-medium text-muted-foreground">
+                      Reading
+                    </span>
+                  </div>
+
+                  <button className="w-full bg-[#ff6b1d] hover:bg-[#e55a1a] text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                    <Play className="w-4 h-4" />
+                    Start Game
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Back Button */}
+            <div className="text-center mt-8">
+              <button
+                onClick={onExit}
+                className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-2 mx-auto"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Games
               </button>
-            </motion.div>
+            </div>
           </div>
 
           {/* Companion Introduction */}
