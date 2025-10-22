@@ -48,7 +48,7 @@ export default function InterestsSelectionScreen({ data, onNext, onBack, onSkip 
         transition={{ delay: 0.4 }}
         className="text-center"
       >
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+        <h1 className="text-2xl font-normal text-gray-900 mb-4">
           <span className="text-[#F5B82E]">{childName}'s</span> favorite things?
         </h1>
 
