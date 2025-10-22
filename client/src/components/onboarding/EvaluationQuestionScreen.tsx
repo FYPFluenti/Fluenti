@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Users, ArrowRight } from 'lucide-react';
 
 interface EvaluationQuestionScreenProps {
   data: any;
@@ -28,23 +27,11 @@ export default function EvaluationQuestionScreen({ data, onNext, onBack, onSkip 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center max-w-lg mx-auto">
       <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-        className="w-32 h-32 mx-auto mb-6"
-      >
-        {/* Illustration of therapist with child */}
-        <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 rounded-3xl flex items-center justify-center">
-          <div className="text-6xl">👨‍⚕️👧</div>
-        </div>
-      </motion.div>
-
-      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-8">
+        <h1 className="text-2xl font-normal text-gray-900 mb-8">
           Has <span className="text-[#F5B82E]">{childName}</span> been evaluated by a speech therapist?
         </h1>
 
@@ -59,8 +46,8 @@ export default function EvaluationQuestionScreen({ data, onNext, onBack, onSkip 
             onClick={() => handleOptionSelect(false)}
             className={`flex-1 rounded-3xl p-8 font-bold text-2xl transition-all duration-200 min-h-[120px] flex items-center justify-center ${
               hasBeenEvaluated === false
-                ? 'bg-gradient-to-br from-red-400 to-red-600 text-white shadow-lg scale-105'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                ? 'bg-black text-white shadow-lg scale-105'
+                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
             NO
@@ -76,8 +63,8 @@ export default function EvaluationQuestionScreen({ data, onNext, onBack, onSkip 
             onClick={() => handleOptionSelect(true)}
             className={`flex-1 rounded-3xl p-8 font-bold text-2xl transition-all duration-200 min-h-[120px] flex items-center justify-center ${
               hasBeenEvaluated === true
-                ? 'bg-gradient-to-br from-green-400 to-green-600 text-white shadow-lg scale-105'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                ? 'bg-black text-white shadow-lg scale-105'
+                : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
             }`}
           >
             YES
@@ -93,12 +80,12 @@ export default function EvaluationQuestionScreen({ data, onNext, onBack, onSkip 
             disabled={hasBeenEvaluated === null}
             className={`w-full py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 ${
               hasBeenEvaluated !== null
-                ? 'bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white hover:shadow-lg'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                ? 'bg-black text-white hover:shadow-lg'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
             Continue
-            <ArrowRight className="w-5 h-5" />
+
           </motion.button>
 
           <motion.button
