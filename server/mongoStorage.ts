@@ -291,6 +291,7 @@ export const mongoStorage = {
   async createEmotionalSession(sessionData: {
     userId: string;
     sessionType?: 'chat' | 'assessment' | 'crisis';
+    mode?: 'chat' | 'voice';
     emotion?: string;
     response?: string;
     confidence?: number;
@@ -301,6 +302,7 @@ export const mongoStorage = {
         id: sessionId,
         userId: sessionData.userId,
         sessionType: sessionData.sessionType || 'chat',
+        mode: sessionData.mode || 'chat',
         messages: [],
         emotionalState: sessionData.emotion,
         riskLevel: 'low',
@@ -341,9 +343,30 @@ export const mongoStorage = {
     });
   },
 
+  async findEmotionalSession(sessionId: string, userId: string) {
+    return this._safeExecute(async () => {
+      const session = await EmotionalSession.findOne({ 
+        id: sessionId,
+        userId: userId 
+      });
+      return session;
+    });
+  },
+
   async getEmotionalSession(sessionId: string) {
     return this._safeExecute(async () => {
       const session = await EmotionalSession.findOne({ id: sessionId });
+      return session;
+    });
+  },
+
+  async updateEmotionalSessionTitle(sessionId: string, title: string) {
+    return this._safeExecute(async () => {
+      const session = await EmotionalSession.findOneAndUpdate(
+        { id: sessionId },
+        { title: title },
+        { new: true }
+      );
       return session;
     });
   },

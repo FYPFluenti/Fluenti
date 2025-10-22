@@ -1,13 +1,22 @@
 import { Router, Request, Response } from 'express';
 import { OAuth2Client } from 'google-auth-library';
-import { User, IUser } from '../db/schema';
+import { User } from '../models';
 import { generateAccessToken, generateRefreshToken, TOKEN_EXPIRY } from '../services/jwtService';
+import { tokenBasedAuth } from '../middleware';
+
+interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    userType?: string;
+  };
+}
 
 const router = Router();
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // Helper function to create user response
-const createUserResponse = (user: IUser) => ({
+const createUserResponse = (user: any) => ({
   id: user.id,
   firstName: user.firstName,
   lastName: user.lastName,
@@ -18,7 +27,7 @@ const createUserResponse = (user: IUser) => ({
 });
 
 // Helper function to set JWT cookies
-const setAuthCookies = async (res: Response, user: IUser) => {
+const setAuthCookies = async (res: Response, user: any) => {
   const accessToken = generateAccessToken({ 
     userId: user.id, 
     email: user.email,
@@ -37,15 +46,17 @@ const setAuthCookies = async (res: Response, user: IUser) => {
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: TOKEN_EXPIRY.ACCESS_TOKEN_MS
+    sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
+    maxAge: TOKEN_EXPIRY.ACCESS_TOKEN_MS,
+    path: '/'
   });
   
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-    maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS
+    sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
+    maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS,
+    path: '/'
   });
 };// Google OAuth Handler
 const handleGoogleAuth = async (req: Request, res: Response) => {
@@ -256,5 +267,157 @@ router.post('/google-login', handleGoogleAuth);
 router.post('/facebook', handleFacebookAuth);
 router.post('/facebook-signup', handleFacebookAuth);
 router.post('/facebook-login', handleFacebookAuth);
+
+// Password change endpoint (requires authentication)
+
+router.post('/change-password', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    console.log('🔐 Password change request for user:', req.user?.id);
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      console.log('❌ Missing password fields');
+      return res.status(400).json({
+        success: false,
+        message: 'Current password and new password are required'
+      });
+    }
+
+    if (newPassword.length < 6) {
+      console.log('❌ New password too short');
+      return res.status(400).json({
+        success: false,
+        message: 'New password must be at least 6 characters long'
+      });
+    }
+
+    const user = await User.findOne({ id: req.user?.id }).select('+password');
+    if (!user) {
+      console.log('❌ User not found:', req.user?.id);
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    console.log('📋 User found, signup method:', user.signupMethod);
+
+    // Check if user has a password (not OAuth-only user)
+    if (!user.password || user.signupMethod !== 'email') {
+      console.log('❌ Password change not available for OAuth user');
+      return res.status(400).json({
+        success: false,
+        message: 'Password change not available for social login accounts'
+      });
+    }
+
+    // Verify current password
+    console.log('🔍 Verifying current password...');
+    const isCurrentPasswordValid = await user.comparePassword(currentPassword);
+    if (!isCurrentPasswordValid) {
+      console.log('❌ Current password is incorrect');
+      return res.status(400).json({
+        success: false,
+        message: 'Current password is incorrect'
+      });
+    }
+
+    // Update password
+    console.log('✅ Updating password...');
+    user.password = newPassword;
+    await user.save();
+
+    console.log('✅ Password changed successfully for user:', req.user?.id);
+    res.json({
+      success: true,
+      message: 'Password changed successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Change password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to change password. Please try again.'
+    });
+  }
+});
+
+// Get email verification status
+router.get('/email-verification-status', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const user = await User.findOne({ id: req.user?.id });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      emailVerified: user.emailVerified || false,
+      email: user.email,
+      signupMethod: user.signupMethod
+    });
+
+  } catch (error) {
+    console.error('Email verification status error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get email verification status'
+    });
+  }
+});
+
+// Resend verification email
+router.post('/resend-verification', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const user = await User.findOne({ id: req.user?.id });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (user.emailVerified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already verified'
+      });
+    }
+
+    if (user.signupMethod !== 'email') {
+      return res.status(400).json({
+        success: false,
+        message: 'Email verification not required for social login accounts'
+      });
+    }
+
+    // Generate new verification token
+    const crypto = await import('crypto');
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    user.emailVerificationToken = verificationToken;
+    user.emailVerificationExpiry = verificationExpiry;
+    await user.save();
+
+    // TODO: Send verification email (implement email service)
+    console.log(`Verification token for ${user.email}: ${verificationToken}`);
+
+    res.json({
+      success: true,
+      message: 'Verification email sent successfully'
+    });
+
+  } catch (error) {
+    console.error('Resend verification error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send verification email'
+    });
+  }
+});
 
 export default router;

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, Heart, MessageCircle } from 'lucide-react';
+import { AlertTriangle, Heart, MessageCircle, X } from 'lucide-react';
 import SharedSidebarEmotional from '@/components/layout/SharedSidebarEmotional';
 import FeedbackModal from '@/components/layout/FeedbackModel';
 import PageHeader from '@/components/layout/PageHeader';
@@ -30,11 +30,56 @@ const EmotionalSupport = () => {
   const [sessionData, setSessionData] = useState<SessionData>({});
   const [serviceStatus, setServiceStatus] = useState<'unknown' | 'healthy' | 'unhealthy'>('unknown');
   const [showFeedback, setShowFeedback] = useState(false);
+  const [isContinuedSession, setIsContinuedSession] = useState(false);
+  const [continuedSessionTitle, setContinuedSessionTitle] = useState<string>('');
 
-  // Check service health on component mount
+  // Check service health and handle session continuation on component mount
   useEffect(() => {
     checkServiceHealth();
+    handleSessionContinuation();
   }, []);
+
+  const handleSessionContinuation = () => {
+    try {
+      const continuingSessionData = localStorage.getItem('continuingSession');
+      if (continuingSessionData) {
+        const sessionInfo = JSON.parse(continuingSessionData);
+        
+        // Set session data for continuation
+        setSessionData({
+          sessionId: sessionInfo.sessionId,
+          userId: sessionInfo.userId,
+          sessionKey: sessionInfo.sessionKey
+        });
+
+        // Restore previous messages if available
+        if (sessionInfo.messages && sessionInfo.messages.length > 0) {
+          const restoredMessages: Message[] = sessionInfo.messages.map((msg: any, index: number) => ({
+            id: `restored_${index}`,
+            user: msg.role === 'user' ? msg.content : '',
+            ai: msg.role === 'assistant' ? msg.content : '',
+            timestamp: new Date(msg.timestamp || Date.now()),
+            crisisLevel: 'none',
+            isCrisis: false
+          })).filter((msg: Message) => msg.user || msg.ai);
+
+          setMessages(restoredMessages);
+        }
+
+        // Set continuation indicators
+        setIsContinuedSession(true);
+        setContinuedSessionTitle(sessionInfo.title || 'Previous Session');
+
+        // Clear the continuation data
+        localStorage.removeItem('continuingSession');
+        
+        console.log('🔄 Continuing session:', sessionInfo.title);
+      }
+    } catch (error) {
+      console.error('Error handling session continuation:', error);
+      localStorage.removeItem('continuingSession'); // Clear invalid data
+    }
+  };
 
   const checkServiceHealth = async () => {
     try {
@@ -194,6 +239,24 @@ Your wellbeing is important.`,
           </div>
         )}
 
+        {/* Session Continuation Banner */}
+        {isContinuedSession && (
+          <div className="flex justify-center mb-4">
+            <div className="bg-gray-500/10 border border-gray-300/30 rounded-full px-4 py-2 flex items-center gap-2 max-w-fit">
+              <MessageCircle className="w-4 h-4 text-muted-foreground" />
+              <span className="text-muted-foreground text-sm font-medium">
+                Continuing: {continuedSessionTitle}
+              </span>
+              <button
+                onClick={() => setIsContinuedSession(false)}
+                className="text-gray-600 hover:text-gray-800 transition-colors ml-2"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        )}
+
           {/* Chat Messages */}
           <div className="flex-1 rounded-lg p-4 mb-4 overflow-y-auto bg-muted/20 min-h-0">
           {messages.length === 0 ? (
@@ -245,30 +308,7 @@ Your wellbeing is important.`,
                           </div>
                         </div>
                       )}
-                      
                       <div className="whitespace-pre-wrap">{message.ai}</div>
-                      
-                      <div className="flex items-center gap-2 mt-2">
-                        <p className="text-xs text-muted-foreground">
-                          {message.timestamp.toLocaleTimeString()}
-                        </p>
-                        {message.crisisLevel && message.crisisLevel !== 'none' && (
-                          <span className={`inline-flex items-center text-xs px-2.5 py-1 rounded-full font-medium border ${
-                            message.crisisLevel === 'critical' ? 'bg-red-100 text-red-800 border-red-200' :
-                            message.crisisLevel === 'high' ? 'bg-orange-100 text-orange-800 border-orange-200' :
-                            message.crisisLevel === 'medium' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                            'bg-blue-100 text-blue-800 border-blue-200'
-                          }`}>
-                            <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
-                              message.crisisLevel === 'critical' ? 'bg-red-500' :
-                              message.crisisLevel === 'high' ? 'bg-orange-500' :
-                              message.crisisLevel === 'medium' ? 'bg-yellow-500' :
-                              'bg-blue-500'
-                            }`} />
-                            {message.crisisLevel.charAt(0).toUpperCase() + message.crisisLevel.slice(1)}
-                          </span>
-                        )}
-                      </div>
                     </div>
                   </div>
                 </div>

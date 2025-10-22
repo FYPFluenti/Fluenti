@@ -76,6 +76,42 @@ def log_response(response):
 # Store active sessions
 active_sessions: Dict[str, Any] = {}
 
+def restore_session_from_mongodb(user_id: str, session_id: str):
+    """Restore session context from MongoDB EmotionalSession collection"""
+    try:
+        # Access therapy bot's storage
+        if not therapy_bot or not hasattr(therapy_bot, 'storage'):
+            print("❌ Cannot restore session: therapy bot or storage not available")
+            return None
+        
+        storage = therapy_bot.storage
+        
+        # Get conversation history for this session
+        history = storage.get_conversation_history(user_id, session_id, limit=50)
+        
+        print(f"🔍 Attempting to restore session for user: {user_id}, session: {session_id}")
+        
+        if not history:
+            print(f"❌ No conversation history found for session {session_id}")
+            return None
+        
+        # Create new session interface
+        if TherapyInterface is None:
+            print("❌ Cannot restore session: TherapyInterface not available")
+            return None
+            
+        session_interface = TherapyInterface(therapy_bot)
+        session_interface.current_session_id = session_id
+        session_interface.current_user_id = user_id
+        session_interface.session_start_time = datetime.now()
+        
+        print(f"✅ Restored session {session_id} with {len(history)} messages")
+        return session_interface
+        
+    except Exception as e:
+        print(f"❌ Error restoring session from MongoDB: {e}")
+        return None
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint with AI crisis detection status"""
@@ -187,6 +223,20 @@ def therapy_chat():
                     session_interface = session['interface']
                     session_key = key
                     break
+            
+            # If not found in active sessions, try to restore from MongoDB
+            if not session_interface:
+                session_interface = restore_session_from_mongodb(user_id, session_id)
+                if session_interface:
+                    session_key = f"{user_id}_{session_id}"
+                    created_at = datetime.now().isoformat()
+                    active_sessions[session_key] = {
+                        'interface': session_interface,
+                        'user_id': user_id,
+                        'session_id': session_id,
+                        'created_at': created_at
+                    }
+                    print(f"🔄 Restored session from MongoDB: {session_id}")
         
         # If no session found, create a new one
         if not session_interface:
@@ -420,40 +470,50 @@ if __name__ == '__main__':
     else:
         print("❌ Therapy bot failed to load - service will have limited functionality")
     
-    #  Add production server option
-    use_production = os.getenv('THERAPY_PRODUCTION', 'false').lower() == 'true'
+    # Get port from environment (for deployment platforms)
+    port = int(os.environ.get('THERAPY_PORT', 5001))
     
-    if use_production:
+    # Auto-detect production environment
+    is_production = (
+        os.getenv('RENDER') or 
+        os.getenv('RAILWAY_ENVIRONMENT') or 
+        os.getenv('DYNO') or 
+        os.getenv('THERAPY_PRODUCTION', 'false').lower() == 'true'
+    )
+    
+    if is_production:
         try:
             from waitress import serve
             print("🚀 Starting with Waitress production server...")
-            print("🌟 Server running on http://localhost:5001")
-            print("🔗 Frontend can now connect to this service")
-            print("💡 Press Ctrl+C to stop the service")
+            print(f"🌟 Server running on port {port}")
+            print("🔗 Production environment detected")
             print("=" * 60)
             
-            serve(app, host='0.0.0.0', port=5001, threads=6)
+            serve(app, host='0.0.0.0', port=port, threads=6)
             
         except ImportError:
-            print("⚠️ Waitress not installed. Install with: pip install waitress")
-            print("🔄 Falling back to Flask development server...")
-            use_production = False
-    
-    if not use_production:
-        print("⚠️ Using Flask development server (not for production)")
-        print("🌟 Starting Flask server on http://localhost:5001")
-        print("🔗 Frontend can now connect to this service")
+            print("⚠️ Waitress not available, using Flask...")
+            app.run(
+                host='0.0.0.0',
+                port=port,
+                debug=False,
+                threaded=True,
+                use_reloader=False
+            )
+    else:
+        print("⚠️ Using Flask development server")
+        print(f"🌟 Starting Flask server on http://localhost:{port}")
+        print("🔗 Frontend can connect to this service")
         print("💡 Press Ctrl+C to stop the service")
         print("=" * 60)
         
         try:
-            # Run Flask app -  Better configuration
             app.run(
                 host='0.0.0.0',
-                port=5001,
-                debug=False,  # Disabled to prevent auto-restarts and improve performance
+                port=port,
+                debug=False,
                 threaded=True,
-                use_reloader=False  # Explicitly disable the reloader
+                use_reloader=False
             )
         except KeyboardInterrupt:
             print("\n🛑 Service stopped by user")

@@ -7,6 +7,8 @@ import type { Express } from "express";
 import connectDB from "./mongodb";
 import authRoutes from "./routes/auth";
 import feedbackRoutes from "./routes/feedback";
+import settingsRoutes from "./routes/settings";
+import { extractAndValidateJWT } from "./middleware";
 
 
 const app = express();
@@ -20,11 +22,17 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
+// Add JWT extraction middleware globally
+app.use(extractAndValidateJWT);
+
 // Register auth routes (after JSON parsing middleware)
 app.use("/api/auth", authRoutes);
 
 // Register feedback routes (after JSON parsing middleware)
 app.use("/api/feedback", feedbackRoutes);
+
+// Register settings routes (after JSON parsing middleware)
+app.use("/api/settings", settingsRoutes);
 
 // Ensure UTF-8 encoding
 app.use((req, res, next) => {

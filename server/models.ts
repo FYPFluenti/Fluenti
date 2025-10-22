@@ -26,6 +26,35 @@ const UserSchema = new mongoose.Schema({
     enum: ['email', 'google', 'facebook'], 
     default: 'email' 
   },
+  // Email verification fields
+  emailVerified: { type: Boolean, default: false },
+  emailVerificationToken: { type: String, select: false },
+  emailVerificationExpiry: { type: Date, select: false },
+  // Password reset fields
+  passwordResetToken: { type: String, select: false },
+  passwordResetExpiry: { type: Date, select: false },
+  // User Settings
+  settings: {
+    // Privacy Settings
+    analyticsEnabled: { type: Boolean, default: true },
+    necessaryCookies: { type: Boolean, default: true }, // Always true, but stored for completeness
+    
+    // Notification Settings
+    pushNotifications: { type: Boolean, default: true },
+    emailNotifications: { type: Boolean, default: true },
+    
+    // Theme and Display Settings
+    theme: { 
+      type: String, 
+      enum: ['light', 'dark', 'system'], 
+      default: 'system' 
+    },
+    language: { 
+      type: String, 
+      enum: ['english', 'urdu'], 
+      default: 'english' 
+    }
+  },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -186,6 +215,12 @@ const EmotionalSessionSchema = new mongoose.Schema({
     enum: ['chat', 'assessment', 'crisis'], 
     required: true 
   },
+  mode: {
+    type: String,
+    enum: ['chat', 'voice'],
+    default: 'chat'
+  },
+  title: { type: String }, // AI-generated title for the session
   messages: [{ 
     role: { type: String, enum: ['user', 'assistant'], required: true },
     content: { type: String, required: true },

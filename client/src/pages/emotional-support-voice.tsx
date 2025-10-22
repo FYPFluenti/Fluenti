@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import ModelViewerAvatar from '@/components/ModelViewerAvatar';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition_simple';
-import { Mic, MicOff, Waves, Heart, Brain, Shield, X, AlertTriangle } from 'lucide-react';
+import { Mic, MicOff, Waves, Heart, Brain, Shield, X, AlertTriangle, RotateCcw } from 'lucide-react';
 import SharedSidebarEmotional from '@/components/layout/SharedSidebarEmotional';
 import FeedbackModal from '@/components/layout/FeedbackModel';
 import PageHeader from '@/components/layout/PageHeader';
@@ -31,6 +31,8 @@ const EmotionalSupportVoice = () => {
   const [showServiceOfflineModal, setShowServiceOfflineModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [isContinuedSession, setIsContinuedSession] = useState(false);
+  const [continuedSessionTitle, setContinuedSessionTitle] = useState<string>('');
   const { startRecording, stopRecording, isRecording } = useSpeechRecognition();
 
   // Handle Coqui TTS audio playback directly
@@ -151,10 +153,52 @@ const EmotionalSupportVoice = () => {
     };
     
     checkServiceStatus();
+    handleSessionContinuation();
     // Check status every 30 seconds
     const interval = setInterval(checkServiceStatus, 30000);
     return () => clearInterval(interval);
   }, [serviceStatus]);
+
+  const handleSessionContinuation = () => {
+    try {
+      const continuingSessionData = localStorage.getItem('continuingSession');
+      if (continuingSessionData) {
+        const sessionInfo = JSON.parse(continuingSessionData);
+        
+        // Set session data for continuation
+        setSessionData({
+          sessionId: sessionInfo.sessionId,
+          userId: sessionInfo.userId,
+          sessionKey: sessionInfo.sessionKey
+        });
+
+        // Restore previous history if available
+        if (sessionInfo.messages && sessionInfo.messages.length > 0) {
+          const restoredHistory = sessionInfo.messages
+            .filter((msg: any) => msg.role === 'user' || msg.role === 'assistant')
+            .map((msg: any, index: number) => ({
+              user: msg.role === 'user' ? msg.content : '',
+              ai: msg.role === 'assistant' ? msg.content : ''
+            }))
+            .filter((item: any) => item.user || item.ai);
+
+          setHistory(restoredHistory);
+        }
+
+        // Set continuation indicators
+        setIsContinuedSession(true);
+        setContinuedSessionTitle(sessionInfo.title || 'Previous Session');
+
+        // Clear the continuation data
+        localStorage.removeItem('continuingSession');
+        
+        console.log('🔄 Continuing voice session:', sessionInfo.title);
+      }
+    } catch (error) {
+      console.error('Error handling voice session continuation:', error);
+      localStorage.removeItem('continuingSession'); // Clear invalid data
+    }
+  };
 
   const handleRecordStop = async (blob: Blob) => {
     try {
@@ -269,6 +313,24 @@ const EmotionalSupportVoice = () => {
             </span>
           </div>
         </div>
+
+        {/* Session Continuation Banner */}
+        {isContinuedSession && (
+          <div className="flex justify-center mx-4 mb-2">
+            <div className="bg-gray-500/10 border border-gray-300/30 rounded-full px-4 py-2 flex items-center gap-2 max-w-fit">
+              <RotateCcw className="h-4 w-4 text-muted-foreground" />
+              <span className="text-muted-foreground text-sm font-medium">
+                Continuing: {continuedSessionTitle}
+              </span>
+              <button
+                onClick={() => setIsContinuedSession(false)}
+                className="text-gray-600 hover:text-gray-800 transition-colors ml-2"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        )}
         
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Main Content Area - Grid Layout for stable positioning */}

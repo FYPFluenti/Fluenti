@@ -19,11 +19,31 @@ import { generateTTSAudio } from "./services/ttsService";
 import { fastTranscribeAudio } from "./services/fastSTTService";
 import { processChildSpeechAudio } from "./services/childSpeechSTT";
 import { transcribeAudioWithGroq, assessPronunciationWithGroq } from "./services/groqSpeechService";
+import Groq from 'groq-sdk';
+
+// Initialize Groq client for AI title generation
+const groq = new Groq({
+  apiKey: process.env.GROQ_API_KEY || ''
+});
 
 import { AuthService } from "./auth";
 import gamesRouter from "./routes/games";
 import aiGameRouter from "./routes/aiGame";
 
+// Interface for therapy session history
+interface TherapySession {
+  id: string;
+  type: 'support' | 'therapy';
+  title: string;
+  date: Date | string;
+  duration: string;
+  mood: string;
+  notes: string;
+  messages?: any[];
+  riskLevel?: string;
+  score?: number;
+  accuracy?: number;
+}
 
 // Configure multer for handling form data
 const upload = multer({ 
@@ -1100,12 +1120,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 
   // Enhanced emotional support endpoint with therapy service integration
-  app.post('/api/emotional-support', upload.single('audio'), async (req: Request, res: Response) => {
+  app.post('/api/emotional-support', tokenBasedAuth, upload.single('audio'), async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { mode, language, sessionId, userId, history } = req.body;
       let text = req.body.text;
 
-      console.log('🎙️ Processing emotional support request - Mode:', mode, 'Language:', language, 'SessionId:', sessionId, 'UserId:', userId);
+      // Get authenticated user ID
+      const authenticatedUserId = req.user?.claims?.sub || req.user?.id;
+      const finalUserId = userId || authenticatedUserId || `user_${Date.now()}`;
+
+      console.log('🎙️ Processing emotional support request - Mode:', mode, 'Language:', language, 'SessionId:', sessionId, 'AuthUserId:', authenticatedUserId, 'FinalUserId:', finalUserId);
 
       // Handle voice mode with audio processing (STT)
       if (mode === 'voice' && req.file) {
@@ -1164,10 +1188,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const cleanUserId = userId && userId.trim() !== '' ? userId : null;
           
           // Don't generate new random userId - use provided one or create stable fallback
-          const stableUserId = cleanUserId || `voice_user_${cleanSessionId || 'default'}`;
+          // Use authenticated user ID for consistency
+          const stableUserId = finalUserId; // Use the authenticated user ID
           const stableSessionId = cleanSessionId; // Use provided sessionId as-is (may be null for new sessions)
 
-          console.log('📝 Session context - UserId:', stableUserId, 'SessionId:', stableSessionId, 'Original sessionId:', sessionId, 'Original userId:', userId);
+          console.log('📝 Session context - AuthUserId:', finalUserId, 'SessionId:', stableSessionId, 'Original sessionId:', sessionId, 'Original userId:', userId);
 
           // Call Python therapy service (same as emotional-support-chat)
           const pythonServiceResponse = await fetch('http://localhost:5001/api/therapy/chat', {
@@ -1178,7 +1203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             body: JSON.stringify({
               message: text.trim(),
               sessionId: stableSessionId, // Will be null for new sessions - therapy service handles this
-              userId: stableUserId, // Now consistent across voice messages
+              userId: stableUserId, // Now using authenticated user ID
               language: language || 'en'
             })
           });
@@ -1189,6 +1214,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
             crisisLevel = therapyResponse.crisisLevel || 'none';
             isCrisis = therapyResponse.isCrisis || false;
             console.log('✅ Therapy service response received');
+
+            // Save to EmotionalSession collection for history tracking
+            try {
+              const sessionData = await mongoStorage.createEmotionalSession({
+                userId: stableUserId,
+                sessionType: isCrisis ? 'crisis' : 'chat',
+                mode: 'voice',
+                emotion: crisisLevel
+              });
+
+              // Add the conversation messages to the session if it was created
+              if (sessionData && sessionData.id) {
+                await mongoStorage.addMessageToEmotionalSession(sessionData.id, {
+                  role: 'user',
+                  content: text.trim()
+                });
+
+                await mongoStorage.addMessageToEmotionalSession(sessionData.id, {
+                  role: 'assistant', 
+                  content: finalResponse
+                });
+              }
+            } catch (sessionSaveError) {
+              console.error('⚠️ Failed to save session to EmotionalSession:', sessionSaveError);
+              // Continue processing - don't fail the request due to history save issues
+            }
           } else {
             console.warn('⚠️ Therapy service unavailable, using fallback');
             finalResponse = "I'm here to listen and support you. How are you feeling today?";
@@ -1267,7 +1318,7 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
   });
 
  
-  app.post('/api/emotional-support-chat', async (req: Request, res: Response) => {
+  app.post('/api/emotional-support-chat', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { message, language, sessionId, userId } = req.body;
       
@@ -1278,14 +1329,19 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
         });
       }
 
+      // Get authenticated user ID
+      const authenticatedUserId = req.user?.claims?.sub || req.user?.id;
+      const finalUserId = userId || authenticatedUserId || `user_${Date.now()}`;
+
       console.log('🤖 Processing emotional support chat request:', {
         message: message.substring(0, 50) + '...',
         language: language || 'en',
         sessionId: sessionId || 'new',
-        userId: userId || 'anonymous'
+        authenticatedUserId: authenticatedUserId,
+        finalUserId: finalUserId
       });
 
-      // Call Python therapy service
+      // Call Python therapy service with authenticated user ID
       const pythonServiceResponse = await fetch('http://localhost:5001/api/therapy/chat', {
         method: 'POST',
         headers: {
@@ -1294,7 +1350,7 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
         body: JSON.stringify({
           message: message.trim(),
           sessionId: sessionId,
-          userId: userId || `user_${Date.now()}`,
+          userId: finalUserId,
           language: language || 'en'
         })
       });
@@ -1304,6 +1360,57 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
       }
 
       const therapyResponse = await pythonServiceResponse.json();
+      
+      // Save to EmotionalSession collection for history tracking
+      try {
+        let sessionObjectId: string | undefined;
+        
+        // If sessionId provided, try to continue existing session
+        if (sessionId) {
+          console.log('🔄 Attempting to continue existing session:', sessionId);
+          
+          // Check if session exists in EmotionalSession collection
+          try {
+            const existingSession = await mongoStorage.findEmotionalSession(sessionId, finalUserId);
+            
+            if (existingSession) {
+              console.log('✅ Found existing session to continue');
+              sessionObjectId = sessionId;
+            } else {
+              console.log('❌ Session not found, will create new session');
+            }
+          } catch (findError) {
+            console.log('⚠️ Error finding session, will create new session:', findError);
+          }
+        }
+        
+        // Create new session only if not continuing existing one
+        if (!sessionObjectId) {
+          const sessionData = await mongoStorage.createEmotionalSession({
+            userId: finalUserId,
+            sessionType: therapyResponse.isCrisis ? 'crisis' : 'chat',
+            mode: 'chat',
+            emotion: therapyResponse.crisisLevel || 'neutral'
+          });
+          sessionObjectId = sessionData?.id;
+        }
+
+        // Add the conversation messages to the session
+        if (sessionObjectId) {
+          await mongoStorage.addMessageToEmotionalSession(sessionObjectId, {
+            role: 'user',
+            content: message.trim()
+          });
+
+          await mongoStorage.addMessageToEmotionalSession(sessionObjectId, {
+            role: 'assistant', 
+            content: therapyResponse.response
+          });
+        }
+      } catch (sessionSaveError) {
+        console.error('⚠️ Failed to save session to EmotionalSession:', sessionSaveError);
+        // Continue processing - don't fail the request due to history save issues
+      }
       
       // Return response in format expected by frontend
       res.json({ 
@@ -1446,6 +1553,262 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
         python_service: 'unhealthy',
         error: error instanceof Error ? error.message : 'Unknown error',
         timestamp: new Date().toISOString()
+      });
+    }
+  });
+
+  // AI-powered session title generation with database persistence
+  async function generateAndSaveAISessionTitle(session: any): Promise<string> {
+    try {
+      // If session already has a title saved in the database, use it
+      if (session.title && session.title.trim() !== '') {
+        return session.title;
+      }
+
+      // If it's a crisis session, set and save that title
+      if (session.sessionType === 'crisis') {
+        const title = 'Crisis Support Session';
+        await mongoStorage.updateEmotionalSessionTitle(session.id || session._id, title);
+        return title;
+      }
+
+      // If we have messages, use AI to generate a meaningful title
+      if (session.messages && session.messages.length > 0) {
+        const conversationContent = session.messages
+          .slice(0, 6) // Take first 6 messages for context
+          .map((msg: any) => `${msg.role}: ${msg.content}`)
+          .join('\n');
+
+        console.log(`🤖 Generating AI title for session ${session.id}...`);
+
+        const completion = await groq.chat.completions.create({
+          messages: [
+            {
+              role: "system",
+              content: `You are a helpful assistant that creates short, meaningful titles for therapy and emotional support sessions. 
+              Generate a 2-5 word title that captures the main topic or emotional theme of the conversation. 
+              The title should be empathetic, professional, and specific to the conversation content.
+              
+              Examples:
+              - "Dealing with Work Stress"
+              - "Relationship Concerns"
+              - "Anxiety Management"
+              - "Self-Confidence Building"
+              - "Processing Grief"
+              - "Sleep Difficulties"
+              
+              Return only the title, nothing else.`
+            },
+            {
+              role: "user",
+              content: `Generate a title for this emotional support session:\n\n${conversationContent}`
+            }
+          ],
+          model: "llama-3.1-8b-instant",
+          temperature: 0.3,
+          max_tokens: 20
+        });
+
+        const aiTitle = completion.choices[0]?.message?.content?.trim();
+        if (aiTitle && aiTitle.length > 0 && aiTitle.length <= 50) {
+          const cleanTitle = aiTitle.replace(/['"]/g, ''); // Remove quotes if any
+          
+          // Save the generated title to the database
+          await mongoStorage.updateEmotionalSessionTitle(session.id || session._id, cleanTitle);
+          console.log(`✅ AI title saved for session ${session.id}: "${cleanTitle}"`);
+          
+          return cleanTitle;
+        }
+      }
+
+      // Fallback based on session type and mode
+      const fallbackTitle = session.mode === 'voice' ? 'Voice Support Session' : 'Chat Support Session';
+      
+      // Save the fallback title to the database
+      await mongoStorage.updateEmotionalSessionTitle(session.id || session._id, fallbackTitle);
+      
+      return fallbackTitle;
+    } catch (error) {
+      console.error('Error generating AI session title:', error);
+      // Fallback to basic title without saving (to avoid overwriting potential existing titles)
+      return session.mode === 'voice' ? 'Voice Support Session' : 'Chat Support Session';
+    }
+  }
+
+  // Bulk update titles for existing sessions (migration utility)
+  app.post('/api/therapy/generate-missing-titles', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'User not authenticated' });
+      }
+
+      console.log('🔄 Starting bulk title generation for user:', userId);
+
+      // Get all emotional sessions without titles
+      const sessions = await mongoStorage.getUserEmotionalSessions(userId, 100);
+      const sessionsWithoutTitles = sessions.filter((session: any) => !session.title || session.title.trim() === '');
+
+      console.log(`📋 Found ${sessionsWithoutTitles.length} sessions without titles`);
+
+      let updatedCount = 0;
+      for (const session of sessionsWithoutTitles) {
+        try {
+          await generateAndSaveAISessionTitle(session);
+          updatedCount++;
+        } catch (error) {
+          console.error(`❌ Failed to generate title for session ${session.id}:`, error);
+        }
+      }
+
+      console.log(`✅ Successfully generated titles for ${updatedCount} sessions`);
+
+      res.json({
+        success: true,
+        message: `Generated titles for ${updatedCount} sessions`,
+        totalProcessed: sessionsWithoutTitles.length,
+        updated: updatedCount
+      });
+
+    } catch (error) {
+      console.error("❌ Error in bulk title generation:", error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to generate titles',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get user's therapy session history
+  app.get('/api/therapy/history', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'User not authenticated' });
+      }
+
+      const { limit = 20, offset = 0, type } = req.query;
+      
+      console.log('📋 Fetching therapy history for user:', userId, 'Type:', type);
+
+      let sessions: TherapySession[] = [];
+      let total = 0;
+
+      // Get different types of sessions based on filter
+      if (!type || type === 'all') {
+        // Get both emotional sessions and therapeutic sessions
+        try {
+          const emotionalSessions = await mongoStorage.getUserEmotionalSessions(userId, Number(limit));
+          const therapeuticSessions = await mongoStorage.getUserTherapeuticSessions(userId, Number(limit), Number(offset));
+          
+          // Combine and format sessions with AI-generated titles
+          const formattedEmotional = await Promise.all(emotionalSessions.map(async (session: any) => ({
+            id: session.id || session._id, // Use the nanoid 'id' field first, fallback to _id
+            sessionId: session.id || session._id, // Explicit sessionId for continuation
+            userId: session.userId, // Include userId for session continuation
+            type: 'support' as const,
+            mode: session.mode || 'chat', // Add mode information
+            title: await generateAndSaveAISessionTitle(session), // Use AI-generated title with DB persistence
+            date: session.createdAt || session.timestamp || new Date(),
+            duration: session.duration ? `${Math.round(session.duration / 1000 / 60)} min` : 'N/A',
+            mood: session.emotionalState || 'neutral',
+            messages: session.messages || [],
+            riskLevel: session.riskLevel || 'low',
+            notes: session.messages && session.messages.length > 0 
+              ? session.messages[0].content.substring(0, 100) + '...'
+              : 'No messages recorded'
+          })));
+
+          const formattedTherapeutic = therapeuticSessions.sessions.map((session: any) => ({
+            id: session._id || session.id,
+            type: 'therapy' as const,
+            title: 'Therapeutic Session',
+            date: session.timestamp || session.createdAt || new Date(),
+            duration: session.duration ? `${Math.round(session.duration / 1000 / 60)} min` : 'N/A',
+            mood: session.therapeutic_data?.mood || 'neutral',
+            notes: session.therapeutic_data?.notes || 'Therapeutic session completed',
+            score: session.score || 0,
+            accuracy: session.accuracy || 0
+          }));
+
+          // Combine and sort by date (newest first)
+          sessions = [...formattedEmotional, ...formattedTherapeutic]
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .slice(Number(offset), Number(offset) + Number(limit));
+
+          total = emotionalSessions.length + therapeuticSessions.total;
+        } catch (error) {
+          console.error('❌ Error fetching sessions:', error);
+          sessions = [];
+          total = 0;
+        }
+      } else if (type === 'support') {
+        // Get only emotional support sessions
+        try {
+          const emotionalSessions = await mongoStorage.getUserEmotionalSessions(userId, Number(limit));
+          sessions = await Promise.all(emotionalSessions.map(async (session: any) => ({
+            id: session.id || session._id, // Use the nanoid 'id' field first, fallback to _id
+            sessionId: session.id || session._id, // Explicit sessionId for continuation
+            userId: session.userId, // Include userId for session continuation
+            type: 'support' as const,
+            mode: session.mode || 'chat', // Add mode information
+            title: await generateAndSaveAISessionTitle(session), // Use AI-generated title with DB persistence
+            date: session.createdAt || session.timestamp || new Date(),
+            duration: session.duration ? `${Math.round(session.duration / 1000 / 60)} min` : 'N/A',
+            mood: session.emotionalState || 'neutral',
+            messages: session.messages || [],
+            riskLevel: session.riskLevel || 'low',
+            notes: session.messages && session.messages.length > 0 
+              ? session.messages[0].content.substring(0, 100) + '...'
+              : 'No messages recorded'
+          })));
+          total = emotionalSessions.length;
+        } catch (error) {
+          console.error('❌ Error fetching emotional sessions:', error);
+          sessions = [];
+          total = 0;
+        }
+      } else if (type === 'therapy') {
+        // Get only therapeutic sessions
+        try {
+          const therapeuticSessions = await mongoStorage.getUserTherapeuticSessions(userId, Number(limit), Number(offset));
+          sessions = therapeuticSessions.sessions.map((session: any) => ({
+            id: session._id || session.id,
+            type: 'therapy' as const,
+            title: 'Therapeutic Session',
+            date: session.timestamp || session.createdAt || new Date(),
+            duration: session.duration ? `${Math.round(session.duration / 1000 / 60)} min` : 'N/A',
+            mood: session.therapeutic_data?.mood || 'neutral',
+            notes: session.therapeutic_data?.notes || 'Therapeutic session completed',
+            score: session.score || 0,
+            accuracy: session.accuracy || 0
+          }));
+          total = therapeuticSessions.total;
+        } catch (error) {
+          console.error('❌ Error fetching therapeutic sessions:', error);
+          sessions = [];
+          total = 0;
+        }
+      }
+
+      console.log(`✅ Found ${sessions.length} sessions for user ${userId}`);
+
+      res.json({
+        success: true,
+        sessions: sessions,
+        total: total,
+        limit: Number(limit),
+        offset: Number(offset),
+        hasMore: Number(offset) + sessions.length < total
+      });
+
+    } catch (error) {
+      console.error("❌ Error fetching therapy history:", error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to fetch therapy history',
+        details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
   });

@@ -34,7 +34,8 @@ except ImportError:
     EMBEDDINGS_CLASS = HuggingFaceBgeEmbeddings
     EMBEDDINGS_TYPE = 'legacy'
     print("⚠️ Using deprecated HuggingFaceBgeEmbeddings. Install langchain-huggingface for updated version.")
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Sentiment analysis
 try:
@@ -92,6 +93,10 @@ class MongoDBStorage:
             self.sessions = self.db.sessions
             self.crisis_logs = self.db.crisis_logs
             self.user_profiles = self.db.user_profiles
+            
+            # Also connect to fluenti database for EmotionalSession collection
+            self.fluenti_db = self.client.fluenti
+            self.emotional_sessions = self.fluenti_db.emotionalsessions  # MongoDB collection name (pluralized)
 
             # Create indexes for better performance
             self._create_indexes()
@@ -281,6 +286,39 @@ class MongoDBStorage:
     def get_conversation_history(self, user_id: str, session_id: str, limit: int = 10) -> List[Dict]:
         """Retrieve conversation history from MongoDB"""
         try:
+            # First try to get from EmotionalSession collection (Node.js service)
+            if hasattr(self, 'emotional_sessions'):
+                emotional_session = self.emotional_sessions.find_one({
+                    "id": session_id,
+                    "userId": user_id
+                })
+                
+                if emotional_session and emotional_session.get('messages'):
+                    print(f"✅ Found session in EmotionalSession collection: {len(emotional_session['messages'])} messages")
+                    formatted_conversations = []
+                    for msg in emotional_session['messages'][-limit:]:
+                        if msg.get('role') == 'user':
+                            # User message - prepare for next assistant response
+                            user_msg = {
+                                "user_id": user_id,
+                                "session_id": session_id,
+                                "timestamp": msg.get('timestamp', ''),
+                                "user_input": msg.get('content', ''),
+                                "bot_response": '',
+                                "crisis_level": 'none',
+                                "mood_score": None,
+                                "input_length": len(msg.get('content', '')),
+                                "response_length": 0
+                            }
+                            formatted_conversations.append(user_msg)
+                        elif msg.get('role') == 'assistant' and formatted_conversations:
+                            # Assistant message - add to last user message
+                            formatted_conversations[-1]['bot_response'] = msg.get('content', '')
+                            formatted_conversations[-1]['response_length'] = len(msg.get('content', ''))
+                    
+                    return formatted_conversations
+            
+            # Fallback to conversations collection (Python service)
             if hasattr(self, 'conversations'):
                 # Get from MongoDB
                 conversations = list(
@@ -458,14 +496,7 @@ class DataLoader:
             except Exception as e:
                 print(f"⚠️ Could not load additional conversations: {e}")
 
-            # Dataset 5: Mental health support conversations
-            try:
-                print("Loading mental health support conversations...")
-                dataset5 = load_dataset("mental_health_dataset", split='train[:5000]')  # Limit to 5000
-                datasets.append(dataset5)
-                print(f"✅ Loaded {safe_dataset_len(dataset5)} mental health support conversations")
-            except Exception as e:
-                print(f"⚠️ Could not load mental health support dataset: {e}")
+
 
             # Dataset 6: Mental health support - LIMITED SIZE
             try:
@@ -494,14 +525,7 @@ class DataLoader:
             except Exception as e:
                 print(f"⚠️ Could not load Q&A dataset: {e}")
 
-            # Dataset 9: Conversational AI dataset
-            try:
-                print("Loading conversational AI dataset...")
-                dataset9 = load_dataset("daily_dialog", split='train[:3000]')  # Limited size
-                datasets.append(dataset9)
-                print(f"✅ Loaded {safe_dataset_len(dataset9)} conversational examples")
-            except Exception as e:
-                print(f"⚠️ Could not load conversational dataset: {e}")
+
 
             # Dataset 10: Mental health classification dataset
             try:
@@ -1731,7 +1755,7 @@ Your personalized crisis intervention response:"""
 
         # Crisis situations always get crisis response
         if crisis_level in [CrisisLevel.MEDIUM, CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
-            print(f"🚨 CRISIS RESPONSE TYPE SELECTED: {crisis_level.value}")
+            print(f" CRISIS RESPONSE TYPE SELECTED: {crisis_level.value}")
             return "crisis"
 
         # Simple greetings and casual interactions
@@ -1784,7 +1808,7 @@ Your personalized crisis intervention response:"""
                 retriever = self.general_retriever
 
             if retriever:
-                docs = retriever.get_relevant_documents(enhanced_query)
+                docs = retriever.invoke(enhanced_query)
                 context = "\n\n".join([doc.page_content for doc in docs[:2]])
                 return context[:1000]
             else:
@@ -1882,7 +1906,7 @@ Your personalized crisis intervention response:"""
     def _add_crisis_resources(self, response: str, crisis_level: CrisisLevel) -> str:
         """Add crisis resources only for actual crisis situations"""
         if crisis_level == CrisisLevel.CRITICAL:
-            resources = """\n\n🚨 IMMEDIATE CRISIS SUPPORT (PAKISTAN):
+            resources = """\n\n IMMEDIATE CRISIS SUPPORT (PAKISTAN):
 • 1166 - National Emergency Helpline  
 • 1019 - Mental Health Crisis Line (24/7)
 • 0800-00-100 - Rozan Crisis Helpline"""

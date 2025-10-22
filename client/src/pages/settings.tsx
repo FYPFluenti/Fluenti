@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useSettings } from "@/hooks/useSettings";
 import { useLocation } from "wouter";
 import {
   Gamepad2,
@@ -7,6 +8,8 @@ import {
   Smile,
   SlidersHorizontal,
   Shield,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import SharedSidebar from "@/components/layout/SharedSidebar";
@@ -21,6 +24,7 @@ interface UserData {
   firstName?: string;
   lastName?: string;
   userType?: string;
+  signupMethod?: string;
 }
 
 export default function Settings() {
@@ -32,17 +36,89 @@ export default function Settings() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [showFeedback, setShowFeedback] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [analyticsOn, setAnalyticsOn] = useState(true);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  
+  const {
+    settings,
+    isLoading: settingsLoading,
+    error: settingsError,
+    updateSetting,
+    deleteAccount
+  } = useSettings();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) setLocation("/login");
   }, [isLoading, isAuthenticated, setLocation]);
 
-  const handleToggleAnalytics = () => setAnalyticsOn(!analyticsOn);
-  const handleToggleNotifications = () => setNotificationsEnabled(!notificationsEnabled);
-  const handleToggleEmailNotifications = () => setEmailNotifications(!emailNotifications);
+  const handleToggleAnalytics = async () => {
+    const success = await updateSetting('analyticsEnabled', !settings.analyticsEnabled);
+    if (success) {
+      toast({
+        title: "Settings Updated",
+        description: `Analytics ${settings.analyticsEnabled ? 'disabled' : 'enabled'}`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update analytics setting",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleNotifications = async () => {
+    const success = await updateSetting('pushNotifications', !settings.pushNotifications);
+    if (success) {
+      toast({
+        title: "Settings Updated",
+        description: `Push notifications ${settings.pushNotifications ? 'disabled' : 'enabled'}`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update notification setting",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleToggleEmailNotifications = async () => {
+    const success = await updateSetting('emailNotifications', !settings.emailNotifications);
+    if (success) {
+      toast({
+        title: "Settings Updated",
+        description: `Email notifications ${settings.emailNotifications ? 'disabled' : 'enabled'}`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update email notification setting",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!showDeleteConfirm) {
+      setShowDeleteConfirm(true);
+      return;
+    }
+
+    setIsDeleting(true);
+    const success = await deleteAccount(deletePassword || undefined);
+    setIsDeleting(false);
+    
+    if (!success) {
+      toast({
+        title: "Error",
+        description: "Failed to delete account. Please check your password and try again.",
+        variant: "destructive",
+      });
+    }
+    // If successful, the user will be redirected by the deleteAccount function
+  };
 
   const displayName = user?.firstName && user?.lastName 
     ? `${user.firstName} ${user.lastName}`
@@ -52,14 +128,29 @@ export default function Settings() {
     ? `${user.firstName[0]}${user.lastName[0]}`.toUpperCase()
     : user?.email?.[0]?.toUpperCase() || "U";
 
-  if (isLoading) {
+  if (isLoading || settingsLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center child-dashboard-no-zoom">
-        <div className="text-foreground/80 child-dashboard-container px-4">Loading…</div>
+        <div className="flex items-center gap-2 text-foreground/80 child-dashboard-container px-4">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          Loading settings…
+        </div>
       </div>
     );
   }
   if (!isAuthenticated) return null;
+
+  // Show error message if settings failed to load
+  if (settingsError) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center child-dashboard-no-zoom">
+        <div className="flex items-center gap-2 text-red-500 child-dashboard-container px-4">
+          <AlertCircle className="w-5 h-5" />
+          Error loading settings: {settingsError}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground flex">
@@ -151,14 +242,14 @@ export default function Settings() {
                     <button
                       onClick={handleToggleAnalytics}
                       className={`relative inline-flex h-6 w-12 rounded-full transition ${
-                        analyticsOn ? "bg-[#ff6b1d]" : "bg-muted"
+                        settings.analyticsEnabled ? "bg-[#ff6b1d]" : "bg-muted"
                       }`}
                       role="switch"
-                      aria-checked={analyticsOn}
+                      aria-checked={settings.analyticsEnabled}
                     >
                       <span
                         className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
-                          analyticsOn ? "left-7" : "left-1"
+                          settings.analyticsEnabled ? "left-7" : "left-1"
                         }`}
                       />
                     </button>
@@ -190,14 +281,14 @@ export default function Settings() {
                     <button
                       onClick={handleToggleNotifications}
                       className={`relative inline-flex h-6 w-12 rounded-full transition ${
-                        notificationsEnabled ? "bg-[#ff6b1d]" : "bg-muted"
+                        settings.pushNotifications ? "bg-[#ff6b1d]" : "bg-muted"
                       }`}
                       role="switch"
-                      aria-checked={notificationsEnabled}
+                      aria-checked={settings.pushNotifications}
                     >
                       <span
                         className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
-                          notificationsEnabled ? "left-7" : "left-1"
+                          settings.pushNotifications ? "left-7" : "left-1"
                         }`}
                       />
                     </button>
@@ -215,14 +306,14 @@ export default function Settings() {
                     <button
                       onClick={handleToggleEmailNotifications}
                       className={`relative inline-flex h-6 w-12 rounded-full transition ${
-                        emailNotifications ? "bg-[#ff6b1d]" : "bg-muted"
+                        settings.emailNotifications ? "bg-[#ff6b1d]" : "bg-muted"
                       }`}
                       role="switch"
-                      aria-checked={emailNotifications}
+                      aria-checked={settings.emailNotifications}
                     >
                       <span
                         className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
-                          emailNotifications ? "left-7" : "left-1"
+                          settings.emailNotifications ? "left-7" : "left-1"
                         }`}
                       />
                     </button>
@@ -244,17 +335,72 @@ export default function Settings() {
             <div className="space-y-6">
           
               <div>
-                <button
-                  className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition"
-                  onClick={() => {
-                    // TODO: call your API to delete account
-                  }}
-                >
-                  delete account
-                </button>
-                <p className="text-sm text-muted-foreground mt-2 max-w-prose">
-                  this will delete your account and everything related to it. be careful, it cannot be undone.
-                </p>
+                {!showDeleteConfirm ? (
+                  <button
+                    className="px-4 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 transition"
+                    onClick={handleDeleteAccount}
+                  >
+                    delete account
+                  </button>
+                ) : (
+                  <div className="space-y-4 p-4 border-2 border-red-500 rounded-lg bg-red-50 dark:bg-red-950">
+                    <div className="flex items-center gap-2 text-red-600">
+                      <AlertCircle className="w-5 h-5" />
+                      <span className="font-semibold">Confirm Account Deletion</span>
+                    </div>
+                    <p className="text-sm text-red-700 dark:text-red-300">
+                      This action cannot be undone. All your data will be permanently deleted.
+                    </p>
+                    
+                    {user?.signupMethod === 'email' && (
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-red-700 dark:text-red-300">
+                          Enter your password to confirm:
+                        </label>
+                        <input
+                          type="password"
+                          value={deletePassword}
+                          onChange={(e) => setDeletePassword(e.target.value)}
+                          className="w-full p-2 border border-red-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                          placeholder="Your current password"
+                        />
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleDeleteAccount}
+                        disabled={isDeleting || (user?.signupMethod === 'email' && !deletePassword)}
+                        className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition flex items-center gap-2"
+                      >
+                        {isDeleting ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Deleting...
+                          </>
+                        ) : (
+                          'Permanently Delete Account'
+                        )}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowDeleteConfirm(false);
+                          setDeletePassword("");
+                        }}
+                        disabled={isDeleting}
+                        className="px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
+                {!showDeleteConfirm && (
+                  <p className="text-sm text-muted-foreground mt-2 max-w-prose">
+                    this will delete your account and everything related to it. be careful, it cannot be undone.
+                  </p>
+                )}
               </div>
             </div>
           </section>

@@ -10,6 +10,12 @@ import {
   Shield,
   Zap,
   Palette,
+  Mail,
+  CheckCircle,
+  AlertCircle,
+  Eye,
+  EyeOff,
+  User,
 } from "lucide-react";
 import SharedSidebarEmotional from "@/components/layout/SharedSidebarEmotional";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
@@ -17,6 +23,7 @@ import FeedbackModal from "@/components/layout/FeedbackModel";
 import PageHeader from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { useUserSettings } from "@/hooks/useUserSettings";
 
 
 interface UserProfile {
@@ -35,15 +42,39 @@ export default function AdultSettings() {
   };
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  
+  const {
+    settings,
+    profile,
+    emailVerification,
+    isLoading: settingsLoading,
+    error: settingsError,
+    updateSetting,
+    updateProfile,
+    changePassword,
+    resendVerificationEmail,
+    deleteAccount,
+  } = useUserSettings();
 
-  // UI state (kept only those used)
+  // UI state
   const [showFeedback, setShowFeedback] = useState(false);
-  const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
-  const [darkMode, setDarkMode] = useState(
-    localStorage.getItem("darkMode") === "true"
-  );
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [isResendingEmail, setIsResendingEmail] = useState(false);
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    firstName: '',
+    lastName: '',
+    profilePicture: ''
+  });
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   useEffect(() => {
     // redirect to login if not authenticated
@@ -62,14 +93,22 @@ export default function AdultSettings() {
     }
   }, [isLoading, isAuthenticated, user, setLocation]);
 
+  // Apply theme changes
   useEffect(() => {
-    // apply dark mode preference on mount
-    if (darkMode) {
+    if (settings.theme === 'dark') {
       document.documentElement.classList.add("dark");
-    } else {
+    } else if (settings.theme === 'light') {
       document.documentElement.classList.remove("dark");
+    } else {
+      // System preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
     }
-  }, [darkMode]);
+  }, [settings.theme]);
 
   // Derived display name (full name preferred, fallback to email)
   const displayName =
@@ -78,36 +117,194 @@ export default function AdultSettings() {
     ) || user?.email || "User";
 
   // Handlers
-  const handleToggleDark = () => {
-    const next = !darkMode;
-    setDarkMode(next);
-    localStorage.setItem("darkMode", String(next));
-    toast({
-      title: "Appearance updated",
-      description: next ? "Dark mode enabled" : "Light mode enabled",
-    });
+  const handleToggleDark = async () => {
+    const next = settings.theme === 'dark' ? 'light' : 'dark';
+    const success = await updateSetting('theme', next);
+    if (success) {
+      toast({
+        title: "Theme updated",
+        description: `${next === 'dark' ? 'Dark' : 'Light'} mode enabled`,
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update theme setting",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleToggleAnalytics = () => {
-    setAnalyticsEnabled((v) => !v);
-    toast({
-      title: analyticsEnabled ? "Analytics disabled" : "Analytics enabled",
-    });
+  const handleToggleAnalytics = async () => {
+    const newValue = !settings.analyticsEnabled;
+    const success = await updateSetting('analyticsEnabled', newValue);
+    if (success) {
+      toast({
+        title: newValue ? "Analytics enabled" : "Analytics disabled",
+        description: newValue ? "Anonymous usage data will be collected" : "Data collection has been disabled",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update analytics setting",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleToggleNotifications = () => {
-    setNotificationsEnabled((v) => !v);
-    toast({
-      title: notificationsEnabled ? "Notifications off" : "Notifications on",
-    });
+  const handleToggleNotifications = async () => {
+    const newValue = !settings.pushNotifications;
+    const success = await updateSetting('pushNotifications', newValue);
+    if (success) {
+      toast({
+        title: newValue ? "Push notifications enabled" : "Push notifications disabled",
+        description: newValue ? "You'll receive browser notifications for reminders and updates" : "Browser notifications have been turned off",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update notification setting",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleToggleEmailNotifications = () => {
-    setEmailNotifications((v) => !v);
-    toast({
-      title: emailNotifications ? "Email updates off" : "Email updates on",
-    });
+  const handleToggleEmailNotifications = async () => {
+    const newValue = !settings.emailNotifications;
+    const success = await updateSetting('emailNotifications', newValue);
+    if (success) {
+      toast({
+        title: newValue ? "Email notifications enabled" : "Email notifications disabled",
+        description: newValue ? "You'll receive progress reports and updates via email" : "Email notifications have been turned off",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update email notification setting",
+        variant: "destructive",
+      });
+    }
   };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({
+        title: "Error", 
+        description: "New passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "New password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    
+    const result = await changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+    
+    if (result.success) {
+      toast({
+        title: "Success",
+        description: "Password changed successfully",
+      });
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setShowPasswordChange(false);
+    } else {
+      toast({
+        title: "Error",
+        description: result.message,
+        variant: "destructive",
+      });
+    }
+    
+    setIsChangingPassword(false);
+  };
+
+  const handleResendVerificationEmail = async () => {
+    setIsResendingEmail(true);
+    
+    const result = await resendVerificationEmail();
+    
+    if (result.success) {
+      toast({
+        title: "Success",
+        description: "Verification email sent! Please check your inbox.",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: result.message,
+        variant: "destructive",
+      });
+    }
+    
+    setIsResendingEmail(false);
+  };
+
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!profileForm.firstName.trim() || !profileForm.lastName.trim()) {
+      toast({
+        title: "Error",
+        description: "First name and last name are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUpdatingProfile(true);
+
+    const result = await updateProfile({
+      firstName: profileForm.firstName.trim(),
+      lastName: profileForm.lastName.trim(),
+      profilePicture: profileForm.profilePicture.trim() || undefined,
+    });
+
+    if (result.success) {
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+      setShowProfileEdit(false);
+    } else {
+      toast({
+        title: "Error",
+        description: result.message,
+        variant: "destructive",
+      });
+    }
+
+    setIsUpdatingProfile(false);
+  };
+
+  // Initialize profile form when opening edit
+  useEffect(() => {
+    if (showProfileEdit && profile) {
+      setProfileForm({
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        profilePicture: profile.profilePicture || ''
+      });
+    }
+  }, [showProfileEdit, profile]);
 
   const handleResetChatHistory = async () => {
     if (
@@ -143,25 +340,31 @@ export default function AdultSettings() {
     );
     if (!confirm2) return;
 
-    try {
-      // TODO: call API to delete account
+    let password = '';
+    if (profile?.signupMethod === 'email') {
+      const inputPassword = prompt("Please enter your password to confirm account deletion:");
+      if (!inputPassword) return;
+      password = inputPassword;
+    }
+
+    const result = await deleteAccount(password);
+    
+    if (result.success) {
       toast({
         title: "Account deleted",
-        description:
-          "Your account has been scheduled for deletion. You will be signed out.",
+        description: "Your account has been deleted. You will be redirected to the homepage.",
       });
-      // sign-out or redirect
-      setTimeout(() => setLocation("/"), 1200);
-    } catch (err) {
+      setTimeout(() => setLocation("/"), 1500);
+    } else {
       toast({
         title: "Error",
-        description: "Failed to delete account. Contact support.",
+        description: result.message,
         variant: "destructive",
       });
     }
   };
 
-  if (isLoading) {
+  if (isLoading || settingsLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-foreground/80">Loading…</div>
@@ -203,12 +406,230 @@ export default function AdultSettings() {
                   {displayName[0]?.toUpperCase() || "U"}
                 </div>
               )}
-              <div>
+              <div className="flex-grow">
                 <div className="text-lg font-medium">{displayName}</div>
                 <div className="text-sm text-muted-foreground">{user.email}</div>
               </div>
+              <button
+                onClick={() => setShowProfileEdit(!showProfileEdit)}
+                className="flex items-center gap-2 px-4 py-2 text-sm bg-muted hover:bg-muted/80 rounded-lg"
+              >
+                <User className="w-4 h-4" />
+                {showProfileEdit ? 'Cancel' : 'Edit Profile'}
+              </button>
             </div>
+
+            {/* Profile Edit Form */}
+            {showProfileEdit && (
+              <form onSubmit={handleProfileUpdate} className="mt-6 p-4 border border-border rounded-lg bg-muted/20">
+                <h3 className="font-semibold mb-4">Edit Profile Information</h3>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium block mb-2">First Name</label>
+                    <input
+                      type="text"
+                      value={profileForm.firstName}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, firstName: e.target.value }))}
+                      placeholder="Enter your first name"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-2">Last Name</label>
+                    <input
+                      type="text"
+                      value={profileForm.lastName}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, lastName: e.target.value }))}
+                      placeholder="Enter your last name"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <label className="text-sm font-medium block mb-2">Profile Picture URL (optional)</label>
+                  <input
+                    type="url"
+                    value={profileForm.profilePicture}
+                    onChange={(e) => setProfileForm(prev => ({ ...prev, profilePicture: e.target.value }))}
+                    placeholder="https://example.com/your-profile-picture.jpg"
+                    className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                  />
+                </div>
+                <div className="flex gap-3 mt-4">
+                  <button
+                    type="submit"
+                    disabled={isUpdatingProfile}
+                    className="px-4 py-2 bg-[#ff6b1d] text-white rounded-lg hover:bg-[#e55a15] disabled:opacity-50"
+                  >
+                    {isUpdatingProfile ? 'Updating...' : 'Update Profile'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowProfileEdit(false)}
+                    className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+
             <div className="mt-6 h-px bg-border" />
+          </section>
+
+          {/* Account Security */}
+          <section className="mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <Shield className="w-6 h-6 text-[#ff6b1d]" />
+              <h2 className="text-2xl font-bold">Account Security</h2>
+            </div>
+            <p className="text-muted-foreground mb-6">
+              Manage your email verification and password settings
+            </p>
+
+            <div className="space-y-6">
+              {/* Email Verification Status */}
+              <div className="p-4 border border-border rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-5 h-5" />
+                    <div>
+                      <div className="font-semibold">Email Verification</div>
+                      <div className="text-sm text-muted-foreground">
+                        {emailVerification?.email || user.email}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    {emailVerification?.emailVerified ? (
+                      <div className="flex items-center gap-2 text-green-600">
+                        <CheckCircle className="w-5 h-5" />
+                        <span className="text-sm font-medium">Verified</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 text-amber-600">
+                          <AlertCircle className="w-5 h-5" />
+                          <span className="text-sm font-medium">Not Verified</span>
+                        </div>
+                        {emailVerification?.signupMethod === 'email' && (
+                          <button
+                            onClick={handleResendVerificationEmail}
+                            disabled={isResendingEmail}
+                            className="px-3 py-1 text-sm bg-[#ff6b1d] text-white rounded-lg hover:bg-[#e55a15] disabled:opacity-50"
+                          >
+                            {isResendingEmail ? 'Sending...' : 'Resend'}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Password Change */}
+              {profile?.signupMethod === 'email' && (
+                <div className="p-4 border border-border rounded-lg">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <Lock className="w-5 h-5" />
+                      <div>
+                        <div className="font-semibold">Password</div>
+                        <div className="text-sm text-muted-foreground">
+                          Change your account password
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowPasswordChange(!showPasswordChange);
+                        if (showPasswordChange) {
+                          // Reset form when canceling
+                          setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                        }
+                      }}
+                      className="px-4 py-2 text-sm bg-muted hover:bg-muted/80 rounded-lg"
+                    >
+                      {showPasswordChange ? 'Cancel' : 'Change Password'}
+                    </button>
+                  </div>
+                  
+                  {showPasswordChange && (
+                    <form onSubmit={handlePasswordChange} className="space-y-4 mt-4 pt-4 border-t border-border">
+                      <div className="grid gap-4">
+                        <div>
+                          <label className="text-sm font-medium block mb-2">Current Password</label>
+                          <div className="relative">
+                            <input
+                              type={showCurrentPassword ? "text" : "password"}
+                              value={passwordForm.currentPassword}
+                              onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                              placeholder="Enter your current password"
+                              className="w-full px-3 py-2 border border-border rounded-lg pr-10 bg-background"
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            >
+                              {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="text-sm font-medium block mb-2">New Password</label>
+                          <div className="relative">
+                            <input
+                              type={showNewPassword ? "text" : "password"}
+                              value={passwordForm.newPassword}
+                              onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                              placeholder="Enter your new password (min 6 characters)"
+                              className="w-full px-3 py-2 border border-border rounded-lg pr-10 bg-background"
+                              required
+                              minLength={6}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowNewPassword(!showNewPassword)}
+                              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            >
+                              {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <label className="text-sm font-medium block mb-2">Confirm New Password</label>
+                          <input
+                            type="password"
+                            value={passwordForm.confirmPassword}
+                            onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                            placeholder="Confirm your new password"
+                            className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                            required
+                            minLength={6}
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-3 pt-2">
+                        <button
+                          type="submit"
+                          disabled={isChangingPassword}
+                          className="px-4 py-2 bg-[#ff6b1d] text-white rounded-lg hover:bg-[#e55a15] disabled:opacity-50"
+                        >
+                          {isChangingPassword ? 'Changing...' : 'Change Password'}
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
+              )}
+            </div>
           </section>
 
           {/* Privacy & analytics */}
@@ -230,8 +651,9 @@ export default function AdultSettings() {
                   <div className="inline-flex items-center">
                     <button
                       disabled
-                      className="relative inline-flex h-6 w-12 rounded-full bg-muted cursor-not-allowed"
+                      role="switch"
                       aria-checked="true"
+                      className="relative inline-flex h-6 w-12 rounded-full bg-muted cursor-not-allowed"
                     >
                       <span className="absolute top-1 left-7 inline-block h-4 w-4 rounded-full bg-white" />
                     </button>
@@ -251,14 +673,14 @@ export default function AdultSettings() {
                     <button
                       onClick={handleToggleAnalytics}
                       className={`relative inline-flex h-6 w-12 rounded-full transition ${
-                        analyticsEnabled ? "bg-[#ff6b1d]" : "bg-muted"
+                        settings.analyticsEnabled ? "bg-[#ff6b1d]" : "bg-muted"
                       }`}
                       role="switch"
-                      aria-checked={analyticsEnabled}
+                      aria-checked={settings.analyticsEnabled}
                     >
                       <span
                         className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
-                          analyticsEnabled ? "left-7" : "left-1"
+                          settings.analyticsEnabled ? "left-7" : "left-1"
                         }`}
                       />
                     </button>
@@ -283,21 +705,21 @@ export default function AdultSettings() {
                   <div>
                     <div className="font-semibold">Push Notifications</div>
                     <p className="text-sm text-muted-foreground">
-                      Session reminders & progress updates.
+                      Receive browser notifications for session reminders, progress updates, and achievement notifications.
                     </p>
                   </div>
                   <div>
                     <button
                       onClick={handleToggleNotifications}
                       className={`relative inline-flex h-6 w-12 rounded-full transition ${
-                        notificationsEnabled ? "bg-[#ff6b1d]" : "bg-muted"
+                        settings.pushNotifications ? "bg-[#ff6b1d]" : "bg-muted"
                       }`}
                       role="switch"
-                      aria-checked={notificationsEnabled}
+                      aria-checked={settings.pushNotifications}
                     >
                       <span
                         className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
-                          notificationsEnabled ? "left-7" : "left-1"
+                          settings.pushNotifications ? "left-7" : "left-1"
                         }`}
                       />
                     </button>
@@ -308,21 +730,21 @@ export default function AdultSettings() {
                   <div>
                     <div className="font-semibold">Email Notifications</div>
                     <p className="text-sm text-muted-foreground">
-                      Weekly progress reports by email.
+                      Receive weekly progress reports, account updates, and important announcements via email.
                     </p>
                   </div>
                   <div>
                     <button
                       onClick={handleToggleEmailNotifications}
                       className={`relative inline-flex h-6 w-12 rounded-full transition ${
-                        emailNotifications ? "bg-[#ff6b1d]" : "bg-muted"
+                        settings.emailNotifications ? "bg-[#ff6b1d]" : "bg-muted"
                       }`}
                       role="switch"
-                      aria-checked={emailNotifications}
+                      aria-checked={settings.emailNotifications}
                     >
                       <span
                         className={`absolute top-1 inline-block h-4 w-4 rounded-full bg-white transition ${
-                          emailNotifications ? "left-7" : "left-1"
+                          settings.emailNotifications ? "left-7" : "left-1"
                         }`}
                       />
                     </button>
@@ -368,12 +790,18 @@ export default function AdultSettings() {
           </section>
         </div>
       </main>
+<<<<<<< HEAD
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav 
         onFeedbackOpen={() => setShowFeedback(true)}
         currentPage="settings"
         userType="adult"
+=======
+      <FeedbackModal 
+        isOpen={showFeedback} 
+        onClose={() => setShowFeedback(false)} 
+>>>>>>> main
       />
     </div>
   );
