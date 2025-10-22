@@ -15,17 +15,33 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
   // Risk level colors and styling
   const getRiskLevelColor = (riskLevel: 'low' | 'moderate' | 'high') => {
     switch (riskLevel) {
-      case 'high': return 'border-red-400 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400';
-      case 'moderate': return 'border-orange-400 bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400';
-      case 'low': return 'border-green-400 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400';
+      case 'high': return 'border-l-4 border-red-400';
+      case 'moderate': return 'border-l-4 border-orange-400';
+      case 'low': return 'border-l-4 border-green-400';
     }
   };
 
   const getRiskIcon = (riskLevel: 'low' | 'moderate' | 'high') => {
     switch (riskLevel) {
-      case 'high': return <span className="w-4 h-4 inline-block text-center font-bold">!</span>;
-      case 'moderate': return <span className="w-4 h-4 inline-block text-center font-bold">~</span>;
-      case 'low': return <span className="w-4 h-4 inline-block text-center font-bold">+</span>;
+      case 'high': 
+        return (
+          <svg className="w-4 h-4 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2L13.09 8.26L22 9L15.5 15L17.18 22L12 18.27L6.82 22L8.5 15L2 9L10.91 8.26L12 2Z" stroke="currentColor" strokeWidth="2" fill="none"/>
+            <path d="M12 8V12M12 16H12.01"/>
+          </svg>
+        );
+      case 'moderate': 
+        return (
+          <svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z"/>
+          </svg>
+        );
+      case 'low': 
+        return (
+          <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z"/>
+          </svg>
+        );
     }
   };
 
@@ -33,101 +49,113 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
     switch (riskLevel) {
       case 'high': return `${concerningAnswers} area${concerningAnswers !== 1 ? 's' : ''} need attention`;
       case 'moderate': return `${concerningAnswers} area${concerningAnswers !== 1 ? 's' : ''} to monitor`;
-      case 'low': return 'On track!';
+      case 'low': return 'on track!';
     }
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 max-w-4xl mx-auto">
+    <div className="max-w-2xl mx-auto text-center space-y-8 py-4">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
+        className="space-y-4"
       >
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-2">
-          Assessment Report
-        </h1>
-        <div className="bg-gradient-to-r from-[#F5B82E] to-orange-400 text-transparent bg-clip-text font-bold text-lg">
-          Report for: {report.childName} - {report.childAge.years} years, {report.childAge.months} months
+        <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto">
+          <svg className="w-8 h-8 text-yellow-600" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+          </svg>
         </div>
-      </motion.div>
-
-      {/* Main Summary */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-        className="bg-gray-50 dark:bg-gray-700 rounded-2xl p-6 mb-8"
-      >
-        <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-3">Summary</h2>
-        <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-          {report.summary}
-        </p>
-        
-        {/* Overall Risk Assessment */}
-        <div className={`mt-4 p-4 rounded-xl border-l-4 ${getRiskLevelColor(report.overallRiskLevel)}`}>
-          <div className="flex items-center gap-2">
-            {getRiskIcon(report.overallRiskLevel)}
-            <span className="font-semibold">
-              Overall Assessment: {report.overallRiskLevel.charAt(0).toUpperCase() + report.overallRiskLevel.slice(1)} Risk
-            </span>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-normal text-gray-900">assessment complete</h1>
+          <p className="text-base text-gray-600 max-w-lg mx-auto leading-relaxed">
+            we've analyzed your responses and created a personalized report for {report.childName}
+          </p>
+          <div className="text-sm text-gray-500">
+            {report.childAge.years} years, {report.childAge.months} months old
           </div>
         </div>
       </motion.div>
 
-      {/* Assessed Categories */}
+      {/* Summary */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="space-y-3"
+      >
+        <h2 className="text-lg font-semibold text-gray-800">here's what we found</h2>
+        <div className="bg-gray-50 rounded-2xl p-6 max-w-lg mx-auto">
+          <p className="text-base text-gray-700 leading-relaxed">
+            {report.summary}
+          </p>
+        </div>
+      </motion.div>
+
+      {/* Overall Assessment */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="mb-8"
+        className="space-y-3"
       >
-        <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-6">Assessed Categories</h2>
-        
-        <div className="space-y-4">
+        <h3 className="text-base font-semibold text-gray-800">overall assessment</h3>
+        <div className="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3">
+          {getRiskIcon(report.overallRiskLevel)}
+          <span className="text-sm font-medium text-gray-700">
+            {report.overallRiskLevel} risk level
+          </span>
+        </div>
+      </motion.div>
+
+      {/* Categories */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5 }}
+        className="space-y-4"
+      >
+        <h3 className="text-base font-semibold text-gray-800">areas assessed</h3>
+        <div className="space-y-3 max-w-lg mx-auto">
           {report.categories.map((category, index) => (
             <motion.div
               key={category.name}
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.6 + index * 0.1 }}
-              className={`border-l-4 ${getRiskLevelColor(category.riskLevel)} p-4 rounded-r-xl`}
+              className="text-left bg-white border border-gray-200 rounded-xl p-4"
             >
-              <div className="flex items-start gap-3">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="font-bold text-gray-800 dark:text-white">{category.name}</h3>
-                    <div className="flex items-center gap-1">
-                      {getRiskIcon(category.riskLevel)}
-                      <span className="text-sm font-semibold">
-                        {getRiskLabel(category.riskLevel, category.concerningAnswers)}
-                      </span>
-                    </div>
-                    {/* Milestone alignment percentage */}
-                    <div className="ml-auto flex items-center gap-1 text-xs text-gray-500">
-                      {Math.round(category.milestoneAlignment)}% aligned
-                    </div>
+              <div className="space-y-2">
+                <div className="flex items-start justify-between">
+                  <h4 className="text-sm font-medium text-gray-900">{category.name}</h4>
+                  <div className="flex items-center gap-2 ml-3">
+                    {getRiskIcon(category.riskLevel)}
+                    <span className="text-xs text-gray-500">
+                      {getRiskLabel(category.riskLevel, category.concerningAnswers)}
+                    </span>
                   </div>
-                  
-                  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-2">
-                    {category.description}
-                  </p>
-                  
-                  {/* Show recommendations if any */}
-                  {category.recommendations.length > 0 && (
-                    <div className="mt-2">
-                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Recommendations:</p>
-                      <ul className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
-                        {category.recommendations.map((rec, i) => (
-                          <li key={i} className="flex items-start gap-1">
-                            <span className="text-[#F5B82E] mt-0.5">•</span>
-                            {rec}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                </div>
+                
+                <p className="text-xs text-gray-700 leading-normal">{category.description}</p>
+                
+                {category.recommendations.length > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-3 space-y-1 mt-3">
+                    <p className="text-xs font-medium text-gray-800">
+                      recommended activities
+                    </p>
+                    <ul className="text-xs text-gray-700 space-y-0.5">
+                      {category.recommendations.map((rec, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="text-gray-400 mt-0.5 text-xs">•</span>
+                          <span className="leading-normal">{rec}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                
+                <div className="text-xs text-gray-400 text-right pt-1">
+                  {Math.round(category.milestoneAlignment)}% milestone alignment
                 </div>
               </div>
             </motion.div>
@@ -135,67 +163,30 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
         </div>
       </motion.div>
 
-      {/* Next Steps Section */}
-      {report.nextSteps.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.8 }}
-          className="bg-blue-50 dark:bg-blue-900/20 rounded-2xl p-6 mb-8"
-        >
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
-            Recommended Next Steps
-          </h2>
-          <ul className="space-y-2">
-            {report.nextSteps.map((step, i) => (
-              <li key={i} className="flex items-start gap-2 text-gray-600 dark:text-gray-300">
-                <span className="text-blue-600 font-bold mt-0.5">{i + 1}.</span>
-                {step}
-              </li>
-            ))}
-          </ul>
-        </motion.div>
-      )}
-
       {/* Action Buttons */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1.0 }}
-        className="space-y-4"
+        transition={{ delay: 0.7 }}
+        className="space-y-3 max-w-xs mx-auto"
       >
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={onStartPracticing}
-          className="w-full bg-black text-white py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 hover:shadow-lg transition-all duration-200"
+          className="w-full bg-black text-white py-3 px-6 rounded-2xl font-semibold text-base hover:bg-gray-800 transition-colors duration-200"
         >
-          Start practicing
+          start
         </motion.button>
 
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={onLearnMore}
-          className="w-full bg-white dark:bg-gray-700 border-2 border-[#F5B82E] text-[#F5B82E] py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 hover:bg-[#F5B82E] hover:text-white transition-all duration-200"
+          className="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 px-6 rounded-2xl font-semibold text-base hover:border-gray-800 hover:text-gray-800 transition-colors duration-200"
         >
-          Learn more
+          learn more
         </motion.button>
-      </motion.div>
-
-      {/* Footer Links */}
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 1.2 }}
-        className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-600 flex justify-center gap-6 text-sm text-gray-500 dark:text-gray-400"
-      >
-        <button className="hover:text-[#F5B82E] transition-colors duration-200 flex items-center gap-1">
-          Privacy & Terms
-        </button>
-        <button className="hover:text-[#F5B82E] transition-colors duration-200">
-          Disclaimer
-        </button>
       </motion.div>
     </div>
   );
