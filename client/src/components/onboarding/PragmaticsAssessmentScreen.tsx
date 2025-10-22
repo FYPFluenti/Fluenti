@@ -57,19 +57,19 @@ export default function PragmaticsAssessmentScreen({ data, onNext, onBack, step 
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center max-w-lg mx-auto">
-      <div className="text-sm text-gray-500 mb-6">{step} of 4</div>
+    <div className="bg-white rounded-2xl shadow-xl p-6 text-center max-w-2xl mx-auto">
+      <div className="text-xs text-gray-500 mb-4">{step} of 4</div>
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
-        <h1 className="text-xl font-bold text-gray-800 dark:text-white mb-8 leading-tight">
+        <h1 className="text-2xl font-normal text-gray-900 mb-8 leading-tight">
           {question}
         </h1>
 
-        <div className="space-y-4 mb-8">
+        <div className="space-y-3 mb-6">
           {/* NO Option */}
           <motion.button
             initial={{ opacity: 0, x: -20 }}
@@ -78,7 +78,7 @@ export default function PragmaticsAssessmentScreen({ data, onNext, onBack, step 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => handleAnswerSelect('no')}
-            className={`w-full p-4 rounded-2xl font-semibold text-lg transition-all duration-200 ${
+            className={`w-full p-3 rounded-xl font-semibold text-base transition-all duration-200 ${
               selectedAnswer === 'no'
                 ? 'bg-black text-white shadow-lg scale-105'
                 : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
@@ -95,7 +95,7 @@ export default function PragmaticsAssessmentScreen({ data, onNext, onBack, step 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => handleAnswerSelect('yes')}
-            className={`w-full p-4 rounded-2xl font-semibold text-lg transition-all duration-200 ${
+            className={`w-full p-3 rounded-xl font-semibold text-base transition-all duration-200 ${
               selectedAnswer === 'yes'
                 ? 'bg-black text-white shadow-lg scale-105'
                 : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
@@ -112,7 +112,7 @@ export default function PragmaticsAssessmentScreen({ data, onNext, onBack, step 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => handleAnswerSelect('cant-tell')}
-            className={`w-full p-4 rounded-2xl font-semibold text-lg transition-all duration-200 ${
+            className={`w-full p-3 rounded-xl font-semibold text-base transition-all duration-200 ${
               selectedAnswer === 'cant-tell'
                 ? 'bg-black text-white shadow-lg scale-105'
                 : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
@@ -128,7 +128,7 @@ export default function PragmaticsAssessmentScreen({ data, onNext, onBack, step 
           whileTap={{ scale: selectedAnswer ? 0.98 : 1 }}
           onClick={handleContinue}
           disabled={!selectedAnswer}
-          className={`w-full py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 ${
+          className={`w-full py-3 px-6 rounded-xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 ${
             selectedAnswer
               ? 'bg-black text-white hover:shadow-lg'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
