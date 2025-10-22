@@ -30,7 +30,7 @@ export default function SpeechTherapyScreen({ data, onNext, onBack, onSkip }: Sp
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-8">
+        <h1 className="text-2xl font-normal text-gray-900 mb-8">
           Are you currently looking for a speech therapist?
         </h1>
 
@@ -79,8 +79,8 @@ export default function SpeechTherapyScreen({ data, onNext, onBack, onSkip }: Sp
             disabled={seekingTherapy === null}
             className={`w-full py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 ${
               seekingTherapy !== null
-                ? 'bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white hover:shadow-lg'
-                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+                ? 'bg-black text-white hover:shadow-lg'
+                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
             }`}
           >
             Continue
