@@ -37,7 +37,7 @@ export default function VocabularyAssessmentScreen({ data, onNext, onBack }: Voc
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-8">
+        <h1 className="text-2xl font-normal text-gray-900 mb-8">
           Approximately how many words can <span className="text-[#F5B82E]">{childName}</span> say?
         </h1>
 
@@ -52,10 +52,10 @@ export default function VocabularyAssessmentScreen({ data, onNext, onBack }: Voc
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => handleLevelSelect(option.id)}
-              className={`w-full p-6 rounded-2xl font-semibold text-lg transition-all duration-200 ${
+              className={`w-full p-6 rounded-2xl text-left transition-all duration-200 ${
                 selectedLevel === option.id
-                  ? `bg-gradient-to-r ${option.color} text-white shadow-lg scale-105`
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  ? `bg-black text-white shadow-lg scale-105`
+                  : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50'
               }`}
             >
               {option.label}
@@ -69,11 +69,11 @@ export default function VocabularyAssessmentScreen({ data, onNext, onBack }: Voc
           whileTap={{ scale: selectedLevel ? 0.98 : 1 }}
           onClick={handleContinue}
           disabled={!selectedLevel}
-          className={`w-full py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 ${
-            selectedLevel
-              ? 'bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white hover:shadow-lg'
-              : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
-          }`}
+            className={`w-full py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 ${
+              selectedLevel
+              ? 'bg-black text-white hover:shadow-lg'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+            }`}
         >
           Continue
         </motion.button>
