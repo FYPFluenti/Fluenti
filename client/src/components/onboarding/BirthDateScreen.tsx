@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, ArrowRight } from 'lucide-react';
 
 interface BirthDateScreenProps {
   data: any;
@@ -63,9 +62,9 @@ export default function BirthDateScreen({ data, onNext, onBack }: BirthDateScree
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-        className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full mx-auto mb-6 flex items-center justify-center"
+  // Decorative circle removed
       >
-        <Calendar className="w-10 h-10 text-white" />
+        
       </motion.div>
 
       <motion.div
@@ -73,7 +72,7 @@ export default function BirthDateScreen({ data, onNext, onBack }: BirthDateScree
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+        <h1 className="text-2xl font-normal text-gray-900 mb-4">
           When was <span className="text-[#F5B82E]">{childName}</span> born?
         </h1>
 
@@ -135,12 +134,12 @@ export default function BirthDateScreen({ data, onNext, onBack }: BirthDateScree
           disabled={!selectedDate}
           className={`w-full py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 ${
             selectedDate
-              ? 'bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white hover:shadow-lg'
-              : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+              ? 'bg-black text-white hover:shadow-lg'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
         >
           Continue
-          <ArrowRight className="w-5 h-5" />
+
         </motion.button>
       </motion.div>
     </div>
