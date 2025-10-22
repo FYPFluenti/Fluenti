@@ -495,27 +495,13 @@ export default function SpeechTherapyPage() {
             <div className="mb-8">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-2">
-                    <Hand className="w-8 h-8 text-[#F5B82E]" />
+                  <h1 className="text-3xl font-bold text-foreground mb-2">
                     Hi {childName || ((user && 'firstName' in user) ? user.firstName : 'there')}! Ready to practice?
-                    <Target className="w-7 h-7 text-[#F5B82E]" />
                   </h1>
                   <p className="text-lg text-muted-foreground">
                     Choose a game to improve your speech skills
                   </p>
                 </div>
-
-                {/* Sound Toggle */}
-                <button
-                  onClick={() => setSoundEnabled(!soundEnabled)}
-                  className={`p-3 rounded-xl transition-all ${
-                    soundEnabled 
-                      ? 'bg-[#ff6b1d]/10 text-[#ff6b1d] hover:bg-[#ff6b1d]/20 dark:bg-[#ff6b1d]/20' 
-                      : 'bg-muted text-muted-foreground hover:bg-muted/80'
-                  }`}
-                >
-                  {soundEnabled ? <Volume2 className="w-6 h-6" /> : <VolumeX className="w-6 h-6" />}
-                </button>
               </div>
 
               {/* Daily Progress */}
