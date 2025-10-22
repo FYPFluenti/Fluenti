@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Clock, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface BookingEvaluationScreenProps {
   data: any;
@@ -51,92 +50,83 @@ export default function BookingEvaluationScreen({ data, onNext, onBack }: Bookin
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 max-w-2xl mx-auto">
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-        className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full mx-auto mb-6 flex items-center justify-center"
-      >
-        <Calendar className="w-10 h-10 text-white" />
-      </motion.div>
-
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-6 sm:p-8 max-w-3xl mx-auto">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
+        transition={{ delay: 0.2 }}
         className="text-center"
       >
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+        <h1 className="text-2xl font-normal text-gray-900 mb-2">
           Book a free 15-min evaluation
         </h1>
         
-        <p className="text-[#F5B82E] font-semibold mb-4">Available for a short time!</p>
+        <p className="text-gray-600 font-semibold mb-3 text-sm sm:text-base">Available for a short time!</p>
         
-        <p className="text-gray-600 dark:text-gray-300 mb-8">
+        <p className="text-gray-600 dark:text-gray-300 mb-6 text-sm sm:text-base">
           Speak directly with a speech therapist and discover personalized solutions for your child.
         </p>
 
         {/* Calendar Widget */}
-        <div className="bg-gray-50 dark:bg-gray-700 rounded-2xl p-6 mb-6">
-          <div className="grid grid-cols-6 gap-2 mb-4">
+        <div className="bg-gray-50 dark:bg-gray-700 rounded-2xl p-4 sm:p-6 mb-6">
+          <div className="grid grid-cols-6 gap-2 mb-6">
             {availableDates.map((dateInfo, index) => (
               <motion.button
                 key={index}
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.6 + index * 0.1 }}
+                transition={{ delay: 0.4 + index * 0.05 }}
                 onClick={() => dateInfo.available && handleDateSelect(dateInfo.date)}
                 disabled={!dateInfo.available}
-                className={`p-3 rounded-xl text-center transition-all duration-200 ${
+                className={`p-2 sm:p-3 rounded-xl text-center transition-all duration-200 ${
                   dateInfo.available
                     ? selectedDate === dateInfo.date
-                      ? 'bg-[#F5B82E] text-white shadow-lg scale-105'
-                      : 'bg-white dark:bg-gray-600 hover:bg-gray-100 dark:hover:bg-gray-500'
+                      ? 'bg-black text-white shadow-lg scale-105'
+                      : 'bg-white dark:bg-gray-600 hover:bg-gray-100 dark:hover:bg-gray-500 border border-gray-200'
                     : 'bg-gray-200 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                <div className="text-xs font-medium">{dateInfo.day}</div>
-                <div className="text-lg font-bold">{dateInfo.date}</div>
+                <div className="text-xs font-medium mb-1">{dateInfo.day}</div>
+                <div className="text-base sm:text-lg font-bold">{dateInfo.date}</div>
               </motion.button>
             ))}
           </div>
 
-          <div className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+          <div className="text-sm text-gray-700 dark:text-gray-300 mb-2 font-medium">
             Available Slots — Wed, Oct 15, 2025
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-6">
             Pakistan Standard Time (GMT+5)
           </div>
 
           {/* Time Sections */}
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
-              <h4 className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Morning</h4>
-              <p className="text-sm text-gray-400">No availability</p>
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Morning</h4>
+              <p className="text-sm text-gray-500">No availability</p>
             </div>
             
             <div>
-              <h4 className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Afternoon</h4>
-              <p className="text-sm text-gray-400">No availability</p>
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Afternoon</h4>
+              <p className="text-sm text-gray-500">No availability</p>
             </div>
             
             <div>
-              <h4 className="text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Evening</h4>
-              <div className="grid grid-cols-2 gap-2">
+              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Evening</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {timeSlots.map((time, index) => (
                   <motion.button
                     key={time}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.8 + index * 0.05 }}
+                    transition={{ delay: 0.6 + index * 0.03 }}
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => handleTimeSelect(time)}
                     className={`p-3 rounded-lg text-sm font-medium transition-all duration-200 ${
                       selectedTime === time
-                        ? 'bg-[#F5B82E] text-white shadow-lg'
-                        : 'bg-white dark:bg-gray-600 hover:bg-gray-100 dark:hover:bg-gray-500'
+                        ? 'bg-black text-white shadow-lg'
+                        : 'bg-white dark:bg-gray-600 hover:bg-gray-100 dark:hover:bg-gray-500 border border-gray-200'
                     }`}
                   >
                     {time}
@@ -155,12 +145,12 @@ export default function BookingEvaluationScreen({ data, onNext, onBack }: Bookin
           disabled={!selectedDate || !selectedTime}
           className={`w-full py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 ${
             selectedDate && selectedTime
-              ? 'bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white hover:shadow-lg'
-              : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+              ? 'bg-black text-white hover:shadow-lg'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
         >
           Continue
-          <ArrowRight className="w-5 h-5" />
+
         </motion.button>
       </motion.div>
     </div>
