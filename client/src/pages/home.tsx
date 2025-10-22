@@ -848,7 +848,7 @@ export default function Home() {
             {/* Welcome Message */}
             <div className="flex items-start gap-3">
               <div className="w-8 h-8 bg-[#ff6b1d] rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-sm">🤖</span>
+                <span className="text-white text-xs font-semibold">AI</span>
               </div>
               <div className="bg-gray-100 rounded-lg p-4 max-w-[80%]">
                 <p className="text-gray-800 text-sm">
@@ -864,7 +864,7 @@ export default function Home() {
                 onClick={() => setChatMessage("I need a speech therapist for my child")}
                 className="w-full text-left p-3 bg-[#ff6b1d]/10 hover:bg-[#ff6b1d]/20 rounded-lg border border-[#ff6b1d]/20 transition-colors"
               >
-                <span className="text-sm font-medium text-gray-800">🗣️ Speech Therapist for Child</span>
+                <span className="text-sm font-medium text-gray-800">Speech Therapist for Child</span>
                 <p className="text-xs text-gray-600 mt-1">Find certified pediatric speech-language pathologists</p>
               </button>
               
@@ -872,7 +872,7 @@ export default function Home() {
                 onClick={() => setChatMessage("I need an emotional therapist for myself")}
                 className="w-full text-left p-3 bg-[#ff6b1d]/10 hover:bg-[#ff6b1d]/20 rounded-lg border border-[#ff6b1d]/20 transition-colors"
               >
-                <span className="text-sm font-medium text-gray-800">💭 Emotional Therapist</span>
+                <span className="text-sm font-medium text-gray-800">Emotional Therapist</span>
                 <p className="text-xs text-gray-600 mt-1">Connect with licensed mental health professionals</p>
               </button>
               
@@ -880,7 +880,7 @@ export default function Home() {
                 onClick={() => setChatMessage("I need both speech and emotional support")}
                 className="w-full text-left p-3 bg-[#ff6b1d]/10 hover:bg-[#ff6b1d]/20 rounded-lg border border-[#ff6b1d]/20 transition-colors"
               >
-                <span className="text-sm font-medium text-gray-800">🤝 Comprehensive Support</span>
+                <span className="text-sm font-medium text-gray-800">Comprehensive Support</span>
                 <p className="text-xs text-gray-600 mt-1">Integrated therapy approach for multiple needs</p>
               </button>
             </div>
@@ -892,7 +892,7 @@ export default function Home() {
                   <p className="text-white text-sm">{chatMessage}</p>
                 </div>
                 <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-gray-600 text-sm">👤</span>
+                  <span className="text-gray-600 text-xs font-semibold">YOU</span>
                 </div>
               </div>
             )}
@@ -900,7 +900,7 @@ export default function Home() {
             {chatMessage && (
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 bg-[#ff6b1d] rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-sm">🤖</span>
+                  <span className="text-white text-xs font-semibold">AI</span>
                 </div>
                 <div className="bg-gray-100 rounded-lg p-4 max-w-[80%]">
                   <p className="text-gray-800 text-sm">
