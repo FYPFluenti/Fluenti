@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Shield, Delete, ArrowRight } from 'lucide-react';
 
 interface AgeVerificationScreenProps {
   data: any;
@@ -44,9 +43,9 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
         transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-        className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full mx-auto mb-6 flex items-center justify-center"
+  // Decorative circle removed
       >
-        <Shield className="w-10 h-10 text-white" />
+        
       </motion.div>
 
       <motion.div
@@ -54,7 +53,7 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-4">
+        <h1 className="text-2xl font-normal text-gray-900 mb-4">
           Please enter your year of birth
         </h1>
 
@@ -108,7 +107,7 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
             onClick={handleDelete}
             className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
           >
-            <Delete className="w-6 h-6 text-red-500" />
+            
           </motion.button>
         </div>
 
@@ -127,12 +126,12 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
           disabled={!isValidYear || !isOfAge}
           className={`w-full py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 ${
             isValidYear && isOfAge
-              ? 'bg-gradient-to-r from-[#F5B82E] to-orange-400 text-white hover:shadow-lg'
-              : 'bg-gray-200 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
+              ? 'bg-black text-white hover:shadow-lg'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
           }`}
         >
           Continue
-          <ArrowRight className="w-5 h-5" />
+
         </motion.button>
       </motion.div>
     </div>
