@@ -790,18 +790,18 @@ export default function AdultSettings() {
           </section>
         </div>
       </main>
-<<<<<<< HEAD
 
       {/* Mobile Bottom Navigation */}
-      <MobileBottomNav 
+      <MobileBottomNav
         onFeedbackOpen={() => setShowFeedback(true)}
         currentPage="settings"
         userType="adult"
-=======
-      <FeedbackModal 
-        isOpen={showFeedback} 
-        onClose={() => setShowFeedback(false)} 
->>>>>>> main
+      />
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={showFeedback}
+        onClose={() => setShowFeedback(false)}
       />
     </div>
   );
