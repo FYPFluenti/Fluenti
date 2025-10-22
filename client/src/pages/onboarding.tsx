@@ -15,7 +15,6 @@ import {
   InterestsSelectionScreen,
   VocabularyAssessmentScreen,
   SpeechTherapyScreen,
-  BookingEvaluationScreen,
   EvaluationQuestionScreen,
   HearingAssessmentScreen,
   PragmaticsAssessmentScreen,
@@ -47,7 +46,7 @@ interface OnboardingData {
   isCompleted?: boolean;
 }
 
-const TOTAL_STEPS = 21;
+const TOTAL_STEPS = 20;
 
 export default function OnboardingPage() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -136,7 +135,7 @@ export default function OnboardingPage() {
     let nextStep = currentStep + 1;
     
     if (currentStep === 8 && updatedData.seekingSpeechTherapy === false) {
-      nextStep = 10;
+      nextStep = 9;
     }
     
     await saveOnboardingData(updatedData, nextStep);
@@ -152,7 +151,7 @@ export default function OnboardingPage() {
     if (currentStep > 1) {
       let previousStep = currentStep - 1;
       
-      if (currentStep === 10 && onboardingData.seekingSpeechTherapy === false) {
+      if (currentStep === 9 && onboardingData.seekingSpeechTherapy === false) {
         previousStep = 8;
       }
       
@@ -263,19 +262,18 @@ export default function OnboardingPage() {
       case 6: return <InterestsSelectionScreen {...stepProps} />;
       case 7: return <VocabularyAssessmentScreen {...stepProps} />;
       case 8: return <SpeechTherapyScreen {...stepProps} />;
-      case 9: return <BookingEvaluationScreen {...stepProps} />;
-      case 10: return <EvaluationQuestionScreen {...stepProps} />;
-      case 11: return <HearingAssessmentScreen {...stepProps} />;
-      case 12: return <PragmaticsAssessmentScreen {...stepProps} step={1} />;
-      case 13: return <PragmaticsAssessmentScreen {...stepProps} step={2} />;
-      case 14: return <PragmaticsAssessmentScreen {...stepProps} step={3} />;
-      case 15: return <PragmaticsAssessmentScreen {...stepProps} step={4} />;
-      case 16: return <PlayAssessmentScreen {...stepProps} step={1} />;
-      case 17: return <PlayAssessmentScreen {...stepProps} step={2} />;
-      case 18: return <PlayAssessmentScreen {...stepProps} step={3} />;
-      case 19: return <PlayAssessmentScreen {...stepProps} step={4} />;
-      case 20: return <PlayAssessmentScreen {...stepProps} step={5} />;
-      case 21: return <ReportScreen 
+      case 9: return <EvaluationQuestionScreen {...stepProps} />;
+      case 10: return <HearingAssessmentScreen {...stepProps} />;
+      case 11: return <PragmaticsAssessmentScreen {...stepProps} step={1} />;
+      case 12: return <PragmaticsAssessmentScreen {...stepProps} step={2} />;
+      case 13: return <PragmaticsAssessmentScreen {...stepProps} step={3} />;
+      case 14: return <PragmaticsAssessmentScreen {...stepProps} step={4} />;
+      case 15: return <PlayAssessmentScreen {...stepProps} step={1} />;
+      case 16: return <PlayAssessmentScreen {...stepProps} step={2} />;
+      case 17: return <PlayAssessmentScreen {...stepProps} step={3} />;
+      case 18: return <PlayAssessmentScreen {...stepProps} step={4} />;
+      case 19: return <PlayAssessmentScreen {...stepProps} step={5} />;
+      case 20: return <ReportScreen 
                         data={onboardingData} 
                         onStartPracticing={handleStartPracticing}
                         onLearnMore={handleLearnMore}
@@ -285,10 +283,10 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-2 py-4">
-      <div className="w-full max-w-2xl md:max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto">
+    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-6">
+      <div className="w-full max-w-3xl">
         {/* Simple progress indicator */}
-        <div className="mb-8">
+        <div className="mb-6">
           <div className="flex items-center justify-between mb-2">
             {currentStep > 1 && (
               <button
