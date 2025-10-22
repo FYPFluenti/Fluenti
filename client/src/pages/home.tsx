@@ -34,7 +34,8 @@ import {
   Smile,
   SlidersHorizontal,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  X
 } from "lucide-react";
 
 // Demo avatars
@@ -57,6 +58,8 @@ export default function Home() {
   const [hovered, setHovered] = useState<string | null>(null);
   const [showPreferences, setShowPreferences] = useState(false);
   const [showDemo, setShowDemo] = useState(false);
+  const [showChatHelper, setShowChatHelper] = useState(false);
+  const [chatMessage, setChatMessage] = useState("");
   
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -802,6 +805,151 @@ export default function Home() {
       </p>
     </div>
   </section>
+
+  {/* Chat Helper Button - Fixed Bottom Right */}
+  <div className="fixed bottom-6 right-6 z-50">
+    <button
+      onClick={() => setShowChatHelper(true)}
+      className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110"
+      aria-label="Chat with helper"
+    >
+      <MessageCircle className="w-6 h-6" />
+    </button>
+  </div>
+
+  {/* Chat Helper Modal */}
+  {showChatHelper && (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+      <div className="w-[500px] max-w-[92vw] h-[600px] max-h-[90vh] rounded-2xl bg-white border border-gray-200 shadow-2xl flex flex-col">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-[#ff6b1d] rounded-full flex items-center justify-center">
+              <MessageCircle className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Chat Helper</h3>
+              <p className="text-sm text-gray-600">Find therapists in your region</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowChatHelper(false)}
+            className="text-gray-400 hover:text-gray-600 p-2"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Chat Content Area */}
+        <div className="flex-1 p-6 overflow-y-auto">
+          <div className="space-y-4">
+            
+            {/* Welcome Message */}
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-[#ff6b1d] rounded-full flex items-center justify-center flex-shrink-0">
+                <span className="text-white text-sm">🤖</span>
+              </div>
+              <div className="bg-gray-100 rounded-lg p-4 max-w-[80%]">
+                <p className="text-gray-800 text-sm">
+                  Hi! I'm here to help you find qualified speech and emotional therapists in your area. 
+                  What type of support are you looking for?
+                </p>
+              </div>
+            </div>
+
+            {/* Quick Options */}
+            <div className="space-y-2">
+              <button 
+                onClick={() => setChatMessage("I need a speech therapist for my child")}
+                className="w-full text-left p-3 bg-[#ff6b1d]/10 hover:bg-[#ff6b1d]/20 rounded-lg border border-[#ff6b1d]/20 transition-colors"
+              >
+                <span className="text-sm font-medium text-gray-800">🗣️ Speech Therapist for Child</span>
+                <p className="text-xs text-gray-600 mt-1">Find certified pediatric speech-language pathologists</p>
+              </button>
+              
+              <button 
+                onClick={() => setChatMessage("I need an emotional therapist for myself")}
+                className="w-full text-left p-3 bg-[#ff6b1d]/10 hover:bg-[#ff6b1d]/20 rounded-lg border border-[#ff6b1d]/20 transition-colors"
+              >
+                <span className="text-sm font-medium text-gray-800">💭 Emotional Therapist</span>
+                <p className="text-xs text-gray-600 mt-1">Connect with licensed mental health professionals</p>
+              </button>
+              
+              <button 
+                onClick={() => setChatMessage("I need both speech and emotional support")}
+                className="w-full text-left p-3 bg-[#ff6b1d]/10 hover:bg-[#ff6b1d]/20 rounded-lg border border-[#ff6b1d]/20 transition-colors"
+              >
+                <span className="text-sm font-medium text-gray-800">🤝 Comprehensive Support</span>
+                <p className="text-xs text-gray-600 mt-1">Integrated therapy approach for multiple needs</p>
+              </button>
+            </div>
+
+            {/* Placeholder for future chatbot messages */}
+            {chatMessage && (
+              <div className="flex items-start gap-3 justify-end">
+                <div className="bg-[#ff6b1d] rounded-lg p-4 max-w-[80%]">
+                  <p className="text-white text-sm">{chatMessage}</p>
+                </div>
+                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-gray-600 text-sm">👤</span>
+                </div>
+              </div>
+            )}
+
+            {chatMessage && (
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-[#ff6b1d] rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-white text-sm">🤖</span>
+                </div>
+                <div className="bg-gray-100 rounded-lg p-4 max-w-[80%]">
+                  <p className="text-gray-800 text-sm">
+                    Great! I'm analyzing therapists in your area. This feature will be fully integrated soon. 
+                    For now, you can sign up to get early access to our therapist recommendation system.
+                  </p>
+                  <div className="mt-3">
+                    <Link href="/signup">
+                      <button className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                        Get Early Access
+                      </button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            )}
+
+          </div>
+        </div>
+
+        {/* Input Area */}
+        <div className="border-t border-gray-200 p-4">
+          <div className="flex gap-3">
+            <input
+              type="text"
+              placeholder="Type your message..."
+              value={chatMessage}
+              onChange={(e) => setChatMessage(e.target.value)}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6b1d] focus:border-[#ff6b1d]"
+            />
+            <button
+              onClick={() => {
+                // Placeholder for future chatbot integration
+                console.log('Chat message sent:', chatMessage);
+              }}
+              disabled={!chatMessage.trim()}
+              className="bg-[#ff6b1d] hover:bg-[#e55a1a] disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors"
+            >
+              Send
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 mt-2 text-center">
+            Powered by Fluenti AI • Connecting you with qualified professionals
+          </p>
+        </div>
+
+      </div>
+    </div>
+  )}
 
   {/* 8. FOOTER - Always last */}
   <footer className="bg-white relative z-10">
