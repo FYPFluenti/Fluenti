@@ -46,3 +46,50 @@ OAUTH_SETUP_INSTRUCTIONS.md
 
 # Environment configuration
 client/src/config/env.ts
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# AI Model Cache (7GB+)
+models/
+hf_cache/
+models/hf_cache/
+server/python/.venv/
+*.pth
+*.bin
+*.safetensors
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+
+# Large files
+*.mp3
+*.wav
+*.mp4
+*.webm
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
