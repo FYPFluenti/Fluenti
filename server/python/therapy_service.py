@@ -471,7 +471,7 @@ if __name__ == '__main__':
         print("❌ Therapy bot failed to load - service will have limited functionality")
     
     # Get port from environment (for deployment platforms)
-    port = int(os.environ.get('PORT', 5001))
+    port = int(os.environ.get('THERAPY_PORT', 5001))
     
     # Auto-detect production environment
     is_production = (

@@ -34,7 +34,8 @@ except ImportError:
     EMBEDDINGS_CLASS = HuggingFaceBgeEmbeddings
     EMBEDDINGS_TYPE = 'legacy'
     print("⚠️ Using deprecated HuggingFaceBgeEmbeddings. Install langchain-huggingface for updated version.")
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 # Sentiment analysis
 try:
@@ -1807,7 +1808,7 @@ Your personalized crisis intervention response:"""
                 retriever = self.general_retriever
 
             if retriever:
-                docs = retriever.get_relevant_documents(enhanced_query)
+                docs = retriever.invoke(enhanced_query)
                 context = "\n\n".join([doc.page_content for doc in docs[:2]])
                 return context[:1000]
             else:
