@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation, useSearch } from 'wouter';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -6,6 +7,7 @@ import { AlertTriangle, Heart, MessageCircle, X } from 'lucide-react';
 import SharedSidebarEmotional from '@/components/layout/SharedSidebarEmotional';
 import FeedbackModal from '@/components/layout/FeedbackModel';
 import PageHeader from '@/components/layout/PageHeader';
+import { useSession } from '@/hooks/useSession';
 
 interface Message {
   id: string;
@@ -33,16 +35,53 @@ const EmotionalSupport = () => {
   const [isContinuedSession, setIsContinuedSession] = useState(false);
   const [continuedSessionTitle, setContinuedSessionTitle] = useState<string>('');
 
+  // Get session ID from URL parameters
+  const searchParams = new URLSearchParams(useSearch());
+  const sessionIdFromUrl = searchParams.get('sessionId');
+  
+  // Use the session hook to fetch session data if continuing
+  const { session: existingSession, loading: sessionLoading, error: sessionError } = useSession(sessionIdFromUrl);
+
   // Check service health and handle session continuation on component mount
   useEffect(() => {
     checkServiceHealth();
     handleSessionContinuation();
-  }, []);
+  }, [existingSession]);
 
   const handleSessionContinuation = () => {
     try {
+      // Check if we have an existing session from the database
+      if (existingSession && !sessionLoading && !sessionError) {
+        // Set session data for continuation
+        setSessionData({
+          sessionId: existingSession.sessionId,
+          userId: existingSession.userId,
+        });
+
+        // Restore previous messages if available
+        if (existingSession.messages && existingSession.messages.length > 0) {
+          const restoredMessages: Message[] = existingSession.messages.map((msg: any, index: number) => ({
+            id: `restored_${index}`,
+            user: msg.role === 'user' ? msg.content : '',
+            ai: msg.role === 'assistant' ? msg.content : '',
+            timestamp: new Date(msg.timestamp || Date.now()),
+            crisisLevel: 'none',
+            isCrisis: false
+          })).filter((msg: Message) => msg.user || msg.ai);
+
+          setMessages(restoredMessages);
+        }
+
+        // Set continuation indicators
+        setIsContinuedSession(true);
+        setContinuedSessionTitle(existingSession.title || 'Previous Session');
+        
+        console.log('🔄 Continuing session:', existingSession.title);
+      }
+      
+      // Also check for legacy localStorage data for backward compatibility
       const continuingSessionData = localStorage.getItem('continuingSession');
-      if (continuingSessionData) {
+      if (continuingSessionData && !existingSession) {
         const sessionInfo = JSON.parse(continuingSessionData);
         
         // Set session data for continuation
@@ -73,7 +112,7 @@ const EmotionalSupport = () => {
         // Clear the continuation data
         localStorage.removeItem('continuingSession');
         
-        console.log('🔄 Continuing session:', sessionInfo.title);
+        console.log('🔄 Continuing session from localStorage:', sessionInfo.title);
       }
     } catch (error) {
       console.error('Error handling session continuation:', error);

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearch } from 'wouter';
 import { Button } from '@/components/ui/button';
 import ModelViewerAvatar from '@/components/ModelViewerAvatar';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition_simple';
@@ -6,6 +7,7 @@ import { Mic, MicOff, Waves, Heart, Brain, Shield, X, AlertTriangle, RotateCcw }
 import SharedSidebarEmotional from '@/components/layout/SharedSidebarEmotional';
 import FeedbackModal from '@/components/layout/FeedbackModel';
 import PageHeader from '@/components/layout/PageHeader';
+import { useSession } from '@/hooks/useSession';
 
 interface SessionData {
   sessionId?: string;
@@ -34,6 +36,13 @@ const EmotionalSupportVoice = () => {
   const [isContinuedSession, setIsContinuedSession] = useState(false);
   const [continuedSessionTitle, setContinuedSessionTitle] = useState<string>('');
   const { startRecording, stopRecording, isRecording } = useSpeechRecognition();
+
+  // Get session ID from URL parameters
+  const searchParams = new URLSearchParams(useSearch());
+  const sessionIdFromUrl = searchParams.get('sessionId');
+  
+  // Use the session hook to fetch session data if continuing
+  const { session: existingSession, loading: sessionLoading, error: sessionError } = useSession(sessionIdFromUrl);
 
   // Handle Coqui TTS audio playback directly
   useEffect(() => {
@@ -157,12 +166,41 @@ const EmotionalSupportVoice = () => {
     // Check status every 30 seconds
     const interval = setInterval(checkServiceStatus, 30000);
     return () => clearInterval(interval);
-  }, [serviceStatus]);
+  }, [serviceStatus, existingSession]);
 
   const handleSessionContinuation = () => {
     try {
+      // Check if we have an existing session from the database
+      if (existingSession && !sessionLoading && !sessionError) {
+        // Set session data for continuation
+        setSessionData({
+          sessionId: existingSession.sessionId,
+          userId: existingSession.userId,
+        });
+
+        // Restore previous history if available
+        if (existingSession.messages && existingSession.messages.length > 0) {
+          const restoredHistory = existingSession.messages
+            .filter((msg: any) => msg.role === 'user' || msg.role === 'assistant')
+            .map((msg: any, index: number) => ({
+              user: msg.role === 'user' ? msg.content : '',
+              ai: msg.role === 'assistant' ? msg.content : ''
+            }))
+            .filter((item: any) => item.user || item.ai);
+
+          setHistory(restoredHistory);
+        }
+
+        // Set continuation indicators
+        setIsContinuedSession(true);
+        setContinuedSessionTitle(existingSession.title || 'Previous Session');
+        
+        console.log('🔄 Continuing voice session:', existingSession.title);
+      }
+
+      // Also check for legacy localStorage data for backward compatibility
       const continuingSessionData = localStorage.getItem('continuingSession');
-      if (continuingSessionData) {
+      if (continuingSessionData && !existingSession) {
         const sessionInfo = JSON.parse(continuingSessionData);
         
         // Set session data for continuation
@@ -192,7 +230,7 @@ const EmotionalSupportVoice = () => {
         // Clear the continuation data
         localStorage.removeItem('continuingSession');
         
-        console.log('🔄 Continuing voice session:', sessionInfo.title);
+        console.log('🔄 Continuing voice session from localStorage:', sessionInfo.title);
       }
     } catch (error) {
       console.error('Error handling voice session continuation:', error);

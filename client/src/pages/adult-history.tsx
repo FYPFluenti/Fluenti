@@ -95,33 +95,21 @@ export default function AdultHistory() {
 
   // Function to continue a therapy session
   const continueSession = (session: any) => {
-    // Store session data in localStorage for continuation
-    const sessionData = {
-      sessionId: session.sessionId || session.id,
-      userId: session.userId,
-      sessionKey: session.sessionKey,
-      type: session.type,
-      mode: session.mode, // Include mode for routing
-      title: session.title,
-      messages: session.messages || [],
-      lastActivity: new Date().toISOString()
-    };
-
-    localStorage.setItem('continuingSession', JSON.stringify(sessionData));
+    const sessionId = session.sessionId || session.id;
     
-    // Navigate to appropriate therapy page based on session mode and type
+    // Navigate to appropriate therapy page based on session mode and type with session ID
     if (session.type === 'support' || session.type === 'chat') {
       // Check mode to decide between voice and chat interface
       if (session.mode === 'voice') {
-        setLocation('/emotional-support-voice');
+        setLocation(`/emotional-support-voice?sessionId=${sessionId}`);
       } else {
-        setLocation('/emotional-support'); // Default to chat mode
+        setLocation(`/emotional-support?sessionId=${sessionId}`); // Default to chat mode
       }
     } else if (session.type === 'therapy') {
-      setLocation('/emotional-support'); // Can be changed to a specific therapy page if needed
+      setLocation(`/emotional-support?sessionId=${sessionId}`); // Can be changed to a specific therapy page if needed
     } else {
       // Default to emotional support chat
-      setLocation('/emotional-support');
+      setLocation(`/emotional-support?sessionId=${sessionId}`);
     }
   };
 

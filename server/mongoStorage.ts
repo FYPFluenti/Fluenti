@@ -313,6 +313,31 @@ export const mongoStorage = {
     });
   },
 
+  async createEmotionalSessionWithId(sessionData: {
+    id: string;
+    userId: string;
+    sessionType?: 'chat' | 'assessment' | 'crisis';
+    mode?: 'chat' | 'voice';
+    emotion?: string;
+    response?: string;
+    confidence?: number;
+  }) {
+    return this._safeExecute(async () => {
+      const session = new EmotionalSession({
+        id: sessionData.id,
+        userId: sessionData.userId,
+        sessionType: sessionData.sessionType || 'chat',
+        mode: sessionData.mode || 'chat',
+        messages: [],
+        emotionalState: sessionData.emotion,
+        riskLevel: 'low',
+        createdAt: new Date()
+      });
+      await session.save();
+      return session;
+    });
+  },
+
   async getUserEmotionalSessions(userId: string, limit = 10) {
     return this._safeExecute(async () => {
       const sessions = await EmotionalSession.find({ userId })

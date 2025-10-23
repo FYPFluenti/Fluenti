@@ -1177,6 +1177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let finalResponse = text; // fallback to transcribed text
       let crisisLevel = 'none';
       let isCrisis = false;
+      let sessionObjectId: string | undefined;
 
       if (text && text.trim() !== 'No speech detected' && text.trim() !== 'No input provided') {
         try {
@@ -1214,24 +1215,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
             crisisLevel = therapyResponse.crisisLevel || 'none';
             isCrisis = therapyResponse.isCrisis || false;
             console.log('✅ Therapy service response received');
+            console.log('🔍 Python service returned sessionId:', therapyResponse.sessionId);
 
             // Save to EmotionalSession collection for history tracking
             try {
-              const sessionData = await mongoStorage.createEmotionalSession({
-                userId: stableUserId,
-                sessionType: isCrisis ? 'crisis' : 'chat',
-                mode: 'voice',
-                emotion: crisisLevel
-              });
+              
+              // If sessionId provided, try to continue existing session
+              if (stableSessionId) {
+                console.log('🔄 Attempting to continue existing voice session:', stableSessionId);
+                
+                // Check if session exists in EmotionalSession collection
+                try {
+                  const existingSession = await mongoStorage.findEmotionalSession(stableSessionId, finalUserId);
+                  
+                  if (existingSession) {
+                    console.log('✅ Found existing voice session to continue');
+                    sessionObjectId = stableSessionId;
+                  } else {
+                    console.log('❌ Voice session not found, will create new session');
+                  }
+                } catch (findError) {
+                  console.log('⚠️ Error finding voice session, will create new session:', findError);
+                }
+              }
+              
+              // Create new session only if not continuing existing one
+              if (!sessionObjectId) {
+                // Use the sessionId from Python service if available, otherwise create new one
+                const pythonSessionId = therapyResponse.sessionId;
+                
+                if (pythonSessionId) {
+                  // Create session with the ID from Python service
+                  const sessionData = await mongoStorage.createEmotionalSessionWithId({
+                    id: pythonSessionId,
+                    userId: finalUserId,
+                    sessionType: isCrisis ? 'crisis' : 'chat',
+                    mode: 'voice',
+                    emotion: crisisLevel
+                  });
+                  sessionObjectId = pythonSessionId;
+                } else {
+                  // Fallback to creating new session with generated ID
+                  const sessionData = await mongoStorage.createEmotionalSession({
+                    userId: finalUserId,
+                    sessionType: isCrisis ? 'crisis' : 'chat',
+                    mode: 'voice',
+                    emotion: crisisLevel
+                  });
+                  sessionObjectId = sessionData?.id;
+                }
+              }
 
-              // Add the conversation messages to the session if it was created
-              if (sessionData && sessionData.id) {
-                await mongoStorage.addMessageToEmotionalSession(sessionData.id, {
+              // Add the conversation messages to the session
+              if (sessionObjectId) {
+                await mongoStorage.addMessageToEmotionalSession(sessionObjectId, {
                   role: 'user',
                   content: text.trim()
                 });
 
-                await mongoStorage.addMessageToEmotionalSession(sessionData.id, {
+                await mongoStorage.addMessageToEmotionalSession(sessionObjectId, {
                   role: 'assistant', 
                   content: finalResponse
                 });
@@ -1289,8 +1331,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         audioBase64: audioBase64,
         hasTTS: !!audioBase64,
         // **NEW: Add therapy service fields (same as chat)**
-        sessionId: therapyResponse?.sessionId,
-        userId: therapyResponse?.userId,
+        sessionId: therapyResponse?.sessionId || sessionObjectId,
+        userId: therapyResponse?.userId || finalUserId,
         sessionKey: therapyResponse?.sessionKey,
         crisisLevel: crisisLevel,
         isCrisis: isCrisis,
@@ -1360,10 +1402,11 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
       }
 
       const therapyResponse = await pythonServiceResponse.json();
+      console.log('🔍 Python service returned sessionId:', therapyResponse.sessionId);
       
       // Save to EmotionalSession collection for history tracking
+      let sessionObjectId: string | undefined;
       try {
-        let sessionObjectId: string | undefined;
         
         // If sessionId provided, try to continue existing session
         if (sessionId) {
@@ -1386,13 +1429,29 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
         
         // Create new session only if not continuing existing one
         if (!sessionObjectId) {
-          const sessionData = await mongoStorage.createEmotionalSession({
-            userId: finalUserId,
-            sessionType: therapyResponse.isCrisis ? 'crisis' : 'chat',
-            mode: 'chat',
-            emotion: therapyResponse.crisisLevel || 'neutral'
-          });
-          sessionObjectId = sessionData?.id;
+          // Use the sessionId from Python service if available, otherwise create new one
+          const pythonSessionId = therapyResponse.sessionId;
+          
+          if (pythonSessionId) {
+            // Create session with the ID from Python service
+            const sessionData = await mongoStorage.createEmotionalSessionWithId({
+              id: pythonSessionId,
+              userId: finalUserId,
+              sessionType: therapyResponse.isCrisis ? 'crisis' : 'chat',
+              mode: 'chat',
+              emotion: therapyResponse.crisisLevel || 'neutral'
+            });
+            sessionObjectId = pythonSessionId;
+          } else {
+            // Fallback to creating new session with generated ID
+            const sessionData = await mongoStorage.createEmotionalSession({
+              userId: finalUserId,
+              sessionType: therapyResponse.isCrisis ? 'crisis' : 'chat',
+              mode: 'chat',
+              emotion: therapyResponse.crisisLevel || 'neutral'
+            });
+            sessionObjectId = sessionData?.id;
+          }
         }
 
         // Add the conversation messages to the session
@@ -1416,8 +1475,8 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
       res.json({ 
         success: true,
         chatResponse: therapyResponse.response,
-        sessionId: therapyResponse.sessionId,
-        userId: therapyResponse.userId,
+        sessionId: therapyResponse.sessionId || sessionObjectId,
+        userId: therapyResponse.userId || finalUserId,
         sessionKey: therapyResponse.sessionKey,
         crisisLevel: therapyResponse.crisisLevel,
         isCrisis: therapyResponse.isCrisis,
@@ -1675,6 +1734,63 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
       res.status(500).json({ 
         success: false,
         error: 'Failed to generate titles',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Get specific therapy session by ID
+  app.get('/api/therapy/session/:sessionId', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'User not authenticated' });
+      }
+
+      const { sessionId } = req.params;
+      
+      console.log('📋 Fetching session details for user:', userId, 'Session ID:', sessionId);
+
+      // Try to find the session in EmotionalSession collection first
+      const emotionalSession = await mongoStorage.findEmotionalSession(sessionId, userId);
+      
+      if (emotionalSession) {
+        const sessionData = {
+          id: emotionalSession.id || emotionalSession._id,
+          sessionId: emotionalSession.id || emotionalSession._id,
+          userId: emotionalSession.userId,
+          type: 'support' as const,
+          mode: emotionalSession.mode || 'chat',
+          title: emotionalSession.title || 'Emotional Support Session',
+          date: emotionalSession.createdAt || emotionalSession.timestamp || new Date(),
+          duration: emotionalSession.duration ? `${Math.round(emotionalSession.duration / 1000 / 60)} min` : 'N/A',
+          mood: emotionalSession.emotionalState || 'neutral',
+          messages: emotionalSession.messages || [],
+          riskLevel: emotionalSession.riskLevel || 'low',
+          notes: emotionalSession.messages && emotionalSession.messages.length > 0 
+            ? emotionalSession.messages[0].content.substring(0, 100) + '...'
+            : 'No messages recorded'
+        };
+
+        return res.json({
+          success: true,
+          session: sessionData
+        });
+      }
+
+      // If not found in emotional sessions, try therapeutic sessions
+      // TODO: Add therapeutic session retrieval if needed
+      
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Session not found or access denied' 
+      });
+
+    } catch (error) {
+      console.error("❌ Error fetching session details:", error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to fetch session details',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
