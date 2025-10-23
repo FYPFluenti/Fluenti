@@ -565,11 +565,12 @@ export const mongoStorage = {
   async getConnectionStatus() {
     try {
       const connected = await this._ensureConnected(5000);
+      const mongoose = await import('mongoose');
       return {
         connected: connected && isMongoConnected(),
-        readyState: (require('mongoose') as any).connection?.readyState || 0,
-        host: (require('mongoose') as any).connection?.host || 'unknown',
-        name: (require('mongoose') as any).connection?.name || 'unknown'
+        readyState: (mongoose.default as any).connection?.readyState || 0,
+        host: (mongoose.default as any).connection?.host || 'unknown',
+        name: (mongoose.default as any).connection?.name || 'unknown'
       };
     } catch (error) {
       return {
@@ -577,6 +578,47 @@ export const mongoStorage = {
         error: error instanceof Error ? error.message : 'Unknown error',
         readyState: 0
       };
+    }
+  },
+
+  async saveEmergencyEvent(eventData: {
+    userId: string;
+    sessionId: string;
+    crisisLevel: string;
+    harmType: string;
+    triggerMessage: string;
+    botResponse: string;
+    conversationHistory: string;
+    timestamp: Date;
+    notificationSent: boolean;
+  }) {
+    try {
+      await this._ensureConnected();
+      
+      // Import mongoose to get the connection
+      const mongoose = await import('mongoose');
+      const db = mongoose.default.connection.db;
+      
+      if (!db) {
+        throw new Error('MongoDB connection not available');
+      }
+
+      const emergencyEventsCollection = db.collection('emergency_events');
+      
+      const emergencyEvent = {
+        emergencyId: nanoid(), // Use custom field for our ID
+        ...eventData,
+        createdAt: new Date()
+      };
+
+      const result = await emergencyEventsCollection.insertOne(emergencyEvent);
+      
+      console.log(`✅ Emergency event saved: ${emergencyEvent.emergencyId}`);
+      return emergencyEvent.emergencyId;
+      
+    } catch (error) {
+      console.error('❌ Error saving emergency event:', error);
+      throw error;
     }
   }
 };

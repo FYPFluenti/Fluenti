@@ -27,7 +27,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 # Import the therapy bot components
 try:
-    from emotional_therapy import therapy_bot, interface, TherapyInterface, CrisisLevel
+    from emotional_therapy import therapy_bot, interface, TherapyInterface, CrisisLevel, HarmType
     print("✅ Successfully imported therapy components")
     
     # Type checking for imported components
@@ -37,6 +37,8 @@ try:
         print("⚠️ TherapyInterface is None - cannot create sessions")
     if CrisisLevel is None:
         print("⚠️ CrisisLevel is None - crisis detection unavailable")
+    if HarmType is None:
+        print("⚠️ HarmType is None - harm type detection unavailable")
         
 except ImportError as e:
     print(f"❌ Error importing therapy components: {e}")
@@ -44,6 +46,7 @@ except ImportError as e:
     interface = None
     TherapyInterface = None
     CrisisLevel = None
+    HarmType = None
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for frontend communication
@@ -282,8 +285,9 @@ def therapy_chat():
         # Send message to existing session
         response = session_interface.send_message(message)
         
-        # Check if response indicates crisis level
+        # Check if response indicates crisis level and harm type
         crisis_level = session_interface.last_crisis_level
+        harm_type = getattr(session_interface, 'last_harm_type', None)
         is_crisis = crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL] if CrisisLevel else False
         
         # Get AI crisis detection info if available
@@ -303,6 +307,7 @@ def therapy_chat():
             'sessionId': session_interface.current_session_id,
             'userId': user_id,
             'crisisLevel': crisis_level.value if crisis_level else 'none',
+            'harmType': harm_type.value if harm_type else 'none',
             'isCrisis': is_crisis,
             'newSession': False,
             'aiDetection': ai_detection_info

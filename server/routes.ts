@@ -1118,6 +1118,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Emergency notification endpoint for crisis situations
+  app.post('/api/emergency-notification', async (req: Request, res: Response) => {
+    try {
+      const { 
+        user_id, 
+        session_id, 
+        crisis_level, 
+        harm_type, 
+        trigger_message, 
+        bot_response, 
+        conversation_history, 
+        timestamp 
+      } = req.body;
+
+      console.log(`🚨 EMERGENCY NOTIFICATION - User: ${user_id}, Crisis: ${crisis_level}, Harm: ${harm_type}`);
+
+      // Import nodemailer dynamically
+      const nodemailer = await import('nodemailer');
+
+      // Configure email transporter (you'll need to set these environment variables)
+      const transporter = nodemailer.default.createTransport({
+        service: 'gmail', // or your email service
+        auth: {
+          user: process.env.EMERGENCY_EMAIL_USER,
+          pass: process.env.EMERGENCY_EMAIL_PASS
+        }
+      });
+
+      // Create email content
+      const emailSubject = `🚨 URGENT: Crisis Detection - ${harm_type} (${crisis_level})`;
+      const emailBody = `
+EMERGENCY ALERT: Crisis Detection System
+
+User ID: ${user_id}
+Session ID: ${session_id}
+Crisis Level: ${crisis_level}
+Harm Type: ${harm_type}
+Timestamp: ${timestamp}
+
+TRIGGER MESSAGE:
+"${trigger_message}"
+
+BOT RESPONSE:
+"${bot_response}"
+
+CONVERSATION HISTORY:
+${conversation_history}
+
+Please review this case immediately and take appropriate action.
+
+This is an automated alert from the Fluenti Crisis Detection System.
+      `;
+
+      // Send email notification
+      const mailOptions = {
+        from: process.env.EMERGENCY_EMAIL_USER,
+        to: process.env.EMERGENCY_NOTIFICATION_EMAIL || 'admin@fluenti.com',
+        subject: emailSubject,
+        text: emailBody
+      };
+
+      await transporter.sendMail(mailOptions);
+
+      console.log('✅ Emergency notification email sent successfully');
+
+      // Store emergency event in database
+      await mongoStorage.saveEmergencyEvent({
+        userId: user_id,
+        sessionId: session_id,
+        crisisLevel: crisis_level,
+        harmType: harm_type,
+        triggerMessage: trigger_message,
+        botResponse: bot_response,
+        conversationHistory: conversation_history,
+        timestamp: new Date(timestamp),
+        notificationSent: true
+      });
+
+      res.status(200).json({ success: true, message: 'Emergency notification sent' });
+
+    } catch (error) {
+      console.error('❌ Emergency notification error:', error);
+      res.status(500).json({ 
+        success: false, 
+        error: 'Failed to send emergency notification',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
 
   // Enhanced emotional support endpoint with therapy service integration
   app.post('/api/emotional-support', tokenBasedAuth, upload.single('audio'), async (req: AuthenticatedRequest, res: Response) => {
@@ -1213,7 +1302,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             therapyResponse = await pythonServiceResponse.json();
             finalResponse = therapyResponse.response;
             crisisLevel = therapyResponse.crisisLevel || 'none';
+            const harmType = therapyResponse.harmType || 'none';
             isCrisis = therapyResponse.isCrisis || false;
+            
+            // Log crisis and harm type information
+            if (crisisLevel !== 'none' || harmType !== 'none') {
+              console.log(`🚨 Crisis Detection - Level: ${crisisLevel}, Harm Type: ${harmType}`);
+            }
             console.log('✅ Therapy service response received');
             console.log('🔍 Python service returned sessionId:', therapyResponse.sessionId);
 

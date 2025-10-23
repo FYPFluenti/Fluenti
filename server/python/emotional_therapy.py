@@ -437,6 +437,12 @@ class CrisisLevel(Enum):
     HIGH = "high"
     CRITICAL = "critical"
 
+class HarmType(Enum):
+    NONE = "none"
+    SELF_HARM = "self_harm"
+    HARM_TO_OTHERS = "harm_to_others"
+    BOTH = "both"
+
 @dataclass
 class UserSession:
     user_id: str
@@ -1070,10 +1076,10 @@ class CrisisDetector:
         else:
             return CrisisLevel.NONE
 
-    def detect_crisis_level(self, text: str, user_id: Optional[str] = None) -> CrisisLevel:
+    def detect_crisis_level(self, text: str, user_id: Optional[str] = None) -> Tuple[CrisisLevel, HarmType]:
         """Main crisis detection method - Configurable: AI/Pattern/Hybrid"""
         if not text or not text.strip():
-            return CrisisLevel.NONE
+            return CrisisLevel.NONE, HarmType.NONE
 
         # Use current user if no user_id provided
         if not user_id:
@@ -1094,18 +1100,20 @@ class CrisisDetector:
         else:
             # Hybrid mode (default)
             ai_level = CrisisLevel.NONE
+            ai_harm_type = HarmType.NONE
             pattern_level = CrisisLevel.NONE
+            pattern_harm_type = HarmType.NONE
 
             # Try AI-powered crisis detection
             try:
-                ai_level = self._ai_powered_crisis_detection(text)
-                print(f"🤖 AI Analysis: {ai_level.value}")
+                ai_level, ai_harm_type = self._ai_powered_crisis_detection(text)
+                print(f"🤖 AI Analysis: {ai_level.value} (Harm: {ai_harm_type.value})")
             except Exception as e:
                 print(f"⚠️ AI crisis detection failed: {e}")
 
             # Always run pattern-based detection for comparison
-            pattern_level = self._pattern_based_crisis_detection(text, user_id)
-            print(f"📊 Pattern Analysis: {pattern_level.value}")
+            pattern_level, pattern_harm_type = self._pattern_based_crisis_detection(text, user_id)
+            print(f"📊 Pattern Analysis: {pattern_level.value} (Harm: {pattern_harm_type.value})")
 
             # Hybrid decision logic: Take the higher of the two levels for safety
             crisis_levels = [CrisisLevel.NONE, CrisisLevel.LOW, CrisisLevel.MEDIUM, CrisisLevel.HIGH, CrisisLevel.CRITICAL]
@@ -1116,56 +1124,102 @@ class CrisisDetector:
             # Use the higher level (more conservative approach for safety)
             final_level = crisis_levels[max(ai_index, pattern_index)]
             
-            print(f"🔒 Final Decision: {final_level.value} (AI: {ai_level.value}, Pattern: {pattern_level.value})")
+            # Combine harm types - if either detects harm to others, flag it
+            final_harm_type = HarmType.NONE
+            if ai_harm_type == HarmType.HARM_TO_OTHERS or pattern_harm_type == HarmType.HARM_TO_OTHERS:
+                final_harm_type = HarmType.HARM_TO_OTHERS
+            elif ai_harm_type == HarmType.SELF_HARM or pattern_harm_type == HarmType.SELF_HARM:
+                final_harm_type = HarmType.SELF_HARM
+            elif ai_harm_type == HarmType.BOTH or pattern_harm_type == HarmType.BOTH:
+                final_harm_type = HarmType.BOTH
             
-            return final_level
+            print(f"🔒 Final Decision: {final_level.value} (AI: {ai_level.value}, Pattern: {pattern_level.value})")
+            if final_harm_type != HarmType.NONE:
+                print(f"⚠️ HARM DETECTED: {final_harm_type.value}")
+            
+            return final_level, final_harm_type
 
-    def _ai_powered_crisis_detection(self, text: str) -> CrisisLevel:
+    def _ai_powered_crisis_detection(self, text: str) -> Tuple[CrisisLevel, HarmType]:
         """AI-powered crisis detection using LLM analysis"""
         if not hasattr(self, 'llm') or self.llm is None:
             raise Exception("LLM not available")
 
         crisis_analysis_prompt = f"""
-You are a mental health crisis assessment AI. Analyze the following message for suicide risk and crisis level.
+You are a mental health crisis assessment AI. Analyze the following message for crisis level AND harm type.
 
 Message: "{text}"
 
 Instructions:
-1. Assess the immediate suicide/self-harm risk level
+1. Assess the immediate crisis risk level (suicide/self-harm vs harm to others)
 2. Consider context, intent, and emotional state
 3. Look for both explicit and implicit crisis indicators
-4. Consider if this is genuine distress vs. casual expression
+4. Identify if the harm is directed toward self, others, or both
 
-Return ONLY one of these exact levels:
-- CRITICAL: Immediate suicide/self-harm intent or plan
-- HIGH: Strong suicidal ideation or distress  
-- MEDIUM: Moderate emotional distress or concerning thoughts
+Return your analysis in this EXACT format:
+CRISIS_LEVEL: [one of: CRITICAL, HIGH, MEDIUM, LOW, NONE]
+HARM_TYPE: [one of: SELF_HARM, HARM_TO_OTHERS, BOTH, NONE]
+
+Crisis Levels:
+- CRITICAL: Immediate intent or plan to harm self or others
+- HIGH: Strong ideation or distress about harming self or others
+- MEDIUM: Moderate emotional distress or concerning thoughts about harm
 - LOW: Mild emotional difficulties
 - NONE: No crisis indicators
 
-Crisis Level:"""
+Harm Types:
+- SELF_HARM: Intent/thoughts about harming oneself
+- HARM_TO_OTHERS: Intent/thoughts about harming other people
+- BOTH: Both self-harm and harm to others mentioned
+- NONE: No harm indicators
+
+Analysis:"""
 
         try:
             response = self.llm.invoke(crisis_analysis_prompt)
             ai_response = response.content.strip().upper() if hasattr(response, 'content') else str(response).strip().upper()
             
-            # Parse AI response
-            if 'CRITICAL' in ai_response:
-                return CrisisLevel.CRITICAL
-            elif 'HIGH' in ai_response:
-                return CrisisLevel.HIGH
-            elif 'MEDIUM' in ai_response:
-                return CrisisLevel.MEDIUM
-            elif 'LOW' in ai_response:
-                return CrisisLevel.LOW
-            else:
-                return CrisisLevel.NONE
-                
+            # Parse AI response for crisis level
+            crisis_level = CrisisLevel.NONE
+            if 'CRISIS_LEVEL:' in ai_response:
+                level_part = ai_response.split('CRISIS_LEVEL:')[1].split('\n')[0].strip()
+                if 'CRITICAL' in level_part:
+                    crisis_level = CrisisLevel.CRITICAL
+                elif 'HIGH' in level_part:
+                    crisis_level = CrisisLevel.HIGH
+                elif 'MEDIUM' in level_part:
+                    crisis_level = CrisisLevel.MEDIUM
+                elif 'LOW' in level_part:
+                    crisis_level = CrisisLevel.LOW
+            
+            # Parse AI response for harm type
+            harm_type = HarmType.NONE
+            if 'HARM_TYPE:' in ai_response:
+                harm_part = ai_response.split('HARM_TYPE:')[1].split('\n')[0].strip()
+                if 'HARM_TO_OTHERS' in harm_part:
+                    harm_type = HarmType.HARM_TO_OTHERS
+                elif 'SELF_HARM' in harm_part:
+                    harm_type = HarmType.SELF_HARM
+                elif 'BOTH' in harm_part:
+                    harm_type = HarmType.BOTH
+            
+            # Fallback parsing if structured format not found
+            if crisis_level == CrisisLevel.NONE:
+                if 'CRITICAL' in ai_response:
+                    crisis_level = CrisisLevel.CRITICAL
+                elif 'HIGH' in ai_response:
+                    crisis_level = CrisisLevel.HIGH
+                elif 'MEDIUM' in ai_response:
+                    crisis_level = CrisisLevel.MEDIUM
+                elif 'LOW' in ai_response:
+                    crisis_level = CrisisLevel.LOW
+            
+            return crisis_level, harm_type
+               
         except Exception as e:
             print(f"❌ AI crisis analysis error: {e}")
-            raise e
+            return CrisisLevel.NONE, HarmType.NONE
 
-    def _pattern_based_crisis_detection(self, text: str, user_id: Optional[str] = None) -> CrisisLevel:
+    def _pattern_based_crisis_detection(self, text: str, user_id: Optional[str] = None) -> Tuple[CrisisLevel, HarmType]:
         """Original pattern-based crisis detection as fallback"""
         # Extract linguistic features
         features = self._extract_linguistic_features(text)
@@ -1208,7 +1262,34 @@ Crisis Level:"""
         if contexts:
             print(f"🔍 Learned contexts: {contexts}")
 
-        return final_level
+        # Determine harm type based on patterns
+        harm_type = HarmType.NONE
+        text_lower = text.lower()
+        
+        # Check for harm to others patterns
+        harm_others_patterns = [
+            'hurt someone', 'kill someone', 'harm others', 'attack', 'violence',
+            'revenge', 'get back at', 'make them pay', 'hurt them', 'teach them a lesson',
+            'hate everyone', 'everyone deserves', 'they all should', 'nobody understands'
+        ]
+        
+        # Check for self-harm patterns  
+        self_harm_patterns = [
+            'hurt myself', 'kill myself', 'end it all', 'suicide', 'self harm',
+            'cut myself', 'overdose', 'jump off', 'hang myself', 'slit my wrists'
+        ]
+        
+        has_harm_others = any(pattern in text_lower for pattern in harm_others_patterns)
+        has_self_harm = any(pattern in text_lower for pattern in self_harm_patterns)
+        
+        if has_harm_others and has_self_harm:
+            harm_type = HarmType.BOTH
+        elif has_harm_others:
+            harm_type = HarmType.HARM_TO_OTHERS
+        elif has_self_harm:
+            harm_type = HarmType.SELF_HARM
+
+        return final_level, harm_type
 
     def get_safety_assessment_questions(self, crisis_level: CrisisLevel) -> List[str]:
         """Generate dynamic safety assessment questions"""
@@ -1818,11 +1899,11 @@ Your personalized crisis intervention response:"""
             print(f"⚠️ Context retrieval error: {e}")
             return ""
 
-    def generate_enhanced_response(self, user_input: str, user_id: str, session_id: str) -> Tuple[str, CrisisLevel]:
+    def generate_enhanced_response(self, user_input: str, user_id: str, session_id: str) -> Tuple[str, CrisisLevel, HarmType]:
         """Generate responses with strict session isolation"""
         try:
             # Enhanced crisis detection
-            crisis_level = self.crisis_detector.detect_crisis_level(user_input, user_id)
+            crisis_level, harm_type = self.crisis_detector.detect_crisis_level(user_input, user_id)
 
             # Get conversation count for THIS session only
             current_session_history = self.storage.get_conversation_history(user_id, session_id)
@@ -1830,7 +1911,7 @@ Your personalized crisis intervention response:"""
 
             # Determine response type dynamically
             response_type = self._determine_response_type(user_input, crisis_level, conversation_count)
-            print(f" Response Type Determined: {response_type} (Crisis Level: {crisis_level.value})")
+            print(f" Response Type Determined: {response_type} (Crisis Level: {crisis_level.value}, Harm Type: {harm_type.value})")
 
             #  Get conversation history from THIS session only
             conversation_history = self._format_conversation_history(user_id, session_id, limit=10)
@@ -1876,6 +1957,11 @@ Your personalized crisis intervention response:"""
             # Generate response
             response = self._generate_with_retry(formatted_prompt)
 
+            # Handle emergency notification for harm to others
+            if harm_type in [HarmType.HARM_TO_OTHERS, HarmType.BOTH] and crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
+                print(f" EMERGENCY: Harm to others detected - Level: {crisis_level.value}, Type: {harm_type.value}")
+                self._send_emergency_notification(user_id, session_id, user_input, response, crisis_level, harm_type)
+
             # Minimal post-processing - only add resources for actual crises
             if crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
                 print(f" Adding crisis resources for {crisis_level.value}")
@@ -1896,11 +1982,53 @@ Your personalized crisis intervention response:"""
                 mood_score=mood_score
             )
 
-            return response, crisis_level
+            return response, crisis_level, harm_type
 
         except Exception as e:
             print(f"❌ Error generating response: {e}")
             raise RuntimeError(f"Response generation failed: {e}")
+
+    def _send_emergency_notification(self, user_id: str, session_id: str, user_input: str, bot_response: str, crisis_level: CrisisLevel, harm_type: HarmType):
+        """Send emergency notification for harm to others scenarios"""
+        try:
+            # Get conversation history for context
+            conversation_history = self.storage.get_conversation_history(user_id, session_id)
+            
+            # Format conversation for email
+            formatted_history = "\n".join([
+                f"User: {conv.get('user_input', '')}\nBot: {conv.get('bot_response', '')}\n---"
+                for conv in conversation_history[-10:]  # Last 10 exchanges
+            ])
+            
+            # Create emergency notification payload
+            notification_data = {
+                'user_id': user_id,
+                'session_id': session_id,
+                'crisis_level': crisis_level.value,
+                'harm_type': harm_type.value,
+                'trigger_message': user_input,
+                'bot_response': bot_response,
+                'conversation_history': formatted_history,
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            # Send to backend for email notification
+            import requests
+            try:
+                response = requests.post(
+                    'http://localhost:3000/api/emergency-notification',
+                    json=notification_data,
+                    timeout=5
+                )
+                if response.status_code == 200:
+                    print(f"✅ Emergency notification sent successfully")
+                else:
+                    print(f"❌ Emergency notification failed: {response.status_code}")
+            except Exception as req_error:
+                print(f"❌ Failed to send emergency notification: {req_error}")
+                
+        except Exception as e:
+            print(f"❌ Error in emergency notification: {e}")
 
     # ... (rest of the methods remain the same but with session isolation checks)
     def _add_crisis_resources(self, response: str, crisis_level: CrisisLevel) -> str:
@@ -1912,12 +2040,12 @@ Your personalized crisis intervention response:"""
 • 0800-00-100 - Rozan Crisis Helpline"""
 
         elif crisis_level == CrisisLevel.HIGH:
-            resources = """\n\n⚠️ URGENT SUPPORT (PAKISTAN):
+            resources = """\n\n URGENT SUPPORT (PAKISTAN):
 • 1019 - Mental Health Crisis Line
 • 0800-00-100 - Rozan Crisis Helpline"""
 
         elif crisis_level == CrisisLevel.MEDIUM:
-            resources = """\n\n💙 SUPPORT AVAILABLE (PAKISTAN):
+            resources = """\n\n SUPPORT AVAILABLE (PAKISTAN):
 • 1019 - Mental Health Crisis Line
 • 0800-00-100 - Rozan Crisis Helpline"""
 
@@ -2004,6 +2132,7 @@ class TherapyInterface:
         self.conversation_count = 0
         self.session_start_time = None
         self.last_crisis_level = CrisisLevel.NONE
+        self.last_harm_type = HarmType.NONE
 
     def start_session(self, user_id: Optional[str] = None) -> str:
         """Start a new therapy session with enhanced context awareness"""
@@ -2022,6 +2151,7 @@ class TherapyInterface:
         self.conversation_count = 0
         self.session_start_time = datetime.now()
         self.last_crisis_level = CrisisLevel.NONE
+        self.last_harm_type = HarmType.NONE
 
         # Dynamic welcome message
         current_hour = datetime.now().hour
@@ -2058,8 +2188,8 @@ How are you doing today?"""
             error_msg = """Please start a new session first.
 
 If this is an emergency:
-• **Call 1019** - Mental Health Crisis Line
-• **Call 1166** - National Emergency Helpline"""
+• Call 1019 - Mental Health Crisis Line
+• Call 1166 - National Emergency Helpline"""
             return error_msg
 
         if not message.strip():
@@ -2067,7 +2197,7 @@ If this is an emergency:
 
         try:
             # Generate contextually-aware response with session memory
-            response, crisis_level = self.therapy_bot.generate_enhanced_response(
+            response, crisis_level, harm_type = self.therapy_bot.generate_enhanced_response(
                 user_input=message,
                 user_id=self.current_user_id,
                 session_id=self.current_session_id
@@ -2076,11 +2206,15 @@ If this is an emergency:
             # Update conversation tracking (backend only)
             self.conversation_count += 1
             self.last_crisis_level = crisis_level
-            self._log_session_info(f"Message processed: {crisis_level.value}")
+            self.last_harm_type = harm_type  # Store harm type for later use
+            self._log_session_info(f"Message processed: {crisis_level.value}, Harm: {harm_type.value}")
 
-            # Format response based on crisis level
+            # Format response based on crisis level and harm type
             if crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
-                formatted_response = f" URGENT SUPPORT NEEDED \n\n{response}"
+                if harm_type in [HarmType.HARM_TO_OTHERS, HarmType.BOTH]:
+                    formatted_response = f" EMERGENCY SUPPORT NEEDED \n\n{response}\n\n This situation requires immediate attention. Please contact emergency services if there is immediate danger to yourself or others."
+                else:
+                    formatted_response = f" URGENT SUPPORT NEEDED \n\n{response}"
             else:
                 formatted_response = response
 
