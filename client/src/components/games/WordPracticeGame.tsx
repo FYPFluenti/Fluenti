@@ -73,7 +73,18 @@ export default function WordPracticeGame({
   // AI Enhancement States
   const [gameMode, setGameMode] = useState<'story' | 'classic' | 'challenge' | 'conquest'>('story');
   const [selectedChallengeMode, setSelectedChallengeMode] = useState<string>('');
-  const [showModeSelector, setShowModeSelector] = useState(true);
+  const [showModeSelector, setShowModeSelector] = useState(() => {
+    // Check if game should start directly (from speech-therapy.tsx)
+    if (gameData?.skipSubModes || gameData?.directStart) {
+      console.log('🎮 Direct start detected - skipping mode selector:', {
+        skipSubModes: gameData.skipSubModes,
+        directStart: gameData.directStart,
+        selectedMode: gameData.selectedMode
+      });
+      return false; // Skip mode selector
+    }
+    return true; // Show mode selector by default
+  });
   const [challengeModes, setChallengeModes] = useState<any[]>([]);
   const [dailyChallenge, setDailyChallenge] = useState<any>(null);
   const [storyContext, setStoryContext] = useState<any>(null);
@@ -673,8 +684,43 @@ export default function WordPracticeGame({
   // Load child profile and generate personalized words
   useEffect(() => {
     const initializeGame = async () => {
+      // ✅ HANDLE DIRECT START from speech-therapy.tsx
+      if (gameData?.skipSubModes || gameData?.directStart) {
+        console.log('🎮 Direct start mode detected:', {
+          gameType: gameData.selectedMode?.type,
+          gameName: gameData.selectedMode?.name,
+          title: gameData.title
+        });
+        
+        // Set game mode based on the passed data
+        if (gameData.selectedMode?.type === 'daily-quest') {
+          console.log('🏆 Starting Daily Quest (Conquest Mode)');
+          setGameMode('conquest');
+          setSelectedChallengeMode(''); // Clear challenge mode
+        } else if (gameData.selectedMode?.type === 'challenge-mode') {
+          console.log('🎯 Starting Challenge Mode - Speed Round');
+          setGameMode('challenge');
+          setSelectedChallengeMode('speed_round'); // Set default to speed round (correct ID)
+          setShowChallengeModeSelector(false); // Skip challenge mode selector
+          // Continue with game initialization (don't return early)
+        } else if (gameData.selectedMode?.type === 'story-adventure') {
+          console.log('📖 Starting Story Adventure');
+          setGameMode('story');
+          setSelectedChallengeMode(''); // Clear challenge mode
+          // ✅ IMPORTANT: Show story opening when story mode is detected
+          setShowStoryOpening(true);
+        } else {
+          console.log('📝 Starting Classic Mode');
+          setGameMode('classic');
+          setSelectedChallengeMode(''); // Clear challenge mode
+        }
+        
+        setShowModeSelector(false);
+        // Continue with game initialization below
+      }
+
       // Don't initialize if we're still showing mode selector
-      if (showModeSelector) {
+      if (showModeSelector && !gameData?.skipSubModes && !gameData?.directStart) {
         setIsLoadingWords(false);
         return;
       }
@@ -797,6 +843,12 @@ export default function WordPracticeGame({
                 setPersonalizedWords(storyWords);
                 setStoryContext(story);
                 setIsLoadingStory(false);
+                
+                // ✅ IMPORTANT: Show story opening after story context is loaded
+                if (gameData?.selectedMode?.type === 'story-adventure' || gameMode === 'story') {
+                  console.log('📖 Triggering story opening after story context loaded');
+                  setShowStoryOpening(true);
+                }
                 
                 // Show story introduction
                 toast({
@@ -2394,7 +2446,7 @@ export default function WordPracticeGame({
   }
 
   // 🎮 ENHANCED GAME MODE SELECTOR (Beautiful UX from Mockup)
-  if (showModeSelector && !isLoadingWords) {
+  if (showModeSelector && !isLoadingWords && !gameData?.skipSubModes && !gameData?.directStart) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-purple-50 via-pink-50 to-blue-50 px-4 py-8">
         <div className="max-w-5xl mx-auto">
