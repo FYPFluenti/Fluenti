@@ -1,13 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation, useSearch } from 'wouter';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, Heart, MessageCircle, X } from 'lucide-react';
+import { AlertTriangle, Heart, MessageCircle, X, Send } from 'lucide-react';
 import SharedSidebarEmotional from '@/components/layout/SharedSidebarEmotional';
 import FeedbackModal from '@/components/layout/FeedbackModel';
 import PageHeader from '@/components/layout/PageHeader';
 import { useSession } from '@/hooks/useSession';
+import { useAuth } from '@/hooks/useAuth';
+import { useNotificationSounds } from '@/hooks/useAudio';
+import { ThinkingIndicator, MessageAnimationWrapper, TypingIndicator } from '@/components/chat/ChatAnimations';
+import { MessageHeader } from '@/components/chat/MessageHeader';
+import type { User } from '@/types/auth';
 
 interface Message {
   id: string;
@@ -34,6 +39,18 @@ const EmotionalSupport = () => {
   const [showFeedback, setShowFeedback] = useState(false);
   const [isContinuedSession, setIsContinuedSession] = useState(false);
   const [continuedSessionTitle, setContinuedSessionTitle] = useState<string>('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [showThinking, setShowThinking] = useState(false);
+  const [newMessageId, setNewMessageId] = useState<string | null>(null);
+
+  // Refs for animations and sound
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const lastTypingSoundRef = useRef<number>(0);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Audio hooks
+  const { playSendSound, playReceiveSound, playTypingSound } = useNotificationSounds();
 
   // Get session ID from URL parameters
   const searchParams = new URLSearchParams(useSearch());
@@ -41,12 +58,42 @@ const EmotionalSupport = () => {
   
   // Use the session hook to fetch session data if continuing
   const { session: existingSession, loading: sessionLoading, error: sessionError } = useSession(sessionIdFromUrl);
+  
+  // Use auth hook for authentication state
+  const { isAuthenticated, logout, user } = useAuth();
+  const typedUser = user as User | null;
 
   // Check service health and handle session continuation on component mount
   useEffect(() => {
     checkServiceHealth();
     handleSessionContinuation();
   }, [existingSession]);
+
+  // Auto-scroll to bottom when new messages are added
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  // Clear new message animation after delay
+  useEffect(() => {
+    if (newMessageId) {
+      const timer = setTimeout(() => {
+        setNewMessageId(null);
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [newMessageId]);
+
+  // Cleanup typing timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSessionContinuation = () => {
     try {
@@ -122,7 +169,9 @@ const EmotionalSupport = () => {
 
   const checkServiceHealth = async () => {
     try {
-      const res = await fetch('http://localhost:3000/api/therapy/health');
+      const res = await fetch('http://localhost:3000/api/therapy/health', {
+        credentials: 'include' // Include cookies for authentication
+      });
       const data = await res.json();
       setServiceStatus(data.success && data.python_service?.status === 'healthy' ? 'healthy' : 'unhealthy');
     } catch (error) {
@@ -132,16 +181,29 @@ const EmotionalSupport = () => {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !isAuthenticated) return;
     
     setIsLoading(true);
     const userMessage = input.trim();
     setInput(''); // Clear input immediately
     
+    // Hide typing indicator since user just sent the message
+    setIsTyping(false);
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Play send sound effect
+    playSendSound();
+    
+    // Show AI thinking indicator immediately
+    setShowThinking(true);
+    
     try {
       const res = await fetch('http://localhost:3000/api/emotional-support-chat', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           message: userMessage,
           language: language,
@@ -152,6 +214,13 @@ const EmotionalSupport = () => {
       });
       
       if (!res.ok) {
+        if (res.status === 401) {
+          // Handle authentication error - logout and redirect
+          console.error('Authentication failed - token may have expired');
+          await logout();
+          window.location.href = '/login';
+          return;
+        }
         throw new Error(`HTTP error! status: ${res.status}`);
       }
       
@@ -166,9 +235,16 @@ const EmotionalSupport = () => {
         });
       }
       
+      // Hide thinking indicator
+      setShowThinking(false);
+      
+      // Play receive sound effect
+      playReceiveSound();
+      
       // Add new message with crisis information
+      const messageId = Date.now().toString();
       const newMessage: Message = {
-        id: Date.now().toString(),
+        id: messageId,
         user: userMessage,
         ai: data.chatResponse || data.response || "I understand. Can you tell me more?",
         timestamp: new Date(),
@@ -177,11 +253,13 @@ const EmotionalSupport = () => {
       };
       
       setMessages(prev => [...prev, newMessage]);
+      setNewMessageId(messageId);
       
       // Show welcome message if it's a new session
       if (data.newSession && data.welcomeMessage && data.welcomeMessage !== data.chatResponse) {
+        const welcomeMessageId = (Date.now() - 1).toString();
         const welcomeMessage: Message = {
-          id: (Date.now() - 1).toString(),
+          id: welcomeMessageId,
           user: '',
           ai: data.welcomeMessage,
           timestamp: new Date(),
@@ -189,10 +267,22 @@ const EmotionalSupport = () => {
           isCrisis: false
         };
         setMessages(prev => [welcomeMessage, ...prev.slice(-1)]);
+        // Don't animate welcome message separately since it comes with the response
       }
       
     } catch (error) {
       console.error('Error:', error);
+      
+      // Hide thinking indicator
+      setShowThinking(false);
+      
+      // Check if it's an authentication error
+      if (error instanceof Error && error.message.includes('401')) {
+        await logout();
+        window.location.href = '/login';
+        return;
+      }
+      
       // Add error message with crisis resources
       const errorMessage: Message = {
         id: Date.now().toString(),
@@ -212,6 +302,55 @@ Your wellbeing is important.`,
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      setIsTyping(false);
+      setShowThinking(false);
+    }
+  };
+
+  // Handle input change with typing sound and animation
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    const oldValue = input;
+    const now = Date.now();
+    
+    // Only play sound when adding characters (not when deleting or pasting)
+    // And debounce to prevent too many sounds (max one every 50ms)
+    if (newValue.length > oldValue.length && 
+        newValue.length - oldValue.length === 1 && 
+        now - lastTypingSoundRef.current > 50) {
+      playTypingSound();
+      lastTypingSoundRef.current = now;
+    }
+    
+    // Show typing indicator when user is actively typing
+    if (newValue.length > 0 && newValue !== oldValue) {
+      setIsTyping(true);
+      
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      // Hide typing indicator after user stops typing for 1 second
+      typingTimeoutRef.current = setTimeout(() => {
+        setIsTyping(false);
+      }, 1000);
+    } else if (newValue.length === 0) {
+      // Hide typing indicator immediately if input is empty
+      setIsTyping(false);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    }
+    
+    setInput(newValue);
+  };
+
+  // Handle key press with enhanced UX
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
     }
   };
 
@@ -247,7 +386,19 @@ Your wellbeing is important.`,
           </div>
         </div>
         
-        <div className="flex-1 flex flex-col max-w-4xl mx-auto p-6 overflow-hidden">
+        <div className="flex-1 flex flex-col px-8 py-4 overflow-hidden">
+        {/* Authentication Alert */}
+        {!isAuthenticated && (
+          <div className="mb-4">
+            <Alert className="border-amber-200 bg-amber-50">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800">
+                Please <a href="/login" className="underline font-medium">log in</a> to access the emotional support chat.
+              </AlertDescription>
+            </Alert>
+          </div>
+        )}
+
         {/* Service Status Alert */}
         {serviceStatus === 'unhealthy' && (
           <div className="mb-4 space-y-4">
@@ -297,7 +448,7 @@ Your wellbeing is important.`,
         )}
 
           {/* Chat Messages */}
-          <div className="flex-1 rounded-lg p-4 mb-4 overflow-y-auto bg-muted/20 min-h-0">
+          <div className="flex-1 px-4 py-6 mb-4 overflow-y-auto min-h-0 scrollbar-hide">
           {messages.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
@@ -307,72 +458,171 @@ Your wellbeing is important.`,
             </div>
           ) : (
             <div className="space-y-4">
-              {messages.map((message) => (
-                <div key={message.id} className="space-y-2">
-                  {/* User message */}
-                  {message.user && (
-                    <div className="flex justify-end">
-                      <div className="bg-primary text-primary-foreground px-4 py-2 rounded-lg max-w-[80%]">
-                        <p className="whitespace-pre-wrap">{message.user}</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* AI response */}
-                  <div className="flex justify-start">
-                    <div className={`px-4 py-3 rounded-xl max-w-[80%] ${
-                      message.isCrisis 
-                        ? 'bg-gradient-to-br from-red-25 via-red-50 to-red-25 border border-red-200/60 shadow-md backdrop-blur-sm' 
-                        : 'bg-muted'
-                    }`}>
-                      {/* Crisis alert */}
-                      {message.isCrisis && (
-                        <div className="relative mb-4 p-4 bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-xl shadow-sm overflow-hidden">
-                          {/* Subtle animated background */}
-                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-100/20 to-transparent animate-pulse" />
-                          
-                          {/* Content */}
-                          <div className="relative flex items-start gap-3">
-                            <div className="flex-shrink-0 p-2 bg-red-100 rounded-full border border-red-200">
-                              <AlertTriangle className="w-5 h-5 text-red-600" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-sm font-semibold text-red-800 mb-1">
-                                Urgent Support Needed
-                              </h4>
-                              <p className="text-xs text-red-700/90 leading-relaxed">
-                                Crisis support resources are available 24/7. You don't have to face this alone.
-                              </p>
+              {messages.map((message, index) => (
+                <MessageAnimationWrapper 
+                  key={message.id} 
+                  isNew={message.id === newMessageId}
+                  delay={message.user ? 0 : 200}
+                >
+                  <div className="space-y-1">
+                    {/* User message */}
+                    {message.user && (
+                      <div className="flex flex-col">
+                        {/* User message header */}
+                        <div className="flex justify-center mb-2">
+                          <div className="w-full max-w-3xl flex justify-end">
+                            <div className="max-w-[70%]">
+                              <MessageHeader 
+                                type="user" 
+                                timestamp={message.timestamp}
+                                userName={typedUser?.firstName || 'You'}
+                                isNewMessage={message.id === newMessageId}
+                              />
                             </div>
                           </div>
                         </div>
-                      )}
-                      <div className="whitespace-pre-wrap">{message.ai}</div>
+                        
+                        {/* User message content */}
+                        <div className="flex justify-center">
+                          <div className="w-full max-w-3xl flex justify-end">
+                            <div className="max-w-[70%]">
+                              <p className="whitespace-pre-wrap text-large leading-relaxed text-foreground/90">{message.user}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* AI response */}
+                    {message.ai && (
+                      <div className="flex flex-col">
+                        {/* AI message header */}
+                        <div className="flex justify-center mb-2">
+                          <div className="w-full max-w-3xl flex justify-start">
+                            <div className="max-w-[70%]">
+                              <MessageHeader 
+                                type="ai" 
+                                timestamp={message.timestamp}
+                                isNewMessage={message.id === newMessageId && !message.user}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* AI message content */}
+                        <div className="flex justify-center">
+                          <div className="w-full max-w-3xl flex justify-start">
+                            <div className="max-w-[70%]">
+                              {/* Crisis alert */}
+                              {message.isCrisis && (
+                                <div className="relative mb-3 p-3 bg-red-50/50 border-l-4 border-red-400 rounded-r-lg">
+                                  <div className="flex items-start gap-2">
+                                    <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                      <h4 className="text-xs font-medium text-red-800 mb-1">
+                                        Crisis Support Available
+                                      </h4>
+                                      <p className="text-xs text-red-700/80 leading-relaxed">
+                                        24/7 resources: 1019 (Crisis Line), 1166 (Emergency), 0800-00-100 (Rozan)
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+                              <div className="whitespace-pre-wrap text-base leading-relaxed text-foreground/90">{message.ai}</div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </MessageAnimationWrapper>
+              ))}
+              
+              {/* Typing Indicator */}
+              {isTyping && (
+                <MessageAnimationWrapper isNew={true}>
+                  <div className="flex flex-col">
+                    <div className="flex justify-center mb-2">
+                      <div className="w-full max-w-3xl flex justify-end">
+                        <div className="max-w-[70%]">
+                          <MessageHeader 
+                            type="user" 
+                            timestamp={new Date()}
+                            userName={typedUser?.firstName || 'You'}
+                            isNewMessage={true}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-center mb-2">
+                      <div className="w-full max-w-3xl flex justify-end">
+                        <TypingIndicator className="text-muted-foreground" />
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                </MessageAnimationWrapper>
+              )}
+              
+              {/* Thinking Indicator */}
+              {showThinking && (
+                <MessageAnimationWrapper isNew={true}>
+                  <div className="flex flex-col">
+                    <div className="flex justify-center mb-2">
+                      <div className="w-full max-w-3xl flex justify-start">
+                        <div className="max-w-[70%]">
+                          <MessageHeader 
+                            type="ai" 
+                            timestamp={new Date()}
+                            isNewMessage={true}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex justify-center">
+                      <div className="w-full max-w-3xl flex justify-start">
+                        <ThinkingIndicator />
+                      </div>
+                    </div>
+                  </div>
+                </MessageAnimationWrapper>
+              )}
+              
+              {/* Scroll anchor */}
+              <div ref={messagesEndRef} />
             </div>
           )}
         </div>
 
           {/* Input */}
-          <div className="flex-shrink-0">
-            <div className="flex gap-2">
-            <Input 
-              value={input} 
-              onChange={(e) => setInput(e.target.value)} 
-              onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()} 
-              placeholder={language === 'ur' ? 'اپنا پیغام یہاں لکھیں...' : 'Share what\'s on your mind...'}
-              disabled={isLoading || serviceStatus === 'unhealthy'}
-              className="flex-1"
-            />
-            <Button 
-              onClick={handleSend} 
-              disabled={!input.trim() || isLoading || serviceStatus === 'unhealthy'}
-            >
-              {isLoading ? 'Sending...' : 'Send'}
-            </Button>
+          <div className="flex-shrink-0 flex justify-center">
+            <div className="flex gap-3 w-full max-w-2xl">
+              <Input 
+                ref={inputRef}
+                value={input} 
+                onChange={handleInputChange} 
+                onKeyDown={handleKeyPress} 
+                placeholder={language === 'ur' ? 'اپنا پیغام یہاں لکھیں...' : isAuthenticated ? 'Share what\'s on your mind...' : 'Please log in to chat...'}
+                disabled={isLoading || serviceStatus === 'unhealthy' || !isAuthenticated}
+                className="flex-1 transition-all duration-200 focus:scale-[1.01] focus:shadow-lg rounded-full px-4 py-3"
+              />
+              <Button 
+                onClick={handleSend} 
+                disabled={!input.trim() || isLoading || serviceStatus === 'unhealthy' || !isAuthenticated}
+                className="transition-all duration-200 hover:scale-105 active:scale-95 disabled:scale-100 rounded-full px-6"
+              >
+                {isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    <span>Sending...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Send className="w-4 h-4" />
+                    <span>Send</span>
+                  </div>
+                )}
+              </Button>
             </div>
           </div>
         </div>
