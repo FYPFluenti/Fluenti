@@ -20,7 +20,7 @@ export default function WelcomeScreen({ onNext, onSkip }: WelcomeScreenProps) {
 
         <div className="text-gray-600 text-base leading-relaxed mb-16 space-y-4">
           <p>
-            We have some questions to learn about your interests and help make this app special just for you.
+            We have some questions to learn about your children's interests and help make this app special just for them.
           </p>
           <p className="text-sm text-gray-500">
             Takes about 5 minutes
