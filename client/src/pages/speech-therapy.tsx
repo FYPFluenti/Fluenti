@@ -6,31 +6,16 @@ import { useLocation } from "wouter";
 import { 
   Star,
   Clock,
-  Volume2,
-  VolumeX,
-  Play,
   Crown,
   Zap,
   Target,
   Award,
   Sparkles,
-  Mic,
-  MicOff,
-  RotateCcw,
+  Play,
   CheckCircle,
-  ArrowRight,
-  Headphones,
-  MessageSquare,
-  Ear,
-  Construction,
-  Music,
-  BookOpen,
-  Bolt,
-  Cat,
-  Dog,
-  Home,
-  Bug,
-  Hand
+  Calendar,
+  Trophy,
+  BookMarked
 } from 'lucide-react';
 
 import SharedSidebar from '@/components/layout/SharedSidebar';
@@ -38,11 +23,6 @@ import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import FeedbackModal from '@/components/layout/FeedbackModel';
 import PageHeader from '@/components/layout/PageHeader';
 import WordPracticeGame from '@/components/games/WordPracticeGame';
-import SoundRecognitionGame from '@/components/games/SoundRecognitionGame';
-import SentenceBuildingGame from '@/components/games/SentenceBuildingGame';
-import RhythmTrainingGame from '@/components/games/RhythmTrainingGame';
-import StoryReadingGame from '@/components/games/StoryReadingGame';
-import QuickSoundsGame from '@/components/games/QuickSoundsGame';
 
 interface GameSession {
   _id: string;
@@ -59,7 +39,6 @@ export default function SpeechTherapyPage() {
   const { user, isAuthenticated } = useAuth() as { user: { firstName?: string; lastName?: string }; isAuthenticated: boolean };
   const [, setLocation] = useLocation();
   const [showFeedback, setShowFeedback] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
   const [activeGame, setActiveGame] = useState<any>(null);
   const [gameSession, setGameSession] = useState<GameSession | null>(null);
   const [gameData, setGameData] = useState<any>(null);
@@ -77,74 +56,47 @@ export default function SpeechTherapyPage() {
     averageAccuracy: 0
   });
 
-  // Games configuration
+  // Main games configuration - Direct game modes without sub-options
   const getGames = () => {
     const baseGames = [
       {
         id: 1,
-        title: "Word Practice",
-        description: "Practice pronouncing common words clearly and correctly",
-        icon: MessageSquare,
+        title: "Daily Quest",
+        description: "Complete today's special word challenges and earn bonus rewards",
+        icon: Calendar,
         difficulty: "Easy",
         duration: "10 min",
-        xpReward: 25,
-        category: "Pronunciation",
-        type: "word-practice"
+        xpReward: 50,
+        category: "Daily Challenge",
+        type: "daily-quest",
+        badge: "New Daily!",
+        badgeColor: "bg-green-500"
       },
       {
         id: 2,
-        title: "Sound Recognition",
-        description: "Listen and identify different speech sounds",
-        icon: Ear,
-        difficulty: "Easy", 
-        duration: "8 min",
-        xpReward: 20,
-        category: "Listening",
-        type: "sound-recognition"
+        title: "Challenge Mode",
+        description: "Test your skills with progressively harder word pronunciation challenges",
+        icon: Trophy,
+        difficulty: "Medium", 
+        duration: "15 min",
+        xpReward: 75,
+        category: "Timed Challenge",
+        type: "challenge-mode",
+        badge: "Popular",
+        badgeColor: "bg-[#ff6b1d]"
       },
       {
         id: 3,
-        title: "Sentence Building",
-        description: "Create complete sentences with proper pronunciation",
-        icon: Construction,
+        title: "Story Adventure",
+        description: "Practice words through an exciting interactive story journey",
+        icon: BookMarked,
         difficulty: "Medium",
-        duration: "15 min", 
-        xpReward: 40,
-        category: "Grammar",
-        type: "sentence-building"
-      },
-      {
-        id: 4,
-        title: "Rhythm Training",
-        description: "Practice speech rhythm and timing patterns",
-        icon: Music,
-        difficulty: "Medium",
-        duration: "12 min",
-        xpReward: 35,
-        category: "Fluency",
-        type: "rhythm-training"
-      },
-      {
-        id: 5,
-        title: "Story Reading",
-        description: "Read short stories with proper expression and clarity",
-        icon: BookOpen,
-        difficulty: "Hard",
-        duration: "20 min",
-        xpReward: 60,
-        category: "Reading",
-        type: "story-reading"
-      },
-      {
-        id: 6,
-        title: "Quick Sounds",
-        description: "Fast-paced pronunciation challenges for confident speakers",
-        icon: Bolt,
-        difficulty: "Hard",
-        duration: "18 min",
-        xpReward: 50,
-        category: "Speed",
-        type: "quick-sounds"
+        duration: "20 min", 
+        xpReward: 100,
+        category: "Story Mode",
+        type: "story-adventure",
+        badge: "Most Fun!",
+        badgeColor: "bg-purple-500"
       }
     ];
 
@@ -154,12 +106,11 @@ export default function SpeechTherapyPage() {
       return {
         ...game,
         stars: progress?.stars || 0,
-
-        //lock the game later on 
-        unlocked: true, // TEMPORARILY UNLOCK ALL GAMES
+        unlocked: true, // All games unlocked
         level: progress?.level || 1,
         bestScore: progress?.bestScore || 0,
-        averageAccuracy: progress?.averageAccuracy || 0
+        averageAccuracy: progress?.averageAccuracy || 0,
+        completedToday: progress?.completedToday || false
       };
     });
   };
@@ -182,7 +133,6 @@ export default function SpeechTherapyPage() {
         setLoading(true);
 
         // Fetch child name, statistics, and game progress in parallel
-        // No need for Authorization header - cookies are sent automatically
         const [onboardingRes, statsRes, progressRes] = await Promise.all([
           fetch('/api/onboarding', {
             credentials: 'include',
@@ -259,22 +209,29 @@ export default function SpeechTherapyPage() {
     }
   };
 
+  // Direct game start - no sub-options needed
   const startGame = async (game: any) => {
+    console.log('🎮 Starting game directly:', {
+      gameType: game.type,
+      title: game.title,
+      gameId: game.id
+    });
+
     if (!game.unlocked) {
       toast({
         title: "Game Locked",
-        description: `Complete more games to unlock this!`,
+        description: `Complete more challenges to unlock this!`,
         variant: "default",
       });
       return;
     }
 
     try {
-      // ✅ Check server connection first
+      // Check server connection first
       try {
         const healthCheck = await fetch('/api/health', {
           credentials: 'include',
-          signal: AbortSignal.timeout(5000) // 5 second timeout
+          signal: AbortSignal.timeout(5000)
         });
         
         if (!healthCheck.ok) {
@@ -282,7 +239,7 @@ export default function SpeechTherapyPage() {
         }
       } catch (healthError) {
         toast({
-          title: "🔌 Server Connection Lost",
+          title: "Server Connection Lost",
           description: "The server is not responding. Please check if the server is running (npm run dev in terminal).",
           variant: "destructive",
           duration: 10000
@@ -290,17 +247,16 @@ export default function SpeechTherapyPage() {
         return;
       }
 
-      // Fetch game-specific data (cookies sent automatically)
-      const gameDataRes = await fetch(`/api/games/game-data/${game.id}`, {
+      // Fetch word practice game data (all modes use this as base)
+      const gameDataRes = await fetch(`/api/games/game-data/1`, {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         },
-        signal: AbortSignal.timeout(10000) // 10 second timeout
+        signal: AbortSignal.timeout(10000)
       });
 
       if (!gameDataRes.ok) {
-        // ✅ Specific error messages
         if (gameDataRes.status === 401) {
           throw new Error('Please log in again to continue.');
         } else if (gameDataRes.status === 404) {
@@ -313,6 +269,65 @@ export default function SpeechTherapyPage() {
 
       const fetchedGameData = await gameDataRes.json();
 
+      // Customize game data based on game type
+      let customizedGameData = { ...fetchedGameData };
+      
+      switch (game.type) {
+        case 'daily-quest':
+          // Daily quest: Select specific daily words
+          customizedGameData = {
+            ...fetchedGameData,
+            title: 'Daily Quest',
+            description: 'Complete today\'s word challenge!',
+            timeLimit: 600, // 10 minutes
+            bonusXP: 25,
+            isDailyQuest: true,
+            skipSubModes: true,
+            directStart: true,
+            selectedMode: { type: 'daily-quest', name: 'Daily Quest' }
+          };
+          break;
+          
+        case 'challenge-mode':
+          // Challenge mode: Harder difficulty with timer
+          customizedGameData = {
+            ...fetchedGameData,
+            title: 'Challenge Mode',
+            description: 'Beat the clock and test your skills!',
+            timeLimit: 900, // 15 minutes
+            difficulty: 'hard',
+            scoreMultiplier: 1.5,
+            isChallengeMode: true,
+            skipSubModes: true,
+            directStart: true,
+            selectedMode: { type: 'challenge-mode', name: 'Challenge Mode' }
+          };
+          break;
+          
+        case 'story-adventure':
+          // Story adventure: Story-based word practice
+          customizedGameData = {
+            ...fetchedGameData,
+            title: 'Story Adventure',
+            description: 'Help the characters by pronouncing words correctly!',
+            storyMode: true,
+            chapters: 3,
+            isStoryMode: true,
+            skipSubModes: true,
+            directStart: true,
+            selectedMode: { type: 'story-adventure', name: 'Story Adventure' }
+          };
+          break;
+      }
+
+      console.log('🎮 Game data customized:', {
+        gameType: game.type,
+        title: customizedGameData.title,
+        skipSubModes: customizedGameData.skipSubModes,
+        directStart: customizedGameData.directStart,
+        selectedMode: customizedGameData.selectedMode
+      });
+
       // Create game session
       const sessionRes = await fetch('/api/games/session/start', {
         method: 'POST',
@@ -322,7 +337,8 @@ export default function SpeechTherapyPage() {
         },
         body: JSON.stringify({
           gameId: game.id,
-          gameName: game.title
+          gameName: game.title,
+          gameType: game.type
         }),
         signal: AbortSignal.timeout(10000)
       });
@@ -333,9 +349,16 @@ export default function SpeechTherapyPage() {
 
       const session = await sessionRes.json();
 
-      setGameData(fetchedGameData);
+      // Set game state and start
+      setGameData(customizedGameData);
       setGameSession(session);
       setActiveGame(game);
+
+      console.log('✅ Game state set:', {
+        gameData: customizedGameData,
+        sessionId: session._id,
+        activeGame: game.title
+      });
 
       toast({
         title: "Game Started!",
@@ -345,19 +368,18 @@ export default function SpeechTherapyPage() {
     } catch (error) {
       console.error('Error starting game:', error);
       
-      // ✅ Specific error messages based on error type
       let errorTitle = "Error";
       let errorMessage = "Failed to start game. Please try again.";
       
       if (error instanceof TypeError && error.message.includes('fetch')) {
-        errorTitle = "🔌 Connection Failed";
+        errorTitle = "Connection Failed";
         errorMessage = "Cannot connect to server. Make sure the server is running:\n1. Open terminal\n2. Run: npm run dev\n3. Try again";
       } else if (error instanceof Error) {
         if (error.message.includes('timed out') || error.message.includes('timeout')) {
-          errorTitle = "⏱️ Request Timeout";
+          errorTitle = "Request Timeout";
           errorMessage = "Server took too long to respond. Please try again.";
         } else if (error.message.includes('Server not responding')) {
-          errorTitle = "🔌 Server Down";
+          errorTitle = "Server Down";
           errorMessage = "The server is not running. Please start it with 'npm run dev' in terminal.";
         } else {
           errorMessage = error.message;
@@ -374,7 +396,7 @@ export default function SpeechTherapyPage() {
   };
 
   const handleGameComplete = async (results: any) => {
-    console.log('🎮 Game completed with results:', results);
+    console.log('Game completed with results:', results);
     
     // Calculate rewards based on game results
     const earnedXP = Math.floor(results.score || 0);
@@ -382,9 +404,8 @@ export default function SpeechTherapyPage() {
     
     // Update user stats with rewards
     setUserStats(prev => {
-      // Safety check to ensure prev exists
       if (!prev) {
-        console.warn('⚠️ Previous user stats is undefined, using default values');
+        console.warn('Previous user stats is undefined, using default values');
         prev = {
           level: 1,
           xp: 0,
@@ -407,7 +428,7 @@ export default function SpeechTherapyPage() {
 
     // Show completion toast
     toast({
-      title: "🎉 Great Job!",
+      title: "Great Job!",
       description: `You earned ${earnedXP} XP and ${earnedStars} stars!`,
     });
 
@@ -558,7 +579,17 @@ export default function SpeechTherapyPage() {
               </div>
             </div>
 
-            {/* Games Grid */}
+            {/* Main Games Grid */}
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center gap-2">
+                <Sparkles className="w-6 h-6 text-[#ff6b1d]" />
+                Choose Your Adventure
+              </h2>
+              <p className="text-muted-foreground mb-6">
+                Each game offers unique word practice challenges
+              </p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {games.map((game) => (
                 <motion.div
@@ -566,32 +597,47 @@ export default function SpeechTherapyPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: game.id * 0.1 }}
-                  className={`bg-card border border-border rounded-xl overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg ${
+                  className={`bg-card border border-border rounded-xl overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-lg relative ${
                     !game.unlocked ? 'opacity-60' : ''
                   }`}
                   onClick={() => startGame(game)}
                 >
+                  {/* Badge */}
+                  {game.badge && (
+                    <div className="absolute top-3 right-3 z-10">
+                      <span className={`${game.badgeColor} text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg`}>
+                        {game.badge}
+                      </span>
+                    </div>
+                  )}
+
                   {/* Game Header */}
-                  <div className="bg-muted p-6 relative">
+                  <div className="bg-gradient-to-br from-muted to-muted/50 p-6 relative">
                     {!game.unlocked && (
-                      <div className="absolute top-2 right-2 bg-card rounded-full p-1.5 border border-border">
+                      <div className="absolute top-2 left-2 bg-card rounded-full p-1.5 border border-border">
                         <Crown className="w-5 h-5 text-muted-foreground" />
                       </div>
                     )}
                     
-                    <div className="flex justify-center mb-3">
-                      <div className="w-16 h-16 rounded-xl bg-[#ff6b1d]/10 flex items-center justify-center">
-                        <game.icon className="w-8 h-8 text-[#ff6b1d]" />
+                    {game.completedToday && (
+                      <div className="absolute top-2 left-2 bg-green-500 rounded-full p-1.5">
+                        <CheckCircle className="w-5 h-5 text-white" />
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-center mb-4">
+                      <div className="w-20 h-20 rounded-2xl bg-[#ff6b1d]/10 flex items-center justify-center border-2 border-[#ff6b1d]/20">
+                        <game.icon className="w-10 h-10 text-[#ff6b1d]" />
                       </div>
                     </div>
-                    <h3 className="text-lg font-bold text-center mb-2">{game.title}</h3>
-                    <p className="text-sm text-muted-foreground text-center">
+                    <h3 className="text-xl font-bold text-center mb-2">{game.title}</h3>
+                    <p className="text-sm text-muted-foreground text-center leading-relaxed">
                       {game.description}
                     </p>
                   </div>
 
                   {/* Game Details */}
-                  <div className="p-4 space-y-3">
+                  <div className="p-5 space-y-4">
                     <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Clock className="w-4 h-4" />
@@ -604,7 +650,7 @@ export default function SpeechTherapyPage() {
                     </div>
 
                     <div className="flex items-center justify-between">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getDifficultyColor(game.difficulty)}`}>
+                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(game.difficulty)}`}>
                         {game.difficulty}
                       </span>
                       <div className="flex items-center gap-1">
@@ -622,77 +668,64 @@ export default function SpeechTherapyPage() {
                     </div>
 
                     <div className="text-center">
-                      <span className="inline-block bg-muted px-3 py-1 rounded-full text-xs font-medium text-muted-foreground">
+                      <span className="inline-block bg-muted px-3 py-1.5 rounded-full text-xs font-medium text-muted-foreground">
                         {game.category}
                       </span>
                     </div>
 
                     {game.unlocked ? (
-                      <button className="w-full bg-[#ff6b1d] hover:bg-[#e55a1a] text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex items-center justify-center gap-2">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent card click from firing
+                          console.log('🎮 Button clicked for game:', game.title, game.type);
+                          startGame(game);
+                        }}
+                        className="w-full bg-[#ff6b1d] hover:bg-[#e55a1a] text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                      >
                         <Play className="w-4 h-4" />
-                        Start Game
+                        Start {game.title}
                       </button>
                     ) : (
-                      <button disabled className="w-full bg-muted text-muted-foreground font-medium py-2.5 px-4 rounded-lg cursor-not-allowed flex items-center justify-center gap-2">
+                      <button disabled className="w-full bg-muted text-muted-foreground font-medium py-3 px-4 rounded-lg cursor-not-allowed flex items-center justify-center gap-2">
                         <Crown className="w-4 h-4" />
-                        Level {Math.ceil(game.id * 1.5)} Required
+                        Level {Math.ceil(game.id * 2)} Required
                       </button>
+                    )}
+
+                    {game.bestScore > 0 && (
+                      <div className="text-center text-xs text-muted-foreground pt-2 border-t border-border">
+                        Best Score: <span className="font-bold text-[#ff6b1d]">{game.bestScore}</span>
+                      </div>
                     )}
                   </div>
                 </motion.div>
               ))}
             </div>
+
+            {/* Info Section */}
+            <div className="mt-8 bg-card border border-border rounded-xl p-6">
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-[#ff6b1d]" />
+                About Game Modes
+              </h3>
+              <div className="grid md:grid-cols-3 gap-4 text-sm text-muted-foreground">
+                <div>
+                  <span className="font-semibold text-foreground">Daily Quest:</span> Fresh word challenges every day with bonus rewards!
+                </div>
+                <div>
+                  <span className="font-semibold text-foreground">Challenge Mode:</span> Race against time with harder words for bigger rewards!
+                </div>
+                <div>
+                  <span className="font-semibold text-foreground">Story Adventure:</span> Learn words through fun interactive stories!
+                </div>
+              </div>
+            </div>
           </>
         ) : (
-          /* Active Game Interface */
+          /* Active Game - Directly launches the specific game */
           <div>
-            {activeGame.type === 'word-practice' && gameSession && gameData && (
+            {activeGame && gameSession && gameData && (
               <WordPracticeGame
-                gameData={gameData}
-                sessionId={gameSession._id}
-                onComplete={handleGameComplete}
-                onExit={handleGameExit}
-              />
-            )}
-            
-            {activeGame.type === 'sound-recognition' && gameSession && gameData && (
-              <SoundRecognitionGame
-                gameData={gameData}
-                sessionId={gameSession._id}
-                onComplete={handleGameComplete}
-                onExit={handleGameExit}
-              />
-            )}
-            
-            {activeGame.type === 'sentence-building' && gameSession && gameData && (
-              <SentenceBuildingGame
-                gameData={gameData}
-                sessionId={gameSession._id}
-                onComplete={handleGameComplete}
-                onExit={handleGameExit}
-              />
-            )}
-            
-            {activeGame.type === 'rhythm-training' && gameSession && gameData && (
-              <RhythmTrainingGame
-                gameData={gameData}
-                sessionId={gameSession._id}
-                onComplete={handleGameComplete}
-                onExit={handleGameExit}
-              />
-            )}
-            
-            {activeGame.type === 'story-reading' && gameSession && gameData && (
-              <StoryReadingGame
-                gameData={gameData}
-                sessionId={gameSession._id}
-                onComplete={handleGameComplete}
-                onExit={handleGameExit}
-              />
-            )}
-            
-            {activeGame.type === 'quick-sounds' && gameSession && gameData && (
-              <QuickSoundsGame
                 gameData={gameData}
                 sessionId={gameSession._id}
                 onComplete={handleGameComplete}
