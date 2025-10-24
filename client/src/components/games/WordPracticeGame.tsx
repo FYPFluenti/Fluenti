@@ -20,7 +20,16 @@ import {
   Brain,
   Headphones,
   Clock,
-  Play
+  Play,
+  BookOpen,
+  TreePine,
+  Palette,
+  Music,
+  Camera,
+  Gamepad2,
+  PawPrint,
+  Rabbit,
+  Fish
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
@@ -63,7 +72,7 @@ export default function WordPracticeGame({
   const [stars, setStars] = useState(0);
   const [streak, setStreak] = useState(0);
   const [maxStreak, setMaxStreak] = useState(0);
-  const [cheerfulCharacter, setCheerfulCharacter] = useState('🌟');
+  const [cheerfulCharacter, setCheerfulCharacter] = useState(<Sparkles className="w-5 h-5 text-yellow-500" />);
   const [isGroqListening, setIsGroqListening] = useState(false);
   const [hasMicrophonePermission, setHasMicrophonePermission] = useState<boolean | null>(null);
   
@@ -73,7 +82,18 @@ export default function WordPracticeGame({
   // AI Enhancement States
   const [gameMode, setGameMode] = useState<'story' | 'classic' | 'challenge' | 'conquest'>('story');
   const [selectedChallengeMode, setSelectedChallengeMode] = useState<string>('');
-  const [showModeSelector, setShowModeSelector] = useState(true);
+  const [showModeSelector, setShowModeSelector] = useState(() => {
+    // Check if game should start directly (from speech-therapy.tsx)
+    if (gameData?.skipSubModes || gameData?.directStart) {
+      console.log('🎮 Direct start detected - skipping mode selector:', {
+        skipSubModes: gameData.skipSubModes,
+        directStart: gameData.directStart,
+        selectedMode: gameData.selectedMode
+      });
+      return false; // Skip mode selector
+    }
+    return true; // Show mode selector by default
+  });
   const [challengeModes, setChallengeModes] = useState<any[]>([]);
   const [dailyChallenge, setDailyChallenge] = useState<any>(null);
   const [storyContext, setStoryContext] = useState<any>(null);
@@ -341,7 +361,7 @@ export default function WordPracticeGame({
           setHasMicrophonePermission(false);
           
           toast({
-            title: "⚠️ No Real Microphone Found",
+            title: "No Real Microphone Found",
             description: "Only 'Stereo Mix' (system audio) is enabled. Please enable your real microphone in Windows Sound Settings → Recording tab → Show Disabled Devices → Enable your microphone.",
             variant: "destructive",
             duration: 20000
@@ -357,7 +377,7 @@ export default function WordPracticeGame({
         
         // Show success message
         toast({
-          title: "Microphone Ready! 🎤",
+          title: "Microphone Ready!",
           description: "You can now start practicing!",
           variant: "default",
           duration: 3000
@@ -673,8 +693,43 @@ export default function WordPracticeGame({
   // Load child profile and generate personalized words
   useEffect(() => {
     const initializeGame = async () => {
+      // ✅ HANDLE DIRECT START from speech-therapy.tsx
+      if (gameData?.skipSubModes || gameData?.directStart) {
+        console.log('🎮 Direct start mode detected:', {
+          gameType: gameData.selectedMode?.type,
+          gameName: gameData.selectedMode?.name,
+          title: gameData.title
+        });
+        
+        // Set game mode based on the passed data
+        if (gameData.selectedMode?.type === 'daily-quest') {
+          console.log('🏆 Starting Daily Quest (Conquest Mode)');
+          setGameMode('conquest');
+          setSelectedChallengeMode(''); // Clear challenge mode
+        } else if (gameData.selectedMode?.type === 'challenge-mode') {
+          console.log('🎯 Starting Challenge Mode - Speed Round');
+          setGameMode('challenge');
+          setSelectedChallengeMode('speed_round'); // Set default to speed round (correct ID)
+          setShowChallengeModeSelector(false); // Skip challenge mode selector
+          // Continue with game initialization (don't return early)
+        } else if (gameData.selectedMode?.type === 'story-adventure') {
+          console.log('📖 Starting Story Adventure');
+          setGameMode('story');
+          setSelectedChallengeMode(''); // Clear challenge mode
+          // ✅ IMPORTANT: Show story opening when story mode is detected
+          setShowStoryOpening(true);
+        } else {
+          console.log('📝 Starting Classic Mode');
+          setGameMode('classic');
+          setSelectedChallengeMode(''); // Clear challenge mode
+        }
+        
+        setShowModeSelector(false);
+        // Continue with game initialization below
+      }
+
       // Don't initialize if we're still showing mode selector
-      if (showModeSelector) {
+      if (showModeSelector && !gameData?.skipSubModes && !gameData?.directStart) {
         setIsLoadingWords(false);
         return;
       }
@@ -740,11 +795,27 @@ export default function WordPracticeGame({
       try {
           
           // Set random cheerful character based on interests
-          const characters = ['🌟', '🦋', '🌈', '🎈', '🎭', '🎯', '🎪', '🎨'];
+          const iconComponents = [
+            <Sparkles className="w-5 h-5 text-yellow-500" />,
+            <Heart className="w-5 h-5 text-pink-500" />,
+            <Zap className="w-5 h-5 text-blue-500" />,
+            <Trophy className="w-5 h-5 text-amber-500" />,
+            <Palette className="w-5 h-5 text-purple-500" />,
+            <Music className="w-5 h-5 text-green-500" />,
+            <Camera className="w-5 h-5 text-indigo-500" />,
+            <Gamepad2 className="w-5 h-5 text-red-500" />
+          ];
           if (loadedProfile.interests?.includes('animals')) {
-            setCheerfulCharacter(['🐱', '🐶', '🦊', '🐸', '🐰'][Math.floor(Math.random() * 5)]);
+            const animalIcons = [
+              <PawPrint className="w-5 h-5 text-orange-500" />,
+              <Rabbit className="w-5 h-5 text-gray-600" />,
+              <Fish className="w-5 h-5 text-blue-600" />,
+              <Heart className="w-5 h-5 text-pink-500" />,
+              <Sparkles className="w-5 h-5 text-yellow-500" />
+            ];
+            setCheerfulCharacter(animalIcons[Math.floor(Math.random() * animalIcons.length)]);
           } else {
-            setCheerfulCharacter(characters[Math.floor(Math.random() * characters.length)]);
+            setCheerfulCharacter(iconComponents[Math.floor(Math.random() * iconComponents.length)]);
           }
           
           // Generate story mode with integrated words OR classic mode words OR challenge words
@@ -788,7 +859,7 @@ export default function WordPracticeGame({
                   difficulty: sw.difficulty,
                   category: 'story',
                   therapyFocus: 'consonants',
-                  visualCue: sw.visualScene?.split(' ')[0] || '✨', // First emoji from scene
+                  visualCue: <Sparkles className="w-6 h-6 text-yellow-500" />, // Icon from scene
                   contextSentence: sw.storyContext,
                   encouragement: sw.successNarrative,
                   ageAppropriate: true
@@ -798,9 +869,15 @@ export default function WordPracticeGame({
                 setStoryContext(story);
                 setIsLoadingStory(false);
                 
+                // ✅ IMPORTANT: Show story opening after story context is loaded
+                if (gameData?.selectedMode?.type === 'story-adventure' || gameMode === 'story') {
+                  console.log('📖 Triggering story opening after story context loaded');
+                  setShowStoryOpening(true);
+                }
+                
                 // Show story introduction
                 toast({
-                  title: `🎭 ${story.title}`,
+                  title: story.title,
                   description: story.introduction,
                   duration: 6000
                 });
@@ -830,7 +907,7 @@ export default function WordPracticeGame({
                   console.warn('⚠️ Companion generation failed, using default');
                   setCompanionCharacter({
                     name: 'Sparkle',
-                    emoji: '✨',
+                    emoji: <Sparkles className="w-5 h-5 text-yellow-500" />,
                     personality: 'encouraging and friendly'
                   });
                 }
@@ -877,7 +954,7 @@ export default function WordPracticeGame({
                   difficulty: cw.difficulty || 5,
                   category: 'challenge',
                   therapyFocus: 'consonants',
-                  visualCue: '🎯',
+                  visualCue: <Target className="w-6 h-6 text-blue-500" />,
                   contextSentence: cw.context || '',
                   encouragement: `Great job on this ${selectedChallengeMode} challenge!`,
                   ageAppropriate: true
@@ -888,7 +965,7 @@ export default function WordPracticeGame({
                 // Show challenge start message
                 const modeName = challengeModes.find(m => m.id === selectedChallengeMode)?.name || 'Challenge';
                 toast({
-                  title: `🎮 ${modeName} Started!`,
+                  title: `${modeName} Started!`,
                   description: `Get ready for the challenge!`,
                   duration: 4000
                 });
@@ -911,7 +988,7 @@ export default function WordPracticeGame({
                   credentials: 'include',
                   body: JSON.stringify({
                     theme: dailyChallenge?.theme || 'Adventure Quest',
-                    emoji: dailyChallenge?.emoji || '🌟',
+                    emoji: dailyChallenge?.emoji || <Sparkles className="w-5 h-5 text-yellow-500" />,
                     difficulty: dailyChallenge?.difficulty || 'medium',
                     count: 12, // More words for conquest mode
                     childProfile: {
@@ -938,7 +1015,7 @@ export default function WordPracticeGame({
                   difficulty: cw.difficulty || 5,
                   category: 'conquest',
                   therapyFocus: 'consonants',
-                  visualCue: dailyChallenge?.emoji || '🏆',
+                  visualCue: dailyChallenge?.emoji || <Trophy className="w-6 h-6 text-yellow-600" />,
                   contextSentence: cw.context || '',
                   encouragement: `Amazing work on today's ${dailyChallenge?.theme || 'quest'}!`,
                   ageAppropriate: true
@@ -948,7 +1025,7 @@ export default function WordPracticeGame({
                 
                 // Show conquest start message with theme
                 toast({
-                  title: `${dailyChallenge?.emoji || '🏆'} ${dailyChallenge?.theme || 'Daily Quest'}!`,
+                  title: `${dailyChallenge?.theme || 'Daily Quest'}!`,
                   description: dailyChallenge?.description || 'Complete today\'s special quest!',
                   duration: 5000
                 });
@@ -1446,7 +1523,7 @@ export default function WordPracticeGame({
           console.error('Failed to generate AI feedback after retries:', error);
           setFeedback({
             message: "Great attempt!",
-            encouragement: "Keep practicing! You're doing wonderfully! " + cheerfulCharacter,
+            encouragement: "Keep practicing! You're doing wonderfully!",
             emotionalTone: "supportive"
           });
         } else {
@@ -1539,13 +1616,13 @@ export default function WordPracticeGame({
         setCurrentAttempt(currentAttempt + 1);
         toast({
           title: `Try ${currentAttempt + 1} of ${maxAttempts}!`,
-          description: "You can do it! " + cheerfulCharacter,
+          description: "You can do it!",
         });
       } else {
         console.log('⏭️ All attempts used - auto-advancing to next word');
         toast({
           title: "Let's try the next word!",
-          description: "Don't worry, practice makes perfect! " + cheerfulCharacter,
+          description: "Don't worry, practice makes perfect!",
         });
         
         if (currentWordIndex < personalizedWords.length - 1) {
@@ -1810,7 +1887,7 @@ export default function WordPracticeGame({
             if (gameMode === 'conquest' && dailyChallenge) {
               const questCompleted = score >= dailyChallenge.targetScore;
               summary = {
-                title: questCompleted ? `Quest Complete! 🏆` : `Great Effort! 💪`,
+                title: questCompleted ? `Quest Complete!` : `Great Effort!`,
                 message: questCompleted 
                   ? `Amazing work! You conquered the ${dailyChallenge.theme} and earned your reward!`
                   : `You gave it your best shot in the ${dailyChallenge.theme}! Keep practicing and you'll conquer it next time!`,
@@ -1819,11 +1896,12 @@ export default function WordPracticeGame({
             } else if (gameMode === 'story' && storyContext) {
               const storyCompleted = wordsCompleted === personalizedWords.length;
               summary = {
-                title: storyCompleted ? `🎉 ${storyContext.title} - Complete!` : `📖 ${storyContext.title}`,
+                title: storyCompleted ? `${storyContext.title} - Complete!` : `${storyContext.title}`,
                 message: storyCompleted
                   ? `What an amazing adventure, ${childProfile?.childName}! You completed the entire story! You practiced ${wordsCompleted} words and scored ${score} points!`
                   : `Great work, ${childProfile?.childName}! You're making wonderful progress in your story adventure! You completed ${wordsCompleted} out of ${personalizedWords.length} words!`,
-                celebrationMessage: storyCompleted ? "Story Complete! 🎉" : "Adventure Continues! 📖"
+                celebrationMessage: storyCompleted ? "Story Complete!" : "Adventure Continues!",
+                isStoryComplete: storyCompleted
               };
             } else {
               summary = {
@@ -2005,7 +2083,7 @@ export default function WordPracticeGame({
                 rarity: data.bonusReward.rarity,
                 icon: data.bonusReward.icon,
                 description: data.bonusReward.description,
-                achievement: `🏆 Daily Quest Bonus: ${dailyChallenge.theme}`,
+                achievement: `Daily Quest Bonus: ${dailyChallenge.theme}`,
                 abilities: [`+${data.streakBonus} Streak Bonus Points!`],
                 collectionProgress: {
                   category: 'Daily Quests',
@@ -2016,7 +2094,7 @@ export default function WordPracticeGame({
               });
               
               toast({
-                title: "🏆 Daily Quest Complete!",
+                title: "Daily Quest Complete!",
                 description: `${data.newStreak} day streak! +${data.streakBonus} bonus points!`,
                 variant: "default"
               });
@@ -2079,7 +2157,7 @@ export default function WordPracticeGame({
     
     toast({
       title: "Word Skipped",
-      description: "No worries! Let's try the next word " + cheerfulCharacter,
+      description: "No worries! Let's try the next word!",
     });
 
     if (currentWordIndex < personalizedWords.length - 1) {
@@ -2207,7 +2285,9 @@ export default function WordPracticeGame({
         >
           <div className="w-16 h-16 border-4 border-[#F5B82E] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-xl text-foreground">Creating your special words...</p>
-          <p className="text-muted-foreground mt-2">Our AI is preparing words just for you! {cheerfulCharacter}</p>
+          <p className="text-muted-foreground mt-2 flex items-center justify-center gap-2">
+            Our AI is preparing words just for you! {cheerfulCharacter}
+          </p>
         </motion.div>
       </div>
     );
@@ -2235,7 +2315,7 @@ export default function WordPracticeGame({
               transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
               className="w-20 h-20 mx-auto mb-6"
             >
-              <div className="text-6xl">🎯</div>
+              <Target className="w-16 h-16 text-blue-500" />
             </motion.div>
             <h2 className="text-2xl font-bold text-gray-800 mb-3">
               Loading Challenge Modes...
@@ -2263,8 +2343,10 @@ export default function WordPracticeGame({
             animate={{ opacity: 1, y: 0 }}
             className="text-center mb-8"
           >
-            <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600 mb-3">
-              🎯 Choose Your Challenge! 🎯
+            <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-600 to-red-600 mb-3 flex items-center justify-center gap-3">
+              <Target className="w-12 h-12 text-orange-600" />
+              Choose Your Challenge!
+              <Target className="w-12 h-12 text-red-600" />
             </h1>
             <p className="text-xl text-gray-700">
               Pick a challenge mode and show off your speech skills!
@@ -2286,7 +2368,7 @@ export default function WordPracticeGame({
                     if (isLocked) {
                       // Show toast for locked modes
                       toast({
-                        title: "Coming Soon! 🚀",
+                        title: "Coming Soon!",
                         description: `${mode.name} mode is under development. Try Speed Round for now!`,
                         variant: "default"
                       });
@@ -2343,14 +2425,14 @@ export default function WordPracticeGame({
                   <div className="flex items-center justify-center gap-4 mb-4">
                     <div className="bg-orange-50 px-3 py-2 rounded-lg">
                       <div className="text-xs text-gray-500">Time</div>
-                      <div className="text-lg font-bold text-orange-600">
-                        ⏱️ {mode.timeLimit}s
+                      <div className="text-lg font-bold text-orange-600 flex items-center gap-1">
+                        <Clock className="w-4 h-4" /> {mode.timeLimit}s
                       </div>
                     </div>
                     <div className="bg-purple-50 px-3 py-2 rounded-lg">
                       <div className="text-xs text-gray-500">Bonus</div>
-                      <div className="text-lg font-bold text-purple-600">
-                        ⚡ {mode.pointMultiplier}x
+                      <div className="text-lg font-bold text-purple-600 flex items-center gap-1">
+                        <Zap className="w-4 h-4" /> {mode.pointMultiplier}x
                       </div>
                     </div>
                   </div>
@@ -2394,7 +2476,7 @@ export default function WordPracticeGame({
   }
 
   // 🎮 ENHANCED GAME MODE SELECTOR (Beautiful UX from Mockup)
-  if (showModeSelector && !isLoadingWords) {
+  if (showModeSelector && !isLoadingWords && !gameData?.skipSubModes && !gameData?.directStart) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-purple-50 via-pink-50 to-blue-50 px-4 py-8">
         <div className="max-w-5xl mx-auto">
@@ -2421,7 +2503,7 @@ export default function WordPracticeGame({
                 <div className="bg-muted p-6 relative">
                   <div className="flex justify-center mb-3">
                     <div className="w-16 h-16 rounded-xl bg-[#ff6b1d]/10 flex items-center justify-center">
-                      <span className="text-4xl">📖</span>
+                      <BookOpen className="w-8 h-8 text-[#ff6b1d]" />
                     </div>
                   </div>
                   <h3 className="text-lg font-bold text-center mb-2">Story Adventure</h3>
@@ -2675,9 +2757,11 @@ export default function WordPracticeGame({
             <motion.h1
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="text-5xl font-bold text-center mb-6 text-green-700"
+              className="text-5xl font-bold text-center mb-6 text-green-700 flex items-center justify-center gap-4"
             >
-              🌳 {storyContext.theme || 'THE ENCHANTED FOREST'} 🌳
+              <TreePine className="w-10 h-10 text-green-600" />
+              {storyContext.theme || 'THE ENCHANTED FOREST'}
+              <TreePine className="w-10 h-10 text-green-600" />
             </motion.h1>
 
             {/* Visual Scene */}
@@ -2825,11 +2909,11 @@ export default function WordPracticeGame({
             className="text-center mb-8"
           >
             <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="text-7xl">🎉</div>
+              <PartyPopper className="w-20 h-20 text-yellow-500" />
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-xl">
                 <Trophy className="w-10 h-10 text-white" />
               </div>
-              <div className="text-7xl">🎊</div>
+              <Sparkles className="w-20 h-20 text-purple-500" />
             </div>
             <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-3">
               {sessionSummary.title || 'Amazing Job!'}
@@ -2850,7 +2934,7 @@ export default function WordPracticeGame({
             <div className="bg-white rounded-2xl p-6 text-center shadow-xl border-4 border-purple-200">
               <div className="text-5xl font-black text-purple-600 mb-2">{score}</div>
               <div className="text-sm font-bold text-gray-600 uppercase tracking-wide">Total Points</div>
-              <div className="text-3xl mt-2">⚡</div>
+              <div className="text-3xl mt-2"><Zap className="w-8 h-8 text-yellow-500" /></div>
             </div>
 
             {/* Stars Earned */}
@@ -2868,14 +2952,14 @@ export default function WordPracticeGame({
             <div className="bg-white rounded-2xl p-6 text-center shadow-xl border-4 border-orange-200">
               <div className="text-5xl font-black text-orange-600 mb-2">{maxStreak}</div>
               <div className="text-sm font-bold text-gray-600 uppercase tracking-wide">Best Streak</div>
-              <div className="text-3xl mt-2">🔥</div>
+              <Zap className="w-8 h-8 text-orange-500" />
             </div>
 
             {/* Accuracy */}
             <div className="bg-white rounded-2xl p-6 text-center shadow-xl border-4 border-green-200">
               <div className="text-5xl font-black text-green-600 mb-2">{totalAccuracy}%</div>
               <div className="text-sm font-bold text-gray-600 uppercase tracking-wide">Accuracy</div>
-              <div className="text-3xl mt-2">🎯</div>
+              <Target className="w-8 h-8 text-blue-500" />
             </div>
           </motion.div>
 
@@ -2924,7 +3008,13 @@ export default function WordPracticeGame({
               <div className="absolute -top-4 left-12 w-0 h-0 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-b-[20px] border-b-blue-400"></div>
               
               <div className="flex items-start gap-4">
-                <div className="text-6xl flex-shrink-0">{cheerfulCharacter}</div>
+                <div className="flex-shrink-0 p-3 bg-white/20 rounded-full">
+                  {sessionSummary.isStoryComplete ? (
+                    <Trophy className="w-12 h-12 text-yellow-300" />
+                  ) : (
+                    cheerfulCharacter
+                  )}
+                </div>
                 <div>
                   <div className="text-lg font-bold text-white mb-2">
                     {companionCharacter?.name || 'Your Companion'} says:
@@ -2952,7 +3042,7 @@ export default function WordPracticeGame({
               <div className="space-y-3">
                 {sessionSummary.nextGoals.map((goal: string, index: number) => (
                   <div key={index} className="text-base text-gray-700 bg-purple-50 border-2 border-purple-200 rounded-xl p-4 font-medium flex items-center gap-2">
-                    <span className="text-2xl">✨</span>
+                    <Sparkles className="w-6 h-6 text-yellow-500" />
                     {goal}
                   </div>
                 ))}
@@ -3008,7 +3098,9 @@ export default function WordPracticeGame({
       {/* 🛠️ AUDIO STATE DEBUG PANEL (Development Only) */}
       {process.env.NODE_ENV === 'development' && (
         <div className="fixed top-4 right-4 z-50 bg-black bg-opacity-80 text-white p-3 rounded-lg text-xs font-mono max-w-xs">
-          <div className="font-bold text-yellow-300 mb-2">🎙️ Audio State Debug</div>
+          <div className="font-bold text-yellow-300 mb-2 flex items-center gap-1">
+            <Headphones className="w-4 h-4" /> Audio State Debug
+          </div>
           <div className={`flex items-center gap-2 ${isAISpeaking ? 'text-red-300' : 'text-gray-400'}`}>
             <div className={`w-2 h-2 rounded-full ${isAISpeaking ? 'bg-red-400' : 'bg-gray-600'}`}></div>
             AI Speaking: {isAISpeaking ? 'ON' : 'OFF'}
@@ -3064,8 +3156,9 @@ export default function WordPracticeGame({
           {/* Story Mode Title */}
           {gameMode === 'story' && storyContext && (
             <div className="flex-1 text-center">
-              <h2 className="text-2xl font-bold text-purple-700">
-                {storyContext.theme || 'The Enchanted Forest'} 🌳
+              <h2 className="text-2xl font-bold text-purple-700 flex items-center justify-center gap-2">
+                {storyContext.theme || 'The Enchanted Forest'}
+                <TreePine className="w-6 h-6 text-green-600" />
               </h2>
             </div>
           )}
@@ -3127,7 +3220,7 @@ export default function WordPracticeGame({
           <div className="bg-white rounded-xl p-3 text-center shadow-md border border-green-200">
             <div className="text-xs text-gray-500 font-semibold mb-1">Streak</div>
             <div className="text-2xl font-black text-green-500 flex items-center justify-center gap-1">
-              {streak} {streak >= 5 ? '🔥' : <Heart className="w-5 h-5 fill-current" />}
+              {streak} {streak >= 5 ? <Zap className="w-5 h-5 text-orange-500 fill-current" /> : <Heart className="w-5 h-5 fill-current" />}
             </div>
           </div>
           
@@ -3260,7 +3353,7 @@ export default function WordPracticeGame({
                   repeat: Infinity,
                   ease: "easeInOut"
                 }}
-                className="text-3xl"
+                className="text-3xl flex justify-center"
               >
                 {cheerfulCharacter}
               </motion.div>
@@ -3284,7 +3377,9 @@ export default function WordPracticeGame({
                 </div>
               )}
               <div className="inline-block px-4 py-2 bg-green-50 border border-green-200 rounded-full">
-                <span className="text-sm font-medium text-green-600">🚀 Groq Whisper</span>
+                <span className="text-sm font-medium text-green-600 flex items-center gap-1">
+                  <Zap className="w-3 h-3" /> Groq Whisper
+                </span>
               </div>
             </div>
 
@@ -3427,7 +3522,7 @@ export default function WordPracticeGame({
                 animate={{ opacity: 1, y: 0 }}
                 className="text-center p-3 bg-yellow-50 border border-yellow-200 rounded-lg"
               >
-                <div className="text-sm font-medium text-yellow-700">
+                <div className="text-sm font-medium text-yellow-700 flex items-center justify-center gap-2">
                   Try {currentAttempt} of {maxAttempts} - You can do it! {cheerfulCharacter}
                 </div>
               </motion.div>
@@ -3569,7 +3664,7 @@ export default function WordPracticeGame({
                 <div className="bg-gradient-to-r from-[#ff6b1d] to-[#ff8a4a] text-white py-4 px-6 rounded-2xl shadow-lg">
                   <p className="text-sm font-medium">Points Earned</p>
                   <p className="text-3xl font-bold flex items-center justify-center gap-2">
-                    +{attempts[attempts.length - 1]?.accuracy || 0} <span>🎯</span>
+                    +{attempts[attempts.length - 1]?.accuracy || 0} <Target className="w-4 h-4 text-blue-500" />
                   </p>
                 </div>
               </motion.div>
@@ -3584,10 +3679,10 @@ export default function WordPracticeGame({
                 whileTap={{ scale: 0.95 }}
               >
                 {currentWordIndex >= personalizedWords.length - 1 && currentAttempt >= maxAttempts ? 
-                  "🎉 Finish Game!" : 
+                  "Finish Game!" : 
                   currentAttempt < maxAttempts && (attempts[attempts.length - 1]?.accuracy || 0) < 70 ?
-                  "Try Again! 💪" :
-                  "Next Word! 🚀"
+                  "Try Again!" :
+                  "Next Word!"
                 }
               </motion.button>
             </motion.div>
@@ -3650,12 +3745,12 @@ export default function WordPracticeGame({
                     setRecentFailures(0);
                     toast({
                       title: "Let's try something easier!",
-                      description: "You've got this! 🌟"
+                      description: "You've got this!"
                     });
                   }}
                   className="bg-gradient-to-br from-green-100 to-green-200 border-2 border-green-300 rounded-xl p-4 hover:shadow-lg transition-all transform hover:scale-105"
                 >
-                  <div className="text-4xl mb-2">🌟</div>
+                  <Star className="w-10 h-10 text-yellow-500 fill-current" />
                   <div className="text-sm font-bold text-green-800">Try an Easier Word First</div>
                 </button>
 
@@ -3667,12 +3762,12 @@ export default function WordPracticeGame({
                     setRecentFailures(0);
                     toast({
                       title: "Let's play something fun!",
-                      description: "Memory game starting! 🎮"
+                      description: "Memory game starting!"
                     });
                   }}
                   className="bg-gradient-to-br from-blue-100 to-blue-200 border-2 border-blue-300 rounded-xl p-4 hover:shadow-lg transition-all transform hover:scale-105"
                 >
-                  <div className="text-4xl mb-2">🎮</div>
+                  <div className="text-4xl mb-2"><Brain className="w-10 h-10 text-purple-500" /></div>
                   <div className="text-sm font-bold text-blue-800">Play a Fun Memory Game</div>
                 </button>
 
@@ -3682,7 +3777,7 @@ export default function WordPracticeGame({
                     setRecentFailures(0);
                     toast({
                       title: "Take your time!",
-                      description: "Come back when you're ready! 💖",
+                      description: "Come back when you're ready!",
                       duration: 5000
                     });
                     setTimeout(() => {
@@ -3691,7 +3786,7 @@ export default function WordPracticeGame({
                   }}
                   className="bg-gradient-to-br from-purple-100 to-purple-200 border-2 border-purple-300 rounded-xl p-4 hover:shadow-lg transition-all transform hover:scale-105"
                 >
-                  <div className="text-4xl mb-2">⏸️</div>
+                  <div className="text-4xl mb-2"><Clock className="w-10 h-10 text-purple-600" /></div>
                   <div className="text-sm font-bold text-purple-800">Take a Quick Break</div>
                   <div className="text-xs text-purple-600">(2 minutes)</div>
                 </button>
@@ -3702,13 +3797,13 @@ export default function WordPracticeGame({
                     setRecentFailures(0);
                     playWordAudio();
                     toast({
-                      title: "You're brave! 💪",
+                      title: "You're brave!",
                       description: "Let's do this together!"
                     });
                   }}
                   className="bg-gradient-to-br from-orange-100 to-orange-200 border-2 border-orange-300 rounded-xl p-4 hover:shadow-lg transition-all transform hover:scale-105"
                 >
-                  <div className="text-4xl mb-2">💪</div>
+                  <div className="text-4xl mb-2"><Heart className="w-10 h-10 text-red-500" /></div>
                   <div className="text-sm font-bold text-orange-800">Keep Trying (I'll help!)</div>
                 </button>
               </div>
@@ -3855,7 +3950,7 @@ export default function WordPracticeGame({
                           transition={{ delay: 1.3 + idx * 0.1 }}
                           className="text-base text-purple-900 font-medium flex items-center gap-2"
                         >
-                          <span className="text-2xl">✨</span>
+                          <Sparkles className="w-6 h-6 text-yellow-500" />
                           {ability}
                         </motion.div>
                       ))}
