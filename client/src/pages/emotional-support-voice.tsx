@@ -37,6 +37,10 @@ const EmotionalSupportVoice = () => {
   const [continuedSessionTitle, setContinuedSessionTitle] = useState<string>('');
   const { startRecording, stopRecording, isRecording } = useSpeechRecognition();
 
+  // Avatar animation states
+  const [avatarState, setAvatarState] = useState<'idle' | 'listening' | 'thinking' | 'speaking'>('idle');
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
+
   // Get session ID from URL parameters
   const searchParams = new URLSearchParams(useSearch());
   const sessionIdFromUrl = searchParams.get('sessionId');
@@ -44,7 +48,19 @@ const EmotionalSupportVoice = () => {
   // Use the session hook to fetch session data if continuing
   const { session: existingSession, loading: sessionLoading, error: sessionError } = useSession(sessionIdFromUrl);
 
-  // Handle Coqui TTS audio playback directly
+  // Manage avatar state transitions based on recording state
+  useEffect(() => {
+    if (!isRecording && !isProcessing && !isAudioPlaying) {
+      // Smooth transition to idle when not in any active state
+      const timeout = setTimeout(() => {
+        setAvatarState('idle');
+      }, 300); // Small delay for smooth transition
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [isRecording, isProcessing, isAudioPlaying]);
+
+  // Handle Coqui TTS audio playback directly with avatar state management
   useEffect(() => {
     if (audioBase64) {
       console.log('🎵 Coqui TTS audio base64 set, length:', audioBase64.length);
@@ -61,27 +77,41 @@ const EmotionalSupportVoice = () => {
           // Start both audio and typing simultaneously
           audio.play().then(() => {
             console.log('✅ Coqui TTS audio playback started');
+            setAvatarState('speaking'); // Set avatar to speaking state
+            setIsAudioPlaying(true);
           }).catch(error => {
             console.error('❌ Coqui TTS audio playback failed:', error);
+            setAvatarState('idle');
+            setIsAudioPlaying(false);
           });
         };
         
         audio.onended = () => {
           console.log('🏁 Coqui TTS audio playback completed');
           setAudioBase64(''); // Clear audio after playing
+          setAvatarState('idle'); // Return avatar to idle state
+          setIsAudioPlaying(false);
         };
         
         audio.onerror = (error) => {
           console.error('❌ Audio error:', error);
           setAudioBase64(''); // Clear audio on error
+          setAvatarState('idle'); // Return avatar to idle state
+          setIsAudioPlaying(false);
         };
         
       } catch (error) {
         console.error('❌ Failed to create audio:', error);
         setAudioBase64(''); // Clear audio on error
+        setAvatarState('idle');
+        setIsAudioPlaying(false);
       }
     } else {
       console.log('🔇 Audio base64 cleared');
+      if (!isRecording && !isProcessing) {
+        setAvatarState('idle');
+        setIsAudioPlaying(false);
+      }
     }
   }, [audioBase64]);
 
@@ -241,6 +271,7 @@ const EmotionalSupportVoice = () => {
   const handleRecordStop = async (blob: Blob) => {
     try {
       setIsProcessing(true); // Start processing
+      setAvatarState('thinking'); // Set avatar to thinking state
       setDisplayedResponse(''); // Clear previous response display
       const formData = new FormData();
       formData.append('mode', 'voice');
@@ -317,6 +348,10 @@ const EmotionalSupportVoice = () => {
       setResponse('Sorry, there was an error processing your voice input. If you\'re in crisis, please contact 988 (Suicide & Crisis Lifeline) or 911.');
     } finally {
       setIsProcessing(false); // End processing
+      // Avatar state will be managed by audio playback or set to idle if no audio
+      if (!audioBase64) {
+        setAvatarState('idle');
+      }
     }
   };
 
@@ -374,13 +409,64 @@ const EmotionalSupportVoice = () => {
           {/* Main Content Area - Grid Layout for stable positioning */}
           <div className="flex-1 grid grid-rows-[auto_1fr_auto] items-center px-6 py-8 gap-6 min-h-0">
             
-            {/* Avatar Section - Fixed Top */}
-            <div className="flex justify-center">
-              <ModelViewerAvatar
-                avatarUrl={avatarUrls.therapist}
-                size="medium"
-                className="drop-shadow-lg"
-              />
+            {/* Avatar Section - Fixed Top with Animation States */}
+            <div className="flex justify-center relative">
+              <div className="relative">
+                <ModelViewerAvatar
+                  avatarUrl={avatarUrls.therapist}
+                  size="medium"
+                  className="drop-shadow-lg transition-all duration-500"
+                  isListening={avatarState === 'listening'}
+                  isSpeaking={avatarState === 'speaking'}
+                />
+                
+                {/* Avatar State Indicator with Smooth Transitions */}
+                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
+                  <div className={`transition-all duration-300 ease-in-out ${
+                    avatarState === 'idle' ? 'opacity-0 scale-95' : 'opacity-100 scale-100'
+                  }`}>
+                    {avatarState === 'listening' && (
+                      <div className="flex items-center gap-1 bg-blue-500/20 backdrop-blur-md border border-blue-400/30 rounded-full px-3 py-1">
+                        <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+                        <span className="text-blue-400 text-xs font-medium">Listening</span>
+                      </div>
+                    )}
+                    {avatarState === 'thinking' && (
+                      <div className="flex items-center gap-2 bg-amber-500/20 backdrop-blur-md border border-amber-400/30 rounded-full px-3 py-1">
+                        <div className="flex gap-1">
+                          <div className="w-1 h-1 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-1 h-1 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                          <div className="w-1 h-1 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                        </div>
+                        <span className="text-amber-400 text-xs font-medium">Thinking</span>
+                      </div>
+                    )}
+                    {avatarState === 'speaking' && (
+                      <div className="flex items-center gap-2 bg-emerald-500/20 backdrop-blur-md border border-emerald-400/30 rounded-full px-3 py-1">
+                        <div className="flex gap-1">
+                          <div className="w-1 h-3 bg-emerald-400 rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-1 h-4 bg-emerald-400 rounded-full animate-pulse" style={{ animationDelay: '100ms' }}></div>
+                          <div className="w-1 h-2 bg-emerald-400 rounded-full animate-pulse" style={{ animationDelay: '200ms' }}></div>
+                          <div className="w-1 h-4 bg-emerald-400 rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></div>
+                          <div className="w-1 h-3 bg-emerald-400 rounded-full animate-pulse" style={{ animationDelay: '400ms' }}></div>
+                        </div>
+                        <span className="text-emerald-400 text-xs font-medium">Speaking</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Ambient Glow Effect for Avatar States */}
+                <div className={`absolute inset-0 rounded-full transition-all duration-500 ease-in-out pointer-events-none ${
+                  avatarState === 'listening' 
+                    ? 'shadow-[0_0_30px_rgba(59,130,246,0.3)] scale-105' 
+                    : avatarState === 'thinking'
+                    ? 'shadow-[0_0_30px_rgba(245,158,11,0.3)] scale-102'
+                    : avatarState === 'speaking'
+                    ? 'shadow-[0_0_40px_rgba(34,197,94,0.4)] scale-105'
+                    : 'shadow-none scale-100'
+                }`}></div>
+              </div>
             </div>
 
             {/* Response Section - Scrollable Middle */}
@@ -421,38 +507,50 @@ const EmotionalSupportVoice = () => {
             {/* Controls - Fixed Bottom */}
             <div className="flex justify-center">
               <Button 
-                onClick={() => isRecording ? stopRecording(handleRecordStop) : startRecording()}
-                disabled={serviceStatus === 'offline' || isProcessing || !!audioBase64}
+                onClick={() => {
+                  if (isRecording) {
+                    stopRecording(handleRecordStop);
+                    setAvatarState('idle');
+                  } else {
+                    startRecording();
+                    setAvatarState('listening');
+                  }
+                }}
+                disabled={serviceStatus === 'offline' || avatarState === 'thinking' || avatarState === 'speaking'}
                 className={`px-8 py-4 rounded-2xl font-semibold text-base transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-lg ${
-                  isRecording 
-                    ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/25' 
-                    : isProcessing
+                  avatarState === 'listening'
+                    ? 'bg-red-500 hover:bg-red-600 text-white shadow-red-500/25 animate-pulse' 
+                    : avatarState === 'thinking'
                     ? 'bg-amber-500 text-white shadow-amber-500/25 cursor-not-allowed'
-                    : !!audioBase64
-                    ? 'bg-cyan-500 text-white shadow-cyan-500/25 cursor-not-allowed'
+                    : avatarState === 'speaking'
+                    ? 'bg-emerald-500 text-white shadow-emerald-500/25 cursor-not-allowed animate-pulse'
                     : 'bg-[#ff6b1d] hover:bg-[#e55a1a] text-white shadow-[#ff6b1d]/25'
                 } disabled:opacity-50 disabled:transform-none disabled:shadow-none`}
                 size="lg"
               >
                 <div className="flex items-center space-x-3">
-                  {isRecording ? (
+                  {avatarState === 'listening' ? (
                     <>
                       <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
                         <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
                       </div>
                       <span>Listening...</span>
                     </>
-                  ) : isProcessing ? (
+                  ) : avatarState === 'thinking' ? (
                     <>
                       <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
                         <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                       </div>
                       <span>AI is thinking...</span>
                     </>
-                  ) : !!audioBase64 ? (
+                  ) : avatarState === 'speaking' ? (
                     <>
                       <div className="w-5 h-5 bg-white/20 rounded-full flex items-center justify-center">
-                        <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                        <div className="flex gap-0.5">
+                          <div className="w-0.5 h-2 bg-white rounded-full animate-pulse" style={{ animationDelay: '0ms' }}></div>
+                          <div className="w-0.5 h-3 bg-white rounded-full animate-pulse" style={{ animationDelay: '150ms' }}></div>
+                          <div className="w-0.5 h-2 bg-white rounded-full animate-pulse" style={{ animationDelay: '300ms' }}></div>
+                        </div>
                       </div>
                       <span>AI is speaking...</span>
                     </>
