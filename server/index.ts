@@ -4,16 +4,28 @@ import cookieParser from "cookie-parser";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import type { Express } from "express";
-import connectDB from "./mongodb";
+import connectDB, { isMongoConnected } from "./mongodb";
 import authRoutes from "./routes/auth";
 import feedbackRoutes from "./routes/feedback";
-import settingsRoutes from "./routes/settings";
-import { extractAndValidateJWT } from "./middleware";
-
+import { MockDataService } from "./services/mockDataService";
 
 const app = express();
 
-connectDB();
+// Attempt to connect to MongoDB, enable mock data if it fails
+connectDB().then(() => {
+  // Wait a moment to see if connection is actually established
+  setTimeout(() => {
+    if (!isMongoConnected()) {
+      console.log('⚠️  MongoDB connection not established, enabling mock data service');
+      MockDataService.enable();
+    } else {
+      console.log('✅ MongoDB connection confirmed, using real database');
+    }
+  }, 2000);
+}).catch(() => {
+  console.log('⚠️  MongoDB connection failed, enabling mock data service');
+  MockDataService.enable();
+});
   
 // Add cookie parser middleware
 app.use(cookieParser());
@@ -22,17 +34,11 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 
-// Add JWT extraction middleware globally
-app.use(extractAndValidateJWT);
-
 // Register auth routes (after JSON parsing middleware)
 app.use("/api/auth", authRoutes);
 
 // Register feedback routes (after JSON parsing middleware)
 app.use("/api/feedback", feedbackRoutes);
-
-// Register settings routes (after JSON parsing middleware)
-app.use("/api/settings", settingsRoutes);
 
 // Ensure UTF-8 encoding
 app.use((req, res, next) => {
