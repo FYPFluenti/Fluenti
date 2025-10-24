@@ -16,6 +16,7 @@ import {
   Eye,
   EyeOff,
   User,
+  Key,
 } from "lucide-react";
 import SharedSidebarEmotional from "@/components/layout/SharedSidebarEmotional";
 import MobileBottomNav from "@/components/layout/MobileBottomNav";
@@ -23,6 +24,7 @@ import FeedbackModal from "@/components/layout/FeedbackModel";
 import PageHeader from "@/components/layout/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { TwoFactorSetup } from "@/components/auth/TwoFactorSetup";
 import { useUserSettings } from "@/hooks/useUserSettings";
 
 
@@ -75,6 +77,7 @@ export default function AdultSettings() {
     profilePicture: ''
   });
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [show2FA, setShow2FA] = useState(false);
 
   useEffect(() => {
     // redirect to login if not authenticated
@@ -479,17 +482,48 @@ export default function AdultSettings() {
             <div className="mt-6 h-px bg-border" />
           </section>
 
-          {/* Account Security */}
+          {/* Security Settings */}
           <section className="mb-8">
             <div className="flex items-center gap-3 mb-4">
               <Shield className="w-6 h-6 text-[#ff6b1d]" />
-              <h2 className="text-2xl font-bold">Account Security</h2>
+              <h2 className="text-2xl font-bold">Security</h2>
             </div>
             <p className="text-muted-foreground mb-6">
-              Manage your email verification and password settings
+              Manage your account security and authentication
+            </p>
+
+            <div className="space-y-4">
+              {/* Two-Factor Authentication */}
+              <button
+                onClick={() => setShow2FA(true)}
+                className="w-full p-4 border border-border hover:bg-muted rounded-lg transition flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-3">
+                  <Key className="w-5 h-5 text-[#ff6b1d]" />
+                  <div className="text-left">
+                    <div className="font-semibold">Two-Factor Authentication</div>
+                    <div className="text-sm text-muted-foreground">
+                      Add an extra layer of security to your account
+                    </div>
+                  </div>
+                </div>
+                <div className="text-muted-foreground group-hover:translate-x-1 transition">→</div>
+              </button>
+            </div>
+          </section>
+
+          {/* Advanced Security */}
+          <section className="mb-8">
+            <div className="flex items-center gap-3 mb-4">
+              <Shield className="w-6 h-6 text-[#ff6b1d]" />
+              <h2 className="text-2xl font-bold">Advanced Security</h2>
+            </div>
+            <p className="text-muted-foreground mb-6">
+              Manage email verification, password settings, and other security options
             </p>
 
             <div className="space-y-6">
+
               {/* Email Verification Status */}
               <div className="p-4 border border-border rounded-lg">
                 <div className="flex items-center justify-between">
@@ -802,6 +836,19 @@ export default function AdultSettings() {
       <FeedbackModal
         isOpen={showFeedback}
         onClose={() => setShowFeedback(false)}
+      />
+
+      {/* 2FA Setup Modal */}
+      <TwoFactorSetup
+        isOpen={show2FA}
+        onClose={() => setShow2FA(false)}
+        userType="adult"
+        onSuccess={() => {
+          toast({
+            title: "2FA Configuration Updated",
+            description: "Your two-factor authentication settings have been updated successfully.",
+          });
+        }}
       />
     </div>
   );

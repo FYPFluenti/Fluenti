@@ -369,55 +369,6 @@ router.get('/email-verification-status', tokenBasedAuth, async (req: Authenticat
   }
 });
 
-// Resend verification email
-router.post('/resend-verification', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const user = await User.findOne({ id: req.user?.id });
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
 
-    if (user.emailVerified) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email is already verified'
-      });
-    }
-
-    if (user.signupMethod !== 'email') {
-      return res.status(400).json({
-        success: false,
-        message: 'Email verification not required for social login accounts'
-      });
-    }
-
-    // Generate new verification token
-    const crypto = await import('crypto');
-    const verificationToken = crypto.randomBytes(32).toString('hex');
-    const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
-
-    user.emailVerificationToken = verificationToken;
-    user.emailVerificationExpiry = verificationExpiry;
-    await user.save();
-
-    // TODO: Send verification email (implement email service)
-    console.log(`Verification token for ${user.email}: ${verificationToken}`);
-
-    res.json({
-      success: true,
-      message: 'Verification email sent successfully'
-    });
-
-  } catch (error) {
-    console.error('Resend verification error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to send verification email'
-    });
-  }
-});
 
 export default router;

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useSettings } from "@/hooks/useSettings";
+import { useUserSettings } from "@/hooks/useUserSettings";
 import { useLocation } from "wouter";
 import {
   Gamepad2,
@@ -10,6 +11,10 @@ import {
   Shield,
   Loader2,
   AlertCircle,
+  Key,
+  Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import SharedSidebar from "@/components/layout/SharedSidebar";
@@ -40,6 +45,17 @@ export default function Settings() {
   const [deletePassword, setDeletePassword] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
   
+  // Password change state
+  const [showPasswordChange, setShowPasswordChange] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  
   const {
     settings,
     isLoading: settingsLoading,
@@ -48,9 +64,56 @@ export default function Settings() {
     deleteAccount
   } = useSettings();
 
+  const {
+    profile,
+    changePassword,
+  } = useUserSettings();
+
   useEffect(() => {
     if (!isLoading && !isAuthenticated) setLocation("/login");
   }, [isLoading, isAuthenticated, setLocation]);
+
+  // Handle password change
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({
+        title: "Oops!",
+        description: "New passwords don't match. Please try again!",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      toast({
+        title: "Password too short!",
+        description: "Your password should be at least 6 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsChangingPassword(true);
+    const success = await changePassword(passwordForm.currentPassword, passwordForm.newPassword);
+    setIsChangingPassword(false);
+    
+    if (success) {
+      toast({
+        title: "Password Changed! 🎉",
+        description: "Your password has been updated successfully!",
+      });
+      setShowPasswordChange(false);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to change password. Please check your current password.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleToggleAnalytics = async () => {
     const success = await updateSetting('analyticsEnabled', !settings.analyticsEnabled);
@@ -184,22 +247,144 @@ export default function Settings() {
               manage your account security and authentication
             </p>
 
-            <button
-              onClick={() => setLocation("/security")}
-              className="w-full p-4 bg-muted hover:bg-accent rounded-lg transition flex items-center justify-between group"
-            >
-              <div className="flex items-center gap-3">
-                <Shield className="w-5 h-5 text-blue-600" />
-                <div className="text-left">
-                  <div className="font-semibold">Security Settings</div>
-                  <div className="text-sm text-muted-foreground">
-                    Two-factor authentication, email verification, and more
+            <div className="space-y-4">
+              {/* Advanced Security Settings */}
+              <button
+                onClick={() => setLocation("/security")}
+                className="w-full p-4 bg-card hover:bg-muted/50 border border-border rounded-lg transition flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-3">
+                  <Shield className="w-5 h-5 text-blue-600" />
+                  <div className="text-left">
+                    <div className="font-semibold">Advanced Security</div>
+                    <div className="text-sm text-muted-foreground">
+                      Extra protection, email verification and more! 
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div className="text-muted-foreground group-hover:translate-x-1 transition">→</div>
-            </button>
+                <div className="text-muted-foreground group-hover:translate-x-1 transition">→</div>
+              </button>
+            </div>
           </section>
+
+          {/* Password Settings */}
+          {user?.signupMethod === 'email' && (
+            <section className="mb-12">
+              <h2 className="text-2xl font-bold mb-1">password</h2>
+              <p className="text-muted-foreground mb-6">
+                change your account password
+              </p>
+
+              <div className="p-4 bg-card hover:bg-muted/50 border border-border rounded-lg transition">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <Lock className="w-5 h-5 text-[#ff6b1d]" />
+                    <div>
+                      <div className="font-semibold">Your Password</div>
+                      <div className="text-sm text-muted-foreground">
+                        Keep your account safe with a strong password
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowPasswordChange(!showPasswordChange);
+                      if (showPasswordChange) {
+                        // Reset form when canceling
+                        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                      }
+                    }}
+                    className="px-4 py-2 text-sm bg-background hover:bg-muted/30 rounded-lg border border-border transition"
+                  >
+                    {showPasswordChange ? 'Cancel' : 'Change Password'}
+                  </button>
+                </div>
+                
+                {showPasswordChange && (
+                  <form onSubmit={handlePasswordChange} className="space-y-4 mt-4 pt-4 border-t border-border">
+                    <div className="grid gap-4">
+                      <div>
+                        <label className="text-sm font-medium block mb-2">Current Password</label>
+                        <div className="relative">
+                          <input
+                            type={showCurrentPassword ? "text" : "password"}
+                            value={passwordForm.currentPassword}
+                            onChange={(e) => setPasswordForm(prev => ({ ...prev, currentPassword: e.target.value }))}
+                            placeholder="Enter your current password"
+                            className="w-full px-3 py-2 border border-border rounded-lg pr-10 bg-background"
+                            required
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium block mb-2">New Password</label>
+                        <div className="relative">
+                          <input
+                            type={showNewPassword ? "text" : "password"}
+                            value={passwordForm.newPassword}
+                            onChange={(e) => setPasswordForm(prev => ({ ...prev, newPassword: e.target.value }))}
+                            placeholder="Enter your new password (at least 6 characters)"
+                            className="w-full px-3 py-2 border border-border rounded-lg pr-10 bg-background"
+                            required
+                            minLength={6}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowNewPassword(!showNewPassword)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                          >
+                            {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium block mb-2">Confirm New Password</label>
+                        <input
+                          type="password"
+                          value={passwordForm.confirmPassword}
+                          onChange={(e) => setPasswordForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                          placeholder="Type your new password again"
+                          className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                          required
+                          minLength={6}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 pt-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowPasswordChange(false);
+                          setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                        }}
+                        className="flex-1 px-4 py-2 border border-border rounded-lg hover:bg-accent transition"
+                        disabled={isChangingPassword}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isChangingPassword || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword}
+                        className="flex-1 px-4 py-2 bg-[#ff6b1d] text-white rounded-lg hover:bg-[#e55a15] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isChangingPassword ? 'Changing...' : 'Update Password'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            </section>
+          )}
 
           {/* Privacy settings */}
           <section className="mb-12">
@@ -420,6 +605,8 @@ export default function Settings() {
           onClose={() => setShowFeedback(false)}
         />
       )}
+
+
     </div>
   );
 }

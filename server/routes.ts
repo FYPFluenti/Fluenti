@@ -791,6 +791,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   }
 
+  // OpenAI Assessment Routes
+  const { OpenAIAssessmentService } = await import('./services/openaiAssessment');
+
+  // Health check for assessment service
+  app.get('/api/assessment/health', (req: Request, res: Response) => {
+    const isAvailable = OpenAIAssessmentService.isAvailable();
+    res.json({ 
+      status: isAvailable ? 'available' : 'unavailable',
+      hasOpenAIKey: !!process.env.OPENAI_API_KEY 
+    });
+  });
+
+  // Analyze individual category
+  app.post('/api/assessment/analyze-category', async (req: Request, res: Response) => {
+    try {
+      const { categoryName, responses, childAge, childName } = req.body;
+
+      if (!categoryName || !responses || !childAge) {
+        return res.status(400).json({ 
+          error: 'Missing required fields: categoryName, responses, and childAge are required' 
+        });
+      }
+
+      if (!OpenAIAssessmentService.isAvailable()) {
+        return res.status(503).json({ 
+          error: 'OpenAI service is not available. Please check API key configuration.' 
+        });
+      }
+
+      const analysis = await OpenAIAssessmentService.analyzeCategoryWithAI(
+        categoryName,
+        responses,
+        childAge,
+        childName
+      );
+
+      res.json({ success: true, analysis });
+
+    } catch (error) {
+      console.error('Error in analyze-category endpoint:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to analyze category' 
+      });
+    }
+  });
+
+  // Generate overall assessment
+  app.post('/api/assessment/overall-assessment', async (req: Request, res: Response) => {
+    try {
+      const { categoryAnalyses, childAge, childName, totalQuestions } = req.body;
+
+      if (!categoryAnalyses || !childAge) {
+        return res.status(400).json({ 
+          error: 'Missing required fields: categoryAnalyses and childAge are required' 
+        });
+      }
+
+      if (!OpenAIAssessmentService.isAvailable()) {
+        return res.status(503).json({ 
+          error: 'OpenAI service is not available. Please check API key configuration.' 
+        });
+      }
+
+      const assessment = await OpenAIAssessmentService.generateOverallAssessment(
+        categoryAnalyses,
+        childAge,
+        childName,
+        totalQuestions
+      );
+
+      res.json({ success: true, assessment });
+
+    } catch (error) {
+      console.error('Error in overall-assessment endpoint:', error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to generate overall assessment' 
+      });
+    }
+  });
+
   // Speech therapy routes
   app.post('/api/speech/session', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {

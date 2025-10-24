@@ -3,7 +3,9 @@ import { motion } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import DarkModeToggle from "@/components/DarkModeToggle";
+import { TwoFactorSetup } from "@/components/auth/TwoFactorSetup";
 import { Settings, User, Bell, Shield, Palette } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface User {
   name?: string;
@@ -19,9 +21,11 @@ interface AdultSettingsProps {
 
 export function AdultSettings({ isOpen, onClose, language = 'en', onLanguageChange }: AdultSettingsProps) {
   const { user } = useAuth() as { user: User };
+  const { toast } = useToast();
   const [notifications, setNotifications] = useState(true);
   const [sessionReminders, setSessionReminders] = useState(true);
   const [dataSharing, setDataSharing] = useState(false);
+  const [show2FA, setShow2FA] = useState(false);
 
   if (!isOpen) return null;
 
@@ -205,6 +209,23 @@ export function AdultSettings({ isOpen, onClose, language = 'en', onLanguageChan
             </div>
             
             <div className="space-y-4">
+              {/* Advanced Security */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-gray-700 dark:text-gray-300 font-medium">Advanced Security</span>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Two-factor authentication and more
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShow2FA(true)}
+                  className="px-3 py-1.5 bg-purple-500 hover:bg-purple-600 text-white text-sm rounded-lg transition-colors flex items-center gap-1.5"
+                >
+                  <Shield className="w-3.5 h-3.5" />
+                  Manage
+                </button>
+              </div>
+
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-gray-700 dark:text-gray-300 font-medium">Data Sharing</span>
@@ -261,6 +282,19 @@ export function AdultSettings({ isOpen, onClose, language = 'en', onLanguageChan
           </div>
         </div>
       </motion.div>
+
+      {/* 2FA Setup Modal */}
+      <TwoFactorSetup
+        isOpen={show2FA}
+        onClose={() => setShow2FA(false)}
+        userType="adult"
+        onSuccess={() => {
+          toast({
+            title: "2FA Updated Successfully",
+            description: "Your two-factor authentication has been configured.",
+          });
+        }}
+      />
     </motion.div>
   );
 }

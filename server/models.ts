@@ -33,6 +33,15 @@ const UserSchema = new mongoose.Schema({
   // Password reset fields
   passwordResetToken: { type: String, select: false },
   passwordResetExpiry: { type: Date, select: false },
+  // Two-Factor Authentication fields
+  twoFactorEnabled: { type: Boolean, default: false },
+  twoFactorSecret: { type: String, select: false }, // Hidden by default for security
+  twoFactorBackupCodes: [{ type: String, select: false }], // Array of hashed backup codes
+  
+  // JWT Refresh Token fields
+  refreshToken: { type: String, select: false },
+  refreshTokenExpiry: { type: Date, select: false },
+  
   // User Settings
   settings: {
     // Privacy Settings

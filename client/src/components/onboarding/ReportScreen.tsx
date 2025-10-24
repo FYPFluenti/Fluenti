@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { AssessmentAnalyzer, type AssessmentData } from '@/lib/assessmentAnalyzer';
+import { AssessmentAnalyzer, type AssessmentData, type AssessmentReport } from '@/lib/assessmentAnalyzer';
 
 interface ReportScreenProps {
   data: AssessmentData;
@@ -9,8 +9,78 @@ interface ReportScreenProps {
 }
 
 export default function ReportScreen({ data, onStartPracticing, onLearnMore }: ReportScreenProps) {
-  // Generate real assessment report using the analyzer
-  const report = AssessmentAnalyzer.generateReport(data);
+  const [report, setReport] = useState<AssessmentReport | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Generate AI-powered assessment report
+    const generateReport = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        console.log('Generating AI-powered assessment report...');
+        
+        const generatedReport = await AssessmentAnalyzer.generateReport(data);
+        setReport(generatedReport);
+        
+        console.log('Assessment report generated:', {
+          aiPowered: generatedReport.aiPowered,
+          overallRisk: generatedReport.overallRiskLevel,
+          categories: generatedReport.categories.length
+        });
+      } catch (err) {
+        console.error('Error generating assessment report:', err);
+        setError(err instanceof Error ? err.message : 'Failed to generate report');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    generateReport();
+  }, [data]);
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800 mx-auto mb-8"></div>
+          <h1 className="text-2xl font-normal text-gray-900 mb-4">Analyzing Assessment</h1>
+          <p className="text-gray-600 text-base">Our AI is carefully reviewing your child's responses...</p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error || !report) {
+    return (
+      <div className="text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="text-red-500 text-6xl mb-8">⚠️</div>
+          <h1 className="text-2xl font-normal text-gray-900 mb-4">Assessment Error</h1>
+          <p className="text-gray-600 text-base mb-16">{error || 'Failed to generate assessment report'}</p>
+          <motion.button 
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => window.location.reload()} 
+            className="w-full bg-gray-800 text-white font-medium py-4 px-8 rounded-full hover:bg-gray-700 transition-all duration-200"
+          >
+            Try Again
+          </motion.button>
+        </motion.div>
+      </div>
+    );
+  }
 
   // Risk level colors and styling
   const getRiskLevelColor = (riskLevel: 'low' | 'moderate' | 'high') => {
@@ -74,6 +144,14 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
           <div className="text-sm text-gray-500">
             {report.childAge.years} years, {report.childAge.months} months old
           </div>
+          {report.aiPowered && (
+            <div className="flex items-center justify-center gap-2 text-sm text-indigo-600 mt-2">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2L13.09 8.26L22 9L15.5 15L17.18 22L12 18.27L6.82 22L8.5 15L2 9L10.91 8.26L12 2Z"/>
+              </svg>
+              <span>AI-Powered Analysis</span>
+            </div>
+          )}
         </div>
       </motion.div>
 
@@ -168,22 +246,22 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.7 }}
-        className="space-y-3 max-w-xs mx-auto"
+        className="space-y-4"
       >
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={onStartPracticing}
-          className="w-full bg-black text-white py-3 px-6 rounded-2xl font-semibold text-base hover:bg-gray-800 transition-colors duration-200"
+          className="w-full bg-gray-800 text-white font-medium py-4 px-8 rounded-full hover:bg-gray-700 transition-all duration-200"
         >
-          start
+          start practicing
         </motion.button>
 
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
           onClick={onLearnMore}
-          className="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 px-6 rounded-2xl font-semibold text-base hover:border-gray-800 hover:text-gray-800 transition-colors duration-200"
+          className="w-full text-gray-500 font-medium py-3 px-6 hover:text-gray-700 transition-colors"
         >
           learn more
         </motion.button>
