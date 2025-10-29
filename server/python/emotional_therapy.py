@@ -1442,6 +1442,23 @@ class TherapyBot:
 
         print("✅ Enhanced TherapyBot with strict session isolation initialized!")
 
+    def _extract_llm_content(self, response) -> str:
+        """Safely extract content from LLM response"""
+        try:
+            if hasattr(response, 'content'):
+                content = response.content
+                if isinstance(content, str):
+                    return content.strip()
+                elif isinstance(content, list) and content:
+                    return str(content[0]).strip()
+                else:
+                    return str(content).strip()
+            else:
+                return str(response).strip()
+        except Exception as e:
+            print(f"⚠️ Error extracting LLM content: {e}")
+            return ""
+
     def _initialize_enhanced_knowledge_base(self):
         """Initialize enhanced vector store with mental health knowledge"""
         try:
@@ -1565,12 +1582,15 @@ class TherapyBot:
     def _setup_dynamic_prompts(self):
         """Setup dynamic therapeutic conversation prompts with strict session isolation"""
 
-        #  Casual prompt with session verification
+        #  Enhanced casual prompt with therapeutic context support
         self.casual_prompt = PromptTemplate(
-            input_variables=["user_input", "conversation_history", "session_context"],
-            template="""You are a warm, professional mental health support assistant. Keep this response natural and conversational.
+            input_variables=["user_input", "conversation_history", "session_context", "context"],
+            template="""You are a warm, professional mental health support assistant. Even in casual interactions, maintain a therapeutically-informed and supportive tone.
 
 CURRENT SESSION CONTEXT ONLY: {session_context}
+
+THERAPEUTIC GUIDANCE (use subtly when appropriate):
+{context}
 
 CURRENT SESSION CONVERSATION HISTORY:
 {conversation_history}
@@ -1579,9 +1599,9 @@ USER MESSAGE: {user_input}
 
 CRITICAL: Only reference information from the CURRENT session shown above. Never reference information not explicitly mentioned in this conversation.
 
-Respond naturally like a skilled therapist would - warm, genuine, and appropriately brief for simple interactions.
+Respond naturally like a skilled therapist would - warm, genuine, and appropriately brief for simple interactions. Even for casual exchanges, maintain therapeutic awareness and provide subtle emotional support when appropriate.
 
-Your natural response:"""
+Your natural, therapeutically-informed response:"""
         )
 
         #  Therapeutic prompt with strict session boundaries
@@ -1692,29 +1712,55 @@ Your personalized crisis intervention response:"""
         # Extract primary issue from first few messages of THIS session only
         progress_notes_len = len(memory.progress_notes) if memory.progress_notes else 0
         if not memory.primary_issue and progress_notes_len < 3:
-            issue_keywords = {
-                'work_stress': ['work', 'job', 'boss', 'colleague', 'workplace', 'professional', 'scolded'],
-                'relationship': ['partner', 'family', 'friend', 'relationship', 'marriage'],
-                'anxiety': ['anxious', 'worry', 'panic', 'nervous', 'scared'],
-                'depression': ['depressed', 'sad', 'hopeless', 'empty', 'worthless'],
-                'trauma': ['trauma', 'abuse', 'flashback', 'triggered'],
-                'embarrassment': ['embarrass', 'shame', 'humiliat', 'mistake', 'mortify']
-            }
+            # Use AI to identify primary issue instead of hardcoded keywords
+            try:
+                if self.llm:
+                    issue_identification_prompt = f"""
+You are a mental health professional identifying the primary issue from user input.
 
-            user_lower = user_input.lower()
-            for issue_type, keywords in issue_keywords.items():
-                if any(keyword in user_lower for keyword in keywords):
-                    memory.primary_issue = issue_type
-                    if memory.issue_details is not None:
-                        memory.issue_details['initial_description'] = user_input[:200]
-                    print(f"🎯 Identified primary issue for this session: {issue_type}")
-                    break
+User Input: "{user_input}"
+Session Context: This is message {progress_notes_len + 1} in the therapy session.
+
+Identify the main therapeutic concern or issue category. Choose the most appropriate:
+- work_stress
+- relationship_issues  
+- anxiety_disorders
+- depression_symptoms
+- trauma_related
+- self_esteem_issues
+- life_transitions
+- grief_loss
+- family_dynamics
+- academic_stress
+- financial_stress
+- health_concerns
+- substance_related
+- anger_management
+- social_anxiety
+- general_support
+
+Return ONLY the category name that best matches the primary concern:"""
+
+                    response = self.llm.invoke(issue_identification_prompt)
+                    ai_issue = self._extract_llm_content(response).strip().lower()
+                    
+                    if ai_issue and len(ai_issue) > 3:
+                        memory.primary_issue = ai_issue
+                        if memory.issue_details is not None:
+                            memory.issue_details['initial_description'] = user_input[:200]
+                        print(f"🎯 AI-identified primary issue: {ai_issue}")
+                else:
+                    print(f"⚠️ LLM unavailable for issue identification")
+                    memory.primary_issue = self._fallback_issue_classification(user_input)
+            except Exception as e:
+                print(f"⚠️ AI issue identification failed: {e}")
+                memory.primary_issue = self._fallback_issue_classification(user_input)
 
         # Update progress notes for THIS session only
         if memory.progress_notes is not None:
             memory.progress_notes.append({
                 'timestamp': datetime.now().isoformat(),
-                'session_id': session_id,  #  Track session ID
+                'session_id': session_id,  # Track session ID
                 'user_input': user_input,
                 'bot_response': bot_response[:100],
                 'themes': self._extract_themes_from_text(user_input)
@@ -1724,25 +1770,64 @@ Your personalized crisis intervention response:"""
             if len(memory.progress_notes) > 20:
                 memory.progress_notes = memory.progress_notes[-20:]
 
+    def _fallback_issue_classification(self, user_input: str) -> str:
+        """Simple fallback issue classification when AI is unavailable"""
+        text_lower = user_input.lower()
+        
+        # Basic keyword-based fallback (minimal hardcoding)
+        if any(word in text_lower for word in ['work', 'job', 'boss', 'colleague']):
+            return "work_stress"
+        elif any(word in text_lower for word in ['family', 'parent', 'sibling', 'relative']):
+            return "family_dynamics"  
+        elif any(word in text_lower for word in ['friend', 'relationship', 'partner']):
+            return "relationship_issues"
+        elif any(word in text_lower for word in ['anxious', 'anxiety', 'worry', 'panic']):
+            return "anxiety_symptoms"
+        elif any(word in text_lower for word in ['sad', 'depressed', 'depression', 'down']):
+            return "depression_symptoms"
+        else:
+            return "general_support"
+
     def _extract_themes_from_text(self, text: str) -> List[str]:
-        """Extract themes from user input"""
-        themes = []
-        text_lower = text.lower()
+        """AI-powered theme extraction from user input - eliminates hardcoded keywords"""
+        if not text.strip():
+            return []
+            
+        try:
+            if self.llm:
+                theme_extraction_prompt = f"""
+You are a mental health professional analyzing user input to identify key therapeutic themes.
 
-        theme_keywords = {
-            'work_stress': ['work', 'job', 'boss', 'workplace', 'professional', 'career', 'scolded'],
-            'embarrassment': ['embarrass', 'shame', 'mistake', 'humiliat', 'mortify'],
-            'anxiety': ['anxious', 'worry', 'nervous', 'panic', 'overwhelm'],
-            'professional_image': ['image', 'reputation', 'credibility', 'professional'],
-            'coping': ['cope', 'handle', 'manage', 'deal with', 'overcome'],
-            'distraction': ['distract', 'take mind off', 'forget', 'think about something else']
-        }
+User Input: "{text}"
 
-        for theme, keywords in theme_keywords.items():
-            if any(keyword in text_lower for keyword in keywords):
-                themes.append(theme)
+Identify the main psychological and emotional themes present in this text. Focus on:
+- Emotional states (anxiety, depression, stress, etc.)
+- Life domains (work, relationships, family, etc.)
+- Coping mechanisms and behaviors
+- Specific concerns or challenges
+- Mental health topics
 
-        return themes
+Return 1-3 most relevant themes as a comma-separated list. Use clear, therapeutic terminology.
+If no significant themes are present, return "general_support".
+
+Themes:"""
+
+                response = self.llm.invoke(theme_extraction_prompt)
+                ai_themes = self._extract_llm_content(response)
+                
+                # Parse AI response into list
+                themes = [theme.strip().lower().replace(' ', '_') for theme in ai_themes.split(',')]
+                themes = [theme for theme in themes if theme and len(theme) > 2]
+                
+                print(f"🎯 AI-extracted themes: {themes}")
+                return themes[:3]  # Limit to 3 themes
+            else:
+                print(f"⚠️ LLM unavailable for theme extraction")
+                return ["general_support"]
+                
+        except Exception as e:
+            print(f"⚠️ AI theme extraction failed: {e}")
+            return ["general_support"]
 
     def _create_session_context(self, user_id: str, session_id: str) -> str:
         """ Create session context with strict isolation"""
@@ -1831,68 +1916,145 @@ Your personalized crisis intervention response:"""
             return "Previous conversation unavailable."
 
     def _determine_response_type(self, user_input: str, crisis_level: CrisisLevel, conversation_count: int) -> str:
-        """Dynamically determine what type of response is needed"""
-        user_input_lower = user_input.lower().strip()
-
+        """AI-powered response type determination - eliminates hardcoded patterns"""
+        
         # Crisis situations always get crisis response
         if crisis_level in [CrisisLevel.MEDIUM, CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
             print(f" CRISIS RESPONSE TYPE SELECTED: {crisis_level.value}")
             return "crisis"
 
-        # Simple greetings and casual interactions
-        casual_indicators = [
-            'hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening',
-            'how are you', 'thanks', 'thank you', 'ok', 'okay', 'yes', 'no',
-            'sure', 'maybe', 'i see', 'alright', 'gotcha'
-        ]
+        # Use AI to determine response type based on therapeutic context
+        try:
+            if self.llm:
+                response_type_prompt = f"""
+You are a mental health professional analyzing user input to determine the appropriate response type.
 
-        # Check if it's a simple/casual message
-        if (len(user_input.split()) <= 5 and
-            any(indicator in user_input_lower for indicator in casual_indicators)):
-            return "casual"
+User Input: "{user_input}"
+Conversation Count: {conversation_count}
 
-        # Check for therapeutic content indicators
-        therapeutic_indicators = [
-            'feel', 'feeling', 'emotion', 'sad', 'happy', 'angry', 'anxious', 'worried',
-            'stressed', 'depressed', 'relationship', 'family', 'work', 'problem',
-            'issue', 'struggle', 'difficult', 'hard', 'challenge', 'help', 'advice',
-            'therapy', 'counseling', 'mental health', 'anxiety', 'depression', 'rough day',
-            'scolded', 'boss'
-        ]
+Analyze this input and determine the most appropriate response type:
 
-        # If it contains therapeutic content or is longer/more complex
-        if (any(indicator in user_input_lower for indicator in therapeutic_indicators) or
-            len(user_input.split()) > 10 or
-            len(user_input) > 50):
-            return "therapeutic"
+1. CASUAL - Very simple greetings, brief acknowledgments, or basic social interactions that still benefit from therapeutic awareness
+2. THERAPEUTIC - Substantial emotional content, mental health topics, meaningful questions, or discussions that require professional therapeutic approach
 
-        # For first few messages, lean towards casual to build rapport
-        if conversation_count < 3:
-            return "casual"
+Consider:
+- Emotional depth and complexity of the message
+- Whether it contains feelings, problems, or requests for help
+- Length and substance of the input
+- Therapeutic value that could be provided
 
-        # Default to therapeutic for established conversations
-        return "therapeutic"
+Respond with ONLY one word: CASUAL or THERAPEUTIC
+
+Response Type:"""
+
+                response = self.llm.invoke(response_type_prompt)
+                ai_response = self._extract_llm_content(response).upper()
+                
+                if 'THERAPEUTIC' in ai_response:
+                    print(f"🤖 AI determined: THERAPEUTIC response needed")
+                    return "therapeutic"
+                elif 'CASUAL' in ai_response:
+                    print(f"🤖 AI determined: CASUAL response (with therapeutic awareness)")
+                    return "casual"
+                else:
+                    print(f"🤖 AI response unclear, defaulting based on conversation stage")
+                    # Fallback logic
+                    return "casual" if conversation_count < 3 else "therapeutic"
+            else:
+                # Fallback when LLM not available - minimal hardcoding
+                print(f"⚠️ LLM unavailable, using basic length-based determination")
+                return "casual" if len(user_input.split()) <= 3 else "therapeutic"
+                
+        except Exception as e:
+            print(f"⚠️ AI response type determination failed: {e}")
+            # Simple fallback without hardcoded keywords
+            return "casual" if len(user_input.split()) <= 3 else "therapeutic"
 
     def _get_dynamic_context(self, query: str, crisis_level: CrisisLevel, response_type: str) -> str:
-        """Get context only when needed for therapeutic responses"""
-        # Don't retrieve context for casual responses
-        if response_type == "casual":
-            return ""
-
-        # Only get context for therapeutic and crisis responses
+        """AI-enhanced therapeutic context retrieval using datasets intelligently"""
         try:
-            if crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
-                enhanced_query = f"crisis intervention suicide prevention safety planning {query}"
-                retriever = self.crisis_retriever
+            # Use AI to enhance query for better context retrieval
+            if self.llm:
+                query_enhancement_prompt = f"""
+You are a mental health knowledge retrieval specialist. Enhance the following query to find the most relevant therapeutic information from mental health datasets.
+
+Original Query: "{query}"
+Crisis Level: {crisis_level.value}
+Response Type: {response_type}
+
+Create an enhanced search query that will retrieve the most relevant therapeutic knowledge for this situation. Include:
+- Key therapeutic concepts
+- Relevant mental health techniques  
+- Appropriate intervention strategies
+- Supportive conversation patterns
+
+Enhanced Query (max 100 characters):"""
+
+                try:
+                    enhancement_response = self.llm.invoke(query_enhancement_prompt)
+                    enhanced_query = self._extract_llm_content(enhancement_response)[:100]  # Limit length
+                    print(f"🔍 AI-enhanced query: {enhanced_query}")
+                except Exception as e:
+                    print(f"⚠️ Query enhancement failed, using original: {e}")
+                    enhanced_query = query
             else:
-                enhanced_query = f"therapeutic techniques mental health support {query}"
+                enhanced_query = query
+
+            # Determine retrieval strategy based on crisis level and response type
+            if crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
+                final_query = f"crisis intervention emergency safety {enhanced_query}"
+                retriever = self.crisis_retriever
+                context_limit = 1200  # More context for crisis situations
+                docs_to_retrieve = 3
+            elif response_type == "casual":
+                final_query = f"supportive empathetic conversation {enhanced_query}"
                 retriever = self.general_retriever
+                context_limit = 600  # Lighter context for casual interactions
+                docs_to_retrieve = 2
+            else:  # therapeutic responses
+                final_query = f"therapeutic counseling mental health {enhanced_query}"
+                retriever = self.general_retriever
+                context_limit = 1000  # Full context for therapeutic responses
+                docs_to_retrieve = 3
 
             if retriever:
-                docs = retriever.invoke(enhanced_query)
-                context = "\n\n".join([doc.page_content for doc in docs[:2]])
-                return context[:1000]
+                # Retrieve relevant documents from mental health datasets
+                docs = retriever.invoke(final_query)
+                
+                # Use AI to select and rank the most relevant context pieces
+                if self.llm and docs:
+                    context_selection_prompt = f"""
+You are a mental health professional selecting the most relevant therapeutic knowledge for a response.
+
+User Query: "{query}"
+Crisis Level: {crisis_level.value}
+Response Type: {response_type}
+
+Available Context Pieces:
+{chr(10).join([f"Context {i+1}: {doc.page_content[:200]}..." for i, doc in enumerate(docs[:docs_to_retrieve])])}
+
+Select and rank the most relevant pieces for therapeutic response generation. Consider:
+- Relevance to user's specific situation
+- Therapeutic value and evidence-based approaches
+- Appropriateness for crisis level
+- Quality of therapeutic guidance
+
+Return the most relevant context pieces combined into a coherent therapeutic knowledge base:"""
+
+                    try:
+                        context_response = self.llm.invoke(context_selection_prompt)
+                        ai_selected_context = self._extract_llm_content(context_response)
+                        final_context = ai_selected_context[:context_limit]
+                        print(f"🧠 AI-selected context: {len(final_context)} chars")
+                        return final_context
+                    except Exception as e:
+                        print(f"⚠️ AI context selection failed, using direct retrieval: {e}")
+                
+                # Fallback: use direct document content
+                context = "\n\n".join([doc.page_content for doc in docs[:docs_to_retrieve]])
+                return context[:context_limit]
             else:
+                print(f"⚠️ No retriever available")
                 return ""
 
         except Exception as e:
@@ -1923,6 +2085,12 @@ Your personalized crisis intervention response:"""
             print(f"🔒 Session isolated context: {session_context}")
             print(f"📝 Session isolated summary: {conversation_summary}")
 
+            # Get therapeutic context for all response types
+            context = self._get_dynamic_context(user_input, crisis_level, response_type)
+            print(f"📚 Retrieved context ({response_type}): {len(context)} chars")
+            if context:
+                print(f"📖 Context preview: {context[:100]}...")
+
             # Generate response based on type
             if response_type == "crisis":
                 print(f" USING CRISIS PROMPT for {crisis_level.value}")
@@ -1939,12 +2107,11 @@ Your personalized crisis intervention response:"""
                 formatted_prompt = self.casual_prompt.format(
                     user_input=user_input,
                     conversation_history=conversation_history,
-                    session_context=session_context
+                    session_context=session_context,
+                    context=context  # Now includes therapeutic context
                 )
 
             else:  # therapeutic
-                context = self._get_dynamic_context(user_input, crisis_level, response_type)
-
                 formatted_prompt = self.therapeutic_prompt.format(
                     context=context,
                     conversation_history=conversation_history,
@@ -2030,29 +2197,60 @@ Your personalized crisis intervention response:"""
         except Exception as e:
             print(f"❌ Error in emergency notification: {e}")
 
-    # ... (rest of the methods remain the same but with session isolation checks)
     def _add_crisis_resources(self, response: str, crisis_level: CrisisLevel) -> str:
-        """Add crisis resources only for actual crisis situations"""
+        """AI-generated crisis resources based on severity and context"""
+        try:
+            if self.llm:
+                crisis_resources_prompt = f"""
+You are a mental health professional providing crisis support resources.
+
+Context:
+- Crisis Level: {crisis_level.value}
+- User needs immediate support information
+- This is for Pakistan-based mental health services
+
+Generate appropriate crisis support information based on the severity level:
+
+For CRITICAL: Include immediate emergency contacts and urgent action steps
+For HIGH: Include crisis helplines and urgent support options  
+For MEDIUM: Include mental health support lines and resources
+
+Guidelines:
+- Include relevant Pakistan mental health helplines (1019, 1166, 0800-00-100)
+- Match urgency to crisis level
+- Keep it concise and actionable
+- Use clear, calming language
+- Format with appropriate urgency indicators
+
+Crisis Support Resources:"""
+
+                resources_response = self.llm.invoke(crisis_resources_prompt)
+                ai_resources = self._extract_llm_content(resources_response)
+                
+                if ai_resources and len(ai_resources.strip()) > 10:
+                    print(f"🤖 Generated AI crisis resources: {len(ai_resources)} chars")
+                    return response + "\n\n" + ai_resources.strip()
+                else:
+                    print(f"⚠️ AI crisis resources generation failed, using fallback")
+                    return response + self._fallback_crisis_resources(crisis_level)
+            else:
+                print(f"⚠️ LLM unavailable for crisis resources")
+                return response + self._fallback_crisis_resources(crisis_level)
+                
+        except Exception as e:
+            print(f"⚠️ AI crisis resources error: {e}")
+            return response + self._fallback_crisis_resources(crisis_level)
+
+    def _fallback_crisis_resources(self, crisis_level: CrisisLevel) -> str:
+        """Fallback crisis resources when AI is unavailable"""
         if crisis_level == CrisisLevel.CRITICAL:
-            resources = """\n\n IMMEDIATE CRISIS SUPPORT (PAKISTAN):
-• 1166 - National Emergency Helpline  
-• 1019 - Mental Health Crisis Line (24/7)
-• 0800-00-100 - Rozan Crisis Helpline"""
-
+            return "\n\n🚨 IMMEDIATE CRISIS SUPPORT (PAKISTAN):\n• 1166 - National Emergency Helpline\n• 1019 - Mental Health Crisis Line (24/7)\n• 0800-00-100 - Rozan Crisis Helpline"
         elif crisis_level == CrisisLevel.HIGH:
-            resources = """\n\n URGENT SUPPORT (PAKISTAN):
-• 1019 - Mental Health Crisis Line
-• 0800-00-100 - Rozan Crisis Helpline"""
-
+            return "\n\n⚠️ URGENT SUPPORT (PAKISTAN):\n• 1019 - Mental Health Crisis Line\n• 0800-00-100 - Rozan Crisis Helpline"
         elif crisis_level == CrisisLevel.MEDIUM:
-            resources = """\n\n SUPPORT AVAILABLE (PAKISTAN):
-• 1019 - Mental Health Crisis Line
-• 0800-00-100 - Rozan Crisis Helpline"""
-
+            return "\n\n💙 SUPPORT AVAILABLE (PAKISTAN):\n• 1019 - Mental Health Crisis Line\n• 0800-00-100 - Rozan Crisis Helpline"
         else:
-            return response
-
-        return response + resources
+            return ""
 
     def _generate_with_retry(self, prompt: str, max_retries: int = 3) -> str:
         """Generate response with retry logic"""
@@ -2135,7 +2333,7 @@ class TherapyInterface:
         self.last_harm_type = HarmType.NONE
 
     def start_session(self, user_id: Optional[str] = None) -> str:
-        """Start a new therapy session with enhanced context awareness"""
+        """Start a new therapy session with AI-generated contextual welcome"""
         # Generate dynamic user ID based on current context
         if not user_id or user_id.strip() == "":
             # Use current timestamp and login if available
@@ -2153,47 +2351,90 @@ class TherapyInterface:
         self.last_crisis_level = CrisisLevel.NONE
         self.last_harm_type = HarmType.NONE
 
-        # Dynamic welcome message
-        current_hour = datetime.now().hour
-        if 5 <= current_hour < 12:
-            greeting = "Good morning!"
-        elif 12 <= current_hour < 17:
-            greeting = "Good afternoon!"
-        elif 17 <= current_hour < 21:
-            greeting = "Good evening!"
-        else:
-            greeting = "Hello!"
-
-        welcome_message = f"""{greeting} I'm here to provide you with mental health support. I'm trained in evidence-based therapeutic approaches and I'm here to listen and help.
-
-I'll remember what we discuss during our conversation, so you don't need to repeat yourself. Whether you're having a tough day, dealing with ongoing challenges, or just need someone to talk to, this is a safe space for you.
-
-How are you doing today?"""
+        # AI-generated contextual welcome message
+        welcome_message = self._generate_ai_welcome_message()
 
         # Backend session logging (not shown to user)
         self._log_session_info("Session started")
 
         return welcome_message
 
+    def _generate_ai_welcome_message(self) -> str:
+        """Generate AI-powered contextual welcome message based on time and environment"""
+        try:
+            if self.therapy_bot and self.therapy_bot.llm:
+                current_time = datetime.now()
+                current_hour = current_time.hour
+                day_of_week = current_time.strftime("%A")
+                
+                welcome_prompt = f"""
+You are a warm, professional mental health support assistant starting a new therapy session.
+
+Context:
+- Current time: {current_hour}:00 on {day_of_week}
+- This is the beginning of a new therapy session
+- You need to create a welcoming, safe environment
+- The user may be feeling vulnerable or uncertain
+
+Generate a natural, contextually appropriate welcome message that:
+1. Includes a time-appropriate greeting that feels natural (not robotic)
+2. Establishes you as a mental health support assistant
+3. Creates a sense of safety and confidentiality
+4. Mentions session continuity (remembering conversation context)
+5. Ends with an open, inviting question
+6. Keeps the tone warm but professional
+7. Is 3-4 sentences long
+
+Make it feel personal and human while maintaining therapeutic boundaries.
+
+Welcome message:"""
+
+                response = self.therapy_bot.llm.invoke(welcome_prompt)
+                ai_welcome = self.therapy_bot._extract_llm_content(response)
+                
+                if ai_welcome and len(ai_welcome.strip()) > 20:
+                    print(f"🤖 Generated AI welcome message: {len(ai_welcome)} chars")
+                    return ai_welcome.strip()
+                else:
+                    print(f"⚠️ AI welcome generation failed, using fallback")
+                    return self._fallback_welcome_message()
+            else:
+                print(f"⚠️ LLM unavailable for welcome generation")
+                return self._fallback_welcome_message()
+                
+        except Exception as e:
+            print(f"⚠️ AI welcome generation error: {e}")
+            return self._fallback_welcome_message()
+
+    def _fallback_welcome_message(self) -> str:
+        """Fallback welcome message when AI is unavailable"""
+        current_hour = datetime.now().hour
+        
+        # Simple time-based greeting without hardcoded templates
+        if 5 <= current_hour < 12:
+            time_context = "morning"
+        elif 12 <= current_hour < 17:
+            time_context = "afternoon"
+        elif 17 <= current_hour < 21:
+            time_context = "evening"
+        else:
+            time_context = "today"
+        
+        return f"""Hello! I'm here to provide mental health support this {time_context}. I'm trained in evidence-based therapeutic approaches and create a safe space for our conversation. I'll remember what we discuss during our session so you don't need to repeat yourself. How are you feeling right now?"""
+
     def send_message(self, message: str) -> str:
         """Send a message and get response"""
 
         if not self.therapy_bot:
-            error_msg = """I'm currently unavailable. If you're in crisis, please contact:
-• 988 - Suicide & Crisis Lifeline
-• 911 - Emergency Services"""
+            error_msg = self._generate_ai_error_message("service_unavailable")
             return error_msg
 
         if not self.current_user_id or not self.current_session_id:
-            error_msg = """Please start a new session first.
-
-If this is an emergency:
-• Call 1019 - Mental Health Crisis Line
-• Call 1166 - National Emergency Helpline"""
+            error_msg = self._generate_ai_error_message("session_required") 
             return error_msg
 
         if not message.strip():
-            return "Please enter a message."
+            return self._generate_ai_error_message("empty_message")
 
         try:
             # Generate contextually-aware response with session memory
@@ -2209,12 +2450,11 @@ If this is an emergency:
             self.last_harm_type = harm_type  # Store harm type for later use
             self._log_session_info(f"Message processed: {crisis_level.value}, Harm: {harm_type.value}")
 
-            # Format response based on crisis level and harm type
             if crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
                 if harm_type in [HarmType.HARM_TO_OTHERS, HarmType.BOTH]:
-                    formatted_response = f" EMERGENCY SUPPORT NEEDED \n\n{response}\n\n This situation requires immediate attention. Please contact emergency services if there is immediate danger to yourself or others."
+                    formatted_response = self._generate_ai_emergency_message(response, crisis_level, harm_type)
                 else:
-                    formatted_response = f" URGENT SUPPORT NEEDED \n\n{response}"
+                    formatted_response = self._generate_ai_urgent_message(response, crisis_level)
             else:
                 formatted_response = response
 
@@ -2222,13 +2462,132 @@ If this is an emergency:
 
         except Exception as e:
             print(f"❌ Chat error: {e}")
-            error_msg = f"""I encountered a technical issue. Please try again.
-
-If you're in crisis, please contact immediately:
-• 1019 - Mental Health Crisis Line
-• 1166 - National Emergency Helpline"""
-
+            error_msg = self._generate_ai_error_message("technical_issue")
             return error_msg
+
+    def _generate_ai_error_message(self, error_type: str) -> str:
+        """AI-generated contextual error messages"""
+        try:
+            if self.therapy_bot and self.therapy_bot.llm:
+                error_context = {
+                    "service_unavailable": "The therapy bot service is currently unavailable",
+                    "session_required": "No active session - user needs to start a new session", 
+                    "empty_message": "User sent an empty or blank message",
+                    "technical_issue": "A technical error occurred during message processing"
+                }
+                
+                error_prompt = f"""
+You are a mental health support assistant handling an error situation.
+
+Error Type: {error_type}
+Context: {error_context.get(error_type, "Unknown error")}
+
+Generate a helpful, supportive error message that:
+1. Acknowledges the issue clearly but gently
+2. Provides appropriate next steps for the user
+3. Includes crisis support information if relevant (Pakistan numbers: 1019, 1166, 0800-00-100)
+4. Maintains a caring, professional tone
+5. Keeps it concise (2-3 lines)
+
+Error Message:"""
+
+                response = self.therapy_bot.llm.invoke(error_prompt)
+                ai_error = self.therapy_bot._extract_llm_content(response)
+                
+                if ai_error and len(ai_error.strip()) > 10:
+                    return ai_error.strip()
+                else:
+                    return self._fallback_error_message(error_type)
+            else:
+                return self._fallback_error_message(error_type)
+                
+        except Exception as e:
+            print(f"⚠️ AI error message generation failed: {e}")
+            return self._fallback_error_message(error_type)
+
+    def _fallback_error_message(self, error_type: str) -> str:
+        """Fallback error messages when AI is unavailable"""
+        fallback_messages = {
+            "service_unavailable": "I'm currently unavailable. If you're in crisis, please contact 1019 (Mental Health Crisis Line) or 1166 (Emergency).",
+            "session_required": "Please start a new session first. If this is an emergency, call 1019 or 1166.",
+            "empty_message": "Please enter a message to continue our conversation.",
+            "technical_issue": "I encountered a technical issue. Please try again. If you're in crisis, contact 1019 or 1166 immediately."
+        }
+        return fallback_messages.get(error_type, "An error occurred. Please try again or contact support if needed.")
+
+    def _generate_ai_emergency_message(self, response: str, crisis_level: CrisisLevel, harm_type: HarmType) -> str:
+        """AI-generated emergency message formatting for harm to others scenarios"""
+        try:
+            if self.therapy_bot and self.therapy_bot.llm:
+                emergency_prompt = f"""
+You are a mental health crisis specialist formatting an emergency response.
+
+Context:
+- Crisis Level: {crisis_level.value}
+- Harm Type: {harm_type.value}
+- This involves potential harm to others
+- Immediate intervention may be needed
+
+Task: Create an appropriate emergency message wrapper that:
+1. Clearly indicates the emergency nature
+2. Emphasizes immediate safety for all involved
+3. Directs to appropriate emergency services
+4. Maintains therapeutic support while ensuring safety
+5. Is clear and actionable
+
+Original therapeutic response: "{response[:100]}..."
+
+Generate an emergency message format that wraps this response appropriately:"""
+
+                emergency_response = self.therapy_bot.llm.invoke(emergency_prompt)
+                ai_emergency = self.therapy_bot._extract_llm_content(emergency_response)
+                
+                if ai_emergency and len(ai_emergency.strip()) > 20:
+                    return ai_emergency.strip()
+                else:
+                    return f"🚨 EMERGENCY SUPPORT NEEDED\n\n{response}\n\nThis situation requires immediate attention. Please contact emergency services if there is immediate danger to yourself or others."
+            else:
+                return f"🚨 EMERGENCY SUPPORT NEEDED\n\n{response}\n\nThis situation requires immediate attention. Please contact emergency services if there is immediate danger to yourself or others."
+                
+        except Exception as e:
+            print(f"⚠️ AI emergency message generation error: {e}")
+            return f"🚨 EMERGENCY SUPPORT NEEDED\n\n{response}\n\nThis situation requires immediate attention. Please contact emergency services if there is immediate danger to yourself or others."
+
+    def _generate_ai_urgent_message(self, response: str, crisis_level: CrisisLevel) -> str:
+        """AI-generated urgent message formatting for high-risk scenarios"""
+        try:
+            if self.therapy_bot and self.therapy_bot.llm:
+                urgent_prompt = f"""
+You are a mental health crisis specialist formatting an urgent response.
+
+Context:
+- Crisis Level: {crisis_level.value}
+- High-risk situation requiring immediate attention
+- Focus on self-harm prevention and safety
+
+Task: Create an appropriate urgent message wrapper that:
+1. Indicates urgency while remaining supportive
+2. Emphasizes immediate safety and support
+3. Maintains hope and connection
+4. Is clear about next steps
+
+Original therapeutic response: "{response[:100]}..."
+
+Generate an urgent message format that wraps this response appropriately:"""
+
+                urgent_response = self.therapy_bot.llm.invoke(urgent_prompt)
+                ai_urgent = self.therapy_bot._extract_llm_content(urgent_response)
+                
+                if ai_urgent and len(ai_urgent.strip()) > 20:
+                    return ai_urgent.strip()
+                else:
+                    return f"⚠️ URGENT SUPPORT NEEDED\n\n{response}"
+            else:
+                return f"⚠️ URGENT SUPPORT NEEDED\n\n{response}"
+                
+        except Exception as e:
+            print(f"⚠️ AI urgent message generation error: {e}")
+            return f"⚠️ URGENT SUPPORT NEEDED\n\n{response}"
 
     def _log_session_info(self, event: str):
         """Backend logging for session information (not displayed to user)"""
@@ -2374,69 +2733,210 @@ Generated: {current_time}
         return "\n".join(insights) if insights else "• Session memory is building understanding of your needs"
 
     def _extract_themes(self, history: List[Dict], memory: SessionMemory) -> str:
-        """Extract themes using both history and memory dynamically"""
+        """AI-powered theme extraction using both history and memory"""
+        try:
+            if self.therapy_bot and self.therapy_bot.llm:
+                # Get text from conversation history
+                all_text = " ".join([conv['user_input'] for conv in history])
+                
+                theme_analysis_prompt = f"""
+You are a mental health professional analyzing conversation themes from a therapy session.
+
+Conversation text: "{all_text[:500]}..."
+Session primary issue: {memory.primary_issue if memory.primary_issue else 'Unknown'}
+
+Analyze the conversation and identify the main psychological and therapeutic themes present. Focus on:
+- Emotional states and feelings expressed
+- Life domains causing stress or concern
+- Relationship dynamics
+- Coping mechanisms mentioned
+- Specific challenges or struggles
+- Mental health topics discussed
+
+Generate 3-4 main themes in a clear, therapeutic format. Use emoji indicators and format as:
+• 😰 Theme Name: Brief description
+• 💔 Theme Name: Brief description
+
+Keep themes relevant to mental health and therapeutic work.
+
+Main Themes:"""
+
+                response = self.therapy_bot.llm.invoke(theme_analysis_prompt)
+                ai_themes = self.therapy_bot._extract_llm_content(response)
+                
+                if ai_themes and len(ai_themes.strip()) > 20:
+                    print(f"🎯 AI-extracted conversation themes: {len(ai_themes)} chars")
+                    return ai_themes.strip()
+                else:
+                    print(f"⚠️ AI theme extraction failed, using fallback")
+                    return self._fallback_theme_extraction(history, memory)
+            else:
+                print(f"⚠️ LLM unavailable for theme extraction")
+                return self._fallback_theme_extraction(history, memory)
+                
+        except Exception as e:
+            print(f"⚠️ AI theme extraction error: {e}")
+            return self._fallback_theme_extraction(history, memory)
+
+    def _fallback_theme_extraction(self, history: List[Dict], memory: SessionMemory) -> str:
+        """Fallback theme extraction when AI is unavailable"""
         found_themes = []
 
         # Get themes from memory first
         if memory.key_themes:
-            for theme in memory.key_themes:
-                found_themes.append(f"😊 {theme.replace('_', ' ').title()}")
+            for theme in memory.key_themes[:2]:
+                found_themes.append(f"• 🧠 {theme.replace('_', ' ').title()}")
 
-        # Add themes from conversation analysis
+        # Simple keyword-based theme detection as fallback
         try:
             all_text = " ".join([conv['user_input'] for conv in history]).lower()
 
-            # Dynamic theme detection
-            themes = {
-                '😰 Anxiety/Stress': ['anxious', 'worried', 'panic', 'stressed', 'overwhelmed', 'nervous'],
-                '😢 Depression/Sadness': ['sad', 'depressed', 'hopeless', 'empty', 'worthless', 'down'],
-                '💔 Relationships': ['relationship', 'partner', 'family', 'friends', 'lonely', 'isolated'],
-                '💼 Work/Career': ['work', 'job', 'career', 'boss', 'workplace', 'professional'],
-                '😳 Embarrassment/Shame': ['embarrass', 'shame', 'humiliat', 'mortify', 'mistake', 'awkward'],
-                '🏠 Family Issues': ['family', 'parents', 'siblings', 'children', 'home', 'relatives'],
-                '🎓 Academic/Study': ['study', 'school', 'exam', 'homework', 'college', 'grades'],
-                '💪 Self-Improvement': ['improve', 'better', 'grow', 'develop', 'progress', 'goals']
+            # Minimal hardcoded themes for fallback only
+            basic_themes = {
+                '• 😰 Anxiety/Stress': ['anxious', 'worried', 'panic', 'stressed', 'overwhelmed'],
+                '• 😢 Emotional Difficulties': ['sad', 'depressed', 'hopeless', 'empty', 'down'],
+                '• 💔 Relationship Concerns': ['relationship', 'partner', 'family', 'friends', 'lonely'],
+                '• 💼 Work/Career Issues': ['work', 'job', 'career', 'boss', 'workplace']
             }
 
-            for theme, keywords in themes.items():
+            for theme, keywords in basic_themes.items():
                 if sum(1 for word in keywords if word in all_text) >= 1:
-                    if theme not in [t for t in found_themes]:
+                    if theme not in found_themes:
                         found_themes.append(theme)
 
-            return "\n".join([f"• {theme}" for theme in found_themes[:4]]) or "• General life concerns and wellbeing"
+            return "\n".join(found_themes[:3]) if found_themes else "• 💙 General life concerns and wellbeing"
 
         except:
-            return "• Conversation themes being analyzed"
+            return "• 🤝 Conversation themes being analyzed"
 
     def _extract_strengths(self, history: List[Dict]) -> str:
-        """Extract strengths mentioned or demonstrated dynamically"""
+        """AI-powered strength identification from conversation"""
+        try:
+            if self.therapy_bot and self.therapy_bot.llm:
+                # Get text from conversation history
+                all_text = " ".join([conv['user_input'] for conv in history])
+                
+                strength_analysis_prompt = f"""
+You are a mental health professional identifying strengths and positive qualities from a therapy conversation.
+
+Conversation text: "{all_text[:500]}..."
+
+Analyze the conversation and identify the strengths, positive qualities, and resilient behaviors the person is demonstrating. Look for:
+- Acts of courage (reaching out, being vulnerable, seeking help)
+- Self-awareness and insight
+- Problem-solving attempts
+- Resilience and persistence
+- Self-compassion or kindness to self
+- Growth mindset or willingness to change
+- Support-seeking behaviors
+- Coping strategies mentioned
+
+Generate 2-3 key strengths in a supportive format using emoji indicators:
+• 💪 Strength: Brief description
+• 🌱 Strength: Brief description
+
+Focus on genuine strengths you can identify from what they've shared.
+
+Identified Strengths:"""
+
+                response = self.therapy_bot.llm.invoke(strength_analysis_prompt)
+                ai_strengths = self.therapy_bot._extract_llm_content(response)
+                
+                if ai_strengths and len(ai_strengths.strip()) > 20:
+                    print(f"🎯 AI-identified strengths: {len(ai_strengths)} chars")
+                    return ai_strengths.strip()
+                else:
+                    print(f"⚠️ AI strength identification failed, using fallback")
+                    return self._fallback_strength_extraction(history)
+            else:
+                print(f"⚠️ LLM unavailable for strength identification")
+                return self._fallback_strength_extraction(history)
+                
+        except Exception as e:
+            print(f"⚠️ AI strength identification error: {e}")
+            return self._fallback_strength_extraction(history)
+
+    def _fallback_strength_extraction(self, history: List[Dict]) -> str:
+        """Fallback strength identification when AI is unavailable"""
         try:
             all_text = " ".join([conv['user_input'] for conv in history]).lower()
 
-            strengths = {
-                '🧘 Self-awareness': ['realize', 'understand', 'aware', 'recognize', 'notice', 'insight'],
-                '🤝 Seeking help': ['help', 'support', 'therapy', 'counseling', 'talking', 'reaching out'],
-                '💪 Resilience': ['trying', 'fighting', 'working', 'effort', 'keep going', 'persevere'],
-                '🎯 Problem-solving': ['fix', 'handle', 'solve', 'figure out', 'work through', 'address'],
-                '❤️ Self-compassion': ['kind to myself', 'forgive', 'gentle', 'understanding', 'patient'],
-                '🌱 Growth mindset': ['learn', 'improve', 'develop', 'change', 'progress', 'better']
+            # Basic strength indicators for fallback
+            basic_strengths = {
+                '• 🧘 Self-awareness': ['realize', 'understand', 'aware', 'recognize', 'notice'],
+                '• 🤝 Seeking support': ['help', 'support', 'therapy', 'talking', 'reaching out'],
+                '• 💪 Persistence': ['trying', 'working', 'effort', 'keep going', 'not giving up'],
+                '• 🎯 Problem-solving': ['fix', 'handle', 'solve', 'figure out', 'work through']
             }
 
             found_strengths = []
-            for strength, indicators in strengths.items():
+            for strength, indicators in basic_strengths.items():
                 if sum(1 for word in indicators if word in all_text) >= 1:
                     found_strengths.append(strength)
 
-            return "\n".join([f"• {strength}" for strength in found_strengths[:3]]) or "• Courage in seeking support\n• Willingness to share experiences"
+            return "\n".join(found_strengths[:3]) if found_strengths else "• 🤝 Courage in seeking support\n• 💪 Willingness to share experiences"
 
         except:
-            return "• Reaching out for support shows strength"
+            return "• 🌟 Reaching out for support shows strength"
 
     def _generate_recommendations(self, history: List[Dict], memory: SessionMemory) -> str:
-        """Generate personalized recommendations using memory dynamically"""
+        """AI-powered personalized recommendations based on conversation"""
+        try:
+            if self.therapy_bot and self.therapy_bot.llm:
+                # Prepare context for recommendations
+                crisis_count = sum(1 for conv in history if conv.get('crisis_level') in ['high', 'critical'])
+                mood_scores = [conv.get('mood_score', 5.0) for conv in history if conv.get('mood_score')]
+                avg_mood = sum(mood_scores) / len(mood_scores) if mood_scores else 5.0
+                
+                all_text = " ".join([conv['user_input'] for conv in history])
+                
+                recommendation_prompt = f"""
+You are a mental health professional providing personalized next steps and recommendations.
+
+Session Context:
+- Primary issue: {memory.primary_issue if memory.primary_issue else 'General support'}
+- Crisis events: {crisis_count}
+- Average mood: {avg_mood:.1f}/10
+- Conversation count: {len(history)}
+
+Conversation summary: "{all_text[:300]}..."
+
+Based on this therapy session, generate 3-4 personalized, actionable recommendations for the person's next steps. Consider:
+- Their specific issues and concerns raised
+- Therapeutic techniques that would be helpful
+- Self-care strategies appropriate to their situation
+- Professional support recommendations if needed
+- Practical coping tools they can use
+
+Format as:
+• 🌱 Recommendation: Specific action step
+• 🧘 Recommendation: Specific action step
+
+Make recommendations specific to what they've shared, not generic.
+
+Personalized Recommendations:"""
+
+                response = self.therapy_bot.llm.invoke(recommendation_prompt)
+                ai_recommendations = self.therapy_bot._extract_llm_content(response)
+                
+                if ai_recommendations and len(ai_recommendations.strip()) > 20:
+                    print(f"🎯 AI-generated recommendations: {len(ai_recommendations)} chars")
+                    return ai_recommendations.strip()
+                else:
+                    print(f"⚠️ AI recommendation generation failed, using fallback")
+                    return self._fallback_recommendations(history, memory)
+            else:
+                print(f"⚠️ LLM unavailable for recommendation generation")
+                return self._fallback_recommendations(history, memory)
+                
+        except Exception as e:
+            print(f"⚠️ AI recommendation generation error: {e}")
+            return self._fallback_recommendations(history, memory)
+
+    def _fallback_recommendations(self, history: List[Dict], memory: SessionMemory) -> str:
+        """Fallback recommendations when AI is unavailable"""
         try:
             crisis_count = sum(1 for conv in history if conv.get('crisis_level') in ['high', 'critical'])
-
             mood_scores = [conv.get('mood_score', 5.0) for conv in history if conv.get('mood_score')]
             avg_mood = sum(mood_scores) / len(mood_scores) if mood_scores else 5.0
 
@@ -2450,33 +2950,24 @@ Generated: {current_time}
             if memory.primary_issue:
                 if 'work' in memory.primary_issue or 'stress' in memory.primary_issue:
                     recommendations.append("• 💼 Practice workplace stress management techniques")
-                    recommendations.append("• 🧘 Use reframing techniques for difficult situations")
                 elif 'anxiety' in memory.primary_issue:
                     recommendations.append("• 🌬️ Practice breathing exercises daily")
-                    recommendations.append("• 🧘 Try mindfulness meditation")
                 elif 'depression' in memory.primary_issue:
-                    recommendations.append("• 🌅 Maintain daily routines")
-                    recommendations.append("• 🚶 Engage in gentle physical activity")
+                    recommendations.append("• 🌅 Maintain daily routines and gentle activities")
 
             # Mood-based recommendations
             if avg_mood < 4.0:
-                recommendations.append("• 🌅 Focus on daily mood-boosting activities")
+                recommendations.append("• 🌱 Focus on daily mood-supporting activities")
             elif avg_mood < 6.0:
-                recommendations.append("• 🧘 Practice regular mindfulness or meditation")
-
-            # Conversation-based recommendations
-            if self.conversation_count > 5:
-                recommendations.append("• 📔 Continue building on our therapeutic relationship")
-            else:
-                recommendations.append("• 🤝 Keep exploring your thoughts and feelings")
+                recommendations.append("• � Practice regular mindfulness or meditation")
 
             # General recommendations
-            recommendations.append("• 🔄 Consider scheduling regular check-ins")
+            recommendations.append("• 🔄 Continue building on our therapeutic relationship")
 
             return "\n".join(recommendations[:4])
 
         except:
-            return "• Continue building on our conversation\n• Practice the coping strategies we discussed"
+            return "• 🤝 Continue building on our conversation\n• 🌱 Practice the coping strategies we discussed"
 
 # Initialize interface
 if therapy_bot:
