@@ -76,6 +76,13 @@ const EmotionalSupport = () => {
     }
   }, [messages]);
 
+  // Auto-scroll to bottom when typing indicator appears
+  useEffect(() => {
+    if ((isTyping || showThinking) && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [isTyping, showThinking]);
+
   // Clear new message animation after delay
   useEffect(() => {
     if (newMessageId) {
@@ -196,6 +203,20 @@ const EmotionalSupport = () => {
     // Play send sound effect
     playSendSound();
     
+    // Add user message immediately
+    const userMessageId = Date.now().toString();
+    const userMessageObj: Message = {
+      id: userMessageId,
+      user: userMessage,
+      ai: '',
+      timestamp: new Date(),
+      crisisLevel: 'none',
+      isCrisis: false
+    };
+    
+    setMessages(prev => [...prev, userMessageObj]);
+    setNewMessageId(userMessageId);
+    
     // Show AI thinking indicator immediately
     setShowThinking(true);
     
@@ -241,19 +262,19 @@ const EmotionalSupport = () => {
       // Play receive sound effect
       playReceiveSound();
       
-      // Add new message with crisis information
-      const messageId = Date.now().toString();
-      const newMessage: Message = {
-        id: messageId,
-        user: userMessage,
+      // Add AI response as a separate message
+      const aiMessageId = (Date.now() + 1).toString();
+      const aiMessage: Message = {
+        id: aiMessageId,
+        user: '',
         ai: data.chatResponse || data.response || "I understand. Can you tell me more?",
         timestamp: new Date(),
         crisisLevel: data.crisisLevel,
         isCrisis: data.isCrisis
       };
       
-      setMessages(prev => [...prev, newMessage]);
-      setNewMessageId(messageId);
+      setMessages(prev => [...prev, aiMessage]);
+      setNewMessageId(aiMessageId);
       
       // Show welcome message if it's a new session
       if (data.newSession && data.welcomeMessage && data.welcomeMessage !== data.chatResponse) {
@@ -284,9 +305,10 @@ const EmotionalSupport = () => {
       }
       
       // Add error message with crisis resources
+      const errorMessageId = (Date.now() + 2).toString();
       const errorMessage: Message = {
-        id: Date.now().toString(),
-        user: userMessage,
+        id: errorMessageId,
+        user: '',
         ai: `I'm sorry, I'm having trouble responding right now. Please try again.
 
 If you're in immediate crisis, please contact:
@@ -322,8 +344,11 @@ Your wellbeing is important.`,
       lastTypingSoundRef.current = now;
     }
     
-    // Show typing indicator when user is actively typing
-    if (newValue.length > 0 && newValue !== oldValue) {
+    // Update input first to ensure state is synchronized
+    setInput(newValue);
+    
+    // Show typing indicator when user is actively typing (any input with content)
+    if (newValue.trim().length > 0) {
       setIsTyping(true);
       
       // Clear existing timeout
@@ -335,15 +360,13 @@ Your wellbeing is important.`,
       typingTimeoutRef.current = setTimeout(() => {
         setIsTyping(false);
       }, 1000);
-    } else if (newValue.length === 0) {
+    } else {
       // Hide typing indicator immediately if input is empty
       setIsTyping(false);
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
     }
-    
-    setInput(newValue);
   };
 
   // Handle key press with enhanced UX
@@ -449,7 +472,7 @@ Your wellbeing is important.`,
 
           {/* Chat Messages */}
           <div className="flex-1 px-4 py-6 mb-4 overflow-y-auto min-h-0 scrollbar-hide">
-          {messages.length === 0 ? (
+          {messages.length === 0 && !isTyping && !showThinking ? (
             <div className="text-center text-muted-foreground py-8">
               <MessageCircle className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <h3 className="text-lg font-medium mb-2">Welcome to Fluenti</h3>
