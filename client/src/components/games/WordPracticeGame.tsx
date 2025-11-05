@@ -2647,15 +2647,7 @@ export default function WordPracticeGame({
             </motion.div>
           )}
 
-          {/* Back Button */}
-          <div className="text-center mt-8">
-            <button
-              onClick={onExit}
-              className="text-gray-500 hover:text-gray-700 transition-colors font-semibold text-lg"
-            >
-              ← Back to Games
-            </button>
-          </div>
+          
         </div>
       </div>
     );

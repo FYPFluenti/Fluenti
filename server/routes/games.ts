@@ -22,15 +22,10 @@ router.get('/progress', async (req: Request, res: Response) => {
 
     const progress = await GameProgress.find({ userId }).sort({ gameId: 1 });
     
-    // Initialize progress for all 6 games if not exists
+    // Initialize progress for Word Practice game if not exists
     if (progress.length === 0) {
       const gameNames = [
-        'Word Practice',
-        'Sound Recognition', 
-        'Sentence Building',
-        'Rhythm Training',
-        'Story Reading',
-        'Quick Sounds'
+        'Word Practice'
       ];
 
       const initialProgress = await Promise.all(
@@ -41,7 +36,7 @@ router.get('/progress', async (req: Request, res: Response) => {
             gameName: name,
             level: 1,
             stars: 0,
-            unlocked: index < 2 // First 2 games unlocked by default
+            unlocked: true // Word Practice game is unlocked by default
           })
         )
       );
@@ -80,78 +75,6 @@ router.get('/game-data/:gameId', async (req: Request, res: Response) => {
           currentLevel: userLevel,
           description: 'AI-powered word practice game with personalized content',
           isAIPowered: true
-        };
-        break;
-
-      case 2: // Sound Recognition
-        gameData = {
-          gameId: 2,
-          gameName: 'Sound Recognition',
-          currentLevel: userLevel,
-          description: 'Interactive sound recognition and phoneme practice',
-          isAIPowered: false // Will be enhanced later
-        };
-        break;
-
-      case 3: // Sentence Building
-        gameData = {
-          gameId: 3,
-          gameName: 'Sentence Building',
-          currentLevel: userLevel,
-          description: 'Build sentences with guided practice',
-          isAIPowered: false // Will be enhanced later
-        };
-        break;
-
-      case 4: // Rhythm Training
-        gameData = {
-          gameId: 4,
-          gameName: 'Rhythm Training',
-          currentLevel: userLevel,
-          description: 'Practice speech rhythm and timing',
-          isAIPowered: false // Will be enhanced later
-        };
-        break;
-
-      case 5: // Story Reading
-        gameData = {
-          gameId: 5,
-          gameName: 'Story Adventure',
-          currentLevel: userLevel,
-          description: 'Interactive story reading with speech practice',
-          isAIPowered: false, // Will be enhanced later
-          stories: [
-            {
-              id: 1,
-              title: 'The Brave Little Fox',
-              content: 'Once upon a time, in a dense forest...'
-            },
-            {
-              id: 2,
-              title: 'The Wise Old Owl',
-              content: 'In the heart of the forest, there lived an owl...'
-            }
-          ]
-        };
-        break;
-
-      case 6: // Quick Sounds
-        gameData = {
-          gameId: 6,
-          gameName: 'Quick Sounds',
-          currentLevel: userLevel,
-          description: 'Fast-paced sound recognition game',
-          isAIPowered: false // Will be enhanced later
-        };
-        break;
-
-      case 7: // Phonological Awareness
-        gameData = {
-          gameId: 7,
-          gameName: 'Phonological Awareness',
-          currentLevel: userLevel,
-          description: 'Develop awareness of speech sounds and patterns',
-          isAIPowered: false // Will be enhanced later
         };
         break;
 

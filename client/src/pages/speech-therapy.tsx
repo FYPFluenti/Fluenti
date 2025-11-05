@@ -20,17 +20,7 @@ import {
   CheckCircle,
   ArrowRight,
   Headphones,
-  MessageSquare,
-  Ear,
-  Construction,
-  Music,
-  BookOpen,
-  Bolt,
-  Cat,
-  Dog,
-  Home,
-  Bug,
-  Hand
+  MessageSquare
 } from 'lucide-react';
 
 import SharedSidebar from '@/components/layout/SharedSidebar';
@@ -38,11 +28,6 @@ import MobileBottomNav from '@/components/layout/MobileBottomNav';
 import FeedbackModal from '@/components/layout/FeedbackModel';
 import PageHeader from '@/components/layout/PageHeader';
 import WordPracticeGame from '@/components/games/WordPracticeGame';
-import SoundRecognitionGame from '@/components/games/SoundRecognitionGame';
-import SentenceBuildingGame from '@/components/games/SentenceBuildingGame';
-import RhythmTrainingGame from '@/components/games/RhythmTrainingGame';
-import StoryReadingGame from '@/components/games/StoryReadingGame';
-import QuickSoundsGame from '@/components/games/QuickSoundsGame';
 
 interface GameSession {
   _id: string;
@@ -90,61 +75,6 @@ export default function SpeechTherapyPage() {
         xpReward: 25,
         category: "Pronunciation",
         type: "word-practice"
-      },
-      {
-        id: 2,
-        title: "Sound Recognition",
-        description: "Listen and identify different speech sounds",
-        icon: Ear,
-        difficulty: "Easy", 
-        duration: "8 min",
-        xpReward: 20,
-        category: "Listening",
-        type: "sound-recognition"
-      },
-      {
-        id: 3,
-        title: "Sentence Building",
-        description: "Create complete sentences with proper pronunciation",
-        icon: Construction,
-        difficulty: "Medium",
-        duration: "15 min", 
-        xpReward: 40,
-        category: "Grammar",
-        type: "sentence-building"
-      },
-      {
-        id: 4,
-        title: "Rhythm Training",
-        description: "Practice speech rhythm and timing patterns",
-        icon: Music,
-        difficulty: "Medium",
-        duration: "12 min",
-        xpReward: 35,
-        category: "Fluency",
-        type: "rhythm-training"
-      },
-      {
-        id: 5,
-        title: "Story Reading",
-        description: "Read short stories with proper expression and clarity",
-        icon: BookOpen,
-        difficulty: "Hard",
-        duration: "20 min",
-        xpReward: 60,
-        category: "Reading",
-        type: "story-reading"
-      },
-      {
-        id: 6,
-        title: "Quick Sounds",
-        description: "Fast-paced pronunciation challenges for confident speakers",
-        icon: Bolt,
-        difficulty: "Hard",
-        duration: "18 min",
-        xpReward: 50,
-        category: "Speed",
-        type: "quick-sounds"
       }
     ];
 
@@ -648,51 +578,6 @@ export default function SpeechTherapyPage() {
           <div>
             {activeGame.type === 'word-practice' && gameSession && gameData && (
               <WordPracticeGame
-                gameData={gameData}
-                sessionId={gameSession._id}
-                onComplete={handleGameComplete}
-                onExit={handleGameExit}
-              />
-            )}
-            
-            {activeGame.type === 'sound-recognition' && gameSession && gameData && (
-              <SoundRecognitionGame
-                gameData={gameData}
-                sessionId={gameSession._id}
-                onComplete={handleGameComplete}
-                onExit={handleGameExit}
-              />
-            )}
-            
-            {activeGame.type === 'sentence-building' && gameSession && gameData && (
-              <SentenceBuildingGame
-                gameData={gameData}
-                sessionId={gameSession._id}
-                onComplete={handleGameComplete}
-                onExit={handleGameExit}
-              />
-            )}
-            
-            {activeGame.type === 'rhythm-training' && gameSession && gameData && (
-              <RhythmTrainingGame
-                gameData={gameData}
-                sessionId={gameSession._id}
-                onComplete={handleGameComplete}
-                onExit={handleGameExit}
-              />
-            )}
-            
-            {activeGame.type === 'story-reading' && gameSession && gameData && (
-              <StoryReadingGame
-                gameData={gameData}
-                sessionId={gameSession._id}
-                onComplete={handleGameComplete}
-                onExit={handleGameExit}
-              />
-            )}
-            
-            {activeGame.type === 'quick-sounds' && gameSession && gameData && (
-              <QuickSoundsGame
                 gameData={gameData}
                 sessionId={gameSession._id}
                 onComplete={handleGameComplete}
