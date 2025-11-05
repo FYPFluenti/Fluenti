@@ -116,10 +116,22 @@ router.get('/game-data/:gameId', async (req: Request, res: Response) => {
       case 5: // Story Reading
         gameData = {
           gameId: 5,
-          gameName: 'Story Reading',
+          gameName: 'Story Adventure',
           currentLevel: userLevel,
           description: 'Interactive story reading with speech practice',
-          isAIPowered: false // Will be enhanced later
+          isAIPowered: false, // Will be enhanced later
+          stories: [
+            {
+              id: 1,
+              title: 'The Brave Little Fox',
+              content: 'Once upon a time, in a dense forest...'
+            },
+            {
+              id: 2,
+              title: 'The Wise Old Owl',
+              content: 'In the heart of the forest, there lived an owl...'
+            }
+          ]
         };
         break;
 
