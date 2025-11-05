@@ -43,9 +43,9 @@ export default function CleanAvatar({
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-orange-100 to-orange-50 dark:from-gray-800 dark:to-gray-900 rounded-full z-10">
           <div className="text-center">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 mx-auto mb-2 flex items-center justify-center shadow-lg">
-              <span className="text-white font-bold text-lg">S</span>
+              <span className="text-white font-bold text-lg">F</span>
             </div>
-            <p className="text-xs text-gray-500">Samaha</p>
+            <p className="text-xs text-gray-500">Fluenti</p>
           </div>
         </div>
       )}

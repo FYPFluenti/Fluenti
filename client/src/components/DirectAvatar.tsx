@@ -11,7 +11,7 @@ export default function DirectAvatar({
   avatarUrl, 
   size = 'medium', 
   className = '',
-  name = 'Samaha'
+  name = 'fluenti'
 }: DirectAvatarProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);

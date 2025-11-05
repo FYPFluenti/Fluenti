@@ -316,7 +316,7 @@ export default function ModelViewerAvatar({
         <model-viewer
           ref={modelViewerRef}
           src={avatarUrl}
-          alt="Samaha's 3D Avatar"
+          alt="Fluenti 3D Avatar"
           camera-controls={cameraControls}  
           auto-rotate={autoRotate ? true : undefined}
           disable-zoom={true}
