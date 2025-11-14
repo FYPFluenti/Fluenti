@@ -26,7 +26,6 @@ const groq = new Groq({
 });
 
 import { AuthService } from "./auth";
-import gamesRouter from "./routes/games";
 
 
 // Interface for therapy session history
@@ -73,10 +72,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Add JWT validation middleware for all routes
   app.use(extractAndValidateJWT);
 
-  // Register games routes
-  app.use('/api/games', tokenBasedAuth, gamesRouter);
-
-
   // ✅ Health check endpoint (no auth required)
   app.get('/api/health', (req: Request, res: Response) => {
     res.json({ 
@@ -98,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           firstName: 'Local',
           lastName: 'Developer',
           profileImageUrl: 'https://via.placeholder.com/150',
-          userType: 'child', // Can be 'adult', 'child', or 'guardian'
+          userType: 'child', // Can be 'adult', 'child', 
           language: 'english',
           createdAt: new Date(),
           updatedAt: new Date(),

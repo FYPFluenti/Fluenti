@@ -41,18 +41,18 @@ export default function InterestsSelectionScreen({ data, onNext, onBack, onSkip 
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 max-w-4xl mx-auto">
+    <div className="bg-card rounded-3xl shadow-xl p-8 max-w-4xl mx-auto border border-border">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
         className="text-center"
       >
-        <h1 className="text-2xl font-normal text-gray-900 mb-4">
-          <span className="text-[#F5B82E]">{childName}'s</span> favorite things?
+        <h1 className="text-2xl font-normal text-foreground mb-4">
+          <span className="text-primary">{childName}'s</span> favorite things?
         </h1>
 
-        <p className="text-gray-600 dark:text-gray-300 mb-8">
+        <p className="text-muted-foreground mb-8">
           Pick {childName === 'your child' ? 'your child' : childName}'s favorite topics and help us personalize their experience!
         </p>
 
@@ -133,7 +133,7 @@ export default function InterestsSelectionScreen({ data, onNext, onBack, onSkip 
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-sm text-[#F5B82E] mb-6"
+            className="text-sm text-primary mb-6"
           >
             {selectedInterests.length} interest{selectedInterests.length !== 1 ? 's' : ''} selected
           </motion.p>
@@ -144,7 +144,7 @@ export default function InterestsSelectionScreen({ data, onNext, onBack, onSkip 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={handleContinue}
-            className="w-full bg-black text-white font-semibold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 hover:shadow-lg transition-all duration-200"
+            className="w-full bg-primary text-primary-foreground font-semibold py-4 px-6 rounded-2xl flex items-center justify-center gap-3 hover:shadow-lg hover:bg-primary/90 transition-all duration-200"
           >
             Continue
           </motion.button>
@@ -153,7 +153,7 @@ export default function InterestsSelectionScreen({ data, onNext, onBack, onSkip 
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
             onClick={onSkip}
-            className="w-full text-gray-500 dark:text-gray-400 font-medium py-3 px-6 rounded-2xl border-2 border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500 transition-colors"
+            className="w-full text-muted-foreground font-medium py-3 px-6 rounded-2xl border-2 border-border hover:border-border/80 transition-colors"
           >
             Skip
           </motion.button>

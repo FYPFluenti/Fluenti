@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import SharedSidebar from '@/components/layout/SharedSidebar';
 import PageHeader from '@/components/layout/PageHeader';
+import FeedbackModal from '@/components/layout/FeedbackModel';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserOnboardingData {
@@ -54,6 +55,7 @@ export default function OnboardingStatistics() {
   const { toast } = useToast();
   const [onboardingData, setOnboardingData] = useState<UserOnboardingData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -122,7 +124,10 @@ export default function OnboardingStatistics() {
   if (!onboardingData) {
     return (
       <div className="min-h-screen bg-background text-foreground flex child-dashboard-no-zoom">
-        <SharedSidebar currentPage="onboarding-stats" />
+        <SharedSidebar 
+        currentPage="onboarding-stats" 
+        onFeedbackOpen={() => setShowFeedback(true)}
+      />
         
         <main className="ml-20 w-full child-dashboard-container">
           <PageHeader className="flex justify-end items-center gap-4 px-4 sm:px-5 py-4 sm:py-5" />
@@ -155,7 +160,10 @@ export default function OnboardingStatistics() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex child-dashboard-no-zoom">
-      <SharedSidebar currentPage="onboarding-stats" />
+      <SharedSidebar 
+        currentPage="onboarding-stats" 
+        onFeedbackOpen={() => setShowFeedback(true)}
+      />
       
       <main className="ml-20 w-full child-dashboard-container">
         <PageHeader className="flex justify-end items-center gap-4 px-4 sm:px-5 py-4 sm:py-5" />
@@ -405,6 +413,12 @@ export default function OnboardingStatistics() {
             )}
           </div>
         </div>
+
+        {/* Feedback Modal */}
+        <FeedbackModal 
+          isOpen={showFeedback} 
+          onClose={() => setShowFeedback(false)} 
+        />
       </main>
     </div>
   );

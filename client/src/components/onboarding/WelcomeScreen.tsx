@@ -14,15 +14,15 @@ export default function WelcomeScreen({ onNext, onSkip }: WelcomeScreenProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <h1 className="text-2xl font-normal text-gray-900 mb-8">
+        <h1 className="text-2xl font-normal text-foreground mb-8">
           welcome to fluenti
         </h1>
 
-        <div className="text-gray-600 text-base leading-relaxed mb-16 space-y-4">
+        <div className="text-muted-foreground text-base leading-relaxed mb-16 space-y-4">
           <p>
             We have some questions to learn about your children's interests and help make this app special just for them.
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted-foreground/80">
             Takes about 5 minutes
           </p>
         </div>
@@ -32,7 +32,7 @@ export default function WelcomeScreen({ onNext, onSkip }: WelcomeScreenProps) {
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => onNext({})}
-            className="w-full bg-gray-800 text-white font-medium py-4 px-8 rounded-full hover:bg-gray-700 transition-all duration-200"
+            className="w-full bg-primary text-primary-foreground font-medium py-4 px-8 rounded-full hover:bg-primary/90 transition-all duration-200"
           >
             let's start
           </motion.button>
@@ -41,7 +41,7 @@ export default function WelcomeScreen({ onNext, onSkip }: WelcomeScreenProps) {
             whileHover={{ scale: 1.01 }}
             whileTap={{ scale: 0.99 }}
             onClick={onSkip}
-            className="w-full text-gray-500 font-medium py-3 px-6 hover:text-gray-700 transition-colors"
+            className="w-full text-muted-foreground font-medium py-3 px-6 hover:text-foreground transition-colors"
           >
             maybe later
           </motion.button>

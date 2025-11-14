@@ -70,22 +70,14 @@ export default function SpeechTherapyPage() {
       try {
         setLoading(true);
 
-        // Fetch child name and statistics in parallel
+        // Fetch child name
         // No need for Authorization header - cookies are sent automatically
-        const [onboardingRes, statsRes] = await Promise.all([
-          fetch('/api/onboarding', {
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          }),
-          fetch('/api/games/statistics', {
-            credentials: 'include',
-            headers: {
-              'Content-Type': 'application/json'
-            }
-          })
-        ]);
+        const onboardingRes = await fetch('/api/onboarding', {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
 
         // Handle onboarding data
         if (onboardingRes.ok) {
@@ -95,22 +87,16 @@ export default function SpeechTherapyPage() {
           }
         }
 
-        // Handle statistics
-        if (statsRes.ok) {
-          const stats = await statsRes.json();
-          setUserStats({
-            level: stats.level || 1,
-            xp: stats.xp || 0,
-            stars: stats.stars || 0,
-            streak: stats.streak || 0,
-            todaysSessions: stats.recentSessions?.filter((s: any) => {
-              const today = new Date().toDateString();
-              return new Date(s.createdAt).toDateString() === today;
-            }).length || 0,
-            dailyGoal: 3,
-            averageAccuracy: stats.averageAccuracy || 0
-          });
-        }
+        // Set default user stats since we removed the statistics API
+        setUserStats({
+          level: 1,
+          xp: 0,
+          stars: 0,
+          streak: 0,
+          todaysSessions: 0,
+          dailyGoal: 3,
+          averageAccuracy: 0
+        });
 
       } catch (error) {
         console.error('Failed to fetch initial data:', error);
@@ -253,7 +239,7 @@ export default function SpeechTherapyPage() {
                 We're working hard to bring you exciting new speech games. Stay tuned for updates!
               </p>
               <button 
-                onClick={() => setLocation('/dashboard')}
+                onClick={() => setLocation('/child-dashboard')}
                 className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-6 py-2 rounded-lg transition-colors"
               >
                 Back to Dashboard

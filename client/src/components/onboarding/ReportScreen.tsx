@@ -49,9 +49,9 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-800 mx-auto mb-8"></div>
-          <h1 className="text-2xl font-normal text-gray-900 mb-4">Analyzing Assessment</h1>
-          <p className="text-gray-600 text-base">Our AI is carefully reviewing your child's responses...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-8"></div>
+          <h1 className="text-2xl font-normal text-foreground mb-4">Analyzing Assessment</h1>
+          <p className="text-muted-foreground text-base">Our AI is carefully reviewing your child's responses...</p>
         </motion.div>
       </div>
     );
@@ -66,14 +66,14 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <div className="text-red-500 text-6xl mb-8">⚠️</div>
-          <h1 className="text-2xl font-normal text-gray-900 mb-4">Assessment Error</h1>
-          <p className="text-gray-600 text-base mb-16">{error || 'Failed to generate assessment report'}</p>
+          <div className="text-destructive text-6xl mb-8">⚠️</div>
+          <h1 className="text-2xl font-normal text-foreground mb-4">Assessment Error</h1>
+          <p className="text-muted-foreground text-base mb-16">{error || 'Failed to generate assessment report'}</p>
           <motion.button 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => window.location.reload()} 
-            className="w-full bg-gray-800 text-white font-medium py-4 px-8 rounded-full hover:bg-gray-700 transition-all duration-200"
+            className="w-full bg-primary text-primary-foreground font-medium py-4 px-8 rounded-full hover:bg-primary/90 transition-all duration-200"
           >
             Try Again
           </motion.button>
@@ -131,21 +131,21 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
         animate={{ opacity: 1, y: 0 }}
         className="space-y-4"
       >
-        <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto">
-          <svg className="w-8 h-8 text-yellow-600" fill="currentColor" viewBox="0 0 24 24">
+        <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
+          <svg className="w-8 h-8 text-primary" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
           </svg>
         </div>
         <div className="space-y-2">
-          <h1 className="text-2xl font-normal text-gray-900">assessment complete</h1>
-          <p className="text-base text-gray-600 max-w-lg mx-auto leading-relaxed">
+          <h1 className="text-2xl font-normal text-foreground">assessment complete</h1>
+          <p className="text-base text-muted-foreground max-w-lg mx-auto leading-relaxed">
             we've analyzed your responses and created a personalized report for {report.childName}
           </p>
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-muted-foreground/80">
             {report.childAge.years} years, {report.childAge.months} months old
           </div>
           {report.aiPowered && (
-            <div className="flex items-center justify-center gap-2 text-sm text-indigo-600 mt-2">
+            <div className="flex items-center justify-center gap-2 text-sm text-primary mt-2">
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2L13.09 8.26L22 9L15.5 15L17.18 22L12 18.27L6.82 22L8.5 15L2 9L10.91 8.26L12 2Z"/>
               </svg>
@@ -162,9 +162,9 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
         transition={{ delay: 0.3 }}
         className="space-y-3"
       >
-        <h2 className="text-lg font-semibold text-gray-800">here's what we found</h2>
-        <div className="bg-gray-50 rounded-2xl p-6 max-w-lg mx-auto">
-          <p className="text-base text-gray-700 leading-relaxed">
+        <h2 className="text-lg font-semibold text-foreground">here's what we found</h2>
+        <div className="bg-muted rounded-2xl p-6 max-w-lg mx-auto">
+          <p className="text-base text-foreground leading-relaxed">
             {report.summary}
           </p>
         </div>
@@ -177,10 +177,10 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
         transition={{ delay: 0.4 }}
         className="space-y-3"
       >
-        <h3 className="text-base font-semibold text-gray-800">overall assessment</h3>
-        <div className="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3">
+        <h3 className="text-base font-semibold text-foreground">overall assessment</h3>
+        <div className="inline-flex items-center gap-3 bg-card border border-border rounded-xl px-4 py-3">
           {getRiskIcon(report.overallRiskLevel)}
-          <span className="text-sm font-medium text-gray-700">
+          <span className="text-sm font-medium text-foreground">
             {report.overallRiskLevel} risk level
           </span>
         </div>
@@ -193,7 +193,7 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
         transition={{ delay: 0.5 }}
         className="space-y-4"
       >
-        <h3 className="text-base font-semibold text-gray-800">areas assessed</h3>
+        <h3 className="text-base font-semibold text-foreground">areas assessed</h3>
         <div className="space-y-3 max-w-lg mx-auto">
           {report.categories.map((category, index) => (
             <motion.div
@@ -252,7 +252,7 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
           onClick={onStartPracticing}
-          className="w-full bg-gray-800 text-white font-medium py-4 px-8 rounded-full hover:bg-gray-700 transition-all duration-200"
+          className="w-full bg-primary text-primary-foreground font-medium py-4 px-8 rounded-full hover:bg-primary/90 transition-all duration-200"
         >
           start practicing
         </motion.button>
@@ -261,7 +261,7 @@ export default function ReportScreen({ data, onStartPracticing, onLearnMore }: R
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.99 }}
           onClick={onLearnMore}
-          className="w-full text-gray-500 font-medium py-3 px-6 hover:text-gray-700 transition-colors"
+          className="w-full text-muted-foreground font-medium py-3 px-6 hover:text-foreground transition-colors"
         >
           learn more
         </motion.button>

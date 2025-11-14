@@ -212,10 +212,10 @@ export default function OnboardingPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="w-8 h-8 border-4 border-gray-300 border-t-gray-900 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <div className="w-8 h-8 border-4 border-muted border-t-foreground rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
     );
@@ -225,19 +225,19 @@ export default function OnboardingPage() {
 
   if (isCompleted) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <div className="max-w-lg w-full text-center">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
             <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
               <span className="text-white text-lg"></span>
             </div>
           </div>
-          <h2 className="text-3xl font-bold mb-3 text-gray-900">All Set!</h2>
-          <p className="text-gray-600 text-lg mb-6">
+          <h2 className="text-3xl font-bold mb-3 text-foreground">All Set!</h2>
+          <p className="text-muted-foreground text-lg mb-6">
             Thank you for completing the assessment. We've created a personalized experience for your child.
           </p>
-          <div className="flex items-center justify-center gap-2 text-gray-500">
-            <div className="w-5 h-5 border-2 border-gray-400 border-t-gray-900 rounded-full animate-spin"></div>
+          <div className="flex items-center justify-center gap-2 text-muted-foreground">
+            <div className="w-5 h-5 border-2 border-muted border-t-foreground rounded-full animate-spin"></div>
             <span>Taking you to your dashboard...</span>
           </div>
         </div>
@@ -283,7 +283,7 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex items-center justify-center px-4 py-6">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-6">
       <div className="w-full max-w-3xl">
         {/* Simple progress indicator */}
         <div className="mb-6">
@@ -291,19 +291,19 @@ export default function OnboardingPage() {
             {currentStep > 1 && (
               <button
                 onClick={handleBack}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
                 aria-label="Go back"
               >
                 ←
               </button>
             )}
-            <div className="text-sm text-gray-500 ml-auto">
+            <div className="text-sm text-muted-foreground ml-auto">
               {currentStep} / {TOTAL_STEPS}
             </div>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-1">
+          <div className="w-full bg-muted rounded-full h-1">
             <motion.div 
-              className="bg-gray-800 h-1 rounded-full"
+              className="bg-primary h-1 rounded-full"
               initial={{ width: 0 }}
               animate={{ width: `${getProgressPercentage()}%` }}
               transition={{ duration: 0.3, ease: "easeOut" }}

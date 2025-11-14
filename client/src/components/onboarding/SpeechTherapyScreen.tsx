@@ -9,6 +9,8 @@ interface SpeechTherapyScreenProps {
 }
 
 export default function SpeechTherapyScreen({ data, onNext, onBack, onSkip }: SpeechTherapyScreenProps) {
+  // Temporarily commented out - skip this question for now
+  /*
   const [seekingTherapy, setSeekingTherapy] = useState<boolean | null>(
     data.seekingSpeechTherapy !== undefined ? data.seekingSpeechTherapy : null
   );
@@ -35,7 +37,6 @@ export default function SpeechTherapyScreen({ data, onNext, onBack, onSkip }: Sp
         </h1>
 
         <div className="flex flex-col sm:flex-row gap-6 mb-8">
-          {/* NO Option */}
           <motion.button
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -52,7 +53,6 @@ export default function SpeechTherapyScreen({ data, onNext, onBack, onSkip }: Sp
             NO
           </motion.button>
 
-          {/* YES Option */}
           <motion.button
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -71,7 +71,6 @@ export default function SpeechTherapyScreen({ data, onNext, onBack, onSkip }: Sp
         </div>
 
         <div className="space-y-4">
-          {/* Continue Button */}
           <motion.button
             whileHover={{ scale: seekingTherapy !== null ? 1.02 : 1 }}
             whileTap={{ scale: seekingTherapy !== null ? 0.98 : 1 }}
@@ -102,4 +101,13 @@ export default function SpeechTherapyScreen({ data, onNext, onBack, onSkip }: Sp
       </motion.div>
     </div>
   );
+  */
+  
+  // Skip this question for now and proceed to next step
+  React.useEffect(() => {
+    onNext({ seekingSpeechTherapy: false });
+  }, [onNext]);
+
+  // Return null to hide the component completely
+  return null;
 }

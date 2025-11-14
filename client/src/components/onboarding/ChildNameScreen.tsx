@@ -24,7 +24,7 @@ export default function ChildNameScreen({ data, onNext, onBack, onSkip }: ChildN
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2 }}
       >
-        <h1 className="text-2xl font-normal text-gray-900 mb-16">
+        <h1 className="text-2xl font-normal text-foreground mb-16">
           what's your name?
         </h1>
 
@@ -38,7 +38,7 @@ export default function ChildNameScreen({ data, onNext, onBack, onSkip }: ChildN
             placeholder="name..."
             value={childName}
             onChange={(e) => setChildName(e.target.value)}
-            className="w-full px-0 py-3 text-lg bg-transparent border-0 border-b border-gray-300 focus:border-gray-600 focus:outline-none transition-colors text-center placeholder-gray-400"
+            className="w-full px-0 py-3 text-lg bg-transparent border-0 border-b border-border focus:border-primary focus:outline-none transition-colors text-center placeholder-muted-foreground text-foreground"
             maxLength={50}
           />
         </div>
@@ -53,8 +53,8 @@ export default function ChildNameScreen({ data, onNext, onBack, onSkip }: ChildN
           disabled={!childName.trim()}
           className={`w-full py-4 px-8 rounded-full font-medium transition-all duration-200 ${
             childName.trim()
-              ? 'bg-gray-800 text-white hover:bg-gray-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+              : 'bg-muted text-muted-foreground cursor-not-allowed'
           }`}
         >
           continue

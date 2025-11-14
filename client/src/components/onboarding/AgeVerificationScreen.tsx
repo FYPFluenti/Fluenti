@@ -38,7 +38,7 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
   const isOfAge = year >= 1900 && year <= currentYear - 18; // Must be 18+ years old
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl p-8 text-center max-w-lg mx-auto">
+    <div className="bg-card rounded-3xl shadow-xl p-8 text-center max-w-lg mx-auto border border-border">
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
@@ -53,11 +53,11 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
       >
-        <h1 className="text-2xl font-normal text-gray-900 mb-4">
+        <h1 className="text-2xl font-normal text-foreground mb-4">
           Please enter your year of birth
         </h1>
 
-        <p className="text-gray-600 dark:text-gray-300 mb-8">
+        <p className="text-muted-foreground mb-8">
           For age verification, type in your year of birth (parent/guardian).
         </p>
 
@@ -69,7 +69,7 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6 + index * 0.1 }}
-              className="w-16 h-16 border-2 border-gray-200 dark:border-gray-600 rounded-xl flex items-center justify-center text-2xl font-bold bg-gray-50 dark:bg-gray-700"
+              className="w-16 h-16 border-2 border-border rounded-xl flex items-center justify-center text-2xl font-bold bg-muted text-foreground"
             >
               {birthYear[index] || ''}
             </motion.div>
@@ -84,7 +84,7 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => handleNumberPress(num.toString())}
-              className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl text-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              className="w-16 h-16 bg-muted rounded-2xl text-xl font-semibold hover:bg-muted/80 transition-colors text-foreground"
             >
               {num}
             </motion.button>
@@ -96,7 +96,7 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => handleNumberPress('0')}
-            className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-2xl text-xl font-semibold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            className="w-16 h-16 bg-muted rounded-2xl text-xl font-semibold hover:bg-muted/80 transition-colors text-foreground"
           >
             0
           </motion.button>
@@ -105,15 +105,15 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={handleDelete}
-            className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
+            className="w-16 h-16 bg-destructive/10 rounded-2xl flex items-center justify-center hover:bg-destructive/20 transition-colors text-destructive"
           >
-            
+            ⌫
           </motion.button>
         </div>
 
         {/* Validation Message */}
         {isValidYear && !isOfAge && (
-          <p className="text-red-500 text-sm mb-4">
+          <p className="text-destructive text-sm mb-4">
             You must be 18 or older to create an account for a child.
           </p>
         )}
@@ -126,12 +126,11 @@ export default function AgeVerificationScreen({ data, onNext, onBack }: AgeVerif
           disabled={!isValidYear || !isOfAge}
           className={`w-full py-4 px-6 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all duration-200 ${
             isValidYear && isOfAge
-              ? 'bg-black text-white hover:shadow-lg'
-              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              ? 'bg-primary text-primary-foreground hover:shadow-lg hover:bg-primary/90'
+              : 'bg-muted text-muted-foreground cursor-not-allowed'
           }`}
         >
-          Continue
-
+          Continue →
         </motion.button>
       </motion.div>
     </div>
