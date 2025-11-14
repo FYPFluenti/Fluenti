@@ -3,7 +3,6 @@ import { mongoStorage } from './mongoStorage';
 import { nanoid } from 'nanoid';
 import { generateTokenPair, type JWTPayload, type TokenPair } from './services/jwtService';
 import { User } from './db/schema';
-import { MockDataService } from './services/mockDataService';
 import { isMongoConnected } from './mongodb';
 import { 
   generateVerificationToken, 
@@ -155,48 +154,9 @@ export class AuthService {
   // Login user
   static async login(loginData: LoginData): Promise<AuthResponse> {
     try {
-      // Use mock data if MongoDB is not connected
-      if (!isMongoConnected() && MockDataService.isEnabled) {
-        console.log('🔧 Using mock data for login');
-        
-        const mockUser = await MockDataService.findUserByEmail(loginData.email);
-        if (!mockUser) {
-          throw new Error('Invalid email or password');
-        }
-
-        // Verify password against mock data
-        const isPasswordValid = await this.verifyPassword(loginData.password, mockUser.password!);
-        if (!isPasswordValid) {
-          throw new Error('Invalid email or password');
-        }
-
-        // Generate JWT tokens
-        const jwtPayload: JWTPayload = {
-          userId: mockUser.id!,
-          email: mockUser.email!,
-          userType: mockUser.userType as 'child' | 'adult' | 'guardian',
-        };
-        const tokens = generateTokenPair(jwtPayload);
-
-        // Store refresh token in mock data
-        await MockDataService.updateUserRefreshToken(
-          mockUser.id!,
-          tokens.refreshToken,
-          new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-        );
-
-        return {
-          user: {
-            id: mockUser.id!,
-            email: mockUser.email!,
-            firstName: mockUser.firstName!,
-            lastName: mockUser.lastName!,
-            userType: mockUser.userType!,
-            language: mockUser.language!,
-            profileImageUrl: mockUser.profilePicture,
-          },
-          tokens,
-        };
+      // Ensure MongoDB is connected
+      if (!isMongoConnected()) {
+        throw new Error('Database connection not available');
       }
 
       // Original MongoDB logic

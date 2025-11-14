@@ -15,6 +15,7 @@ import {
   Lock,
   Eye,
   EyeOff,
+  User,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import SharedSidebar from "@/components/layout/SharedSidebar";
@@ -56,6 +57,14 @@ export default function Settings() {
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   
+  // Profile editing state
+  const [showProfileEdit, setShowProfileEdit] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    firstName: '',
+    lastName: ''
+  });
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  
   const {
     settings,
     isLoading: settingsLoading,
@@ -67,11 +76,22 @@ export default function Settings() {
   const {
     profile,
     changePassword,
+    updateProfile,
   } = useUserSettings();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) setLocation("/login");
   }, [isLoading, isAuthenticated, setLocation]);
+
+  // Initialize profile form when user data loads
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        firstName: user.firstName || '',
+        lastName: user.lastName || ''
+      });
+    }
+  }, [user]);
 
   // Handle password change
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -183,6 +203,44 @@ export default function Settings() {
     // If successful, the user will be redirected by the deleteAccount function
   };
 
+  const handleProfileUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!profileForm.firstName.trim() || !profileForm.lastName.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please fill in both first and last name.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUpdatingProfile(true);
+    console.log('🔄 Updating profile with data:', {
+      firstName: profileForm.firstName.trim(),
+      lastName: profileForm.lastName.trim()
+    });
+    const { success } = await updateProfile({
+      firstName: profileForm.firstName.trim(),
+      lastName: profileForm.lastName.trim()
+    });
+    setIsUpdatingProfile(false);
+    
+    if (success) {
+      toast({
+        title: "Profile Updated! 🎉",
+        description: "Your profile information has been updated successfully!",
+      });
+      setShowProfileEdit(false);
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to update profile. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const displayName = user?.firstName && user?.lastName 
     ? `${user.firstName} ${user.lastName}`
     : user?.email || "User";
@@ -232,11 +290,71 @@ export default function Settings() {
           {/* Profile header */}
           <section className="mb-10">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-muted grid place-items-center text-xl font-semibold">
+              <div className="w-16 h-16 rounded-full bg-muted grid place-items-center text-xl font-semibold border-2 border-border">
                 {initials}
               </div>
-              <div className="text-lg font-medium">{displayName}</div>
+              <div className="flex-grow">
+                <div className="text-lg font-medium">{displayName}</div>
+                <div className="text-sm text-muted-foreground">{user?.email}</div>
+              </div>
+              <button
+                onClick={() => setShowProfileEdit(!showProfileEdit)}
+                className="flex items-center gap-2 px-4 py-2 text-sm bg-muted hover:bg-muted/80 rounded-lg"
+              >
+                <User className="w-4 h-4" />
+                {showProfileEdit ? 'Cancel' : 'Edit Profile'}
+              </button>
             </div>
+
+            {/* Profile Edit Form */}
+            {showProfileEdit && (
+              <form onSubmit={handleProfileUpdate} className="mt-6 p-4 border border-border rounded-lg bg-muted/20">
+                <h3 className="font-semibold mb-4">Edit Profile Information</h3>
+                
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="text-sm font-medium block mb-2">First Name</label>
+                    <input
+                      type="text"
+                      value={profileForm.firstName}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, firstName: e.target.value }))}
+                      placeholder="Enter your first name"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-2">Last Name</label>
+                    <input
+                      type="text"
+                      value={profileForm.lastName}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, lastName: e.target.value }))}
+                      placeholder="Enter your last name"
+                      className="w-full px-3 py-2 border border-border rounded-lg bg-background"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="flex gap-3 mt-6">
+                  <button
+                    type="submit"
+                    disabled={isUpdatingProfile}
+                    className="px-4 py-2 bg-[#ff6b1d] text-white rounded-lg hover:bg-[#e55a15] disabled:opacity-50"
+                  >
+                    {isUpdatingProfile ? 'Updating...' : 'Update Profile'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowProfileEdit(false)}
+                    className="px-4 py-2 bg-muted text-foreground rounded-lg hover:bg-muted/80"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            )}
+
             <div className="mt-6 h-px bg-border" />
           </section>
 

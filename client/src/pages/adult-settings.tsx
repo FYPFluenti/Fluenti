@@ -73,8 +73,7 @@ export default function AdultSettings() {
   const [showProfileEdit, setShowProfileEdit] = useState(false);
   const [profileForm, setProfileForm] = useState({
     firstName: '',
-    lastName: '',
-    profilePicture: ''
+    lastName: ''
   });
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [show2FA, setShow2FA] = useState(false);
@@ -277,8 +276,7 @@ export default function AdultSettings() {
 
     const result = await updateProfile({
       firstName: profileForm.firstName.trim(),
-      lastName: profileForm.lastName.trim(),
-      profilePicture: profileForm.profilePicture.trim() || undefined,
+      lastName: profileForm.lastName.trim()
     });
 
     if (result.success) {
@@ -303,8 +301,7 @@ export default function AdultSettings() {
     if (showProfileEdit && profile) {
       setProfileForm({
         firstName: profile.firstName || '',
-        lastName: profile.lastName || '',
-        profilePicture: profile.profilePicture || ''
+        lastName: profile.lastName || ''
       });
     }
   }, [showProfileEdit, profile]);
@@ -398,17 +395,9 @@ export default function AdultSettings() {
           {/* Profile header */}
           <section className="mb-8">
             <div className="flex items-center gap-4">
-              {user.profilePicture ? (
-                <img
-                  src={user.profilePicture}
-                  alt={displayName}
-                  className="w-16 h-16 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-16 h-16 rounded-full bg-muted grid place-items-center text-xl font-semibold">
-                  {displayName[0]?.toUpperCase() || "U"}
-                </div>
-              )}
+              <div className="w-16 h-16 rounded-full bg-muted grid place-items-center text-xl font-semibold border-2 border-border">
+                {displayName[0]?.toUpperCase() || "U"}
+              </div>
               <div className="flex-grow">
                 <div className="text-lg font-medium">{displayName}</div>
                 <div className="text-sm text-muted-foreground">{user.email}</div>
@@ -426,6 +415,7 @@ export default function AdultSettings() {
             {showProfileEdit && (
               <form onSubmit={handleProfileUpdate} className="mt-6 p-4 border border-border rounded-lg bg-muted/20">
                 <h3 className="font-semibold mb-4">Edit Profile Information</h3>
+                
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="text-sm font-medium block mb-2">First Name</label>
@@ -450,17 +440,8 @@ export default function AdultSettings() {
                     />
                   </div>
                 </div>
-                <div className="mt-4">
-                  <label className="text-sm font-medium block mb-2">Profile Picture URL (optional)</label>
-                  <input
-                    type="url"
-                    value={profileForm.profilePicture}
-                    onChange={(e) => setProfileForm(prev => ({ ...prev, profilePicture: e.target.value }))}
-                    placeholder="https://example.com/your-profile-picture.jpg"
-                    className="w-full px-3 py-2 border border-border rounded-lg bg-background"
-                  />
-                </div>
-                <div className="flex gap-3 mt-4">
+                
+                <div className="flex gap-3 mt-6">
                   <button
                     type="submit"
                     disabled={isUpdatingProfile}

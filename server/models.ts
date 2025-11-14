@@ -15,7 +15,7 @@ const UserSchema = new mongoose.Schema({
   },
   language: { 
     type: String, 
-    enum: ['english'], 
+    enum: ['english', 'urdu', 'both'], 
     default: 'english' 
   },
   // OAuth fields

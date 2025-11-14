@@ -16,7 +16,6 @@ export interface UserProfile {
   lastName: string;
   email: string;
   userType: 'adult' | 'child' | 'guardian';
-  profilePicture?: string;
   signupMethod: 'email' | 'google' | 'facebook';
 }
 
@@ -225,7 +224,7 @@ export function useUserSettings() {
   };
 
   // Update user profile
-  const updateProfile = async (profileData: Partial<Pick<UserProfile, 'firstName' | 'lastName' | 'profilePicture'>>) => {
+  const updateProfile = async (profileData: Partial<Pick<UserProfile, 'firstName' | 'lastName'>>) => {
     if (!isAuthenticated) return { success: false, message: 'Not authenticated' };
 
     try {

@@ -17,7 +17,6 @@ import { generateSmartTTS } from "./services/enhancedTTSService";
 
 
 import { fastTranscribeAudio } from "./services/fastSTTService";
-import { processChildSpeechAudio } from "./services/childSpeechSTT";
 import { transcribeAudioWithGroq, assessPronunciationWithGroq } from "./services/groqSpeechService";
 import Groq from 'groq-sdk';
 
@@ -28,7 +27,7 @@ const groq = new Groq({
 
 import { AuthService } from "./auth";
 import gamesRouter from "./routes/games";
-import aiGameRouter from "./routes/aiGame";
+
 
 // Interface for therapy session history
 interface TherapySession {
@@ -76,7 +75,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register games routes
   app.use('/api/games', tokenBasedAuth, gamesRouter);
-  app.use('/api/ai', tokenBasedAuth, aiGameRouter);
+
 
   // ✅ Health check endpoint (no auth required)
   app.get('/api/health', (req: Request, res: Response) => {
@@ -1007,85 +1006,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ 
         success: false,
         error: 'STT processing failed',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      });
-    }
-  });
-
-  // Dedicated Child Speech STT endpoint for Word Practice Game
-  app.post('/api/speech/child-transcribe', tokenBasedAuth, upload.single('audio'), async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      const { targetWord, language = 'en' } = req.body;
-
-      if (!req.file) {
-        return res.status(400).json({ 
-          success: false,
-          error: 'No audio file provided' 
-        });
-      }
-
-      console.log('🎤 Child Speech STT request - Target word:', targetWord);
-      console.log('📁 Audio file size:', req.file.size, 'bytes');
-      
-      const audioBuffer = req.file.buffer;
-      
-      // Validate audio buffer first
-      if (!validateAudioBuffer(audioBuffer)) {
-        return res.status(400).json({ 
-          success: false,
-          error: 'Invalid audio file format or size' 
-        });
-      }
-      
-      // Use the same proven STT chain as emotional support (works perfectly)
-      const whisperLanguage = language?.startsWith('ur') ? 'ur' : 'en';
-      let transcribedText = '';
-      let method = '';
-      
-      try {
-        // Try fast STT first (same as emotional support)
-        console.log('🔄 Child Speech - Attempting fast STT...');
-        transcribedText = await fastTranscribeAudio(audioBuffer, whisperLanguage);
-        method = 'fast_stt';
-        console.log('✅ Child Speech - Fast STT successful:', transcribedText);
-      } catch (fastSTTError) {
-        console.warn('⚠️ Child Speech - Fast STT failed, trying local Whisper:', fastSTTError);
-        try {
-          transcribedText = await transcribeAudio(audioBuffer, whisperLanguage);
-          method = 'local_whisper';
-          console.log('✅ Child Speech - Local Whisper successful:', transcribedText);
-        } catch (sttError) {
-          console.warn('⚠️ Child Speech - Local Whisper failed, using simple STT:', sttError);
-          try {
-            transcribedText = await simpleTranscribeAudio(audioBuffer, whisperLanguage);
-            method = 'simple_stt';
-            console.log('✅ Child Speech - Simple STT successful:', transcribedText);
-          } catch (finalError) {
-            console.error('❌ Child Speech - All STT methods failed:', finalError);
-            return res.status(500).json({ 
-              success: false,
-              error: 'All transcription methods failed',
-              details: finalError instanceof Error ? finalError.message : 'Unknown error'
-            });
-          }
-        }
-      }
-
-      // Return transcription result (same format as emotional support STT)
-      res.json({ 
-        success: true,
-        transcription: transcribedText || '',
-        confidence: 0.9, // Server-side STT is generally reliable
-        targetWord: targetWord,
-        language: language,
-        method: method
-      });
-
-    } catch (error) {
-      console.error("❌ Child Speech STT error:", error);
-      res.status(500).json({ 
-        success: false,
-        error: 'Child speech STT processing failed',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
     }
