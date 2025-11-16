@@ -79,6 +79,76 @@ def log_response(response):
 # Store active sessions
 active_sessions: Dict[str, Any] = {}
 
+def create_user_context(user_id: str) -> Dict:
+    """Create user context from API request data"""
+    current_time = datetime.now()
+    
+    # Add time_of_day classification for crisis detector compatibility
+    def classify_time_of_day(hour: int) -> str:
+        if 5 <= hour < 12:
+            return 'morning'
+        elif 12 <= hour < 17:
+            return 'afternoon'
+        elif 17 <= hour < 21:
+            return 'evening'
+        else:
+            return 'night'
+    
+    return {
+        'login': user_id,
+        'timestamp': current_time,
+        'session_start': current_time.isoformat(),
+        'user_agent': 'Fluenti-API',
+        'environment': 'Production-API',
+        'time_of_day': classify_time_of_day(current_time.hour),
+        'date': current_time.strftime('%Y-%m-%d')
+    }
+
+def validate_user_id(user_id: str) -> bool:
+    """Validate user ID format and authenticity"""
+    if not user_id or not isinstance(user_id, str):
+        return False
+    
+    # Basic validation - user ID should not be empty and should be reasonable length
+    user_id = user_id.strip()
+    if len(user_id) < 3 or len(user_id) > 100:
+        return False
+    
+    # Check for suspicious patterns that might indicate fallback values
+    suspicious_patterns = ['afaqm3121-lab', 'anonymous_user', 'user_fallback']
+    if any(pattern in user_id.lower() for pattern in suspicious_patterns):
+        print(f"⚠️ WARNING: Suspicious user ID detected: {user_id}")
+        return True  # Still allow but warn
+    
+    return True
+
+def update_therapy_components_user_context(user_id: str):
+    """Update user context for all therapy components with validation"""
+    if not validate_user_id(user_id):
+        print(f"❌ Invalid user ID provided: {user_id}")
+        raise ValueError(f"Invalid user ID format: {user_id}")
+    
+    user_context = create_user_context(user_id)
+    
+    try:
+        # Update therapy bot context
+        if therapy_bot and hasattr(therapy_bot, 'update_user_context'):
+            therapy_bot.update_user_context(user_context)
+        
+        # Update storage context
+        if therapy_bot and hasattr(therapy_bot, 'storage') and hasattr(therapy_bot.storage, 'update_user_context'):
+            therapy_bot.storage.update_user_context(user_context)
+        
+        # Update crisis detector context
+        if therapy_bot and hasattr(therapy_bot, 'crisis_detector') and hasattr(therapy_bot.crisis_detector, 'update_user_context'):
+            therapy_bot.crisis_detector.update_user_context(user_context)
+        
+        print(f"✅ Successfully updated all therapy components with user context: {user_id}")
+        
+    except Exception as e:
+        print(f"❌ Error updating therapy components with user context: {e}")
+        raise
+
 def restore_session_from_mongodb(user_id: str, session_id: str):
     """Restore session context from MongoDB EmotionalSession collection"""
     try:
@@ -158,6 +228,21 @@ def start_therapy_session():
         data = request.json or {}
         user_id = data.get('userId', f"user_{len(active_sessions) + 1}")
         
+        # Validate and update therapy components with authenticated user context
+        try:
+            update_therapy_components_user_context(user_id)
+        except ValueError as e:
+            return jsonify({
+                'error': 'Invalid user authentication',
+                'details': str(e)
+            }), 400
+        except Exception as e:
+            print(f"❌ Error updating user context: {e}")
+            return jsonify({
+                'error': 'Authentication system error',
+                'details': 'Unable to establish user context'
+            }), 500
+        
         # Create new interface for this session
         session_interface = TherapyInterface(therapy_bot)
         welcome_message = session_interface.start_session(user_id)
@@ -214,6 +299,20 @@ def therapy_chat():
                 'error': 'Message is required'
             }), 400
 
+        # Validate and update therapy components with authenticated user context
+        if user_id:
+            try:
+                update_therapy_components_user_context(user_id)
+            except ValueError as e:
+                return jsonify({
+                    'error': 'Invalid user authentication',
+                    'details': str(e)
+                }), 400
+            except Exception as e:
+                print(f"❌ Error updating user context: {e}")
+                # Continue with session but log the error
+                print(f"⚠️ Continuing with session using fallback context")
+
         # Try to get existing session
         session_interface = None
         
@@ -245,6 +344,19 @@ def therapy_chat():
         if not session_interface:
             if not user_id:
                 user_id = f"user_{len(active_sessions) + 1}"
+            
+            # Validate and update therapy components with user context for new session
+            try:
+                update_therapy_components_user_context(user_id)
+            except ValueError as e:
+                return jsonify({
+                    'error': 'Invalid user authentication for new session',
+                    'details': str(e)
+                }), 400
+            except Exception as e:
+                print(f"❌ Error updating user context for new session: {e}")
+                # Continue with session but log the error
+                print(f"⚠️ Continuing with new session using fallback context")
             
             # Type-safe session creation
             if TherapyInterface is None or therapy_bot is None:

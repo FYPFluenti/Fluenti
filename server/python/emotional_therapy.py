@@ -60,9 +60,9 @@ def safe_dataset_len(dataset) -> str:
         return 'unknown'
 
 class MongoDBStorage:
-    """MongoDB Atlas storage for therapy data with current user integration"""
+    """MongoDB Atlas storage for therapy data with dynamic user context"""
 
-    def __init__(self, connection_string: Optional[str] = None):
+    def __init__(self, connection_string: Optional[str] = None, user_context: Optional[Dict] = None):
         # Use provided connection string or environment variable
         if not connection_string:
             connection_string = os.getenv('MONGODB_URI')
@@ -72,8 +72,8 @@ class MongoDBStorage:
 
         self.connection_string = connection_string
 
-        # Get current user context
-        self.current_user = self._get_current_user_context()
+        # Get current user context (dynamic or fallback)
+        self.current_user = user_context or self._get_default_user_context()
 
         try:
             # Initialize MongoDB client
@@ -110,20 +110,56 @@ class MongoDBStorage:
             print(f"❌ MongoDB connection failed: {e}")
             raise RuntimeError(f"MongoDB connection required but failed: {e}")
 
-    def _get_current_user_context(self) -> Dict:
-        """Get current user context from environment"""
+    def _get_default_user_context(self) -> Dict:
+        """Get default user context as fallback when no user context provided"""
         current_time = datetime.now(timezone.utc)
 
-        # Use environment variable or default user login
-        user_login = os.getenv('USER_LOGIN', 'afaqm3121-lab')
+        # Use environment variable as fallback only - should be replaced by actual user context
+        fallback_login = os.getenv('USER_LOGIN', 'anonymous_user')
+        print(f"⚠️ WARNING: Using fallback user context for {fallback_login}. This should be replaced with authenticated user data.")
+
+        # Add time_of_day classification for compatibility
+        def classify_time_of_day(hour: int) -> str:
+            if 5 <= hour < 12:
+                return 'morning'
+            elif 12 <= hour < 17:
+                return 'afternoon'
+            elif 17 <= hour < 21:
+                return 'evening'
+            else:
+                return 'night'
 
         return {
-            'login': user_login,
+            'login': fallback_login,
             'timestamp': current_time,
             'session_start': current_time.isoformat(),
-            'user_agent': os.getenv('HTTP_USER_AGENT', 'Colab-Environment'),
-            'environment': 'Google-Colab'
+            'user_agent': os.getenv('HTTP_USER_AGENT', 'API-Request'),
+            'environment': 'Production-API',
+            'time_of_day': classify_time_of_day(current_time.hour),
+            'date': current_time.strftime('%Y-%m-%d')
         }
+    
+    def update_user_context(self, user_context: Dict) -> None:
+        """Update the current user context dynamically"""
+        if not user_context:
+            print(f"⚠️ No user context provided for update")
+            return
+        
+        # Validate user context structure
+        required_fields = ['login', 'timestamp']
+        missing_fields = [field for field in required_fields if field not in user_context]
+        
+        if missing_fields:
+            print(f"⚠️ User context missing required fields: {missing_fields}")
+            # Fill in missing fields with defaults
+            current_time = datetime.now(timezone.utc)
+            if 'login' not in user_context:
+                user_context['login'] = 'unknown_user'
+            if 'timestamp' not in user_context:
+                user_context['timestamp'] = current_time
+        
+        self.current_user = user_context
+        print(f"✅ Updated user context to: {user_context.get('login', 'unknown')}")
 
     def _create_indexes(self):
         """Create database indexes for better performance"""
@@ -403,9 +439,9 @@ class MongoDBStorage:
         """Cleanup when object is destroyed"""
         self.close_connection()
 
-# Initialize enhanced storage with MongoDB
+# Initialize enhanced storage with MongoDB (will be updated with user context per request)
 try:
-    storage = MongoDBStorage()
+    storage = MongoDBStorage()  # Initialize with default context, will be updated per request
     print("🚀 Enhanced MongoDB storage system ready!")
     print(f"💽 Connected to: FluentiAI-cluster")
     print(f"🗃️ Database: therapy_support_db")
@@ -578,9 +614,10 @@ from datetime import datetime
 class CrisisDetector:
     """Fully dynamic crisis detection system with AI-powered analysis"""
 
-    def __init__(self, llm=None, detection_mode="hybrid"):
+    def __init__(self, llm=None, detection_mode="hybrid", user_context: Optional[Dict] = None):
         self.llm = llm  # LLM for AI-powered crisis detection
         self.detection_mode = detection_mode  # "ai", "pattern", or "hybrid"
+        self.current_user = user_context or self._get_default_user_context()
         
         # Core crisis severity indicators - these are fundamental psychological markers
         self.severity_markers = {
@@ -641,17 +678,22 @@ class CrisisDetector:
             self.sentiment_analyzer = None
             self.sentiment_available = False
 
-        # Get current user context
-        self.current_user = self._get_current_user_context()
-
         print(f"✅ Fully dynamic crisis detection initialized for user: {self.current_user['login']}")
+    
+    def update_user_context(self, user_context: Dict) -> None:
+        """Update the current user context dynamically"""
+        if user_context:
+            self.current_user = user_context
+            print(f"🔄 Crisis detector updated user context to: {user_context.get('login', 'unknown')}")
 
-    def _get_current_user_context(self) -> Dict[str, Any]:
-        """Extract current user context dynamically"""
+    def _get_default_user_context(self) -> Dict[str, Any]:
+        """Extract default user context as fallback"""
         current_time = datetime.utcnow()
+        fallback_login = os.getenv('USER_LOGIN', 'anonymous_user')
+        print(f"⚠️ WARNING: Crisis detector using fallback user context for {fallback_login}")
 
         return {
-            'login': os.getenv('USER_LOGIN', 'anonymous_user'),
+            'login': fallback_login,
             'timestamp': current_time,
             'session_id': f"session_{int(current_time.timestamp())}",
             'time_of_day': self._classify_time_of_day(current_time.hour),
@@ -764,30 +806,61 @@ class CrisisDetector:
         end = min(len(full_text), context_pos + len(context) + 50)
         surrounding = full_text[start:end]
 
-        # Define dynamic categorization rules
-        categorization_clues = {
-            'academic': ['school', 'study', 'exam', 'class', 'grade', 'homework', 'college', 'university', 'learn', 'education'],
-            'professional': ['work', 'job', 'office', 'boss', 'career', 'salary', 'meeting', 'colleague', 'company'],
-            'personal': ['family', 'friend', 'relationship', 'partner', 'parent', 'child', 'sibling'],
-            'health': ['doctor', 'hospital', 'medicine', 'illness', 'pain', 'treatment', 'therapy', 'medical'],
-            'financial': ['money', 'budget', 'debt', 'bill', 'income', 'expense', 'saving', 'cost'],
-            'emotional': ['feel', 'emotion', 'mood', 'mental', 'psychological', 'stress', 'anxiety', 'depression'],
-            'social': ['people', 'social', 'community', 'group', 'team', 'club', 'organization'],
-            'recreational': ['hobby', 'game', 'sport', 'music', 'art', 'entertainment', 'fun', 'leisure']
-        }
+        # AI-powered context categorization
+        if self.llm:
+            try:
+                context_prompt = f"""
+Analyze this text snippet and categorize the main life domain or context being discussed.
 
-        # Score each category
-        category_scores = defaultdict(int)
-        for category, clues in categorization_clues.items():
-            for clue in clues:
-                if clue in surrounding:
-                    category_scores[category] += 1
+Text: "{surrounding}"
 
-        # Return highest scoring category or 'general' if no clear winner
-        if category_scores:
-            return max(category_scores.items(), key=lambda x: x[1])[0]
+Choose the most appropriate category:
+- academic: school, education, learning
+- professional: work, career, job-related
+- personal: family, relationships, personal life
+- health: medical, physical health, treatment
+- financial: money, economics, financial stress
+- emotional: feelings, mental health, psychology
+- social: community, social interactions, groups
+- recreational: hobbies, entertainment, leisure
+- general: no specific domain or mixed contexts
+
+Return ONLY the category name:"""
+                
+                ai_response = self.llm.invoke(context_prompt)
+                ai_category = self._extract_llm_content(ai_response).strip().lower()
+                
+                # Validate AI response
+                valid_categories = ['academic', 'professional', 'personal', 'health', 'financial', 
+                                  'emotional', 'social', 'recreational', 'general']
+                
+                if ai_category in valid_categories:
+                    return ai_category
+                else:
+                    print(f"⚠️ AI returned invalid category: {ai_category}")
+                    return 'general'
+                    
+            except Exception as e:
+                print(f"⚠️ AI context categorization failed: {e}")
+                # Simple fallback
+                if 'work' in surrounding or 'job' in surrounding:
+                    return 'professional'
+                elif 'family' in surrounding or 'relationship' in surrounding:
+                    return 'personal'
+                elif 'school' in surrounding or 'study' in surrounding:
+                    return 'academic'
+                else:
+                    return 'general'
         else:
-            return 'general'
+            # Simple fallback categorization
+            if any(word in surrounding for word in ['work', 'job', 'office', 'boss']):
+                return 'professional'
+            elif any(word in surrounding for word in ['family', 'friend', 'relationship']):
+                return 'personal' 
+            elif any(word in surrounding for word in ['school', 'study', 'exam']):
+                return 'academic'
+            else:
+                return 'general'
 
     def _extract_phrases_around_context(self, text: str, context: str) -> List[str]:
         """Extract meaningful phrases around a context"""
@@ -841,20 +914,49 @@ class CrisisDetector:
         if features['contains_request']:
             help_score += 2.0
 
-        # Language patterns that indicate help seeking
+        # AI-powered help-seeking behavior analysis
         text_lower = text.lower()
+        
+        if self.llm:
+            try:
+                help_seeking_prompt = f"""
+Analyze this text for help-seeking behavior and intent.
 
-        # Learn new help-seeking patterns dynamically
-        help_patterns = [
-            'help', 'advice', 'suggest', 'recommend', 'guide', 'assist', 'support',
-            'how to', 'what should', 'can you', 'could you', 'would you',
-            'i need', 'looking for', 'trying to', 'want to learn'
-        ]
+Text: "{text}"
 
-        for pattern in help_patterns:
-            if pattern in text_lower:
+Look for:
+- Direct requests for help, advice, or support
+- Questions indicating need for guidance
+- Language showing willingness to engage in solutions
+- Expressions of hope or seeking connection
+
+Return a help-seeking score from 0-3:
+- 0: No help-seeking behavior
+- 1: Minimal help-seeking indicators
+- 2: Clear help-seeking behavior  
+- 3: Strong help-seeking with engagement
+
+Score:"""
+                
+                ai_response = self.llm.invoke(help_seeking_prompt)
+                ai_help_text = self._extract_llm_content(ai_response).strip()
+                
+                # Use robust score parsing
+                ai_help_score = self._extract_numeric_score_from_ai_response(ai_help_text, "help_seeking")
+                help_score += ai_help_score
+                
+                if ai_help_score > 1.0:
+                    print(f"🤖 AI detected help-seeking behavior: {ai_help_score}/3")
+                    
+            except Exception as e:
+                print(f"⚠️ AI help-seeking analysis failed: {e}")
+                # Basic fallback
+                if any(word in text_lower for word in ['help', 'advice', 'how to', 'can you']):
+                    help_score += 1.0
+        else:
+            # Simple fallback when no AI
+            if any(word in text_lower for word in ['help', 'advice', 'how to', 'can you', 'support']):
                 help_score += 1.0
-                self.learned_patterns['help_seeking'][pattern] += 1
 
         # Normalize score
         return min(help_score / 5.0, 1.0)
@@ -872,7 +974,8 @@ class CrisisDetector:
         intensity_multiplier = 1.0 + (features['intensity_words'] * 0.2)
         temporal_urgency = 1.0 + (features['temporal_words'] * 0.3)
 
-        # CRITICAL: Explicit suicide/self-harm detection patterns -  More nuanced scoring
+        # SAFETY BACKUP: Critical suicide/self-harm patterns (AI-first approach with hardcoded fallback for safety)
+        # NOTE: AI analysis is prioritized above, these patterns are minimal safety backup only
         critical_patterns = {
             'suicide_explicit': {
                 'patterns': ['kill myself', 'end my life', 'take my life', 'suicide', 'suicidal', 
@@ -973,47 +1076,56 @@ class CrisisDetector:
                 detected_indicators.append(f" FLEXIBLE MATCH: {pattern_name} (Score: +{score})")
                 print(f" FLEXIBLE CRISIS PATTERN: '{pattern_regex}' matched in '{text}' (Score: +{score})")
 
-        # Learn crisis patterns dynamically
-        crisis_patterns = {
-            'self_reference_negative': ['i am', 'i feel', 'i can\'t', 'i don\'t', 'i won\'t'],
-            'absolute_language': ['never', 'always', 'nothing', 'everything', 'everyone', 'nobody'],
-            'despair_language': ['hopeless', 'pointless', 'useless', 'worthless', 'meaningless'],
-            'isolation_language': ['alone', 'lonely', 'isolated', 'abandoned', 'rejected'],
-            'pain_language': ['hurt', 'pain', 'suffering', 'agony', 'unbearable'],
-            'escape_language': ['escape', 'get away', 'run away', 'disappear', 'vanish'],
-            'finality_language': ['end', 'over', 'finished', 'done', 'final', 'last']
-        }
+        # AI-powered general crisis indicator detection
+        if self.llm:
+            try:
+                general_crisis_prompt = f"""
+You are a mental health crisis assessment AI analyzing text for general psychological distress indicators (not specific suicide/self-harm - that's handled separately).
 
-        for pattern_type, patterns in crisis_patterns.items():
-            for pattern in patterns:
-                if pattern in text_lower:
-                    # Base score for pattern -  Lower scores for common words
-                    if pattern_type in ['absolute_language', 'self_reference_negative']:
-                        pattern_score = 0.3  # Very common words, low crisis weight
-                    elif pattern_type in ['isolation_language', 'pain_language']:
-                        pattern_score = 0.5  # Moderate weight
-                    else:
-                        pattern_score = 1.0  # Higher weight for more specific crisis language
+Text: "{text}"
+Context: {list(contexts) if contexts else 'none'}
 
-                    # Adjust based on context
-                    if contexts:
-                        # Reduce score if in specific non-life contexts
-                        non_critical_contexts = {'academic', 'professional', 'recreational', 'financial'}
-                        if any(ctx in non_critical_contexts for ctx in contexts):
-                            pattern_score *= 0.4
+Analyze for:
+- Emotional intensity and despair
+- Isolation and hopelessness
+- Overwhelming life circumstances
+- General psychological distress patterns
+- Language suggesting need for support
 
-                    # Apply multipliers
-                    pattern_score *= intensity_multiplier * temporal_urgency
+Return a crisis score from 0-5:
+- 0: No distress indicators
+- 1-2: Mild emotional difficulty
+- 3-4: Moderate psychological distress
+- 5: Severe emotional crisis (non-suicidal)
 
-                    crisis_score += pattern_score
+Score:"""
+                
+                ai_response = self.llm.invoke(general_crisis_prompt)
+                ai_score_text = self._extract_llm_content(ai_response).strip()
+                
+                # Use robust score parsing
+                ai_crisis_score = self._extract_numeric_score_from_ai_response(ai_score_text, "crisis")
+                crisis_score += ai_crisis_score
+                
+                if ai_crisis_score > 1.0:
+                    detected_indicators.append(f"AI-detected distress (score: {ai_crisis_score})")
+                    print(f"🤖 AI detected general crisis indicators: {ai_crisis_score}/5")
                     
-                    if pattern_score > 0.5:  # Only log significant scores
-                        detected_indicators.append(f"{pattern} ({pattern_type})")
-
-                    # Learn this pattern
-                    self.learned_patterns['crisis_indicators'][pattern]['severity'] = pattern_score
-                    for context in contexts:
-                        self.learned_patterns['crisis_indicators'][pattern]['context_associations'][context] += 1
+            except Exception as e:
+                print(f"⚠️ AI general crisis detection failed: {e}")
+                # Minimal fallback - only basic emotional indicators
+                basic_distress_words = ['hopeless', 'worthless', 'unbearable', 'overwhelming']
+                for word in basic_distress_words:
+                    if word in text_lower:
+                        crisis_score += 0.5
+                        detected_indicators.append(f"{word} (fallback)")
+        else:
+            # Minimal fallback when no AI available
+            critical_distress_words = ['hopeless', 'worthless', 'suicidal', 'unbearable']
+            for word in critical_distress_words:
+                if word in text_lower:
+                    crisis_score += 1.0
+                    detected_indicators.append(f"{word} (no-ai-fallback)")
 
         # Sentiment analysis contribution
         if self.sentiment_available and self.sentiment_analyzer is not None:
@@ -1027,26 +1139,43 @@ class CrisisDetector:
         """Dynamically check for negation patterns"""
         text_lower = text.lower()
 
-        # Learn negation patterns dynamically
-        negation_indicators = ['not', 'don\'t', 'doesn\'t', 'isn\'t', 'aren\'t', 'won\'t', 'wouldn\'t', 'can\'t', 'couldn\'t']
+        # AI-powered negation and context analysis
+        if self.llm and contexts:
+            try:
+                negation_prompt = f"""
+Analyze this text for negation patterns that might reduce crisis severity.
 
-        for negation in negation_indicators:
-            if negation in text_lower:
-                negation_pos = text_lower.find(negation)
+Text: "{text}"
+Contexts: {list(contexts)}
 
-                # Check if negation is near context words
-                for context in contexts:
-                    # Find all context-related words in the text
-                    context_keywords = self.learned_patterns['contexts'][context]['keywords']
-                    for keyword in context_keywords:
-                        keyword_pos = text_lower.find(keyword)
-                        if keyword_pos != -1 and abs(keyword_pos - negation_pos) < 30:
-                            # Learn this negation pattern
-                            pattern = f"{negation}...{keyword}"
-                            self.learned_patterns['negation_patterns'][pattern] += 1
-                            return True
+Look for:
+- Explicit negations ("not", "don't", "won't")
+- Context that contradicts crisis indicators
+- Reassuring self-statements
+- Protective factors mentioned
 
-        return False
+Does this text contain negation or context that reduces crisis concern?
+
+Return: YES or NO
+
+Analysis:"""
+                
+                ai_response = self.llm.invoke(negation_prompt)
+                ai_negation = self._extract_llm_content(ai_response).upper().strip()
+                
+                has_negation = 'YES' in ai_negation
+                
+                if has_negation:
+                    print(f"🤖 AI detected negation/protective context")
+                    
+                return has_negation
+                
+            except Exception as e:
+                print(f"⚠️ AI negation analysis failed: {e}")
+        
+        # Simple fallback negation detection
+        basic_negations = ['not', "don't", "won't", "can't", "isn't"]
+        return any(neg in text_lower for neg in basic_negations)
 
     def _calculate_final_crisis_level(self, crisis_score: float, help_seeking_score: float,
                                     has_negation: bool, contexts: Set[str]) -> CrisisLevel:
@@ -1060,8 +1189,9 @@ class CrisisDetector:
         if help_seeking_score > 0.5:
             crisis_score *= (1.0 - (help_seeking_score * 0.6))
 
-        # Apply time-of-day considerations
-        if self.current_user['time_of_day'] in ['night', 'early_morning']:
+        # Apply time-of-day considerations (with safe access)
+        time_of_day = self.current_user.get('time_of_day', 'unknown')
+        if time_of_day in ['night', 'early_morning']:
             crisis_score *= 1.1  # Slightly higher concern during vulnerable hours
 
         #  More conservative thresholds to prevent false positives
@@ -1077,13 +1207,74 @@ class CrisisDetector:
             return CrisisLevel.NONE
 
     def detect_crisis_level(self, text: str, user_id: Optional[str] = None) -> Tuple[CrisisLevel, HarmType]:
-        """Main crisis detection method - Configurable: AI/Pattern/Hybrid"""
+        """Main crisis detection method - Configurable: AI/Pattern/Hybrid with intelligent optimization"""
         if not text or not text.strip():
             return CrisisLevel.NONE, HarmType.NONE
 
         # Use current user if no user_id provided
         if not user_id:
             user_id = self.current_user.get('login', 'anonymous_user')
+        
+        # Analyze interaction complexity to optimize processing
+        complexity_analysis = self._analyze_interaction_complexity(text)
+        print(f"📊 Interaction complexity: {complexity_analysis['complexity']} (confidence: {complexity_analysis['confidence']})")
+        
+        # For simple interactions, use optimized detection
+        if complexity_analysis['complexity'] == 'simple' and complexity_analysis['confidence'] > 0.8:
+            # AI-powered critical safety check with minimal hardcoded backup
+            if self.llm:
+                try:
+                    safety_check_prompt = f"""
+You are a mental health crisis detection AI. Quickly analyze this text for immediate safety concerns.
+
+Text: "{text}"
+
+This is a SIMPLE interaction that needs quick safety screening. Look for:
+1. Direct suicide/self-harm expressions
+2. Immediate danger indicators
+3. Crisis-level distress
+
+Respond with ONLY one word:
+- SAFE: No immediate safety concerns
+- UNSAFE: Immediate safety concerns detected, needs full crisis analysis
+
+Safety Assessment:"""
+                    
+                    response = self.llm.invoke(safety_check_prompt)
+                    safety_assessment = self._extract_llm_content(response).upper().strip()
+                    
+                    if 'UNSAFE' in safety_assessment:
+                        print(f"⚠️ AI detected safety concern in simple interaction: {safety_assessment}")
+                        # Escalate to full analysis
+                    else:
+                        print(f"✅ AI confirmed simple interaction is safe - skipping heavy analysis")
+                        return CrisisLevel.NONE, HarmType.NONE
+                        
+                except Exception as e:
+                    print(f"⚠️ AI safety check failed, using minimal pattern backup: {e}")
+                    # Minimal hardcoded backup for critical safety only
+                    critical_patterns = ['kill myself', 'suicide', 'end my life']
+                    text_lower = text.lower()
+                    
+                    has_critical = any(pattern in text_lower for pattern in critical_patterns)
+                    if has_critical:
+                        print(f"⚠️ Critical pattern detected in simple interaction, escalating to full analysis")
+                        # Escalate to full analysis
+                    else:
+                        print(f"✅ Simple interaction with no critical patterns - skipping heavy analysis")
+                        return CrisisLevel.NONE, HarmType.NONE
+            else:
+                # Minimal hardcoded backup when no LLM available
+                critical_patterns = ['kill myself', 'suicide', 'end my life']
+                text_lower = text.lower()
+                
+                has_critical = any(pattern in text_lower for pattern in critical_patterns)
+                if has_critical:
+                    print(f"⚠️ Critical pattern detected, escalating to full analysis")
+                    # Escalate to full analysis
+                else:
+                    print(f"✅ Simple interaction with no critical patterns - skipping heavy analysis")
+                    return CrisisLevel.NONE, HarmType.NONE
 
         if self.detection_mode == "ai":
             # AI-only mode
@@ -1115,23 +1306,10 @@ class CrisisDetector:
             pattern_level, pattern_harm_type = self._pattern_based_crisis_detection(text, user_id)
             print(f"📊 Pattern Analysis: {pattern_level.value} (Harm: {pattern_harm_type.value})")
 
-            # Hybrid decision logic: Take the higher of the two levels for safety
-            crisis_levels = [CrisisLevel.NONE, CrisisLevel.LOW, CrisisLevel.MEDIUM, CrisisLevel.HIGH, CrisisLevel.CRITICAL]
-            
-            ai_index = crisis_levels.index(ai_level) if ai_level in crisis_levels else 0
-            pattern_index = crisis_levels.index(pattern_level) if pattern_level in crisis_levels else 0
-            
-            # Use the higher level (more conservative approach for safety)
-            final_level = crisis_levels[max(ai_index, pattern_index)]
-            
-            # Combine harm types - if either detects harm to others, flag it
-            final_harm_type = HarmType.NONE
-            if ai_harm_type == HarmType.HARM_TO_OTHERS or pattern_harm_type == HarmType.HARM_TO_OTHERS:
-                final_harm_type = HarmType.HARM_TO_OTHERS
-            elif ai_harm_type == HarmType.SELF_HARM or pattern_harm_type == HarmType.SELF_HARM:
-                final_harm_type = HarmType.SELF_HARM
-            elif ai_harm_type == HarmType.BOTH or pattern_harm_type == HarmType.BOTH:
-                final_harm_type = HarmType.BOTH
+            # Intelligent hybrid reconciliation using AI analysis
+            final_level, final_harm_type = self._reconcile_crisis_detection_intelligently(
+                ai_level, ai_harm_type, pattern_level, pattern_harm_type, text
+            )
             
             print(f"🔒 Final Decision: {final_level.value} (AI: {ai_level.value}, Pattern: {pattern_level.value})")
             if final_harm_type != HarmType.NONE:
@@ -1262,32 +1440,114 @@ Analysis:"""
         if contexts:
             print(f"🔍 Learned contexts: {contexts}")
 
-        # Determine harm type based on patterns
+        # AI-powered harm type detection with critical pattern backup
         harm_type = HarmType.NONE
         text_lower = text.lower()
         
-        # Check for harm to others patterns
-        harm_others_patterns = [
-            'hurt someone', 'kill someone', 'harm others', 'attack', 'violence',
-            'revenge', 'get back at', 'make them pay', 'hurt them', 'teach them a lesson',
-            'hate everyone', 'everyone deserves', 'they all should', 'nobody understands'
-        ]
+        # AI-powered harm detection with minimal safety backup
+        pattern_self_harm = False
+        pattern_harm_others = False
         
-        # Check for self-harm patterns  
-        self_harm_patterns = [
-            'hurt myself', 'kill myself', 'end it all', 'suicide', 'self harm',
-            'cut myself', 'overdose', 'jump off', 'hang myself', 'slit my wrists'
-        ]
+        if self.llm:
+            try:
+                harm_pattern_prompt = f"""
+You are a mental health safety analyst detecting harm patterns in text.
+
+Text: "{text}"
+
+Analyze for specific harm intentions or expressions:
+1. SELF_HARM patterns: Any expressions of wanting to harm, hurt, or endanger oneself
+2. HARM_TO_OTHERS patterns: Any expressions of wanting to harm, hurt, or endanger other people
+
+Consider context and intent, not just keywords. Look for actual harmful intentions.
+
+Respond with detected patterns (can be multiple):
+- SELF_HARM_DETECTED: Self-harm patterns found
+- HARM_OTHERS_DETECTED: Harm to others patterns found
+- NO_HARM_PATTERNS: No specific harm patterns detected
+
+Pattern Analysis:"""
+                
+                response = self.llm.invoke(harm_pattern_prompt)
+                harm_analysis = self._extract_llm_content(response).upper().strip()
+                
+                pattern_self_harm = 'SELF_HARM_DETECTED' in harm_analysis
+                pattern_harm_others = 'HARM_OTHERS_DETECTED' in harm_analysis
+                
+                if pattern_self_harm or pattern_harm_others:
+                    print(f"🤖 AI detected harm patterns: {harm_analysis}")
+                    
+            except Exception as e:
+                print(f"⚠️ AI harm pattern analysis failed, using minimal backup: {e}")
+                # Minimal safety backup
+                text_lower = text.lower()
+                critical_self_harm = ['kill myself', 'hurt myself', 'suicide']
+                critical_harm_others = ['kill someone', 'hurt someone']
+                
+                pattern_self_harm = any(pattern in text_lower for pattern in critical_self_harm)
+                pattern_harm_others = any(pattern in text_lower for pattern in critical_harm_others)
+        else:
+            # Minimal safety backup when no LLM available
+            text_lower = text.lower()
+            critical_self_harm = ['kill myself', 'hurt myself', 'suicide']
+            critical_harm_others = ['kill someone', 'hurt someone']
+            
+            pattern_self_harm = any(pattern in text_lower for pattern in critical_self_harm)
+            pattern_harm_others = any(pattern in text_lower for pattern in critical_harm_others)
         
-        has_harm_others = any(pattern in text_lower for pattern in harm_others_patterns)
-        has_self_harm = any(pattern in text_lower for pattern in self_harm_patterns)
-        
-        if has_harm_others and has_self_harm:
-            harm_type = HarmType.BOTH
-        elif has_harm_others:
-            harm_type = HarmType.HARM_TO_OTHERS
-        elif has_self_harm:
-            harm_type = HarmType.SELF_HARM
+        # AI-enhanced harm type analysis
+        if self.llm and final_level != CrisisLevel.NONE:
+            try:
+                harm_analysis_prompt = f"""
+Analyze this text for harm intentions. This is a critical safety assessment.
+
+Text: "{text}"
+
+Determine if the text expresses:
+1. SELF_HARM: Intent, thoughts, or plans to harm oneself
+2. HARM_TO_OTHERS: Intent, thoughts, or plans to harm other people  
+3. BOTH: Both self-harm and harm to others mentioned
+4. NONE: No specific harm intentions detected
+
+Consider context, metaphorical language, and actual intent.
+
+Return ONLY one word: SELF_HARM, HARM_TO_OTHERS, BOTH, or NONE
+
+Assessment:"""
+                
+                ai_response = self.llm.invoke(harm_analysis_prompt)
+                ai_harm_assessment = self._extract_llm_content(ai_response).upper().strip()
+                
+                # Combine AI analysis with pattern detection (safety first)
+                if 'BOTH' in ai_harm_assessment or (pattern_self_harm and pattern_harm_others):
+                    harm_type = HarmType.BOTH
+                elif 'HARM_TO_OTHERS' in ai_harm_assessment or pattern_harm_others:
+                    harm_type = HarmType.HARM_TO_OTHERS
+                elif 'SELF_HARM' in ai_harm_assessment or pattern_self_harm:
+                    harm_type = HarmType.SELF_HARM
+                else:
+                    harm_type = HarmType.NONE
+                    
+                if harm_type != HarmType.NONE:
+                    print(f"🤖 AI harm analysis: {ai_harm_assessment} (Final: {harm_type.value})")
+                    
+            except Exception as e:
+                print(f"⚠️ AI harm analysis failed, using pattern detection: {e}")
+                # Fallback to pattern detection only
+                if pattern_self_harm and pattern_harm_others:
+                    harm_type = HarmType.BOTH
+                elif pattern_harm_others:
+                    harm_type = HarmType.HARM_TO_OTHERS
+                elif pattern_self_harm:
+                    harm_type = HarmType.SELF_HARM
+        else:
+            # Use pattern detection when no AI or no crisis detected
+            if pattern_self_harm and pattern_harm_others:
+                harm_type = HarmType.BOTH
+            elif pattern_harm_others:
+                harm_type = HarmType.HARM_TO_OTHERS
+            elif pattern_self_harm:
+                harm_type = HarmType.SELF_HARM
 
         return final_level, harm_type
 
@@ -1369,11 +1629,491 @@ Analysis:"""
 
         return interventions.get(crisis_level, interventions[CrisisLevel.LOW])
 
-# Initialize AI-powered crisis detector with hybrid mode
-crisis_detector = CrisisDetector(detection_mode="hybrid")
-print("✅ AI-powered crisis detection initialized (Hybrid mode: AI + Patterns)!")
+    def _extract_llm_content(self, response) -> str:
+        """Safely extract content from LLM response"""
+        try:
+            if hasattr(response, 'content'):
+                content = response.content
+                if isinstance(content, str):
+                    return content.strip()
+                elif isinstance(content, list) and content:
+                    return str(content[0]).strip()
+                else:
+                    return str(content).strip()
+            else:
+                return str(response).strip()
+        except Exception as e:
+            print(f"⚠️ Error extracting content from LLM response: {e}")
+            return str(response).strip() if response else ""
+
+    def _analyze_interaction_complexity(self, user_input: str) -> Dict[str, Any]:
+        """AI-powered analysis to determine interaction complexity and required processing level"""
+        if not user_input or len(user_input.strip()) < 2:
+            return {
+                'complexity': 'minimal',
+                'requires_full_analysis': False,
+                'requires_ai_context': False,
+                'suggested_response_type': 'acknowledgment',
+                'confidence': 1.0
+            }
+        
+        # Basic linguistic indicators
+        word_count = len(user_input.split())
+        sentence_count = len([s for s in user_input.split('.') if s.strip()])
+        question_count = user_input.count('?')
+        
+        # AI-powered expression understanding (no hardcoded patterns)
+        if self.llm and word_count <= 5 and sentence_count <= 1:
+            try:
+                expression_analysis_prompt = f"""
+You are an expert in understanding human expressions and communication patterns. Analyze this user input for its intent and emotional context.
+
+User Input: "{user_input}"
+Word Count: {word_count}
+Sentence Count: {sentence_count}
+
+Analyze this expression and classify it as one of these categories:
+1. GREETING - any form of hello, welcome, or initial contact (including casual like "hey", "yo", "sup")
+2. ACKNOWLEDGMENT - agreement, confirmation, thanks, or simple responses ("ok", "sure", "thanks", "yeah")
+3. LAUGHTER - expressions of amusement, joy ("haha", "hehe", "lol", "😂", laughing sounds)
+4. EXCLAMATION - emotional outbursts, excitement, surprise ("wow", "omg", "yay", "ugh")
+5. CASUAL_EXPRESSION - informal communication, slang, casual phrases
+6. CLOSING - goodbye, farewell, ending conversation ("bye", "see ya", "gtg")
+7. QUESTION - asking something, seeking information
+8. EMOTIONAL - expressing feelings, emotions, or personal state
+9. COMPLEX - requires deeper analysis or therapeutic response
+10. UNCLEAR - ambiguous or unrecognizable input
+
+Consider:
+- Internet slang and modern expressions
+- Emojis and their emotional context
+- Casual variations and abbreviations
+- Context-appropriate classification
+
+Respond with ONLY the category name (e.g., LAUGHTER, GREETING, etc.)
+
+Classification:"""
+                
+                response = self.llm.invoke(expression_analysis_prompt)
+                ai_classification = self._extract_llm_content(response).upper().strip()
+                
+                # Map AI classification to response types
+                simple_classifications = ['GREETING', 'ACKNOWLEDGMENT', 'LAUGHTER', 'EXCLAMATION', 'CASUAL_EXPRESSION', 'CLOSING']
+                
+                if any(classification in ai_classification for classification in simple_classifications):
+                    # Determine specific pattern type from AI classification
+                    if 'GREETING' in ai_classification:
+                        pattern_type = 'greeting'
+                    elif 'ACKNOWLEDGMENT' in ai_classification:
+                        pattern_type = 'acknowledgment'
+                    elif 'LAUGHTER' in ai_classification:
+                        pattern_type = 'laughter'
+                    elif 'EXCLAMATION' in ai_classification:
+                        pattern_type = 'exclamation'
+                    elif 'CASUAL_EXPRESSION' in ai_classification:
+                        pattern_type = 'casual_expression'
+                    elif 'CLOSING' in ai_classification:
+                        pattern_type = 'closing'
+                    else:
+                        pattern_type = 'simple_expression'
+                    
+                    print(f"🤖 AI classified '{user_input}' as: {ai_classification} ({pattern_type})")
+                    
+                    return {
+                        'complexity': 'simple',
+                        'pattern_type': pattern_type,
+                        'requires_full_analysis': False,
+                        'requires_ai_context': False,
+                        'suggested_response_type': 'casual_supportive',
+                        'confidence': 0.9,
+                        'ai_classification': ai_classification
+                    }
+                elif 'EMOTIONAL' in ai_classification:
+                    return {
+                        'complexity': 'moderate',
+                        'pattern_type': 'emotional_expression',
+                        'requires_full_analysis': True,
+                        'requires_ai_context': False,
+                        'suggested_response_type': 'supportive',
+                        'confidence': 0.8,
+                        'ai_classification': ai_classification
+                    }
+                elif 'COMPLEX' in ai_classification:
+                    return {
+                        'complexity': 'complex',
+                        'pattern_type': 'complex_expression',
+                        'requires_full_analysis': True,
+                        'requires_ai_context': True,
+                        'suggested_response_type': 'therapeutic',
+                        'confidence': 0.7,
+                        'ai_classification': ai_classification
+                    }
+                
+            except Exception as e:
+                print(f"⚠️ AI expression analysis failed: {e}")
+        
+        # Fallback for when AI is unavailable or for longer inputs
+        if word_count <= 3 and sentence_count <= 1 and question_count == 0:
+            return {
+                'complexity': 'simple',
+                'pattern_type': 'unknown_simple',
+                'requires_full_analysis': False,
+                'requires_ai_context': False,
+                'suggested_response_type': 'casual_supportive',
+                'confidence': 0.7
+            }
+        
+        # Use AI for deeper analysis when patterns aren't obvious
+        if self.llm and (word_count > 3 or question_count > 0 or sentence_count > 1):
+            try:
+                complexity_prompt = f"""
+Analyze this user input for interaction complexity and therapeutic content:
+
+Input: "{user_input}"
+
+Consider:
+1. Emotional content depth
+2. Therapeutic significance
+3. Crisis indicators
+4. Help-seeking behavior
+5. Complexity of response needed
+
+Classify as:
+- SIMPLE: Basic social interaction, greeting, or acknowledgment
+- MODERATE: Some emotional content or specific questions
+- COMPLEX: Deep emotional issues, crisis content, or therapeutic needs
+
+Format your response as:
+COMPLEXITY: [SIMPLE/MODERATE/COMPLEX]
+REASONING: [brief explanation]
+REQUIRES_CONTEXT: [YES/NO] - whether this needs knowledge base lookup
+SUGGESTED_TYPE: [casual/supportive/therapeutic]
+
+Analysis:"""
+                
+                response = self.llm.invoke(complexity_prompt)
+                ai_analysis = self._extract_llm_content(response).upper()
+                
+                # Parse AI analysis
+                complexity = 'moderate'  # default
+                requires_context = False
+                suggested_type = 'supportive'
+                
+                if 'COMPLEXITY:' in ai_analysis:
+                    complexity_line = ai_analysis.split('COMPLEXITY:')[1].split('\n')[0].strip()
+                    if 'SIMPLE' in complexity_line:
+                        complexity = 'simple'
+                    elif 'COMPLEX' in complexity_line:
+                        complexity = 'complex'
+                    else:
+                        complexity = 'moderate'
+                
+                if 'REQUIRES_CONTEXT:' in ai_analysis:
+                    context_line = ai_analysis.split('REQUIRES_CONTEXT:')[1].split('\n')[0].strip()
+                    requires_context = 'YES' in context_line
+                
+                if 'SUGGESTED_TYPE:' in ai_analysis:
+                    type_line = ai_analysis.split('SUGGESTED_TYPE:')[1].split('\n')[0].strip().lower()
+                    if 'casual' in type_line:
+                        suggested_type = 'casual'
+                    elif 'therapeutic' in type_line:
+                        suggested_type = 'therapeutic'
+                    else:
+                        suggested_type = 'supportive'
+                
+                return {
+                    'complexity': complexity,
+                    'requires_full_analysis': complexity in ['moderate', 'complex'],
+                    'requires_ai_context': requires_context,
+                    'suggested_response_type': suggested_type,
+                    'confidence': 0.8,
+                    'ai_reasoning': ai_analysis
+                }
+                
+            except Exception as e:
+                print(f"⚠️ AI complexity analysis failed: {e}")
+        
+        # Fallback analysis based on linguistic features
+        if word_count <= 2 and question_count == 0:
+            return {
+                'complexity': 'simple',
+                'requires_full_analysis': False,
+                'requires_ai_context': False,
+                'suggested_response_type': 'casual',
+                'confidence': 0.7
+            }
+        elif word_count <= 6 and question_count <= 1:
+            return {
+                'complexity': 'moderate',
+                'requires_full_analysis': True,
+                'requires_ai_context': False,
+                'suggested_response_type': 'supportive',
+                'confidence': 0.6
+            }
+        else:
+            return {
+                'complexity': 'complex',
+                'requires_full_analysis': True,
+                'requires_ai_context': True,
+                'suggested_response_type': 'therapeutic',
+                'confidence': 0.6
+            }
+
+    def _reconcile_crisis_detection_intelligently(self, ai_level: CrisisLevel, ai_harm_type: HarmType, 
+                                                 pattern_level: CrisisLevel, pattern_harm_type: HarmType, 
+                                                 original_text: str) -> Tuple[CrisisLevel, HarmType]:
+        """Intelligently reconcile AI and pattern-based crisis detection results"""
+        
+        # AI-powered safety-first analysis with minimal hardcoded backup
+        if self.llm:
+            try:
+                critical_safety_prompt = f"""
+You are a mental health crisis safety analyst. Analyze this text for IMMEDIATE CRITICAL safety patterns that require emergency intervention.
+
+Text: "{original_text}"
+
+Look specifically for:
+1. Direct suicide statements or plans
+2. Immediate self-harm intentions
+3. Active crisis expressions requiring immediate escalation
+
+This is a SAFETY-CRITICAL assessment. Be extremely cautious.
+
+Respond with ONLY:
+- CRITICAL_SAFETY: Immediate critical safety concern detected
+- SAFETY_CLEAR: No immediate critical safety patterns
+
+Safety Analysis:"""
+                
+                response = self.llm.invoke(critical_safety_prompt)
+                safety_analysis = self._extract_llm_content(response).upper().strip()
+                
+                if 'CRITICAL_SAFETY' in safety_analysis:
+                    print(f"🚨 AI detected critical safety pattern - escalating to CRITICAL regardless of other analysis")
+                    return CrisisLevel.CRITICAL, HarmType.SELF_HARM
+                    
+            except Exception as e:
+                print(f"⚠️ AI critical safety analysis failed, using minimal backup: {e}")
+                # Minimal hardcoded backup for critical safety only
+                critical_safety_patterns = ['kill myself', 'suicide', 'end my life']
+                text_lower = original_text.lower()
+                has_critical_safety = any(pattern in text_lower for pattern in critical_safety_patterns)
+                
+                if has_critical_safety:
+                    print(f"🚨 Critical safety pattern detected - escalating to CRITICAL regardless of AI analysis")
+                    return CrisisLevel.CRITICAL, HarmType.SELF_HARM
+        else:
+            # Minimal hardcoded backup when no LLM available
+            critical_safety_patterns = ['kill myself', 'suicide', 'end my life']
+            text_lower = original_text.lower()
+            has_critical_safety = any(pattern in text_lower for pattern in critical_safety_patterns)
+            
+            if has_critical_safety:
+                print(f"🚨 Critical safety pattern detected - escalating to CRITICAL regardless of analysis")
+                return CrisisLevel.CRITICAL, HarmType.SELF_HARM
+        
+        # Use AI to analyze the discrepancy and make intelligent decision
+        if self.llm and ai_level != pattern_level:
+            try:
+                reconciliation_prompt = f"""
+You are a mental health crisis assessment specialist resolving conflicting analysis results.
+
+Original Text: "{original_text}"
+
+AI Analysis Result: {ai_level.value} crisis level, {ai_harm_type.value} harm type
+Pattern Analysis Result: {pattern_level.value} crisis level, {pattern_harm_type.value} harm type
+
+The results differ. Analyze the original text and provide the most appropriate assessment considering:
+1. Context and intent behind the words
+2. Emotional state indicators
+3. Actual risk level vs. casual language
+4. Safety-first principle for genuine concerns
+5. Avoiding false positives for non-crisis situations
+
+Provide your reconciled assessment:
+FINAL_CRISIS_LEVEL: [NONE/LOW/MEDIUM/HIGH/CRITICAL]
+FINAL_HARM_TYPE: [NONE/SELF_HARM/HARM_TO_OTHERS/BOTH]
+REASONING: [brief explanation of your decision]
+
+Assessment:"""
+                
+                response = self.llm.invoke(reconciliation_prompt)
+                ai_reconciliation = self._extract_llm_content(response).upper()
+                
+                # Parse AI reconciliation
+                final_level = ai_level  # default to AI if parsing fails
+                final_harm_type = ai_harm_type
+                
+                if 'FINAL_CRISIS_LEVEL:' in ai_reconciliation:
+                    level_line = ai_reconciliation.split('FINAL_CRISIS_LEVEL:')[1].split('\n')[0].strip()
+                    if 'CRITICAL' in level_line:
+                        final_level = CrisisLevel.CRITICAL
+                    elif 'HIGH' in level_line:
+                        final_level = CrisisLevel.HIGH
+                    elif 'MEDIUM' in level_line:
+                        final_level = CrisisLevel.MEDIUM
+                    elif 'LOW' in level_line:
+                        final_level = CrisisLevel.LOW
+                    else:
+                        final_level = CrisisLevel.NONE
+                
+                if 'FINAL_HARM_TYPE:' in ai_reconciliation:
+                    harm_line = ai_reconciliation.split('FINAL_HARM_TYPE:')[1].split('\n')[0].strip()
+                    if 'HARM_TO_OTHERS' in harm_line:
+                        final_harm_type = HarmType.HARM_TO_OTHERS
+                    elif 'SELF_HARM' in harm_line:
+                        final_harm_type = HarmType.SELF_HARM
+                    elif 'BOTH' in harm_line:
+                        final_harm_type = HarmType.BOTH
+                    else:
+                        final_harm_type = HarmType.NONE
+                
+                if 'REASONING:' in ai_reconciliation:
+                    reasoning = ai_reconciliation.split('REASONING:')[1].split('\n')[0].strip()
+                    print(f"🤖 AI Reconciliation: {final_level.value}/{final_harm_type.value} - {reasoning[:100]}...")
+                
+                return final_level, final_harm_type
+                
+            except Exception as e:
+                print(f"⚠️ AI reconciliation failed: {e}")
+        
+        # Fallback intelligent reconciliation without AI
+        crisis_levels = [CrisisLevel.NONE, CrisisLevel.LOW, CrisisLevel.MEDIUM, CrisisLevel.HIGH, CrisisLevel.CRITICAL]
+        ai_index = crisis_levels.index(ai_level) if ai_level in crisis_levels else 0
+        pattern_index = crisis_levels.index(pattern_level) if pattern_level in crisis_levels else 0
+        
+        # Intelligent weighting based on confidence and context
+        text_length = len(original_text.split())
+        text_lower = original_text.lower()  # Define text_lower for emotional content analysis
+        emotional_words = ['feel', 'feeling', 'emotions', 'sad', 'depressed', 'anxious', 'worried', 'scared']
+        has_emotional_content = any(word in text_lower for word in emotional_words)
+        
+        # Give more weight to AI for complex emotional content
+        if text_length > 10 and has_emotional_content:
+            # AI is better at context understanding
+            if ai_index > pattern_index:
+                final_level = ai_level
+                print(f"🧠 Complex emotional content - trusting AI analysis: {ai_level.value}")
+            else:
+                # Take average if pattern is higher
+                avg_index = (ai_index + pattern_index) // 2
+                final_level = crisis_levels[min(avg_index, len(crisis_levels) - 1)]
+                print(f"🧠 Averaging AI and pattern for complex content: {final_level.value}")
+        else:
+            # For simple content, use safety-first approach (higher level)
+            final_level = crisis_levels[max(ai_index, pattern_index)]
+            print(f"🛡️ Safety-first approach for simple content: {final_level.value}")
+        
+        # Intelligent harm type reconciliation
+        if ai_harm_type == HarmType.BOTH or pattern_harm_type == HarmType.BOTH:
+            final_harm_type = HarmType.BOTH
+        elif ai_harm_type == HarmType.HARM_TO_OTHERS or pattern_harm_type == HarmType.HARM_TO_OTHERS:
+            final_harm_type = HarmType.HARM_TO_OTHERS
+        elif ai_harm_type == HarmType.SELF_HARM or pattern_harm_type == HarmType.SELF_HARM:
+            final_harm_type = HarmType.SELF_HARM
+        else:
+            final_harm_type = HarmType.NONE
+        
+        return final_level, final_harm_type
+
+    def _extract_numeric_score_from_ai_response(self, ai_response: str, score_type: str = "general") -> float:
+        """Robustly extract numeric scores from AI responses using multiple parsing strategies"""
+        import re
+        
+        if not ai_response or not ai_response.strip():
+            return 0.0
+            
+        # Multiple parsing strategies for different AI response formats
+        parsing_strategies = [
+            # Strategy 1: Direct score patterns (Score: 3, Score: 3.5)
+            r'Score:\s*([0-9]*\.?[0-9]+)',
+            r'score:\s*([0-9]*\.?[0-9]+)',
+            
+            # Strategy 2: Fraction patterns (3/5, 2.5/3)
+            r'([0-9]*\.?[0-9]+)\s*/\s*[0-9]+',
+            
+            # Strategy 3: Number at start of response
+            r'^\s*([0-9]*\.?[0-9]+)',
+            
+            # Strategy 4: Number followed by common descriptors
+            r'([0-9]*\.?[0-9]+)\s*(?:out of|/|points?|level)',
+            
+            # Strategy 5: Parenthetical scores ((3), (2.5))
+            r'\(\s*([0-9]*\.?[0-9]+)\s*\)',
+            
+            # Strategy 6: Final number in response (as fallback)
+            r'([0-9]*\.?[0-9]+)\s*$'
+        ]
+        
+        # Try each parsing strategy
+        for strategy in parsing_strategies:
+            matches = re.findall(strategy, ai_response, re.IGNORECASE | re.MULTILINE)
+            if matches:
+                try:
+                    score = float(matches[0])
+                    # Validate score range based on type
+                    if score_type == "help_seeking" and 0 <= score <= 3:
+                        print(f"🎯 Extracted {score_type} score: {score} using pattern: {strategy[:20]}...")
+                        return score
+                    elif score_type == "crisis" and 0 <= score <= 5:
+                        print(f"🎯 Extracted {score_type} score: {score} using pattern: {strategy[:20]}...")
+                        return score
+                    elif 0 <= score <= 10:  # General case
+                        print(f"🎯 Extracted {score_type} score: {score} using pattern: {strategy[:20]}...")
+                        return min(score, 5.0)  # Cap at reasonable maximum
+                except (ValueError, IndexError):
+                    continue
+        
+        # If no numeric score found, use AI to interpret the response
+        if self.llm:
+            try:
+                interpretation_prompt = f"""
+The following response was supposed to contain a numeric score but parsing failed:
+
+"{ai_response}"
+
+Please extract or interpret the intended numeric score. Consider:
+- For help-seeking: 0-3 scale (0=none, 1=minimal, 2=clear, 3=strong)
+- For crisis: 0-5 scale (0=none, 1-2=mild, 3-4=moderate, 5=severe)
+- For general: 0-5 scale
+
+Respond with ONLY a single number (e.g., "2.5" or "3"):"""
+                
+                interpretation_response = self.llm.invoke(interpretation_prompt)
+                interpreted_text = self._extract_llm_content(interpretation_response).strip()
+                
+                # Try to extract number from interpretation
+                number_match = re.search(r'([0-9]*\.?[0-9]+)', interpreted_text)
+                if number_match:
+                    interpreted_score = float(number_match.group(1))
+                    print(f"🤖 AI interpreted score: {interpreted_score} from: {interpreted_text}")
+                    return max(0.0, min(interpreted_score, 5.0))  # Clamp to valid range
+                    
+            except Exception as e:
+                print(f"⚠️ AI score interpretation failed: {e}")
+        
+        # Ultimate fallback: analyze response text for indicators
+        response_lower = ai_response.lower()
+        if any(word in response_lower for word in ['none', 'no', 'zero', 'nothing']):
+            return 0.0
+        elif any(word in response_lower for word in ['minimal', 'slight', 'low']):
+            return 1.0
+        elif any(word in response_lower for word in ['moderate', 'medium', 'some']):
+            return 2.5
+        elif any(word in response_lower for word in ['high', 'strong', 'significant']):
+            return 4.0
+        elif any(word in response_lower for word in ['critical', 'severe', 'extreme']):
+            return 5.0
+        else:
+            print(f"⚠️ Could not parse score from: {ai_response[:100]}...")
+            return 0.0
+
+# Initialize AI-powered crisis detector with hybrid mode (will be updated with user context per request)
+crisis_detector = CrisisDetector(detection_mode="hybrid")  # Initialize with default, will be updated per request
+print("✅ Enhanced AI crisis detection initialized (Hybrid mode: AI-Primary + Safety-Patterns)!")
 print(f"🕐 Session started at: {crisis_detector.current_user['timestamp']}")
-print(f"👤 User context: {crisis_detector.current_user['login']} ({crisis_detector.current_user['time_of_day']})")
+time_of_day = crisis_detector.current_user.get('time_of_day', 'unknown')
+print(f"👤 User context: {crisis_detector.current_user['login']} ({time_of_day})")
 
 @dataclass
 class SessionMemory:
@@ -1386,6 +2126,7 @@ class SessionMemory:
     user_preferences: Optional[Dict] = None
     session_id: str = ""  #  Track specific session
     created_at: str = ""  #  Track when session was created
+    complexity_history: Optional[List] = None  # Track interaction complexity over time
 
     def __post_init__(self):
         if self.issue_details is None:
@@ -1396,17 +2137,20 @@ class SessionMemory:
             self.key_themes = []
         if self.user_preferences is None:
             self.user_preferences = {}
+        if self.complexity_history is None:
+            self.complexity_history = []
         if not self.created_at:
             self.created_at = datetime.now().isoformat()
 
 class TherapyBot:
     """Enhanced professional therapy chatbot with strict session isolation"""
 
-    def __init__(self, groq_api_key: str):
+    def __init__(self, groq_api_key: str, user_context: Optional[Dict] = None):
         self.groq_api_key = groq_api_key
         self.crisis_detector = crisis_detector
         self.storage = storage
         self.active_sessions: Dict[str, UserSession] = {}
+        self.current_user_context = user_context
 
         #  Strict session memory isolation
         self.session_memories: Dict[str, SessionMemory] = {}
@@ -1430,17 +2174,33 @@ class TherapyBot:
         # Pass LLM to crisis detector for AI-powered detection
         if self.llm:
             self.crisis_detector.llm = self.llm
-            print("🤖 AI-powered crisis detection enabled!")
+            print("🤖 Enhanced AI-powered crisis detection enabled (Safety-First Hybrid)!")
         else:
             print("⚠️ Using pattern-based crisis detection only")
 
-        # Initialize enhanced knowledge base
-        self._initialize_enhanced_knowledge_base()
-
+        # Mark knowledge base as not loaded (lazy loading)
+        self._knowledge_base_loaded = False
+        self._knowledge_base_loading = False
+        
         # Setup dynamic conversation prompts
         self._setup_dynamic_prompts()
 
         print("✅ Enhanced TherapyBot with strict session isolation initialized!")
+
+    def update_user_context(self, user_context: Dict) -> None:
+        """Update user context for the therapy bot and all its components"""
+        if user_context:
+            self.current_user_context = user_context
+            
+            # Update storage user context
+            if hasattr(self.storage, 'update_user_context'):
+                self.storage.update_user_context(user_context)
+            
+            # Update crisis detector user context
+            if hasattr(self.crisis_detector, 'update_user_context'):
+                self.crisis_detector.update_user_context(user_context)
+            
+            print(f"🔄 TherapyBot updated user context to: {user_context.get('login', 'unknown')}")
 
     def _extract_llm_content(self, response) -> str:
         """Safely extract content from LLM response"""
@@ -1459,6 +2219,130 @@ class TherapyBot:
             print(f"⚠️ Error extracting LLM content: {e}")
             return ""
 
+    def _analyze_interaction_complexity(self, user_input: str, conversation_count: int) -> Dict[str, Any]:
+        """AI-powered analysis of interaction complexity to optimize processing"""
+        try:
+            if self.llm:
+                complexity_prompt = f"""
+Analyze this user interaction for complexity to optimize AI processing.
+
+User Input: "{user_input}"
+Conversation Count: {conversation_count}
+
+Assess complexity on multiple dimensions:
+1. Emotional complexity (0-5): depth of emotions expressed
+2. Therapeutic need (0-5): how much therapeutic intervention is needed
+3. Context dependency (0-5): how much context from previous conversations is needed
+4. Response complexity (0-5): how complex the response should be
+
+Return ONLY a JSON object with numeric scores:
+{{"emotional": 0, "therapeutic": 0, "context": 0, "response": 0, "overall": 0}}
+
+Complexity Analysis:"""
+                
+                response = self.llm.invoke(complexity_prompt)
+                ai_analysis = self._extract_llm_content(response).strip()
+                
+                # Try to parse JSON response
+                import json
+                try:
+                    complexity_data = json.loads(ai_analysis)
+                    # Validate and ensure all required fields
+                    required_fields = ['emotional', 'therapeutic', 'context', 'response', 'overall']
+                    for field in required_fields:
+                        if field not in complexity_data:
+                            complexity_data[field] = 2  # Default medium complexity
+                    
+                    # Add derived fields for backward compatibility
+                    complexity_data['requires_ai_context'] = complexity_data.get('therapeutic', 2) >= 3 or complexity_data.get('overall', 2) >= 3
+                    complexity_level = complexity_data.get('overall', 2)
+                    if complexity_level <= 2:
+                        complexity_data['complexity'] = 'simple'
+                        complexity_data['confidence'] = 0.9  # High confidence for simple interactions
+                    elif complexity_level <= 3:
+                        complexity_data['complexity'] = 'moderate'
+                        complexity_data['confidence'] = 0.8  # Good confidence for moderate complexity
+                    else:
+                        complexity_data['complexity'] = 'complex'
+                        complexity_data['confidence'] = 0.7  # Lower confidence for complex interactions
+                    
+                    return complexity_data
+                except (json.JSONDecodeError, ValueError):
+                    print(f"⚠️ Could not parse AI complexity analysis: {ai_analysis}")
+                    return self._fallback_complexity_analysis(user_input, conversation_count)
+            else:
+                return self._fallback_complexity_analysis(user_input, conversation_count)
+                
+        except Exception as e:
+            print(f"⚠️ AI complexity analysis failed: {e}")
+            return self._fallback_complexity_analysis(user_input, conversation_count)
+    
+    def _fallback_complexity_analysis(self, user_input: str, conversation_count: int) -> Dict[str, Any]:
+        """Fallback complexity analysis when AI is unavailable"""
+        word_count = len(user_input.split())
+        char_count = len(user_input.strip())
+        
+        # Simple heuristic-based complexity scoring
+        emotional = min(5, max(0, word_count // 3))  # More words = potentially more emotional content
+        therapeutic = min(5, max(0, word_count // 4))  # Longer messages may need more therapeutic response
+        context = min(5, max(0, conversation_count // 3))  # More conversation = more context needed
+        response = min(5, max(0, (word_count + conversation_count) // 5))  # Combined complexity for response
+        overall = min(5, max(0, (emotional + therapeutic + context + response) // 4))
+        
+        # Add derived fields for backward compatibility
+        requires_ai_context = therapeutic >= 3 or overall >= 3
+        
+        if overall <= 2:
+            complexity_level = 'simple'
+        elif overall <= 3:
+            complexity_level = 'moderate'
+        else:
+            complexity_level = 'complex'
+        
+        # Calculate confidence based on analysis certainty
+        if overall <= 1:
+            confidence = 0.9  # Very confident about simple cases
+        elif overall <= 2:
+            confidence = 0.8  # Good confidence for straightforward cases
+        elif overall <= 3:
+            confidence = 0.7  # Moderate confidence for moderate complexity
+        else:
+            confidence = 0.6  # Lower confidence for complex cases
+        
+        return {
+            'emotional': emotional,
+            'therapeutic': therapeutic, 
+            'context': context,
+            'response': response,
+            'overall': overall,
+            'requires_ai_context': requires_ai_context,
+            'complexity': complexity_level,
+            'confidence': confidence
+        }
+
+    def _initialize_enhanced_knowledge_base_lazy(self):
+        """Lazy initialization of knowledge base - only loads when first needed"""
+        if self._knowledge_base_loaded or self._knowledge_base_loading:
+            return True
+            
+        print("📚 Lazy loading knowledge base on first therapeutic interaction...")
+        self._knowledge_base_loading = True
+        
+        try:
+            success = self._initialize_enhanced_knowledge_base()
+            if success:
+                self._knowledge_base_loaded = True
+                print("✅ Knowledge base lazy loading completed successfully")
+            else:
+                print("⚠️ Knowledge base lazy loading failed")
+            return success
+        except Exception as e:
+            print(f"❌ Knowledge base lazy loading error: {e}")
+            self._knowledge_base_loading = False
+            return False
+        finally:
+            self._knowledge_base_loading = False
+    
     def _initialize_enhanced_knowledge_base(self):
         """Initialize enhanced vector store with mental health knowledge"""
         try:
@@ -1572,20 +2456,22 @@ class TherapyBot:
             )
 
             print(f"✅ Enhanced knowledge base ready with {len(chunks)} chunks!")
+            return True
 
         except Exception as e:
             print(f"⚠️ Error creating enhanced knowledge base: {e}")
-            raise RuntimeError(f"Knowledge base creation failed: {e}")
+            # Don't raise exception in lazy loading - allow fallback
+            return False
 
 
 
     def _setup_dynamic_prompts(self):
         """Setup dynamic therapeutic conversation prompts with strict session isolation"""
 
-        #  Enhanced casual prompt with therapeutic context support
+        #  Enhanced casual prompt with therapeutic context support and expression understanding
         self.casual_prompt = PromptTemplate(
             input_variables=["user_input", "conversation_history", "session_context", "context"],
-            template="""You are a warm, professional mental health support assistant. Even in casual interactions, maintain a therapeutically-informed and supportive tone.
+            template="""You are a warm, professional mental health support assistant. You understand all forms of human expression including casual sounds, laughter, internet slang, and emotional expressions.
 
 CURRENT SESSION CONTEXT ONLY: {session_context}
 
@@ -1597,11 +2483,24 @@ CURRENT SESSION CONVERSATION HISTORY:
 
 USER MESSAGE: {user_input}
 
+EXPRESSION UNDERSTANDING:
+- Laughter expressions (hehe, haha, lol, 😂, etc.) = positive emotional expressions, joy, amusement
+- Casual sounds (ugh, wow, omg, etc.) = emotional reactions worth acknowledging  
+- Informal greetings (hey, yo, sup, etc.) = connection attempts deserving warm response
+- Brief responses (ok, yeah, sure, etc.) = engagement signals to build upon
+
+RESPONSE GUIDELINES:
+- Recognize and respond appropriately to ALL forms of expression
+- For laughter/joy: acknowledge the positive moment, maybe explore what brought joy
+- For casual expressions: respond naturally without over-analyzing
+- For brief responses: gentle encouragement to share more if appropriate
+- Maintain warmth and therapeutic awareness without being clinical
+
 CRITICAL: Only reference information from the CURRENT session shown above. Never reference information not explicitly mentioned in this conversation.
 
-Respond naturally like a skilled therapist would - warm, genuine, and appropriately brief for simple interactions. Even for casual exchanges, maintain therapeutic awareness and provide subtle emotional support when appropriate.
+Respond naturally like a skilled therapist who understands modern communication - warm, genuine, and appropriately brief for simple interactions. Match the user's energy while maintaining professional support.
 
-Your natural, therapeutically-informed response:"""
+Your natural, expression-aware response:"""
         )
 
         #  Therapeutic prompt with strict session boundaries
@@ -1771,19 +2670,48 @@ Return ONLY the category name that best matches the primary concern:"""
                 memory.progress_notes = memory.progress_notes[-20:]
 
     def _fallback_issue_classification(self, user_input: str) -> str:
-        """Simple fallback issue classification when AI is unavailable"""
-        text_lower = user_input.lower()
+        """AI-assisted issue classification with minimal hardcoded fallback"""
+        # Try AI-powered classification even as "fallback"
+        if self.llm:
+            try:
+                issue_prompt = f"""
+Quickly classify the primary therapeutic concern in this text:
+
+Text: "{user_input}"
+
+Choose the most appropriate category:
+- work_stress
+- relationship_issues  
+- anxiety_symptoms
+- depression_symptoms
+- family_dynamics
+- general_support
+- life_transitions
+- self_esteem_issues
+
+Return ONLY the category name:"""
+                
+                response = self.llm.invoke(issue_prompt)
+                ai_classification = self._extract_llm_content(response).strip().lower()
+                
+                # Validate classification
+                valid_issues = ['work_stress', 'relationship_issues', 'anxiety_symptoms', 
+                              'depression_symptoms', 'family_dynamics', 'general_support',
+                              'life_transitions', 'self_esteem_issues']
+                
+                if ai_classification in valid_issues:
+                    return ai_classification
+                    
+            except Exception as e:
+                print(f"⚠️ AI fallback classification failed: {e}")
         
-        # Basic keyword-based fallback (minimal hardcoding)
-        if any(word in text_lower for word in ['work', 'job', 'boss', 'colleague']):
+        # Minimal hardcoded fallback only for critical cases
+        text_lower = user_input.lower()
+        if 'work' in text_lower or 'job' in text_lower:
             return "work_stress"
-        elif any(word in text_lower for word in ['family', 'parent', 'sibling', 'relative']):
-            return "family_dynamics"  
-        elif any(word in text_lower for word in ['friend', 'relationship', 'partner']):
-            return "relationship_issues"
-        elif any(word in text_lower for word in ['anxious', 'anxiety', 'worry', 'panic']):
+        elif 'anxiety' in text_lower or 'anxious' in text_lower:
             return "anxiety_symptoms"
-        elif any(word in text_lower for word in ['sad', 'depressed', 'depression', 'down']):
+        elif 'depression' in text_lower or 'depressed' in text_lower:
             return "depression_symptoms"
         else:
             return "general_support"
@@ -2017,7 +2945,13 @@ Enhanced Query (max 100 characters):"""
                 context_limit = 1000  # Full context for therapeutic responses
                 docs_to_retrieve = 3
 
-            if retriever:
+            # Ensure knowledge base is loaded before retrieval
+            if not self._knowledge_base_loaded:
+                if not self._initialize_enhanced_knowledge_base_lazy():
+                    print("⚠️ Knowledge base not available, using fallback context")
+                    return "General therapeutic principles: active listening, empathy, validation, and supportive presence."
+            
+            if retriever and self._knowledge_base_loaded:
                 # Retrieve relevant documents from mental health datasets
                 docs = retriever.invoke(final_query)
                 
@@ -2054,26 +2988,114 @@ Return the most relevant context pieces combined into a coherent therapeutic kno
                 context = "\n\n".join([doc.page_content for doc in docs[:docs_to_retrieve]])
                 return context[:context_limit]
             else:
-                print(f"⚠️ No retriever available")
-                return ""
+                print(f"⚠️ No retriever available or knowledge base not loaded")
+                # Provide AI-generated contextual guidance as fallback
+                if self.llm:
+                    try:
+                        fallback_prompt = f"""
+As a mental health professional, provide brief therapeutic guidance for this situation:
+
+User Query: "{query}"
+Crisis Level: {crisis_level.value}
+Response Type: {response_type}
+
+Provide 2-3 sentences of relevant therapeutic approach or supportive guidance:"""
+                        
+                        fallback_response = self.llm.invoke(fallback_prompt)
+                        fallback_context = self._extract_llm_content(fallback_response)
+                        print(f"🤖 Generated fallback context: {len(fallback_context)} chars")
+                        return fallback_context[:500]  # Limit context size
+                    except Exception as e:
+                        print(f"⚠️ Fallback context generation failed: {e}")
+                
+                return "General therapeutic principles: active listening, empathy, validation, and supportive presence."
 
         except Exception as e:
             print(f"⚠️ Context retrieval error: {e}")
             return ""
 
-    def generate_enhanced_response(self, user_input: str, user_id: str, session_id: str) -> Tuple[str, CrisisLevel, HarmType]:
-        """Generate responses with strict session isolation"""
+    def _detect_transcription_errors(self, user_input: str) -> Tuple[bool, str]:
+        """Detect potential transcription errors and understand various expressions including laughter"""
+        if not user_input or len(user_input.strip()) < 3:
+            return False, user_input
+        
         try:
+            if self.llm:
+                transcription_check_prompt = f"""
+You are analyzing user input for clarity and understanding various human expressions.
+
+Input: "{user_input}"
+
+Analyze this input considering:
+1. Transcription errors (nonsensical combinations, mishearing)
+2. Casual expressions ("hehe", "haha", "lol", "omg", etc.)
+3. Internet slang and abbreviations
+4. Emotional expressions and exclamations
+5. Intentional casual language vs. transcription errors
+
+Expressions like "hehe", "haha", "lol", "wow", "omg" are VALID casual expressions, not errors.
+
+Respond with:
+- ERROR_DETECTED: Likely transcription errors or unclear input
+- CASUAL_EXPRESSION: Valid casual/informal expression (like laughter, slang)
+- CLEAR: Standard clear communication
+
+Analysis:"""
+
+                response = self.llm.invoke(transcription_check_prompt)
+                ai_assessment = self._extract_llm_content(response).upper()
+                
+                if 'ERROR_DETECTED' in ai_assessment:
+                    # Generate natural clarification request
+                    clarification_prompt = f"""
+Generate a natural, empathetic response for when you couldn't clearly hear what someone said in therapy. 
+
+The unclear message was: "{user_input}"
+
+Create a warm, professional response that:
+1. Acknowledges you didn't hear clearly
+2. Doesn't embarrass the person
+3. Naturally asks them to repeat
+4. Shows you're still engaged and caring
+
+Response (keep it brief and natural):"""
+                    
+                    clarification_response = self.llm.invoke(clarification_prompt)
+                    natural_response = self._extract_llm_content(clarification_response)
+                    return True, natural_response
+                    
+            return False, user_input
+            
+        except Exception as e:
+            print(f"⚠️ Transcription error detection failed: {e}")
+            return False, user_input
+
+    def generate_enhanced_response(self, user_input: str, user_id: str, session_id: str) -> Tuple[str, CrisisLevel, HarmType]:
+        """Generate responses with strict session isolation and transcription error handling"""
+        try:
+            # Check for transcription errors first
+            has_transcription_error, processed_input = self._detect_transcription_errors(user_input)
+            
+            if has_transcription_error:
+                print(f"🎤 Transcription issue detected, asking for clarification")
+                return processed_input, CrisisLevel.NONE, HarmType.NONE
+            
+            # Use processed input for analysis
+            final_input = processed_input
+            
             # Enhanced crisis detection
-            crisis_level, harm_type = self.crisis_detector.detect_crisis_level(user_input, user_id)
+            crisis_level, harm_type = self.crisis_detector.detect_crisis_level(final_input, user_id)
 
             # Get conversation count for THIS session only
             current_session_history = self.storage.get_conversation_history(user_id, session_id)
             conversation_count = len(current_session_history)
 
             # Determine response type dynamically
-            response_type = self._determine_response_type(user_input, crisis_level, conversation_count)
+            response_type = self._determine_response_type(final_input, crisis_level, conversation_count)
             print(f" Response Type Determined: {response_type} (Crisis Level: {crisis_level.value}, Harm Type: {harm_type.value})")
+
+            # Analyze interaction complexity for context retrieval optimization
+            complexity_analysis = self._analyze_interaction_complexity(final_input, conversation_count)
 
             #  Get conversation history from THIS session only
             conversation_history = self._format_conversation_history(user_id, session_id, limit=10)
@@ -2085,18 +3107,23 @@ Return the most relevant context pieces combined into a coherent therapeutic kno
             print(f"🔒 Session isolated context: {session_context}")
             print(f"📝 Session isolated summary: {conversation_summary}")
 
-            # Get therapeutic context for all response types
-            context = self._get_dynamic_context(user_input, crisis_level, response_type)
-            print(f"📚 Retrieved context ({response_type}): {len(context)} chars")
-            if context:
-                print(f"📖 Context preview: {context[:100]}...")
+            # Get therapeutic context based on complexity analysis and response type
+            if complexity_analysis['requires_ai_context'] or response_type in ['crisis', 'therapeutic']:
+                context = self._get_dynamic_context(final_input, crisis_level, response_type)
+                print(f"📚 Retrieved context ({response_type}): {len(context)} chars")
+                if context:
+                    print(f"📖 Context preview: {context[:100]}...")
+            else:
+                # Use minimal context for simple interactions
+                context = "Basic supportive conversation guidelines: be warm, empathetic, and present."
+                print(f"📚 Using minimal context for {complexity_analysis['complexity']} interaction")
 
             # Generate response based on type
             if response_type == "crisis":
                 print(f" USING CRISIS PROMPT for {crisis_level.value}")
                 assessment_questions = self.crisis_detector.get_safety_assessment_questions(crisis_level)
                 formatted_prompt = self.crisis_prompt.format(
-                    user_input=user_input,
+                    user_input=final_input,
                     crisis_level=crisis_level.value,
                     assessment_questions=assessment_questions[:2],
                     session_context=session_context
@@ -2105,7 +3132,7 @@ Return the most relevant context pieces combined into a coherent therapeutic kno
 
             elif response_type == "casual":
                 formatted_prompt = self.casual_prompt.format(
-                    user_input=user_input,
+                    user_input=final_input,
                     conversation_history=conversation_history,
                     session_context=session_context,
                     context=context  # Now includes therapeutic context
@@ -2115,7 +3142,7 @@ Return the most relevant context pieces combined into a coherent therapeutic kno
                 formatted_prompt = self.therapeutic_prompt.format(
                     context=context,
                     conversation_history=conversation_history,
-                    user_input=user_input,
+                    user_input=final_input,
                     crisis_level=crisis_level.value,
                     session_context=session_context,
                     conversation_summary=conversation_summary
@@ -2136,19 +3163,34 @@ Return the most relevant context pieces combined into a coherent therapeutic kno
                 print(f" Crisis resources added, final response length: {len(response)}")
 
             #  Update session memory after generating response
-            self._update_session_memory(user_id, session_id, user_input, response)
+            self._update_session_memory(user_id, session_id, final_input, response)
 
             # Save conversation
-            mood_score = self._calculate_mood_score(user_input)
+            mood_score = self._calculate_mood_score(final_input)
             self.storage.save_conversation(
                 user_id=user_id,
                 session_id=session_id,
-                user_input=user_input,
+                user_input=final_input,  # Save the processed input, not the original
                 bot_response=response,
                 crisis_level=crisis_level.value,
                 mood_score=mood_score
             )
 
+            # Store complexity analysis for session learning
+            if hasattr(self, 'session_memories') and user_id and session_id:
+                session_key = f"{user_id}_{session_id}"
+                if session_key in self.session_memories:
+                    memory = self.session_memories[session_key]
+                    if not hasattr(memory, 'complexity_history') or memory.complexity_history is None:
+                        memory.complexity_history = []
+                    memory.complexity_history.append({
+                        'input': final_input[:50],
+                        'complexity': complexity_analysis['complexity'],
+                        'confidence': complexity_analysis['confidence'],
+                        'response_type': response_type,
+                        'timestamp': datetime.now().isoformat()
+                    })
+            
             return response, crisis_level, harm_type
 
         except Exception as e:
@@ -2331,25 +3373,162 @@ class TherapyInterface:
         self.session_start_time = None
         self.last_crisis_level = CrisisLevel.NONE
         self.last_harm_type = HarmType.NONE
+        self.session_reuse_window = 300  # 5 minutes window for session reuse
+        self._last_interaction_time = None
+
+    def _should_reuse_existing_session(self, user_id: str) -> bool:
+        """Determine if existing session should be reused based on intelligent criteria"""
+        if not self.current_session_id or not self.current_user_id:
+            return False
+            
+        # Different user always needs new session
+        if self.current_user_id != user_id:
+            return False
+        
+        # Check time window for reuse
+        time_since_last = 0
+        if self._last_interaction_time:
+            time_since_last = (datetime.now() - self._last_interaction_time).total_seconds()
+            if time_since_last > self.session_reuse_window:
+                print(f"⏰ Session expired ({time_since_last:.0f}s > {self.session_reuse_window}s) - creating new session")
+                return False
+        
+        # Use AI to determine if context suggests new session needed
+        if self.therapy_bot.llm and self.conversation_count > 0:
+            try:
+                # Get recent conversation context
+                session_memory = self.therapy_bot._get_or_create_session_memory(user_id, self.current_session_id)
+                recent_topics = []
+                
+                if hasattr(session_memory, 'progress_notes') and session_memory.progress_notes:
+                    recent_notes = session_memory.progress_notes[-3:]  # Last 3 interactions
+                    recent_topics = [note.get('user_input', '')[:50] for note in recent_notes]
+                
+                session_context_prompt = f"""
+Analyze if this user interaction pattern suggests a new therapy session should start or continue existing session:
+
+User: {user_id}
+Current session duration: {self.conversation_count} messages
+Recent topics: {recent_topics}
+Time since last interaction: {time_since_last:.0f} seconds
+
+Consider:
+1. Natural conversation flow vs. new topic/issue
+2. Session continuity and therapeutic relationship
+3. Context switching that might need fresh start
+4. User benefit from continuing vs. starting fresh
+
+Recommendation: CONTINUE or NEW_SESSION
+Reasoning: [brief explanation]
+
+Decision:"""
+                
+                response = self.therapy_bot.llm.invoke(session_context_prompt)
+                ai_decision = self.therapy_bot._extract_llm_content(response).upper()
+                
+                if 'NEW_SESSION' in ai_decision:
+                    print("🤖 AI recommends new session for better therapeutic context")
+                    return False
+                elif 'CONTINUE' in ai_decision:
+                    print("🤖 AI recommends continuing existing session")
+                    return True
+                    
+            except Exception as e:
+                print(f"⚠️ AI session decision failed: {e}")
+        
+        # Default: reuse if within time window and same user
+        return True
+    
+    def _generate_ai_continuation_message(self) -> str:
+        """Generate AI-powered continuation message for resumed sessions"""
+        try:
+            if not self.therapy_bot.llm:
+                return self._fallback_continuation_message()
+            
+            # Get session context for continuation with type safety
+            if not self.current_user_id or not self.current_session_id:
+                return self._fallback_continuation_message()
+                
+            session_memory = self.therapy_bot._get_or_create_session_memory(self.current_user_id, self.current_session_id)
+            
+            recent_context = "No previous context"
+            if hasattr(session_memory, 'progress_notes') and session_memory.progress_notes:
+                recent_notes = session_memory.progress_notes[-2:]  # Last 2 interactions
+                recent_context = "; ".join([note.get('user_input', '')[:30] + "..." for note in recent_notes])
+            
+            continuation_prompt = f"""
+Generate a warm, natural continuation message for a therapy session that's being resumed.
+
+Session Context:
+- User has returned to continue previous conversation
+- Recent topics discussed: {recent_context}
+- Primary issue from session: {session_memory.primary_issue if hasattr(session_memory, 'primary_issue') else 'general support'}
+- Conversation count: {self.conversation_count}
+
+Create a welcoming message that:
+1. Acknowledges their return naturally
+2. Shows continuity with previous conversation
+3. Invites them to continue or share updates
+4. Maintains therapeutic warmth and presence
+5. Keep it conversational and brief (2-3 sentences)
+
+Welcome back message:"""
+            
+            response = self.therapy_bot.llm.invoke(continuation_prompt)
+            ai_continuation = self.therapy_bot._extract_llm_content(response)
+            
+            if ai_continuation and len(ai_continuation.strip()) > 10:
+                print(f"🤖 Generated AI continuation message: {len(ai_continuation)} chars")
+                return ai_continuation.strip()
+            else:
+                return self._fallback_continuation_message()
+                
+        except Exception as e:
+            print(f"⚠️ AI continuation message generation failed: {e}")
+            return self._fallback_continuation_message()
+    
+    def _fallback_continuation_message(self) -> str:
+        """Fallback continuation message when AI is not available"""
+        return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked? What's on your mind today?"
 
     def start_session(self, user_id: Optional[str] = None) -> str:
-        """Start a new therapy session with AI-generated contextual welcome"""
-        # Generate dynamic user ID based on current context
+        """Start a new therapy session with AI-generated contextual welcome and intelligent session reuse"""
+        # Use provided user_id or get from therapy bot's current context
+        target_user_id = None
         if not user_id or user_id.strip() == "":
-            # Use current timestamp and login if available
-            current_time = int(time.time())
-            # Use environment variable or default user login
-            user_login = os.getenv('USER_LOGIN', 'afaqm3121-lab')
-            self.current_user_id = f"{user_login}_{current_time}"
+            if self.therapy_bot.current_user_context:
+                target_user_id = self.therapy_bot.current_user_context.get('login', f"user_{int(time.time())}")
+            else:
+                # Fallback only if no context available
+                current_time = int(time.time())
+                user_login = os.getenv('USER_LOGIN', 'anonymous_user')
+                target_user_id = f"{user_login}_{current_time}"
+                print(f"⚠️ WARNING: TherapyInterface using fallback user ID: {target_user_id}")
         else:
-            self.current_user_id = user_id.strip()
+            target_user_id = user_id.strip()
 
-        # Generate dynamic session ID
+        # Check if we should reuse existing session
+        if target_user_id and self._should_reuse_existing_session(target_user_id):
+            print(f"🔄 Reusing existing session: {self.current_session_id}")
+            # Update interaction time
+            self._last_interaction_time = datetime.now()
+            # Generate welcome message for continuing session
+            try:
+                return self._generate_ai_continuation_message()
+            except Exception as e:
+                print(f"⚠️ AI continuation message failed: {e}")
+                return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked?"
+
+        # Create new session
+        self.current_user_id = target_user_id
         self.current_session_id = f"session_{int(time.time())}"
         self.conversation_count = 0
         self.session_start_time = datetime.now()
         self.last_crisis_level = CrisisLevel.NONE
         self.last_harm_type = HarmType.NONE
+        self._last_interaction_time = datetime.now()
+        
+        print(f"🎆 Created new session: {self.current_session_id} for user: {self.current_user_id}")
 
         # AI-generated contextual welcome message
         welcome_message = self._generate_ai_welcome_message()
@@ -2358,6 +3537,8 @@ class TherapyInterface:
         self._log_session_info("Session started")
 
         return welcome_message
+
+
 
     def _generate_ai_welcome_message(self) -> str:
         """Generate AI-powered contextual welcome message based on time and environment"""
