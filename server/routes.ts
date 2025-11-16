@@ -17,7 +17,6 @@ import { generateSmartTTS } from "./services/enhancedTTSService";
 
 
 import { fastTranscribeAudio } from "./services/fastSTTService";
-import { transcribeAudioWithGroq, assessPronunciationWithGroq } from "./services/groqSpeechService";
 import Groq from 'groq-sdk';
 
 // Initialize Groq client for AI title generation
@@ -903,30 +902,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Groq Speech Recognition Routes
-  app.post('/api/speech/groq/transcribe', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      await transcribeAudioWithGroq(req, res);
-    } catch (error) {
-      console.error("Error in Groq transcription route:", error);
-      res.status(500).json({ 
-        error: "Groq transcription failed",
-        message: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
+  // Groq Speech Recognition Routes removed - unused endpoints
 
-  app.post('/api/speech/groq/assess', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
-    try {
-      await assessPronunciationWithGroq(req, res);
-    } catch (error) {
-      console.error("Error in Groq pronunciation assessment route:", error);
-      res.status(500).json({ 
-        error: "Groq pronunciation assessment failed",
-        message: error instanceof Error ? error.message : "Unknown error"
-      });
-    }
-  });
+
 
   // Pure STT endpoint (NO therapy processing - just transcription)
   app.post('/api/speech/transcribe-only', tokenBasedAuth, upload.single('audio'), async (req: AuthenticatedRequest, res: Response) => {
