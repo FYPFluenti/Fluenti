@@ -2359,28 +2359,40 @@ Safety Analysis:"""
                 safety_analysis = self._extract_llm_content(response).upper().strip()
                 
                 if 'CRITICAL_SAFETY' in safety_analysis:
-                    print(f"🚨 AI detected critical safety pattern - escalating to CRITICAL regardless of other analysis")
-                    return CrisisLevel.CRITICAL, HarmType.SELF_HARM
+                    print(f"🚨 AI detected critical safety pattern - escalating to CRITICAL but preserving harm type")
+                    # Preserve the harm type from AI analysis if it detected harm_to_others
+                    final_harm_type = ai_harm_type if ai_harm_type != HarmType.NONE else HarmType.SELF_HARM
+                    return CrisisLevel.CRITICAL, final_harm_type
                     
             except Exception as e:
                 print(f"⚠️ AI critical safety analysis failed, using minimal backup: {e}")
-                # Minimal hardcoded backup for critical safety only
-                critical_safety_patterns = ['kill myself', 'suicide', 'end my life']
+                # Minimal hardcoded backup for critical safety only - prioritize AI analysis
                 text_lower = original_text.lower()
-                has_critical_safety = any(pattern in text_lower for pattern in critical_safety_patterns)
                 
-                if has_critical_safety:
-                    print(f"🚨 Critical safety pattern detected - escalating to CRITICAL regardless of AI analysis")
+                # Only override if we have clear self-harm patterns AND AI didn't detect harm_to_others
+                self_harm_patterns = ['kill myself', 'suicide', 'end my life', 'harm myself']
+                has_self_harm = any(pattern in text_lower for pattern in self_harm_patterns)
+                
+                if has_self_harm and ai_harm_type != HarmType.HARM_TO_OTHERS:
+                    print(f"🚨 Self-harm pattern detected - escalating to CRITICAL with self_harm type")
                     return CrisisLevel.CRITICAL, HarmType.SELF_HARM
+                elif ai_harm_type == HarmType.HARM_TO_OTHERS:
+                    print(f"🚨 AI detected harm_to_others - preserving classification")
+                    return CrisisLevel.CRITICAL, HarmType.HARM_TO_OTHERS
         else:
-            # Minimal hardcoded backup when no LLM available
-            critical_safety_patterns = ['kill myself', 'suicide', 'end my life']
+            # Minimal hardcoded backup when no LLM available - preserve pattern analysis
             text_lower = original_text.lower()
-            has_critical_safety = any(pattern in text_lower for pattern in critical_safety_patterns)
             
-            if has_critical_safety:
-                print(f"🚨 Critical safety pattern detected - escalating to CRITICAL regardless of analysis")
+            # Check for self-harm patterns
+            self_harm_patterns = ['kill myself', 'suicide', 'end my life', 'harm myself']
+            has_self_harm = any(pattern in text_lower for pattern in self_harm_patterns)
+            
+            if has_self_harm:
+                print(f"🚨 Self-harm pattern detected (no LLM) - escalating to CRITICAL")
                 return CrisisLevel.CRITICAL, HarmType.SELF_HARM
+            elif pattern_harm_type == HarmType.HARM_TO_OTHERS:
+                print(f"🚨 Pattern analysis detected harm_to_others - preserving classification")
+                return CrisisLevel.CRITICAL if pattern_level != CrisisLevel.NONE else CrisisLevel.HIGH, HarmType.HARM_TO_OTHERS
         
         # Use AI to analyze the discrepancy and make intelligent decision
         if self.llm and ai_level != pattern_level:
@@ -2648,7 +2660,7 @@ class TherapyBot:
         else:
             print("⚠️ Using pattern-based crisis detection only")
 
-        # Mark knowledge base as not loaded (lazy loading)
+        # Initialize knowledge base immediately during startup (no lazy loading)
         self._knowledge_base_loaded = False
         self._knowledge_base_loading = False
         
@@ -2656,6 +2668,17 @@ class TherapyBot:
         self.general_retriever = None
         self.crisis_retriever = None
         self.vector_store = None
+        
+        # Load knowledge base immediately during initialization
+        print("📚 Loading knowledge base during startup...")
+        try:
+            if self._initialize_enhanced_knowledge_base():
+                self._knowledge_base_loaded = True
+                print("✅ Knowledge base loaded successfully during startup")
+            else:
+                print("⚠️ Knowledge base loading failed during startup")
+        except Exception as e:
+            print(f"❌ Knowledge base loading error during startup: {e}")
         
         # Setup dynamic conversation prompts
         self._setup_dynamic_prompts()
@@ -3420,11 +3443,10 @@ Enhanced Query (max 100 characters):"""
                 context_limit = 1000  # Full context for therapeutic responses
                 docs_to_retrieve = 3
 
-            # Ensure knowledge base is loaded before retrieval
+            # Check if knowledge base is available (should be loaded during startup)
             if not self._knowledge_base_loaded:
-                if not self._initialize_enhanced_knowledge_base_lazy():
-                    print("⚠️ Knowledge base not available, using fallback context")
-                    return "General therapeutic principles: active listening, empathy, validation, and supportive presence."
+                print("⚠️ Knowledge base not available, using fallback context")
+                return "General therapeutic principles: active listening, empathy, validation, and supportive presence."
             
             if retriever and self._knowledge_base_loaded:
                 # Retrieve relevant documents from mental health datasets
@@ -3518,6 +3540,7 @@ Provide 2-3 sentences of relevant therapeutic approach or supportive guidance:""
             
             # Enhanced crisis detection
             crisis_level, harm_type = self.crisis_detector.detect_crisis_level(final_input, user_id)
+            print(f"🔍 CRISIS DETECTION RESULT: Level={crisis_level.value}, Harm={harm_type.value}")
 
             # Get conversation count for THIS session only
             current_session_history = self.storage.get_conversation_history(user_id, session_id)
@@ -3586,8 +3609,11 @@ Provide 2-3 sentences of relevant therapeutic approach or supportive guidance:""
 
             # Handle emergency notification for harm to others
             if harm_type in [HarmType.HARM_TO_OTHERS, HarmType.BOTH] and crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
-                print(f" EMERGENCY: Harm to others detected - Level: {crisis_level.value}, Type: {harm_type.value}")
+                print(f"🚨 EMERGENCY: Harm to others detected - Level: {crisis_level.value}, Type: {harm_type.value}")
+                print(f"🚨 SENDING EMERGENCY NOTIFICATION to backend...")
                 self._send_emergency_notification(user_id, session_id, user_input, response, crisis_level, harm_type)
+            else:
+                print(f"🔍 No emergency notification sent - Level: {crisis_level.value}, Type: {harm_type.value}")
 
             # Minimal post-processing - only add resources for actual crises
             if crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
@@ -4178,24 +4204,24 @@ Error Message:"""
         try:
             if self.therapy_bot and self.therapy_bot.llm:
                 emergency_prompt = f"""
-You are a mental health crisis specialist formatting an emergency response.
+You are a mental health crisis specialist creating a clean, professional emergency response.
 
 Context:
 - Crisis Level: {crisis_level.value}
 - Harm Type: {harm_type.value}
-- This involves potential harm to others
-- Immediate intervention may be needed
+- This involves potential danger and requires immediate attention
 
-Task: Create an appropriate emergency message wrapper that:
-1. Clearly indicates the emergency nature
-2. Emphasizes immediate safety for all involved
-3. Directs to appropriate emergency services
-4. Maintains therapeutic support while ensuring safety
-5. Is clear and actionable
+Task: Create a clean, well-formatted emergency response that:
+1. Uses clear, direct language without asterisks (*) or bullet points
+2. Emphasizes immediate safety and support
+3. Includes the therapeutic response naturally  
+4. Maintains hope while ensuring safety
+5. Uses proper paragraphs, not lists
+6. Keeps the full therapeutic response intact (don't truncate)
 
-Original therapeutic response: "{response[:100]}..."
+Original therapeutic response: "{response}"
 
-Generate an emergency message format that wraps this response appropriately:"""
+Generate a complete, clean emergency response (no asterisks, no truncation):"""
 
                 emergency_response = self.therapy_bot.llm.invoke(emergency_prompt)
                 ai_emergency = self.therapy_bot._extract_llm_content(emergency_response)
@@ -4216,22 +4242,23 @@ Generate an emergency message format that wraps this response appropriately:"""
         try:
             if self.therapy_bot and self.therapy_bot.llm:
                 urgent_prompt = f"""
-You are a mental health crisis specialist formatting an urgent response.
+You are a mental health crisis specialist creating a clean, professional urgent response.
 
 Context:
 - Crisis Level: {crisis_level.value}
 - High-risk situation requiring immediate attention
-- Focus on self-harm prevention and safety
+- Focus on safety and support
 
-Task: Create an appropriate urgent message wrapper that:
-1. Indicates urgency while remaining supportive
-2. Emphasizes immediate safety and support
-3. Maintains hope and connection
-4. Is clear about next steps
+Task: Create a clean, well-formatted urgent response that:
+1. Uses clear, direct language without asterisks (*) or bullet points
+2. Emphasizes immediate safety and support while remaining hopeful
+3. Includes the full therapeutic response naturally (don't truncate)
+4. Uses proper paragraphs, not lists
+5. Maintains therapeutic warmth while conveying urgency
 
-Original therapeutic response: "{response[:100]}..."
+Original therapeutic response: "{response}"
 
-Generate an urgent message format that wraps this response appropriately:"""
+Generate a complete, clean urgent response (no asterisks, no truncation):"""
 
                 urgent_response = self.therapy_bot.llm.invoke(urgent_prompt)
                 ai_urgent = self.therapy_bot._extract_llm_content(urgent_response)
