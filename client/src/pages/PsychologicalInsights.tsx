@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Brain, 
-  TrendingUp, 
-  Users, 
-  Shield, 
-  Heart, 
+import {
+  Brain,
+  TrendingUp,
+  Users,
+  Shield,
+  Heart,
   Activity,
   AlertTriangle,
   CheckCircle,
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import SharedSidebarEmotional from '@/components/layout/SharedSidebarEmotional';
 import PageHeader from '@/components/layout/PageHeader';
+import FeedbackModal from '@/components/layout/FeedbackModel';
 import { useAuth } from '@/hooks/useAuth';
 import { User } from '@/types/auth';
 import {
@@ -273,6 +274,7 @@ export default function PsychologicalInsights() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
 
   const loadData = async () => {
     if (!user?.id) return;
@@ -307,7 +309,10 @@ export default function PsychologicalInsights() {
   if (loading) {
     return (
       <div className="flex min-h-screen bg-background">
-        <SharedSidebarEmotional currentPage="insights" />
+        <SharedSidebarEmotional 
+          currentPage="insights" 
+          onFeedbackOpen={() => setShowFeedback(true)}
+        />
         <main className="flex-1 ml-20 p-8">
           <div className="flex items-center justify-center h-64">
             <RefreshCw className="w-8 h-8 animate-spin text-fluenti-primary" />
@@ -320,7 +325,10 @@ export default function PsychologicalInsights() {
   if (error) {
     return (
       <div className="flex min-h-screen bg-background">
-        <SharedSidebarEmotional currentPage="insights" />
+        <SharedSidebarEmotional 
+          currentPage="insights" 
+          onFeedbackOpen={() => setShowFeedback(true)}
+        />
         <main className="flex-1 ml-20 p-8">
           <div className="flex items-center justify-center h-64 text-center">
             <div className="space-y-4">
@@ -346,7 +354,10 @@ export default function PsychologicalInsights() {
   if (!loading && (!profile || !progress)) {
     return (
       <div className="flex min-h-screen bg-background">
-        <SharedSidebarEmotional currentPage="insights" />
+        <SharedSidebarEmotional 
+          currentPage="insights" 
+          onFeedbackOpen={() => setShowFeedback(true)}
+        />
         <main className="flex-1 ml-20 p-8">
           <div className="flex items-center justify-center h-64 text-center">
             <div className="space-y-4">
@@ -372,7 +383,10 @@ export default function PsychologicalInsights() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <SharedSidebarEmotional currentPage="insights" />
+      <SharedSidebarEmotional 
+        currentPage="insights" 
+        onFeedbackOpen={() => setShowFeedback(true)}
+      />
       
       <main className="flex-1 ml-20 p-8">
         <div className="max-w-7xl mx-auto space-y-8">
@@ -508,6 +522,12 @@ export default function PsychologicalInsights() {
           )}
         </div>
       </main>
+
+      {/* Feedback Modal */}
+      <FeedbackModal 
+        isOpen={showFeedback} 
+        onClose={() => setShowFeedback(false)} 
+      />
     </div>
   );
 }
