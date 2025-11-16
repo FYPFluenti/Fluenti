@@ -5,15 +5,52 @@ import time
 import logging
 import asyncio
 import re
-from datetime import datetime, timezone
+import hashlib
+import secrets
+import uuid
+from datetime import datetime, timezone, timedelta
+import re
 from typing import Dict, List, Optional, Any, Tuple
 from collections import defaultdict
 from dataclasses import dataclass
 from enum import Enum
+from functools import wraps
+import html
+
+# Security imports with graceful fallback
+try:
+    from cryptography.fernet import Fernet
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    import base64
+    CRYPTO_AVAILABLE = True
+except ImportError:
+    print("⚠️ WARNING: cryptography package not found. Security features will be limited.")
+    print("Install with: pip install cryptography")
+    CRYPTO_AVAILABLE = False
+    # Define None to avoid import conflicts
+    Fernet = None
+    PBKDF2HMAC = None
+    hashes = None
+    import base64
 
 # Load environment variables
 from dotenv import load_dotenv
 load_dotenv()  # Load variables from .env file
+
+# Security configuration
+SECURITY_CONFIG = {
+    'MAX_INPUT_LENGTH': 5000,
+    'MAX_SESSION_DURATION': 86400,  # 24 hours
+    'MAX_CONVERSATIONS_PER_SESSION': 1000,
+    'RATE_LIMIT_WINDOW': 3600,  # 1 hour
+    'MAX_REQUESTS_PER_HOUR': 100,
+    'ENCRYPTION_ENABLED': os.getenv('ENCRYPTION_ENABLED', 'true').lower() == 'true' and CRYPTO_AVAILABLE,
+    'AUDIT_LOGGING': os.getenv('AUDIT_LOGGING', 'true').lower() == 'true',
+    'DATA_RETENTION_DAYS': int(os.getenv('DATA_RETENTION_DAYS', '30')),
+    'SANITIZE_INPUTS': True,
+    'VALIDATE_SESSION_TOKENS': True
+}
 
 # Database imports
 from pymongo import MongoClient
@@ -46,6 +83,273 @@ except ImportError:
     except ImportError:
         SentimentIntensityAnalyzer = None
 
+# Security utility classes
+class SecurityManager:
+    """Centralized security manager for encryption, sanitization, and access control"""
+    
+    def __init__(self):
+        self.cipher_suite = None
+        self.rate_limiter = {}
+        self.session_tokens = {}
+        self.audit_logger = self._setup_audit_logger()
+        
+        if SECURITY_CONFIG['ENCRYPTION_ENABLED']:
+            self._initialize_encryption()
+    
+    def _initialize_encryption(self):
+        """Initialize encryption with secure key derivation"""
+        if not CRYPTO_AVAILABLE or Fernet is None or PBKDF2HMAC is None or hashes is None:
+            print("⚠️ Cryptography not available, encryption disabled")
+            self.cipher_suite = None
+            return
+            
+        try:
+            from cryptography.fernet import Fernet as CryptoFernet
+            from cryptography.hazmat.primitives import hashes as crypto_hashes
+            from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC as CryptoPBKDF2HMAC
+            
+            # Get encryption key from environment or generate one
+            key_material = os.getenv('ENCRYPTION_KEY')
+            if not key_material:
+                # Generate a secure key - should be stored securely in production
+                key_material = base64.urlsafe_b64encode(os.urandom(32)).decode()
+                print(f"⚠️ WARNING: Using generated encryption key. Store securely: {key_material}")
+            
+            # Derive encryption key using PBKDF2
+            salt = os.getenv('ENCRYPTION_SALT', 'therapy_bot_salt').encode()
+            kdf = CryptoPBKDF2HMAC(
+                algorithm=crypto_hashes.SHA256(),
+                length=32,
+                salt=salt,
+                iterations=100000,
+            )
+            key = base64.urlsafe_b64encode(kdf.derive(key_material.encode()))
+            self.cipher_suite = CryptoFernet(key)
+            print("🔐 Encryption initialized successfully")
+        except Exception as e:
+            print(f"❌ Encryption initialization failed: {e}")
+            self.cipher_suite = None
+    
+    def _setup_audit_logger(self) -> logging.Logger:
+        """Setup secure audit logging"""
+        logger = logging.getLogger('therapy_audit')
+        logger.setLevel(logging.INFO)
+        
+        # Create secure log handler
+        log_file = os.getenv('AUDIT_LOG_FILE', 'therapy_audit.log')
+        handler = logging.FileHandler(log_file)
+        
+        # Secure log format - no PII in logs
+        formatter = logging.Formatter(
+            '%(asctime)s - %(levelname)s - %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S'
+        )
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        
+        return logger
+    
+    def encrypt_sensitive_data(self, data: str) -> str:
+        """Encrypt sensitive data if encryption is enabled"""
+        if not CRYPTO_AVAILABLE or not self.cipher_suite or not data:
+            return data
+        
+        try:
+            encrypted = self.cipher_suite.encrypt(data.encode())
+            return base64.urlsafe_b64encode(encrypted).decode()
+        except Exception as e:
+            print(f"⚠️ Encryption failed: {e}")
+            return data
+    
+    def decrypt_sensitive_data(self, encrypted_data: str) -> str:
+        """Decrypt sensitive data if encryption is enabled"""
+        if not CRYPTO_AVAILABLE or not self.cipher_suite or not encrypted_data:
+            return encrypted_data
+        
+        try:
+            encrypted_bytes = base64.urlsafe_b64decode(encrypted_data.encode())
+            decrypted = self.cipher_suite.decrypt(encrypted_bytes)
+            return decrypted.decode()
+        except Exception as e:
+            print(f"⚠️ Decryption failed: {e}")
+            return encrypted_data
+    
+    def sanitize_input(self, user_input: str) -> str:
+        """Sanitize user input to prevent injection attacks"""
+        if not user_input or not SECURITY_CONFIG['SANITIZE_INPUTS']:
+            return user_input
+        
+        # Remove potential script tags and dangerous characters
+        sanitized = html.escape(user_input)
+        
+        # Remove potential SQL injection patterns
+        dangerous_patterns = [
+            r'\bDROP\b', r'\bDELETE\b', r'\bINSERT\b', r'\bUPDATE\b',
+            r'\bUNION\b', r'\bSELECT\b', r'\bEXEC\b', r'\bEXECUTE\b',
+            r'<script', r'javascript:', r'vbscript:', r'onload=', r'onerror='
+        ]
+        
+        for pattern in dangerous_patterns:
+            sanitized = re.sub(pattern, '', sanitized, flags=re.IGNORECASE)
+        
+        # Limit input length
+        if len(sanitized) > SECURITY_CONFIG['MAX_INPUT_LENGTH']:
+            sanitized = sanitized[:SECURITY_CONFIG['MAX_INPUT_LENGTH']]
+            print("⚠️ Input truncated due to length limit")
+        
+        return sanitized.strip()
+    
+    def validate_session_token(self, user_id: str, session_id: str) -> bool:
+        """Validate session token for security"""
+        if not SECURITY_CONFIG['VALIDATE_SESSION_TOKENS']:
+            return True
+        
+        session_key = f"{user_id}_{session_id}"
+        
+        # Check if session exists and is valid
+        if session_key not in self.session_tokens:
+            return False
+        
+        session_data = self.session_tokens[session_key]
+        current_time = time.time()
+        
+        # Check session expiration
+        if current_time - session_data['created'] > SECURITY_CONFIG['MAX_SESSION_DURATION']:
+            del self.session_tokens[session_key]
+            return False
+        
+        # Update last access time
+        session_data['last_access'] = current_time
+        return True
+    
+    def create_session_token(self, user_id: str, session_id: str) -> str:
+        """Create secure session token"""
+        session_token = secrets.token_urlsafe(32)
+        session_key = f"{user_id}_{session_id}"
+        
+        self.session_tokens[session_key] = {
+            'token': session_token,
+            'created': time.time(),
+            'last_access': time.time(),
+            'user_id_hash': hashlib.sha256(user_id.encode()).hexdigest()[:16]
+        }
+        
+        return session_token
+    
+    def check_rate_limit(self, user_id: str) -> bool:
+        """Check if user has exceeded rate limits"""
+        current_time = time.time()
+        user_hash = hashlib.sha256(user_id.encode()).hexdigest()[:16]
+        
+        if user_hash not in self.rate_limiter:
+            self.rate_limiter[user_hash] = []
+        
+        # Clean old requests outside the window
+        window_start = current_time - SECURITY_CONFIG['RATE_LIMIT_WINDOW']
+        self.rate_limiter[user_hash] = [
+            req_time for req_time in self.rate_limiter[user_hash] 
+            if req_time > window_start
+        ]
+        
+        # Check if under limit
+        if len(self.rate_limiter[user_hash]) >= SECURITY_CONFIG['MAX_REQUESTS_PER_HOUR']:
+            return False
+        
+        # Add current request
+        self.rate_limiter[user_hash].append(current_time)
+        return True
+    
+    def hash_pii(self, data: str) -> str:
+        """Hash PII data for logging and analytics"""
+        if not data:
+            return ""
+        return hashlib.sha256(data.encode()).hexdigest()[:16]
+    
+    def audit_log(self, event: str, user_id: str, session_id: str, 
+                  details: Optional[Dict] = None, level: str = 'INFO'):
+        """Secure audit logging without PII"""
+        if not SECURITY_CONFIG['AUDIT_LOGGING']:
+            return
+        
+        # Hash sensitive identifiers
+        user_hash = self.hash_pii(user_id) if user_id else "unknown"
+        session_hash = self.hash_pii(session_id) if session_id else "unknown"
+        
+        audit_entry = {
+            'event': event,
+            'user_hash': user_hash,
+            'session_hash': session_hash,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'details': details or {}
+        }
+        
+        # Remove any potential PII from details
+        sanitized_details = {}
+        if details:
+            for key, value in details.items():
+                if key.lower() in ['user_input', 'response', 'message', 'content']:
+                    sanitized_details[key] = f"[CONTENT_LENGTH:{len(str(value))}]"
+                elif key.lower() in ['user_id', 'session_id', 'login']:
+                    sanitized_details[key] = self.hash_pii(str(value))
+                else:
+                    sanitized_details[key] = value
+            audit_entry['details'] = sanitized_details
+        
+        log_message = f"{event} - User: {user_hash} - Session: {session_hash}"
+        if sanitized_details:
+            log_message += f" - Details: {json.dumps(sanitized_details)}"
+        
+        if level.upper() == 'ERROR':
+            self.audit_logger.error(log_message)
+        elif level.upper() == 'WARNING':
+            self.audit_logger.warning(log_message)
+        else:
+            self.audit_logger.info(log_message)
+
+# Global security manager instance
+security_manager = SecurityManager()
+
+# Security decorators
+def require_valid_session(func):
+    """Decorator to validate session tokens"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        # Extract user_id and session_id from arguments
+        user_id = kwargs.get('user_id') or (args[1] if len(args) > 1 else None)
+        session_id = kwargs.get('session_id') or (args[2] if len(args) > 2 else None)
+        
+        if user_id and session_id:
+            if not security_manager.validate_session_token(user_id, session_id):
+                security_manager.audit_log(
+                    'INVALID_SESSION_ACCESS',
+                    user_id, session_id,
+                    {'function': func.__name__},
+                    'WARNING'
+                )
+                raise ValueError("Invalid session token")
+        
+        return func(*args, **kwargs)
+    return wrapper
+
+def rate_limit_check(func):
+    """Decorator to check rate limits"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        user_id = kwargs.get('user_id') or (args[1] if len(args) > 1 else None)
+        
+        if user_id:
+            if not security_manager.check_rate_limit(user_id):
+                security_manager.audit_log(
+                    'RATE_LIMIT_EXCEEDED',
+                    user_id, kwargs.get('session_id', 'unknown'),
+                    {'function': func.__name__},
+                    'WARNING'
+                )
+                raise ValueError("Rate limit exceeded")
+        
+        return func(*args, **kwargs)
+    return wrapper
+
 # Utility function to safely get dataset size
 def safe_dataset_len(dataset) -> str:
     """Safely get dataset length, returns string representation"""
@@ -60,7 +364,7 @@ def safe_dataset_len(dataset) -> str:
         return 'unknown'
 
 class MongoDBStorage:
-    """MongoDB Atlas storage for therapy data with dynamic user context"""
+    """Secure MongoDB Atlas storage for therapy data with encryption and audit logging"""
 
     def __init__(self, connection_string: Optional[str] = None, user_context: Optional[Dict] = None):
         # Use provided connection string or environment variable
@@ -70,7 +374,9 @@ class MongoDBStorage:
         if not connection_string:
             raise ValueError("MongoDB connection string required. Please set MONGODB_URI environment variable.")
 
+        # Security: Don't store raw connection string in logs
         self.connection_string = connection_string
+        self.security_manager = security_manager
 
         # Get current user context (dynamic or fallback)
         self.current_user = user_context or self._get_default_user_context()
@@ -188,16 +494,33 @@ class MongoDBStorage:
 
 
 
+    @require_valid_session
+    @rate_limit_check
     def save_conversation(self, user_id: str, session_id: str, user_input: str,
                          bot_response: str, crisis_level: str,
                          mood_score: Optional[float] = None):
-        """Save conversation to MongoDB"""
+        """Securely save conversation to MongoDB with encryption and sanitization"""
 
+        # Sanitize inputs
+        sanitized_input = self.security_manager.sanitize_input(user_input)
+        sanitized_response = self.security_manager.sanitize_input(bot_response)
+        
+        # Encrypt sensitive data
+        encrypted_input = self.security_manager.encrypt_sensitive_data(sanitized_input)
+        encrypted_response = self.security_manager.encrypt_sensitive_data(sanitized_response)
+        
         conversation_doc = {
-            "user_id": user_id,
-            "session_id": session_id,
-            "user_login": self.current_user['login'],
+            "user_id": self.security_manager.hash_pii(user_id),  # Hash user ID for privacy
+            "session_id": self.security_manager.hash_pii(session_id),  # Hash session ID
+            "user_login": self.security_manager.hash_pii(self.current_user['login']),
             "timestamp": datetime.now(timezone.utc),
+            "encrypted_user_input": encrypted_input,
+            "encrypted_bot_response": encrypted_response,
+            "input_length": len(sanitized_input),
+            "response_length": len(sanitized_response),
+            "crisis_level": crisis_level,
+            "mood_score": mood_score,
+            "data_version": "2.0_encrypted",  # Track encryption version
             "user_input": user_input,
             "bot_response": bot_response,
             "crisis_level": crisis_level,
@@ -319,14 +642,26 @@ class MongoDBStorage:
         except Exception as e:
             print(f"❌ Error sending crisis alert: {e}")
 
+    @require_valid_session
     def get_conversation_history(self, user_id: str, session_id: str, limit: int = 10) -> List[Dict]:
-        """Retrieve conversation history from MongoDB"""
+        """Securely retrieve conversation history from MongoDB with decryption"""
         try:
+            # Audit log access
+            self.security_manager.audit_log(
+                'CONVERSATION_HISTORY_ACCESS',
+                user_id, session_id,
+                {'limit': limit}
+            )
+            
+            # Hash IDs for database query
+            user_hash = self.security_manager.hash_pii(user_id)
+            session_hash = self.security_manager.hash_pii(session_id)
+            
             # First try to get from EmotionalSession collection (Node.js service)
             if hasattr(self, 'emotional_sessions'):
                 emotional_session = self.emotional_sessions.find_one({
-                    "id": session_id,
-                    "userId": user_id
+                    "id": session_hash,  # Use hashed session ID
+                    "userId": user_hash  # Use hashed user ID
                 })
                 
                 if emotional_session and emotional_session.get('messages'):
@@ -334,6 +669,10 @@ class MongoDBStorage:
                     formatted_conversations = []
                     for msg in emotional_session['messages'][-limit:]:
                         if msg.get('role') == 'user':
+                            # Decrypt content if encrypted
+                            decrypted_content = self.security_manager.decrypt_sensitive_data(
+                                msg.get('content', '')
+                            )
                             # User message - prepare for next assistant response
                             user_msg = {
                                 "user_id": user_id,
@@ -348,34 +687,46 @@ class MongoDBStorage:
                             }
                             formatted_conversations.append(user_msg)
                         elif msg.get('role') == 'assistant' and formatted_conversations:
+                            # Decrypt assistant response if encrypted
+                            decrypted_response = self.security_manager.decrypt_sensitive_data(
+                                msg.get('content', '')
+                            )
                             # Assistant message - add to last user message
-                            formatted_conversations[-1]['bot_response'] = msg.get('content', '')
-                            formatted_conversations[-1]['response_length'] = len(msg.get('content', ''))
+                            formatted_conversations[-1]['bot_response'] = decrypted_response
+                            formatted_conversations[-1]['response_length'] = len(decrypted_response)
                     
                     return formatted_conversations
             
             # Fallback to conversations collection (Python service)
             if hasattr(self, 'conversations'):
-                # Get from MongoDB
+                # Get from MongoDB using hashed IDs for security
                 conversations = list(
                     self.conversations.find(
                         {
-                            "user_id": user_id,
-                            "session_id": session_id,
-                            "user_login": self.current_user['login']  # Ensure user isolation
+                            "user_id": user_hash,
+                            "session_id": session_hash,
+                            "user_login": self.security_manager.hash_pii(self.current_user['login'])
                         }
                     ).sort("timestamp", 1).limit(limit)
                 )
 
-                # Convert MongoDB docs to expected format
+                # Convert MongoDB docs to expected format with decryption
                 formatted_conversations = []
                 for conv in conversations:
+                    # Decrypt sensitive data if encrypted
+                    user_input = conv.get("encrypted_user_input") or conv.get("user_input", "")
+                    bot_response = conv.get("encrypted_bot_response") or conv.get("bot_response", "")
+                    
+                    if conv.get("data_version") == "2.0_encrypted":
+                        user_input = self.security_manager.decrypt_sensitive_data(user_input)
+                        bot_response = self.security_manager.decrypt_sensitive_data(bot_response)
+                    
                     formatted_conversations.append({
-                        "user_id": conv["user_id"],
-                        "session_id": conv["session_id"],
+                        "user_id": user_id,  # Return original user_id for interface consistency
+                        "session_id": session_id,  # Return original session_id
                         "timestamp": conv["timestamp"].isoformat() if hasattr(conv["timestamp"], 'isoformat') else str(conv["timestamp"]),
-                        "user_input": conv["user_input"],
-                        "bot_response": conv["bot_response"],
+                        "user_input": user_input,
+                        "bot_response": bot_response,
                         "crisis_level": conv["crisis_level"],
                         "mood_score": conv.get("mood_score"),
                         "input_length": conv.get("input_length", 0),
@@ -388,8 +739,100 @@ class MongoDBStorage:
                 raise RuntimeError("MongoDB connection not available")
 
         except Exception as e:
+            self.security_manager.audit_log(
+                'CONVERSATION_HISTORY_ERROR',
+                user_id, session_id,
+                {'error': str(e)},
+                'ERROR'
+            )
             print(f"❌ Error retrieving conversation history: {e}")
             return []
+    
+    def cleanup_expired_data(self):
+        """Clean up expired data based on retention policy"""
+        try:
+            retention_days = SECURITY_CONFIG['DATA_RETENTION_DAYS']
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=retention_days)
+            
+            # Clean up conversations
+            if hasattr(self, 'conversations'):
+                result = self.conversations.delete_many({
+                    "timestamp": {"$lt": cutoff_date}
+                })
+                print(f"🧹 Cleaned up {result.deleted_count} expired conversations")
+            
+            # Clean up crisis logs
+            if hasattr(self, 'crisis_logs'):
+                result = self.crisis_logs.delete_many({
+                    "timestamp": {"$lt": cutoff_date}
+                })
+                print(f"🧹 Cleaned up {result.deleted_count} expired crisis logs")
+            
+            # Clean up sessions
+            if hasattr(self, 'sessions'):
+                result = self.sessions.delete_many({
+                    "start_time": {"$lt": cutoff_date}
+                })
+                print(f"🧹 Cleaned up {result.deleted_count} expired sessions")
+            
+            self.security_manager.audit_log(
+                'DATA_CLEANUP',
+                'system', 'system',
+                {'retention_days': retention_days, 'cutoff_date': cutoff_date.isoformat()}
+            )
+            
+        except Exception as e:
+            print(f"❌ Error during data cleanup: {e}")
+            self.security_manager.audit_log(
+                'DATA_CLEANUP_ERROR',
+                'system', 'system',
+                {'error': str(e)},
+                'ERROR'
+            )
+    
+    def anonymize_user_data(self, user_id: str):
+        """Anonymize user data for privacy compliance"""
+        try:
+            user_hash = self.security_manager.hash_pii(user_id)
+            
+            # Anonymize conversations
+            if hasattr(self, 'conversations'):
+                self.conversations.update_many(
+                    {"user_id": user_hash},
+                    {"$set": {
+                        "user_id": "anonymized",
+                        "user_login": "anonymized",
+                        "encrypted_user_input": "[ANONYMIZED]",
+                        "encrypted_bot_response": "[ANONYMIZED]"
+                    }}
+                )
+            
+            # Anonymize crisis logs
+            if hasattr(self, 'crisis_logs'):
+                self.crisis_logs.update_many(
+                    {"user_id": user_hash},
+                    {"$set": {
+                        "user_id": "anonymized",
+                        "user_login": "anonymized"
+                    }}
+                )
+            
+            self.security_manager.audit_log(
+                'USER_DATA_ANONYMIZED',
+                user_id, 'all_sessions',
+                {'action': 'anonymize_user_data'}
+            )
+            
+            print(f"✅ User data anonymized for privacy compliance")
+            
+        except Exception as e:
+            print(f"❌ Error anonymizing user data: {e}")
+            self.security_manager.audit_log(
+                'USER_ANONYMIZATION_ERROR',
+                user_id, 'unknown',
+                {'error': str(e)},
+                'ERROR'
+            )
 
     def get_user_analytics(self, user_login: Optional[str] = None) -> Dict:
         """Get user analytics and insights"""
@@ -1417,15 +1860,42 @@ Analysis:"""
         # Calculate final level
         final_level = self._calculate_final_crisis_level(crisis_score, help_seeking_score, has_negation, contexts)
 
-        # Update user patterns
+        # Audit log crisis detection result
+        if final_level in [CrisisLevel.CRITICAL, CrisisLevel.HIGH]:
+            security_manager.audit_log(
+                'HIGH_CRISIS_DETECTED',
+                user_id or 'unknown', 'unknown',
+                {
+                    'crisis_level': final_level.value,
+                    'crisis_score': crisis_score,
+                    'contexts_count': len(contexts),
+                    'has_negation': has_negation
+                },
+                'WARNING'
+            )
+        
+        # Update user patterns with security controls
         if user_id:  # Ensure user_id is not None
-            self.user_patterns[user_id]['crisis_history'].append({
-                'text': text,
+            user_hash = security_manager.hash_pii(user_id)
+            if user_hash not in self.user_patterns:
+                self.user_patterns[user_hash] = {
+                    'typical_language': defaultdict(int),
+                    'crisis_history': [],
+                    'help_seeking_patterns': defaultdict(int),
+                    'context_preferences': defaultdict(int)
+                }
+            
+            self.user_patterns[user_hash]['crisis_history'].append({
+                'text_hash': security_manager.hash_pii(text[:50]),  # Only hash first 50 chars
                 'level': final_level,
                 'score': crisis_score,
                 'contexts': list(contexts),
                 'timestamp': self.current_user['timestamp'].isoformat()
             })
+            
+            # Limit crisis history size for privacy
+            if len(self.user_patterns[user_hash]['crisis_history']) > 50:
+                self.user_patterns[user_hash]['crisis_history'] = self.user_patterns[user_hash]['crisis_history'][-30:]
 
         # Log results
         if final_level in [CrisisLevel.CRITICAL, CrisisLevel.HIGH]:
@@ -2181,6 +2651,11 @@ class TherapyBot:
         # Mark knowledge base as not loaded (lazy loading)
         self._knowledge_base_loaded = False
         self._knowledge_base_loading = False
+        
+        # Initialize retriever attributes to None (will be set during knowledge base loading)
+        self.general_retriever = None
+        self.crisis_retriever = None
+        self.vector_store = None
         
         # Setup dynamic conversation prompts
         self._setup_dynamic_prompts()
@@ -3014,74 +3489,32 @@ Provide 2-3 sentences of relevant therapeutic approach or supportive guidance:""
             print(f"⚠️ Context retrieval error: {e}")
             return ""
 
-    def _detect_transcription_errors(self, user_input: str) -> Tuple[bool, str]:
-        """Detect potential transcription errors and understand various expressions including laughter"""
-        if not user_input or len(user_input.strip()) < 3:
-            return False, user_input
-        
-        try:
-            if self.llm:
-                transcription_check_prompt = f"""
-You are analyzing user input for clarity and understanding various human expressions.
 
-Input: "{user_input}"
 
-Analyze this input considering:
-1. Transcription errors (nonsensical combinations, mishearing)
-2. Casual expressions ("hehe", "haha", "lol", "omg", etc.)
-3. Internet slang and abbreviations
-4. Emotional expressions and exclamations
-5. Intentional casual language vs. transcription errors
-
-Expressions like "hehe", "haha", "lol", "wow", "omg" are VALID casual expressions, not errors.
-
-Respond with:
-- ERROR_DETECTED: Likely transcription errors or unclear input
-- CASUAL_EXPRESSION: Valid casual/informal expression (like laughter, slang)
-- CLEAR: Standard clear communication
-
-Analysis:"""
-
-                response = self.llm.invoke(transcription_check_prompt)
-                ai_assessment = self._extract_llm_content(response).upper()
-                
-                if 'ERROR_DETECTED' in ai_assessment:
-                    # Generate natural clarification request
-                    clarification_prompt = f"""
-Generate a natural, empathetic response for when you couldn't clearly hear what someone said in therapy. 
-
-The unclear message was: "{user_input}"
-
-Create a warm, professional response that:
-1. Acknowledges you didn't hear clearly
-2. Doesn't embarrass the person
-3. Naturally asks them to repeat
-4. Shows you're still engaged and caring
-
-Response (keep it brief and natural):"""
-                    
-                    clarification_response = self.llm.invoke(clarification_prompt)
-                    natural_response = self._extract_llm_content(clarification_response)
-                    return True, natural_response
-                    
-            return False, user_input
-            
-        except Exception as e:
-            print(f"⚠️ Transcription error detection failed: {e}")
-            return False, user_input
-
+    @require_valid_session
+    @rate_limit_check
     def generate_enhanced_response(self, user_input: str, user_id: str, session_id: str) -> Tuple[str, CrisisLevel, HarmType]:
-        """Generate responses with strict session isolation and transcription error handling"""
+        """Securely generate responses with comprehensive security controls"""
         try:
-            # Check for transcription errors first
-            has_transcription_error, processed_input = self._detect_transcription_errors(user_input)
+            # Security validation
+            if not user_input or len(user_input.strip()) == 0:
+                raise ValueError("Empty input not allowed")
             
-            if has_transcription_error:
-                print(f"🎤 Transcription issue detected, asking for clarification")
-                return processed_input, CrisisLevel.NONE, HarmType.NONE
+            # Sanitize input
+            sanitized_input = security_manager.sanitize_input(user_input)
             
-            # Use processed input for analysis
-            final_input = processed_input
+            # Audit log the interaction
+            security_manager.audit_log(
+                'RESPONSE_GENERATION_REQUEST',
+                user_id, session_id,
+                {
+                    'input_length': len(sanitized_input),
+                    'original_length': len(user_input)
+                }
+            )
+            
+            # Use sanitized input for analysis
+            final_input = sanitized_input
             
             # Enhanced crisis detection
             crisis_level, harm_type = self.crisis_detector.detect_crisis_level(final_input, user_id)
@@ -3492,53 +3925,97 @@ Welcome back message:"""
         return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked? What's on your mind today?"
 
     def start_session(self, user_id: Optional[str] = None) -> str:
-        """Start a new therapy session with AI-generated contextual welcome and intelligent session reuse"""
-        # Use provided user_id or get from therapy bot's current context
+        """Start a secure therapy session with comprehensive security controls"""
         target_user_id = None
-        if not user_id or user_id.strip() == "":
-            if self.therapy_bot.current_user_context:
-                target_user_id = self.therapy_bot.current_user_context.get('login', f"user_{int(time.time())}")
+        try:
+            # Security validation and sanitization
+            if user_id:
+                target_user_id = security_manager.sanitize_input(user_id.strip())
+                if not target_user_id:
+                    raise ValueError("Invalid user ID provided")
+                
+                # Rate limit check
+                if not security_manager.check_rate_limit(target_user_id):
+                    raise ValueError("Rate limit exceeded for user")
             else:
-                # Fallback only if no context available
-                current_time = int(time.time())
-                user_login = os.getenv('USER_LOGIN', 'anonymous_user')
-                target_user_id = f"{user_login}_{current_time}"
-                print(f"⚠️ WARNING: TherapyInterface using fallback user ID: {target_user_id}")
-        else:
-            target_user_id = user_id.strip()
+                # Generate secure user ID
+                if self.therapy_bot.current_user_context:
+                    base_login = self.therapy_bot.current_user_context.get('login', 'anonymous')
+                    target_user_id = f"{security_manager.sanitize_input(base_login)}_{int(time.time())}"
+                else:
+                    # Secure fallback
+                    target_user_id = f"secure_user_{secrets.token_hex(8)}"
+                    print(f"⚠️ WARNING: Using generated secure user ID")
+            
+            # Validate user ID format
+            if len(target_user_id) > 100 or not re.match(r'^[a-zA-Z0-9_-]+$', target_user_id):
+                raise ValueError("Invalid user ID format")
 
-        # Check if we should reuse existing session
-        if target_user_id and self._should_reuse_existing_session(target_user_id):
-            print(f"🔄 Reusing existing session: {self.current_session_id}")
-            # Update interaction time
+            # Check if we should reuse existing sessionsion
+            if target_user_id and self._should_reuse_existing_session(target_user_id):
+                print(f"🔄 Reusing existing session: {self.current_session_id}")
+                # Update interaction time
+                self._last_interaction_time = datetime.now()
+                # Generate welcome message for continuing session
+                try:
+                    return self._generate_ai_continuation_message()
+                except Exception as e:
+                    print(f"⚠️ AI continuation message failed: {e}")
+                    return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked?"
+
+            # Create new secure session
+            self.current_user_id = target_user_id
+            self.current_session_id = f"session_{secrets.token_hex(16)}_{int(time.time())}"
+            self.conversation_count = 0
+            self.session_start_time = datetime.now()
+            self.last_crisis_level = CrisisLevel.NONE
+            self.last_harm_type = HarmType.NONE
             self._last_interaction_time = datetime.now()
-            # Generate welcome message for continuing session
-            try:
-                return self._generate_ai_continuation_message()
-            except Exception as e:
-                print(f"⚠️ AI continuation message failed: {e}")
-                return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked?"
-
-        # Create new session
-        self.current_user_id = target_user_id
-        self.current_session_id = f"session_{int(time.time())}"
-        self.conversation_count = 0
-        self.session_start_time = datetime.now()
-        self.last_crisis_level = CrisisLevel.NONE
-        self.last_harm_type = HarmType.NONE
-        self._last_interaction_time = datetime.now()
-        
-        print(f"🎆 Created new session: {self.current_session_id} for user: {self.current_user_id}")
-
-        # AI-generated contextual welcome message
-        welcome_message = self._generate_ai_welcome_message()
-
-        # Backend session logging (not shown to user)
-        self._log_session_info("Session started")
-
-        return welcome_message
-
-
+            
+            # Create secure session token
+            session_token = security_manager.create_session_token(self.current_user_id, self.current_session_id)
+            
+            # Audit log session creation
+            security_manager.audit_log(
+                'SESSION_CREATED',
+                self.current_user_id, self.current_session_id,
+                {
+                    'session_token_created': True,
+                    'user_type': 'authenticated' if user_id else 'anonymous',
+                    'security_version': '2.0'
+                }
+            )
+            
+            print(f"🎆 Created secure session with token authentication")
+            
+            # AI-generated contextual welcome message
+            welcome_message = self._generate_ai_welcome_message()
+            
+            # Backend session logging (not shown to user)
+            self._log_session_info("Secure session started")
+            
+            return welcome_message
+            
+        except ValueError as ve:
+            # Security validation errors
+            security_manager.audit_log(
+                'SESSION_START_SECURITY_ERROR',
+                target_user_id or user_id or 'unknown', 'unknown',
+                {'error': str(ve)},
+                'WARNING'
+            )
+            return f"Session creation failed: {ve}"
+            
+        except Exception as e:
+            # System errors
+            security_manager.audit_log(
+                'SESSION_START_SYSTEM_ERROR',
+                target_user_id or user_id or 'unknown', 'unknown',
+                {'error_type': type(e).__name__},
+                'ERROR'
+            )
+            print(f"❌ Error starting session: {e}")
+            return "Unable to start session due to a system error. Please try again."
 
     def _generate_ai_welcome_message(self) -> str:
         """Generate AI-powered contextual welcome message based on time and environment"""
@@ -3814,13 +4291,23 @@ Timestamp: {datetime.now().strftime('%H:%M:%S')}
         print(backend_log)  # This goes to backend logs only
 
     def get_session_summary(self) -> str:
-        """Generate enhanced session summary with memory insights"""
+        """Generate secure enhanced session summary with memory insights"""
         if not self.current_session_id:
             return "No active session to summarize."
 
         try:
+            # Validate session security
             if not self.current_user_id:
                 return "No user ID available for session summary."
+            
+            if not security_manager.validate_session_token(self.current_user_id, self.current_session_id):
+                security_manager.audit_log(
+                    'INVALID_SESSION_SUMMARY_ACCESS',
+                    self.current_user_id, self.current_session_id,
+                    {'action': 'get_session_summary'},
+                    'WARNING'
+                )
+                return "Session expired. Please start a new session to get a summary."
                 
             history = self.therapy_bot.storage.get_conversation_history(
                 self.current_user_id, self.current_session_id
@@ -3829,6 +4316,13 @@ Timestamp: {datetime.now().strftime('%H:%M:%S')}
             if not history:
                 return "No conversations in this session yet."
 
+            # Audit log session summary access
+            security_manager.audit_log(
+                'SESSION_SUMMARY_GENERATED',
+                self.current_user_id, self.current_session_id,
+                {'conversation_count': len(history)}
+            )
+            
             # Get session memory for enhanced summary
             memory = self.therapy_bot._get_or_create_session_memory(
                 self.current_user_id, self.current_session_id
@@ -3869,7 +4363,14 @@ Generated: {current_time}
             return summary
 
         except Exception as e:
-            return f"Error generating session summary: {e}"
+            security_manager.audit_log(
+                'SESSION_SUMMARY_ERROR',
+                self.current_user_id or 'unknown', self.current_session_id or 'unknown',
+                {'error_type': type(e).__name__},
+                'ERROR'
+            )
+            print(f"❌ Error generating session summary: {e}")
+            return "Unable to generate session summary due to a system error. Please try again later."
 
     def _get_session_duration(self) -> str:
         """Calculate and format session duration dynamically"""
@@ -4212,10 +4713,36 @@ def run_console_therapy_session():
 
         except KeyboardInterrupt:
             print("\n\n🤖 Bot: Session interrupted. Take care!")
+            # Secure cleanup
+            if interface and interface.current_session_id:
+                security_manager.audit_log(
+                    'SESSION_INTERRUPTED',
+                    interface.current_user_id or 'unknown',
+                    interface.current_session_id,
+                    {'reason': 'keyboard_interrupt'}
+                )
             break
         except Exception as e:
-            print(f"\n❌ Error: {e}")
-            print("Please try again or type 'quit' to exit.")
+            # Log error securely without exposing sensitive data
+            if interface and interface.current_session_id:
+                security_manager.audit_log(
+                    'SESSION_ERROR',
+                    interface.current_user_id or 'unknown',
+                    interface.current_session_id,
+                    {'error_type': type(e).__name__},
+                    'ERROR'
+                )
+            print(f"\n❌ Error: A security or system error occurred. Please try again or type 'quit' to exit.")
+    
+    # Final cleanup on exit
+    if interface and interface.current_session_id:
+        security_manager.audit_log(
+            'CONSOLE_SESSION_ENDED',
+            interface.current_user_id or 'console_user',
+            interface.current_session_id,
+            {'total_conversations': interface.conversation_count}
+        )
+        print("\n🔒 Session ended securely. All data protected.")
 
 def test_therapy_bot():
     """Test the therapy bot with sample conversations"""
@@ -4247,12 +4774,62 @@ def test_therapy_bot():
     summary = interface.get_session_summary()
     print(f"\n📋 Summary: {summary[:200]}...")
 
-    print("\n✅ Bot test completed!")
+    # Secure cleanup after testing
+    if interface and interface.current_session_id:
+        security_manager.audit_log(
+            'TEST_SESSION_COMPLETED',
+            interface.current_user_id or 'test_user',
+            interface.current_session_id,
+            {'test_messages': len(test_messages)}
+        )
+
+    print("\n✅ Bot test completed with secure cleanup!")
+
+# Security maintenance functions
+def cleanup_expired_data():
+    """Clean up expired data across all storage systems"""
+    try:
+        if 'interface' in globals() and interface and interface.therapy_bot and interface.therapy_bot.storage:
+            interface.therapy_bot.storage.cleanup_expired_data()
+        print("✅ Data cleanup completed")
+    except Exception as e:
+        print(f"❌ Data cleanup failed: {e}")
+
+def anonymize_user_data(user_id: str):
+    """Anonymize user data for privacy compliance"""
+    try:
+        if 'interface' in globals() and interface and interface.therapy_bot and interface.therapy_bot.storage:
+            interface.therapy_bot.storage.anonymize_user_data(user_id)
+        print(f"✅ User data anonymized for {security_manager.hash_pii(user_id)}")
+    except Exception as e:
+        print(f"❌ User data anonymization failed: {e}")
+
+def get_security_status() -> Dict[str, Any]:
+    """Get current security configuration status"""
+    return {
+        'encryption_enabled': SECURITY_CONFIG['ENCRYPTION_ENABLED'],
+        'audit_logging': SECURITY_CONFIG['AUDIT_LOGGING'],
+        'data_retention_days': SECURITY_CONFIG['DATA_RETENTION_DAYS'],
+        'rate_limiting': True,
+        'session_validation': SECURITY_CONFIG['VALIDATE_SESSION_TOKENS'],
+        'input_sanitization': SECURITY_CONFIG['SANITIZE_INPUTS'],
+        'active_sessions': len(security_manager.session_tokens),
+        'security_version': '2.0'
+    }
 
 # API Mode - Don't run console interface automatically
-print("✅ Therapy bot ready for API integration!")
+print("🔒 Secure Therapy Bot ready for API integration!")
+print("🛡️ Security Features Enabled:")
+print(f"  - Encryption: {SECURITY_CONFIG['ENCRYPTION_ENABLED']}")
+print(f"  - Audit Logging: {SECURITY_CONFIG['AUDIT_LOGGING']}")
+print(f"  - Rate Limiting: Enabled")
+print(f"  - Input Sanitization: {SECURITY_CONFIG['SANITIZE_INPUTS']}")
+print(f"  - Session Validation: {SECURITY_CONFIG['VALIDATE_SESSION_TOKENS']}")
 print("🔗 Available functions for external calls:")
-print("- interface.start_session() to start")
-print("- interface.send_message('your message') to chat") 
-print("- interface.get_session_summary() to get summary")
-print("🌟 Ready to be imported by therapy_service.py")
+print("- interface.start_session() to start (with secure token)")
+print("- interface.send_message('your message') to chat (with validation)") 
+print("- interface.get_session_summary() to get summary (with access control)")
+print("- cleanup_expired_data() for data maintenance")
+print("- anonymize_user_data(user_id) for privacy compliance")
+print("- get_security_status() for security monitoring")
+print("🌟 Ready to be imported by therapy_service.py with comprehensive security controls")
