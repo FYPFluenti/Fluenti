@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send } from 'lucide-react';
+import { X, Send, Star } from 'lucide-react';
 
 interface FeedbackModalProps {
   isOpen: boolean;
@@ -9,8 +9,15 @@ interface FeedbackModalProps {
 
 export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
   const [feedback, setFeedback] = useState('');
+  const [rating, setRating] = useState<number>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+
+  const handleClose = () => {
+    setFeedback('');
+    setRating(0);
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +33,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         },
         body: JSON.stringify({
           feedback: feedback.trim(),
+          rating: rating || undefined,
           userEmail: localStorage.getItem('userEmail') || undefined,
           userName: localStorage.getItem('userName') || undefined,
         }),
@@ -37,6 +45,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         console.log('✅ Feedback submitted successfully');
         setIsSuccess(true);
         setFeedback('');
+        setRating(0);
         
         // Close modal after showing success message
         setTimeout(() => {
@@ -68,7 +77,7 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
             <div className="flex items-center justify-between p-6 border-b border-border">
               <h3 className="text-lg font-semibold">Send Feedback</h3>
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="p-2 hover:bg-muted rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -88,19 +97,60 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="p-6">
-                <textarea
-                  value={feedback}
-                  onChange={(e) => setFeedback(e.target.value)}
-                  placeholder="How can we improve Fluenti? Your feedback helps us make the app better!"
-                  className="w-full h-32 resize-none rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground p-4 focus:outline-none focus:ring-2 focus:ring-[#ff6b1d] focus:border-[#ff6b1d]"
-                  disabled={isSubmitting}
-                />
+              <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                {/* Star Rating Section */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Rate your experience (optional)
+                  </label>
+                  <div className="flex items-center space-x-1">
+                    {[1, 2, 3, 4, 5].map((starValue) => (
+                      <button
+                        key={starValue}
+                        type="button"
+                        onClick={() => setRating(starValue)}
+                        className="p-1 hover:scale-110 transition-transform focus:outline-none"
+                        disabled={isSubmitting}
+                      >
+                        <Star
+                          className={`w-6 h-6 transition-colors ${
+                            starValue <= rating
+                              ? 'fill-yellow-400 text-yellow-400'
+                              : 'text-gray-300 hover:text-yellow-200'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  {rating > 0 && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {rating === 1 && "Poor"}
+                      {rating === 2 && "Fair"}
+                      {rating === 3 && "Good"}
+                      {rating === 4 && "Very Good"}
+                      {rating === 5 && "Excellent"}
+                    </p>
+                  )}
+                </div>
+
+                {/* Feedback Text Area */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Your feedback
+                  </label>
+                  <textarea
+                    value={feedback}
+                    onChange={(e) => setFeedback(e.target.value)}
+                    placeholder="How can we improve Fluenti? Your feedback helps us make the app better!"
+                    className="w-full h-32 resize-none rounded-lg border border-border bg-card text-foreground placeholder:text-muted-foreground p-4 focus:outline-none focus:ring-2 focus:ring-[#ff6b1d] focus:border-[#ff6b1d]"
+                    disabled={isSubmitting}
+                  />
+                </div>
 
                 <div className="flex items-center justify-end gap-3 mt-4">
                   <button
                     type="button"
-                    onClick={onClose}
+                    onClick={handleClose}
                     className="px-4 py-2 rounded-lg border border-border text-foreground hover:bg-muted transition-colors"
                     disabled={isSubmitting}
                   >
