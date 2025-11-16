@@ -7,6 +7,7 @@ import {
   Smile,
   User,
   Settings,
+  Brain,
 } from 'lucide-react';
 import FluentiLogo from '@/components/FluentiLogo';
 import { LogoutButton } from '../auth/LogoutButton';
@@ -29,6 +30,13 @@ export default function SharedSidebarEmotional({ onFeedbackOpen, currentPage }: 
       id: "history", 
       path: "/adult-history",
       isActive: currentPage === "history"
+    },
+    { 
+      icon: Brain, 
+      label: "insights", 
+      id: "insights", 
+      path: "/psychological-insights",
+      isActive: currentPage === "insights"
     },
     { 
       icon: Smile, 

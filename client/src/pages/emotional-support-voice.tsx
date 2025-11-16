@@ -3,7 +3,7 @@ import { useSearch } from 'wouter';
 import { Button } from '@/components/ui/button';
 import ModelViewerAvatar from '@/components/ModelViewerAvatar';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition_simple';
-import { Mic, MicOff, Waves, Heart, Brain, Shield, X, AlertTriangle, RotateCcw } from 'lucide-react';
+import { Mic, MicOff, Waves, Heart, Brain, Shield, X, AlertTriangle, RotateCcw, Plus } from 'lucide-react';
 import SharedSidebarEmotional from '@/components/layout/SharedSidebarEmotional';
 import FeedbackModal from '@/components/layout/FeedbackModel';
 import PageHeader from '@/components/layout/PageHeader';
@@ -169,6 +169,25 @@ const EmotionalSupportVoice = () => {
     }
   }, [response, audioBase64]);
 
+  // Session persistence - save active session data for voice mode
+  useEffect(() => {
+    if (sessionData.sessionId && history.length > 0) {
+      const sessionToSave = {
+        sessionId: sessionData.sessionId,
+        userId: sessionData.userId,
+        sessionKey: sessionData.sessionKey,
+        messages: history.flatMap(item => [
+          ...(item.user ? [{ role: 'user', content: item.user, timestamp: new Date().toISOString() }] : []),
+          ...(item.ai ? [{ role: 'assistant', content: item.ai, timestamp: new Date().toISOString() }] : [])
+        ]),
+        lastUpdated: new Date().toISOString(),
+        title: 'Active Voice Session'
+      };
+      localStorage.setItem('activeVoiceSessionData', JSON.stringify(sessionToSave));
+      console.log('💾 Saved active voice session data:', sessionData.sessionId);
+    }
+  }, [sessionData, history]);
+
   // Check therapy service status on mount
   useEffect(() => {
     const checkServiceStatus = async () => {
@@ -200,6 +219,50 @@ const EmotionalSupportVoice = () => {
 
   const handleSessionContinuation = () => {
     try {
+      // First, check for active voice session data (from page refresh)
+      const activeVoiceSessionData = localStorage.getItem('activeVoiceSessionData');
+      if (activeVoiceSessionData && !sessionIdFromUrl) {
+        const sessionInfo = JSON.parse(activeVoiceSessionData);
+        console.log('🔄 Restoring active voice session from localStorage:', sessionInfo.sessionId);
+        
+        // Set session data for continuation
+        setSessionData({
+          sessionId: sessionInfo.sessionId,
+          userId: sessionInfo.userId,
+          sessionKey: sessionInfo.sessionKey
+        });
+
+        // Restore previous history if available
+        if (sessionInfo.messages && sessionInfo.messages.length > 0) {
+          const restoredHistory = sessionInfo.messages
+            .filter((msg: any) => msg.role === 'user' || msg.role === 'assistant')
+            .reduce((acc: any[], msg: any, index: number, array: any[]) => {
+              if (msg.role === 'user') {
+                const nextMsg = array[index + 1];
+                acc.push({
+                  user: msg.content,
+                  ai: (nextMsg && nextMsg.role === 'assistant') ? nextMsg.content : ''
+                });
+              }
+              return acc;
+            }, [])
+            .filter((item: any) => item.user || item.ai);
+
+          setHistory(restoredHistory);
+        }
+
+        // Set continuation indicators
+        setIsContinuedSession(true);
+        setContinuedSessionTitle(sessionInfo.title || 'Restored Voice Session');
+        
+        // Auto-dismiss continuation banner after 2 seconds
+        setTimeout(() => {
+          setIsContinuedSession(false);
+        }, 2000);
+        
+        return; // Exit early, don't check other sources
+      }
+      
       // Check if we have an existing session from the database
       if (existingSession && !sessionLoading && !sessionError) {
         // Set session data for continuation
@@ -224,6 +287,11 @@ const EmotionalSupportVoice = () => {
         // Set continuation indicators
         setIsContinuedSession(true);
         setContinuedSessionTitle(existingSession.title || 'Previous Session');
+        
+        // Auto-dismiss continuation banner after 2 seconds
+        setTimeout(() => {
+          setIsContinuedSession(false);
+        }, 2000);
         
         console.log('🔄 Continuing voice session:', existingSession.title);
       }
@@ -256,6 +324,11 @@ const EmotionalSupportVoice = () => {
         // Set continuation indicators
         setIsContinuedSession(true);
         setContinuedSessionTitle(sessionInfo.title || 'Previous Session');
+
+        // Auto-dismiss continuation banner after 2 seconds
+        setTimeout(() => {
+          setIsContinuedSession(false);
+        }, 2000);
 
         // Clear the continuation data
         localStorage.removeItem('continuingSession');
@@ -302,16 +375,19 @@ const EmotionalSupportVoice = () => {
       if (data.success) {
         // *NEW: Update session data for continuity (same as chat mode)*
         if (data.sessionId || data.userId || data.sessionKey) {
-          setSessionData({
+          const newSessionData = {
             sessionId: data.sessionId || sessionData.sessionId,
             userId: data.userId || sessionData.userId,
             sessionKey: data.sessionKey || sessionData.sessionKey
-          });
-          console.log('📝 Session data updated:', {
-            sessionId: data.sessionId || sessionData.sessionId,
-            userId: data.userId || sessionData.userId,
-            sessionKey: data.sessionKey || sessionData.sessionKey
-          });
+          };
+          setSessionData(newSessionData);
+          console.log('📝 Session data updated:', newSessionData);
+          
+          // If this is a completely new session, clear any old active session data
+          if (data.newSession) {
+            localStorage.removeItem('activeVoiceSessionData');
+            console.log('🗑️ Cleared old active voice session data for new session');
+          }
         }
         
         // Handle successful therapy response
@@ -353,6 +429,19 @@ const EmotionalSupportVoice = () => {
         setAvatarState('idle');
       }
     }
+  };
+
+  // Function to start a new voice session explicitly
+  const startNewSession = () => {
+    // Clear all session data and history
+    setSessionData({});
+    setHistory([]);
+    setResponse('');
+    setDisplayedResponse('');
+    setIsContinuedSession(false);
+    setContinuedSessionTitle('');
+    localStorage.removeItem('activeVoiceSessionData');
+    console.log('🆕 Started new voice session');
   };
 
   return (
@@ -505,7 +594,7 @@ const EmotionalSupportVoice = () => {
             </div>
 
             {/* Controls - Fixed Bottom */}
-            <div className="flex justify-center">
+            <div className="flex justify-center items-center gap-4">
               <Button 
                 onClick={() => {
                   if (isRecording) {
@@ -564,6 +653,18 @@ const EmotionalSupportVoice = () => {
                   )}
                 </div>
               </Button>
+
+              {/* New Session Button - Only show if we have conversation history */}
+              {(history.length > 0 || isContinuedSession) && (
+                <Button 
+                  onClick={startNewSession}
+                  variant="outline"
+                  className="px-4 py-2 rounded-xl border-gray-500/30 text-gray-300 hover:bg-gray-700/50 hover:text-white hover:border-gray-400/50 transition-all duration-200"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  New Session
+                </Button>
+              )}
             </div>
           </div>
         </div>

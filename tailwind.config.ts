@@ -49,6 +49,9 @@ content: [
         border: "var(--border)", // Existing border color
         input: "var(--input)",
         ring: "var(--ring)",
+        "fluenti-primary": {
+          DEFAULT: "var(--fluenti-primary)",
+        },
         chart: {
           "1": "var(--chart-1)",
           "2": "var(--chart-2)",
@@ -65,6 +68,16 @@ content: [
           "accent-foreground": "var(--sidebar-accent-foreground)",
           border: "var(--sidebar-border)",
           ring: "var(--sidebar-ring)",
+        },
+        "fluenti-primary": {
+          DEFAULT: "var(--fluenti-primary)",
+          light: "var(--fluenti-primary-light)",
+          dark: "var(--fluenti-primary-dark)",
+        },
+        "fluenti-secondary": {
+          DEFAULT: "var(--fluenti-secondary)",
+          light: "var(--fluenti-secondary-light)",
+          dark: "var(--fluenti-secondary-dark)",
         },
       },
       keyframes: {

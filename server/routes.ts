@@ -1684,6 +1684,100 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
     }
   });
 
+  // Psychological Profile endpoint
+  app.get('/api/therapy/psychological-profile', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'User not authenticated' });
+      }
+      console.log(`🧠 Fetching psychological profile for user: ${userId}`);
+
+      const pythonServiceResponse = await fetch(`http://localhost:5001/api/therapy/psychological-profile?userId=${encodeURIComponent(userId)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!pythonServiceResponse.ok) {
+        throw new Error(`Python service psychological profile failed: ${pythonServiceResponse.status}`);
+      }
+
+      const profileData = await pythonServiceResponse.json();
+      res.json(profileData);
+      
+    } catch (error) {
+      console.error("❌ Failed to get psychological profile:", error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to get psychological profile',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Long-term Progress endpoint
+  app.get('/api/therapy/long-term-progress', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'User not authenticated' });
+      }
+      const days = req.query.days || '30';
+      console.log(`📊 Fetching long-term progress for user: ${userId}, days: ${days}`);
+
+      const pythonServiceResponse = await fetch(`http://localhost:5001/api/therapy/long-term-progress?userId=${encodeURIComponent(userId)}&days=${days}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      if (!pythonServiceResponse.ok) {
+        throw new Error(`Python service long-term progress failed: ${pythonServiceResponse.status}`);
+      }
+
+      const progressData = await pythonServiceResponse.json();
+      res.json(progressData);
+      
+    } catch (error) {
+      console.error("❌ Failed to get long-term progress:", error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to get long-term progress',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
+  // Session History endpoint for psychological insights
+  app.get('/api/therapy/sessions', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ success: false, error: 'User not authenticated' });
+      }
+      console.log(`📝 Fetching session history for user: ${userId}`);
+
+      // Get sessions from MongoDB
+      const sessions = await mongoStorage.getUserEmotionalSessions(userId);
+      
+      res.json({
+        success: true,
+        sessions: sessions || []
+      });
+      
+    } catch (error) {
+      console.error("❌ Failed to get session history:", error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to get session history',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // AI-powered session title generation with database persistence
   async function generateAndSaveAISessionTitle(session: any): Promise<string> {
     try {

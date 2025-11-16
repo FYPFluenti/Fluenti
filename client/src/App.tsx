@@ -26,6 +26,7 @@ import Settings from "@/pages/settings";
 import VoiceModel from "@/pages/voice-model";
 import AdultHistory from "@/pages/adult-history";
 import AdultSettings from "@/pages/adult-settings";
+import PsychologicalInsights from "@/pages/PsychologicalInsights";
 
 
 
@@ -140,6 +141,12 @@ export default function App() {
             <Route path="/adult-history">
               <ProtectedRoute>
                 <AdultHistory />
+              </ProtectedRoute>
+            </Route>
+            
+            <Route path="/psychological-insights">
+              <ProtectedRoute allowedUserTypes={['adult']}>
+                <PsychologicalInsights />
               </ProtectedRoute>
             </Route>
             

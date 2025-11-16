@@ -93,17 +93,78 @@ const EmotionalSupport = () => {
     }
   }, [newMessageId]);
 
-  // Cleanup typing timeout on unmount
+  // Session persistence - save active session data
+  useEffect(() => {
+    if (sessionData.sessionId && messages.length > 0) {
+      const sessionToSave = {
+        sessionId: sessionData.sessionId,
+        userId: sessionData.userId,
+        sessionKey: sessionData.sessionKey,
+        messages: messages.map(msg => ({
+          role: msg.user ? 'user' : 'assistant',
+          content: msg.user || msg.ai,
+          timestamp: msg.timestamp.toISOString()
+        })),
+        lastUpdated: new Date().toISOString(),
+        title: 'Active Chat Session'
+      };
+      localStorage.setItem('activeSessionData', JSON.stringify(sessionToSave));
+      console.log('💾 Saved active session data:', sessionData.sessionId);
+    }
+  }, [sessionData, messages]);
+
+  // Cleanup typing timeout and session data on unmount
   useEffect(() => {
     return () => {
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
       }
+      // Note: We don't clear activeSessionData here to allow page refresh restoration
+      // It will be cleared only when starting a completely new session
     };
   }, []);
 
   const handleSessionContinuation = () => {
     try {
+      // First, check for active session data (from page refresh)
+      const activeSessionData = localStorage.getItem('activeSessionData');
+      if (activeSessionData && !sessionIdFromUrl) {
+        const sessionInfo = JSON.parse(activeSessionData);
+        console.log('🔄 Restoring active session from localStorage:', sessionInfo.sessionId);
+        
+        // Set session data for continuation
+        setSessionData({
+          sessionId: sessionInfo.sessionId,
+          userId: sessionInfo.userId,
+          sessionKey: sessionInfo.sessionKey
+        });
+
+        // Restore previous messages if available
+        if (sessionInfo.messages && sessionInfo.messages.length > 0) {
+          const restoredMessages: Message[] = sessionInfo.messages.map((msg: any, index: number) => ({
+            id: `restored_${index}`,
+            user: msg.role === 'user' ? msg.content : '',
+            ai: msg.role === 'assistant' ? msg.content : '',
+            timestamp: new Date(msg.timestamp || Date.now()),
+            crisisLevel: 'none',
+            isCrisis: false
+          })).filter((msg: Message) => msg.user || msg.ai);
+
+          setMessages(restoredMessages);
+        }
+
+        // Set continuation indicators
+        setIsContinuedSession(true);
+        setContinuedSessionTitle(sessionInfo.title || 'Restored Session');
+        
+        // Auto-dismiss continuation banner after 2 seconds
+        setTimeout(() => {
+          setIsContinuedSession(false);
+        }, 2000);
+        
+        return; // Exit early, don't check other sources
+      }
+      
       // Check if we have an existing session from the database
       if (existingSession && !sessionLoading && !sessionError) {
         // Set session data for continuation
@@ -129,6 +190,11 @@ const EmotionalSupport = () => {
         // Set continuation indicators
         setIsContinuedSession(true);
         setContinuedSessionTitle(existingSession.title || 'Previous Session');
+        
+        // Auto-dismiss continuation banner after 2 seconds
+        setTimeout(() => {
+          setIsContinuedSession(false);
+        }, 2000);
         
         console.log('🔄 Continuing session:', existingSession.title);
       }
@@ -162,6 +228,11 @@ const EmotionalSupport = () => {
         // Set continuation indicators
         setIsContinuedSession(true);
         setContinuedSessionTitle(sessionInfo.title || 'Previous Session');
+
+        // Auto-dismiss continuation banner after 2 seconds
+        setTimeout(() => {
+          setIsContinuedSession(false);
+        }, 2000);
 
         // Clear the continuation data
         localStorage.removeItem('continuingSession');
@@ -249,11 +320,18 @@ const EmotionalSupport = () => {
       
       // Update session data if new session or session data returned
       if (data.sessionId || data.userId || data.sessionKey) {
-        setSessionData({
+        const newSessionData = {
           sessionId: data.sessionId || sessionData.sessionId,
           userId: data.userId || sessionData.userId,
           sessionKey: data.sessionKey || sessionData.sessionKey
-        });
+        };
+        setSessionData(newSessionData);
+        
+        // If this is a completely new session, clear any old active session data
+        if (data.newSession) {
+          localStorage.removeItem('activeSessionData');
+          console.log('🗑️ Cleared old active session data for new session');
+        }
       }
       
       // Hide thinking indicator
@@ -377,6 +455,17 @@ Your wellbeing is important.`,
     }
   };
 
+  // Function to start a new session explicitly
+  const startNewSession = () => {
+    // Clear all session data and messages
+    setSessionData({});
+    setMessages([]);
+    setIsContinuedSession(false);
+    setContinuedSessionTitle('');
+    localStorage.removeItem('activeSessionData');
+    console.log('🆕 Started new chat session');
+  };
+
   return (
     <div className="min-h-screen max-h-screen flex bg-background overflow-hidden">
       {/* Sidebar */}
@@ -389,8 +478,22 @@ Your wellbeing is important.`,
       <div className="ml-20 flex-1 flex flex-col h-screen overflow-hidden relative">
         <PageHeader />
         
-        {/* Service Status - Top Right Corner (below header) */}
-        <div className="absolute top-20 right-4 z-10">
+        <div className="absolute top-20 right-4 z-10 flex items-center space-x-3">
+          {/* New Session Button - only show if there's an active session */}
+          {(sessionData.sessionId && messages.length > 0) && (
+            <button
+              onClick={startNewSession}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-fluenti-primary/20 hover:bg-fluenti-primary/30 border border-fluenti-primary/30 text-fluenti-primary transition-all duration-200"
+              title="Start a new session"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              New Session
+            </button>
+          )}
+          
+          {/* Service Status */}
           <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
             serviceStatus === 'healthy' 
               ? 'bg-emerald-500/20 border border-emerald-400/30 text-emerald-600' 

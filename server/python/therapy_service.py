@@ -548,6 +548,309 @@ def crisis_detection_config():
             'details': str(e)
         }), 500
 
+@app.route('/api/therapy/psychological-profile', methods=['GET'])
+def get_psychological_profile():
+    """Get psychological profile insights for a user"""
+    try:
+        if not therapy_bot or not hasattr(therapy_bot, 'storage'):
+            return jsonify({
+                'error': 'Therapy service not available',
+                'available': False
+            }), 503
+        
+        data = request.args
+        user_id = data.get('userId')
+        
+        if not user_id:
+            return jsonify({
+                'error': 'User ID required',
+                'required_params': ['userId']
+            }), 400
+        
+        # Validate and update therapy components with user context
+        try:
+            update_therapy_components_user_context(user_id)
+        except ValueError as e:
+            return jsonify({
+                'error': 'Invalid user ID',
+                'details': str(e)
+            }), 400
+        except Exception as e:
+            print(f"❌ Error updating user context: {e}")
+            return jsonify({
+                'error': 'Failed to update user context',
+                'details': str(e)
+            }), 500
+        
+        # Get psychological profile and session data
+        profile = therapy_bot.storage.get_or_create_psychological_profile(user_id)
+        user_hash = therapy_bot.storage.security_manager.hash_pii(user_id)
+        
+        # Get actual session count from conversations collection - try multiple formats
+        print(f"🔍 [Profile] Looking for sessions with user_id: {user_id}")
+        print(f"🔍 [Profile] Hashed user_id: {user_hash}")
+        print(f"🔍 [Profile] Total documents in conversations collection: {therapy_bot.storage.conversations.count_documents({})}")
+        
+        # Sample some documents to see the structure
+        sample_docs = list(therapy_bot.storage.conversations.find({}).limit(3))
+        for i, doc in enumerate(sample_docs):
+            print(f"🔍 [Profile] Sample doc {i}: {list(doc.keys())}")
+            if 'user_id' in doc:
+                print(f"🔍 [Profile] Sample doc {i} user_id: {doc['user_id']}")
+            if 'user_context' in doc:
+                print(f"🔍 [Profile] Sample doc {i} user_context: {doc['user_context']}")
+            if 'userId' in doc:
+                print(f"🔍 [Profile] Sample doc {i} userId: {doc['userId']}")
+        
+        session_queries = [
+            {"user_id": user_hash},
+            {"user_id": user_id}, 
+            {"user_context.login": user_id},
+            {"userId": user_id}
+        ]
+        
+        total_sessions = 0
+        for query in session_queries:
+            count = therapy_bot.storage.conversations.count_documents(query)
+            print(f"🔍 [Profile] Query {query} found {count} sessions")
+            if count > 0:
+                total_sessions = count
+                break
+        
+        # Get recent progress data
+        recent_progress = list(therapy_bot.storage.long_term_progress.find({
+            "user_id": user_hash
+        }).sort("timestamp", -1).limit(1))
+        
+        latest_progress = recent_progress[0] if recent_progress else {}
+        
+        # Format profile data for API response with actual data
+        profile_data = {
+            'userId': user_id,
+            'profileExists': bool(profile.core_patterns or profile.cultural_context or total_sessions > 0),
+            'lastUpdated': profile.last_updated or datetime.now().isoformat(),
+            'insights': {
+                'corePatterns': {
+                    'count': len(profile.core_patterns),
+                    'patterns': list(profile.core_patterns.keys())[:5] if profile.core_patterns else []
+                },
+                'cognitivePatterns': {
+                    'count': len(profile.cognitive_patterns),
+                    'patterns': list(profile.cognitive_patterns.keys())[:3] if profile.cognitive_patterns else []
+                },
+                'copingMechanisms': {
+                    'count': len(profile.coping_mechanisms),
+                    'effective': [name for name, data in profile.coping_mechanisms.items() 
+                                if isinstance(data, dict) and data.get('confidence', 0) > 0.6][:3] if profile.coping_mechanisms else []
+                },
+                'culturalContext': {
+                    'identified': bool(profile.cultural_context),
+                    'aspects': list(profile.cultural_context.keys())[:4] if profile.cultural_context else []
+                },
+                'traumaInformed': {
+                    'indicators': len([t for t in profile.trauma_indicators.values() 
+                                     if isinstance(t, dict) and t.get('present')]) if profile.trauma_indicators else 0,
+                    'approach_needed': bool(profile.trauma_indicators)
+                },
+                'progressTracking': {
+                    'trend': latest_progress.get('risk_level_trend', profile.long_term_progress.get('current_risk_trend', 'unknown')),
+                    'momentum': latest_progress.get('session_quality_indicators', {}).get('progress_momentum', 
+                                profile.long_term_progress.get('therapeutic_momentum', 0)),
+                    'resilience_factors': len(latest_progress.get('resilience_indicators', profile.resilience_factors or []))
+                }
+            },
+            'recommendations': {
+                'culturally_informed': bool(profile.cultural_context),
+                'trauma_informed': bool(profile.trauma_indicators),
+                'strengths_based': bool(profile.resilience_factors or latest_progress.get('resilience_indicators'))
+            },
+            'sessionCount': total_sessions  # Add actual session count
+        }
+        
+        return jsonify({
+            'success': True,
+            'profile': profile_data,
+            'capabilities': {
+                'deep_understanding': True,
+                'cultural_awareness': True,
+                'trauma_informed': True,
+                'progress_tracking': True,
+                'personalized_recommendations': True
+            }
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting psychological profile: {e}")
+        traceback.print_exc()
+        return jsonify({
+            'error': 'Failed to retrieve psychological profile',
+            'details': str(e)
+        }), 500
+
+@app.route('/api/therapy/long-term-progress', methods=['GET'])
+def get_long_term_progress():
+    """Get long-term therapeutic progress for a user"""
+    try:
+        if not therapy_bot or not hasattr(therapy_bot, 'storage'):
+            return jsonify({
+                'error': 'Therapy service not available'
+            }), 503
+        
+        data = request.args
+        user_id = data.get('userId')
+        days = int(data.get('days', 30))  # Default to 30 days
+        
+        if not user_id:
+            return jsonify({
+                'error': 'User ID required'
+            }), 400
+        
+        # Validate user context
+        try:
+            update_therapy_components_user_context(user_id)
+        except Exception as e:
+            return jsonify({
+                'error': 'Failed to validate user context',
+                'details': str(e)
+            }), 400
+        
+        # Get progress data from database
+        from datetime import timedelta
+        cutoff_date = datetime.now() - timedelta(days=days)
+        user_hash = therapy_bot.storage.security_manager.hash_pii(user_id)
+        
+        # Get actual session count from conversations - try multiple formats
+        print(f"🔍 Looking for sessions with user_id: {user_id}")
+        print(f"🔍 Hashed user_id: {user_hash}")
+        
+        # Try different user ID formats
+        session_queries = [
+            {"user_id": user_hash},
+            {"user_id": user_id}, 
+            {"user_context.login": user_id},
+            {"userId": user_id}
+        ]
+        
+        total_sessions = 0
+        session_query_used = None
+        for query in session_queries:
+            count = therapy_bot.storage.conversations.count_documents(query)
+            print(f"🔍 Query {query} found {count} sessions")
+            if count > 0:
+                total_sessions = count
+                session_query_used = query
+                break
+        
+        # Get progress entries using the same query format that worked for sessions
+        if session_query_used:
+            progress_entries = list(therapy_bot.storage.long_term_progress.find({
+                'user_id': user_hash,
+                'timestamp': {'$gte': cutoff_date}
+            }).sort('timestamp', 1))
+        else:
+            progress_entries = []
+        
+        # If no progress entries but we have sessions, create summary from sessions
+        if not progress_entries and total_sessions > 0:
+            # Get recent conversations to create progress data
+            recent_conversations = list(therapy_bot.storage.conversations.find({
+                'user_id': user_hash,
+                'timestamp': {'$gte': cutoff_date}
+            }).sort('timestamp', 1))
+            
+            # Calculate basic stats from conversations
+            crisis_events = sum(1 for conv in recent_conversations 
+                              if conv.get('crisis_level') not in ['none', None, 'stable'])
+            avg_mood = 5.0  # Default neutral mood if no specific data
+            
+            return jsonify({
+                'success': True,
+                'progress': {
+                    'entries': [],
+                    'summary': {
+                        'totalSessions': total_sessions,
+                        'averageMood': avg_mood,
+                        'crisisEvents': crisis_events,
+                        'currentTrend': 'stable',
+                        'timespan': f'{days} days'
+                    },
+                    'insights': {
+                        'improvement': False,
+                        'stable': True,
+                        'needsAttention': crisis_events > 0
+                    }
+                }
+            })
+        
+        # If no progress entries and no sessions
+        if not progress_entries and total_sessions == 0:
+            return jsonify({
+                'success': True,
+                'progress': {
+                    'entries': [],
+                    'summary': {
+                        'totalSessions': 0,
+                        'averageMood': 0,
+                        'crisisEvents': 0,
+                        'currentTrend': 'unknown',
+                        'timespan': f'{days} days'
+                    },
+                    'insights': {
+                        'improvement': False,
+                        'stable': False,
+                        'needsAttention': False
+                    }
+                }
+            })
+        
+        # Process progress data
+        progress_data = []
+        for entry in progress_entries:
+            progress_data.append({
+                'date': entry['timestamp'].strftime('%Y-%m-%d'),
+                'crisisLevel': entry.get('crisis_level', 'none'),
+                'moodScore': entry.get('mood_score'),
+                'patternsIdentified': entry.get('patterns_identified', 0),
+                'qualityIndicators': entry.get('session_quality_indicators', {}),
+                'riskTrend': entry.get('risk_level_trend', 'unknown'),
+                'resilienceIndicators': entry.get('resilience_indicators', [])
+            })
+        
+        # Generate summary insights with actual session count
+        mood_scores = [entry.get('mood_score') for entry in progress_entries if entry.get('mood_score')]
+        avg_mood = sum(mood_scores) / len(mood_scores) if mood_scores else 5.0
+        
+        crisis_events = sum(1 for entry in progress_entries 
+                           if entry.get('crisis_level') not in ['none', None])
+        
+        latest_trend = progress_entries[-1].get('risk_level_trend', 'unknown') if progress_entries else 'unknown'
+        
+        return jsonify({
+            'success': True,
+            'progress': {
+                'entries': progress_data,
+                'summary': {
+                    'totalSessions': total_sessions,  # Use actual session count from conversations
+                    'averageMood': round(avg_mood, 1),
+                    'crisisEvents': crisis_events,
+                    'currentTrend': latest_trend,
+                    'timespan': f'{days} days'
+                },
+                'insights': {
+                    'improvement': latest_trend == 'decreasing',
+                    'stable': latest_trend == 'stable',
+                    'needsAttention': latest_trend == 'increasing'
+                }
+            }
+        })
+        
+    except Exception as e:
+        print(f"❌ Error getting long-term progress: {e}")
+        return jsonify({
+            'error': 'Failed to retrieve progress data',
+            'details': str(e)
+        }), 500
+
 @app.errorhandler(404)
 def not_found(error):
     return jsonify({
@@ -559,7 +862,9 @@ def not_found(error):
             'POST /api/therapy/session-summary',
             'GET /api/therapy/sessions',
             'GET /api/therapy/crisis-detection/config',
-            'POST /api/therapy/crisis-detection/config'
+            'POST /api/therapy/crisis-detection/config',
+            'GET /api/therapy/psychological-profile',
+            'GET /api/therapy/long-term-progress'
         ]
     }), 404
 

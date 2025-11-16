@@ -36,7 +36,37 @@ except ImportError:
 
 # Load environment variables
 from dotenv import load_dotenv
+from dataclasses import field
 load_dotenv()  # Load variables from .env file
+
+@dataclass
+class PsychologicalProfile:
+    """Comprehensive psychological profile for deep understanding"""
+    user_id: str
+    core_patterns: Dict[str, Any] = field(default_factory=dict)
+    trauma_indicators: Dict[str, Any] = field(default_factory=dict)
+    cultural_context: Dict[str, Any] = field(default_factory=dict)
+    long_term_progress: Dict[str, Any] = field(default_factory=dict)
+    therapeutic_preferences: Dict[str, Any] = field(default_factory=dict)
+    risk_factors: Dict[str, Any] = field(default_factory=dict)
+    resilience_factors: Dict[str, Any] = field(default_factory=dict)
+    cognitive_patterns: Dict[str, Any] = field(default_factory=dict)
+    emotional_regulation_patterns: Dict[str, Any] = field(default_factory=dict)
+    relationship_patterns: Dict[str, Any] = field(default_factory=dict)
+    coping_mechanisms: Dict[str, Any] = field(default_factory=dict)
+    trigger_patterns: Dict[str, Any] = field(default_factory=dict)
+    created_at: str = ""
+    last_updated: str = ""
+
+    def __post_init__(self):
+        current_time = datetime.now().isoformat()
+        if not self.created_at:
+            self.created_at = current_time
+        self.last_updated = current_time
+        
+        # Initialize session insights if empty
+        if 'session_insights' not in self.core_patterns:
+            self.core_patterns['session_insights'] = []
 
 # Security configuration
 SECURITY_CONFIG = {
@@ -399,6 +429,9 @@ class MongoDBStorage:
             self.sessions = self.db.sessions
             self.crisis_logs = self.db.crisis_logs
             self.user_profiles = self.db.user_profiles
+            self.psychological_profiles = self.db.psychological_profiles  # New collection for deep profiling
+            self.long_term_progress = self.db.long_term_progress  # New collection for progress tracking
+            self.cultural_contexts = self.db.cultural_contexts  # New collection for cultural understanding
             
             # Also connect to fluenti database for EmotionalSession collection
             self.fluenti_db = self.client.fluenti
@@ -486,6 +519,18 @@ class MongoDBStorage:
 
             # User profiles indexes
             self.user_profiles.create_index([("user_login", 1)], unique=True)
+
+            # Psychological profiles indexes
+            self.psychological_profiles.create_index([("user_id", 1)], unique=True)
+            self.psychological_profiles.create_index([("last_updated", -1)])
+
+            # Long-term progress indexes
+            self.long_term_progress.create_index([("user_id", 1), ("timestamp", -1)])
+            self.long_term_progress.create_index([("metric_type", 1), ("timestamp", -1)])
+
+            # Cultural contexts indexes
+            self.cultural_contexts.create_index([("user_id", 1)])
+            self.cultural_contexts.create_index([("cultural_background", 1)])
 
             print("📊 Database indexes created successfully")
 
@@ -833,6 +878,656 @@ class MongoDBStorage:
                 {'error': str(e)},
                 'ERROR'
             )
+
+    def get_or_create_psychological_profile(self, user_id: str) -> PsychologicalProfile:
+        """Get or create comprehensive psychological profile for a user"""
+        try:
+            user_hash = self.security_manager.hash_pii(user_id)
+            
+            # Try to get existing profile
+            existing_profile = self.psychological_profiles.find_one({"user_id": user_hash})
+            
+            if existing_profile:
+                # Convert MongoDB document to PsychologicalProfile
+                profile = PsychologicalProfile(
+                    user_id=user_hash,
+                    core_patterns=existing_profile.get('core_patterns', {}),
+                    trauma_indicators=existing_profile.get('trauma_indicators', {}),
+                    cultural_context=existing_profile.get('cultural_context', {}),
+                    long_term_progress=existing_profile.get('long_term_progress', {}),
+                    therapeutic_preferences=existing_profile.get('therapeutic_preferences', {}),
+                    risk_factors=existing_profile.get('risk_factors', {}),
+                    resilience_factors=existing_profile.get('resilience_factors', {}),
+                    cognitive_patterns=existing_profile.get('cognitive_patterns', {}),
+                    emotional_regulation_patterns=existing_profile.get('emotional_regulation_patterns', {}),
+                    relationship_patterns=existing_profile.get('relationship_patterns', {}),
+                    coping_mechanisms=existing_profile.get('coping_mechanisms', {}),
+                    trigger_patterns=existing_profile.get('trigger_patterns', {}),
+                    created_at=existing_profile.get('created_at', ''),
+                    last_updated=existing_profile.get('last_updated', '')
+                )
+                print(f"✅ Retrieved existing psychological profile for user")
+                return profile
+            else:
+                # Create new profile
+                profile = PsychologicalProfile(user_id=user_hash)
+                
+                # Save to database
+                profile_doc = {
+                    "user_id": user_hash,
+                    "core_patterns": profile.core_patterns,
+                    "trauma_indicators": profile.trauma_indicators,
+                    "cultural_context": profile.cultural_context,
+                    "long_term_progress": profile.long_term_progress,
+                    "therapeutic_preferences": profile.therapeutic_preferences,
+                    "risk_factors": profile.risk_factors,
+                    "resilience_factors": profile.resilience_factors,
+                    "cognitive_patterns": profile.cognitive_patterns,
+                    "emotional_regulation_patterns": profile.emotional_regulation_patterns,
+                    "relationship_patterns": profile.relationship_patterns,
+                    "coping_mechanisms": profile.coping_mechanisms,
+                    "trigger_patterns": profile.trigger_patterns,
+                    "created_at": profile.created_at,
+                    "last_updated": profile.last_updated
+                }
+                
+                self.psychological_profiles.insert_one(profile_doc)
+                print(f"✅ Created new psychological profile for user")
+                return profile
+                
+        except Exception as e:
+            print(f"❌ Error managing psychological profile: {e}")
+            # Return basic profile as fallback
+            return PsychologicalProfile(user_id=self.security_manager.hash_pii(user_id))
+
+    def update_psychological_profile(self, user_id: str, conversation_text: str, 
+                                   crisis_level: str, mood_score: Optional[float] = None, llm=None):
+        """Update psychological profile based on conversation analysis"""
+        try:
+            profile = self.get_or_create_psychological_profile(user_id)
+            
+            # AI-powered psychological pattern analysis
+            if llm:
+                pattern_analysis = self._analyze_psychological_patterns(conversation_text, profile, llm)
+                
+                # Update profile with new insights
+                profile.core_patterns.update(pattern_analysis.get('core_patterns', {}))
+                profile.cognitive_patterns.update(pattern_analysis.get('cognitive_patterns', {}))
+                profile.emotional_regulation_patterns.update(pattern_analysis.get('emotional_patterns', {}))
+                profile.coping_mechanisms.update(pattern_analysis.get('coping_mechanisms', {}))
+                profile.trigger_patterns.update(pattern_analysis.get('trigger_patterns', {}))
+                
+                # Detect potential trauma indicators
+                trauma_indicators = self._detect_trauma_indicators(conversation_text, profile, llm)
+                if trauma_indicators:
+                    profile.trauma_indicators.update(trauma_indicators)
+                
+                # Analyze cultural context
+                cultural_insights = self._analyze_cultural_context(conversation_text, profile, llm)
+                if cultural_insights:
+                    profile.cultural_context.update(cultural_insights)
+                
+                # Update progress tracking
+                self._update_long_term_progress(user_id, crisis_level, mood_score, pattern_analysis)
+                
+                # Save updated profile
+                profile.last_updated = datetime.now().isoformat()
+                self._save_psychological_profile(profile)
+                
+                print(f"✅ Updated psychological profile with AI insights")
+            else:
+                print(f"⚠️ LLM unavailable for psychological pattern analysis")
+                
+        except Exception as e:
+            print(f"❌ Error updating psychological profile: {e}")
+
+    def _analyze_psychological_patterns(self, text: str, profile: PsychologicalProfile, llm=None) -> Dict[str, Any]:
+        """AI-powered deep psychological pattern analysis"""
+        try:
+            if not llm:
+                return {}
+                
+            # Get existing patterns for context
+            existing_patterns = {
+                'core_patterns': profile.core_patterns,
+                'cognitive_patterns': profile.cognitive_patterns,
+                'emotional_patterns': profile.emotional_regulation_patterns,
+                'coping_mechanisms': profile.coping_mechanisms
+            }
+            
+            analysis_prompt = f"""
+You are a clinical psychologist analyzing conversation text for deep psychological patterns.
+
+Current Text: "{text}"
+
+Existing Profile Context:
+- Known core patterns: {list(existing_patterns['core_patterns'].keys())[:5]}
+- Known cognitive patterns: {list(existing_patterns['cognitive_patterns'].keys())[:5]}
+- Known coping mechanisms: {list(existing_patterns['coping_mechanisms'].keys())[:3]}
+
+Analyze this text for:
+1. CORE PATTERNS: Fundamental psychological patterns (attachment style, defense mechanisms, core beliefs)
+2. COGNITIVE PATTERNS: Thinking patterns (cognitive distortions, rumination, catastrophizing)
+3. EMOTIONAL PATTERNS: Emotional regulation strategies and patterns
+4. COPING MECHANISMS: How the person deals with stress and challenges
+5. TRIGGER PATTERNS: What seems to trigger emotional responses
+
+For each pattern found, provide:
+- Pattern name
+- Evidence from text
+- Confidence level (0.1-1.0)
+- Therapeutic implications
+
+IMPORTANT: Return ONLY valid JSON, no additional text or explanation.
+
+JSON format required:
+{{
+  "core_patterns": {{"pattern_name": {{"evidence": "text_evidence", "confidence": 0.8, "implications": "therapeutic_notes"}}}},
+  "cognitive_patterns": {{}},
+  "emotional_patterns": {{}},
+  "coping_mechanisms": {{}},
+  "trigger_patterns": {{}}
+}}
+
+Respond with JSON only:"""
+            
+            response = llm.invoke(analysis_prompt)
+            ai_analysis = self._extract_llm_content(response)
+            
+            # Parse JSON response with enhanced extraction
+            import json
+            import re
+            try:
+                # First try direct JSON parsing
+                pattern_analysis = json.loads(ai_analysis)
+                print(f"🧠 AI identified {sum(len(patterns) for patterns in pattern_analysis.values())} psychological patterns")
+                return pattern_analysis
+            except json.JSONDecodeError:
+                # Try to extract JSON from text
+                json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', ai_analysis, re.DOTALL)
+                if json_match:
+                    try:
+                        pattern_analysis = json.loads(json_match.group())
+                        print(f"🧠 Extracted {sum(len(patterns) for patterns in pattern_analysis.values())} patterns from AI text")
+                        return pattern_analysis
+                    except json.JSONDecodeError:
+                        pass
+                print(f"⚠️ Could not parse AI psychological analysis: {ai_analysis[:100]}...")
+                return self._extract_patterns_from_text(ai_analysis)
+                
+        except Exception as e:
+            print(f"⚠️ Psychological pattern analysis failed: {e}")
+            return {}
+
+    def _detect_trauma_indicators(self, text: str, profile: PsychologicalProfile, llm=None) -> Dict[str, Any]:
+        """Detect potential trauma indicators with appropriate sensitivity"""
+        try:
+            if not llm:
+                return {}
+                
+            trauma_analysis_prompt = f"""
+You are a trauma-informed mental health professional analyzing text for potential trauma indicators.
+
+Text: "{text}"
+
+Existing trauma context: {list(profile.trauma_indicators.keys())[:3] if profile.trauma_indicators else 'None identified'}
+
+Analyze for POTENTIAL indicators of:
+1. Hypervigilance or anxiety responses
+2. Avoidance patterns
+3. Emotional numbing or disconnection
+4. Intrusive thoughts or memories references
+5. Sleep or concentration difficulties
+6. Emotional dysregulation patterns
+7. Trust or relationship difficulties
+
+IMPORTANT: 
+- Only note POTENTIAL indicators, not diagnoses
+- Focus on behavioral and emotional patterns
+- Be sensitive and non-judgmental
+- Consider cultural context
+
+IMPORTANT: Return ONLY valid JSON, no additional text or explanation.
+
+JSON format required:
+{{
+  "hypervigilance": {{"present": true, "evidence": "text", "confidence": 0.8}},
+  "avoidance": {{"present": false, "evidence": "", "confidence": 0.0}},
+  "emotional_numbing": {{}},
+  "intrusive_patterns": {{}},
+  "concentration_issues": {{}},
+  "emotional_dysregulation": {{}},
+  "trust_issues": {{}}
+}}
+
+Respond with JSON only:"""
+            
+            response = llm.invoke(trauma_analysis_prompt)
+            ai_analysis = self._extract_llm_content(response)
+            
+            import json
+            import re
+            try:
+                # First try direct JSON parsing
+                trauma_indicators = json.loads(ai_analysis)
+            except json.JSONDecodeError:
+                # Try to extract JSON from text
+                json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', ai_analysis, re.DOTALL)
+                if json_match:
+                    try:
+                        trauma_indicators = json.loads(json_match.group())
+                    except json.JSONDecodeError:
+                        print(f"⚠️ Could not parse trauma analysis: {ai_analysis[:100]}...")
+                        return {}
+                else:
+                    print(f"⚠️ No JSON found in trauma analysis: {ai_analysis[:100]}...")
+                    return {}
+            
+            # Filter out low-confidence indicators
+            filtered_indicators = {}
+            if isinstance(trauma_indicators, dict):
+                for indicator, data in trauma_indicators.items():
+                    if isinstance(data, dict) and data.get('present') and data.get('confidence', 0) > 0.6:
+                        filtered_indicators[indicator] = data
+                    
+            if filtered_indicators:
+                print(f"🔍 Identified {len(filtered_indicators)} potential trauma indicators")
+            return filtered_indicators
+                
+        except Exception as e:
+            print(f"⚠️ Trauma indicator analysis failed: {e}")
+            return {}
+
+    def _analyze_cultural_context(self, text: str, profile: PsychologicalProfile, llm=None) -> Dict[str, Any]:
+        """Analyze cultural context and adapt therapeutic approach accordingly"""
+        try:
+            if not llm:
+                return {}
+                
+            cultural_analysis_prompt = f"""
+You are a culturally-informed mental health professional analyzing text for cultural context.
+
+Text: "{text}"
+
+Current cultural context: {profile.cultural_context}
+
+Analyze for:
+1. Cultural background indicators (language use, cultural references, values)
+2. Religious or spiritual references
+3. Family dynamics and cultural expectations
+4. Cultural stigma around mental health
+5. Cultural strengths and resources
+6. Communication styles (direct/indirect, collectivist/individualist)
+7. Cultural coping mechanisms
+
+Consider Pakistani/South Asian context specifically, but remain open to other cultural indicators.
+
+IMPORTANT: Return ONLY valid JSON, no additional text or explanation.
+
+JSON format required:
+{{
+  "cultural_background": {{"indicators": [], "confidence": 0.8}},
+  "religious_spiritual": {{"present": false, "type": "", "role": "", "confidence": 0.5}},
+  "family_dynamics": {{"style": "individualist", "expectations": [], "support_level": "medium", "confidence": 0.6}},
+  "mental_health_stigma": {{"present": false, "level": "low", "manifestations": [], "confidence": 0.5}},
+  "cultural_strengths": [],
+  "communication_style": {{"directness": "direct", "orientation": "individualist", "confidence": 0.6}},
+  "cultural_coping": []
+}}
+
+Respond with JSON only:"""
+            
+            response = llm.invoke(cultural_analysis_prompt)
+            ai_analysis = self._extract_llm_content(response)
+            
+            import json
+            import re
+            try:
+                # First try direct JSON parsing
+                cultural_insights = json.loads(ai_analysis)
+            except json.JSONDecodeError:
+                # Try to extract JSON from text
+                json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', ai_analysis, re.DOTALL)
+                if json_match:
+                    try:
+                        cultural_insights = json.loads(json_match.group())
+                    except json.JSONDecodeError:
+                        print(f"⚠️ Could not parse cultural analysis JSON: {ai_analysis[:100]}...")
+                        return {}
+                else:
+                    print(f"⚠️ No JSON found in cultural analysis: {ai_analysis[:100]}...")
+                    return {}
+            
+            # Validate and process cultural insights
+            processed_insights = {}
+            if isinstance(cultural_insights, dict):
+                for key, value in cultural_insights.items():
+                    if isinstance(value, dict) and value.get('confidence', 0) > 0.5:
+                        processed_insights[key] = value
+                    elif isinstance(value, list) and value:
+                        processed_insights[key] = value
+                        
+            if processed_insights:
+                print(f"🌍 Identified cultural context insights: {list(processed_insights.keys())}")
+            return processed_insights
+                
+        except Exception as e:
+            print(f"⚠️ Cultural context analysis failed: {e}")
+            return {}
+
+    def _update_long_term_progress(self, user_id: str, crisis_level: str, mood_score: Optional[float], 
+                                  pattern_analysis: Dict[str, Any]):
+        """Track long-term therapeutic progress across sessions"""
+        try:
+            user_hash = self.security_manager.hash_pii(user_id)
+            
+            progress_entry = {
+                "user_id": user_hash,
+                "timestamp": datetime.now(),
+                "crisis_level": crisis_level,
+                "mood_score": mood_score,
+                "patterns_identified": len([p for patterns in pattern_analysis.values() for p in patterns]),
+                "pattern_categories": list(pattern_analysis.keys()),
+                "session_quality_indicators": {
+                    "emotional_awareness": self._assess_emotional_awareness(pattern_analysis),
+                    "coping_effectiveness": self._assess_coping_effectiveness(pattern_analysis),
+                    "insight_development": self._assess_insight_development(pattern_analysis),
+                    "progress_momentum": self._assess_progress_momentum(crisis_level, mood_score)
+                },
+                "therapeutic_goals_progress": self._assess_therapeutic_goals(pattern_analysis),
+                "risk_level_trend": self._assess_risk_trend(crisis_level, user_hash),
+                "resilience_indicators": self._identify_resilience_indicators(pattern_analysis)
+            }
+            
+            # Save progress entry
+            self.long_term_progress.insert_one(progress_entry)
+            
+            # Update profile with progress summary
+            self._update_profile_progress_summary(user_hash, progress_entry)
+            
+            print(f"✅ Updated long-term progress tracking")
+            
+        except Exception as e:
+            print(f"❌ Error updating long-term progress: {e}")
+
+    def _save_psychological_profile(self, profile: PsychologicalProfile):
+        """Save psychological profile to database"""
+        try:
+            profile_doc = {
+                "user_id": profile.user_id,
+                "core_patterns": profile.core_patterns,
+                "trauma_indicators": profile.trauma_indicators,
+                "cultural_context": profile.cultural_context,
+                "long_term_progress": profile.long_term_progress,
+                "therapeutic_preferences": profile.therapeutic_preferences,
+                "risk_factors": profile.risk_factors,
+                "resilience_factors": profile.resilience_factors,
+                "cognitive_patterns": profile.cognitive_patterns,
+                "emotional_regulation_patterns": profile.emotional_regulation_patterns,
+                "relationship_patterns": profile.relationship_patterns,
+                "coping_mechanisms": profile.coping_mechanisms,
+                "trigger_patterns": profile.trigger_patterns,
+                "last_updated": profile.last_updated
+            }
+            
+            self.psychological_profiles.update_one(
+                {"user_id": profile.user_id},
+                {"$set": profile_doc},
+                upsert=True
+            )
+            
+        except Exception as e:
+            print(f"❌ Error saving psychological profile: {e}")
+
+    def _extract_llm_content(self, response) -> str:
+        """Safely extract content from LLM response"""
+        try:
+            if hasattr(response, 'content'):
+                content = response.content
+                if isinstance(content, str):
+                    return content.strip()
+                elif isinstance(content, list) and content:
+                    return str(content[0]).strip()
+                else:
+                    return str(content).strip()
+            else:
+                return str(response).strip()
+        except Exception as e:
+            print(f"⚠️ Error extracting content from LLM response: {e}")
+            return str(response).strip() if response else ""
+
+    def _assess_emotional_awareness(self, pattern_analysis: Dict[str, Any]) -> float:
+        """Assess level of emotional awareness from pattern analysis"""
+        try:
+            awareness_score = 0.0
+            
+            # Check emotional patterns
+            emotional_patterns = pattern_analysis.get('emotional_patterns', {})
+            if emotional_patterns:
+                awareness_score += 0.3
+                
+            # Check for emotional vocabulary and insight
+            core_patterns = pattern_analysis.get('core_patterns', {})
+            for pattern_name, data in core_patterns.items():
+                if isinstance(data, dict) and 'emotion' in pattern_name.lower():
+                    confidence = data.get('confidence', 0)
+                    awareness_score += confidence * 0.2
+                    
+            return min(awareness_score, 1.0)
+        except:
+            return 0.5  # Default neutral score
+
+    def _assess_coping_effectiveness(self, pattern_analysis: Dict[str, Any]) -> float:
+        """Assess effectiveness of coping mechanisms"""
+        try:
+            coping_score = 0.0
+            coping_mechanisms = pattern_analysis.get('coping_mechanisms', {})
+            
+            for mechanism, data in coping_mechanisms.items():
+                if isinstance(data, dict):
+                    confidence = data.get('confidence', 0)
+                    # Positive coping mechanisms get higher scores
+                    if any(positive in mechanism.lower() for positive in 
+                          ['support', 'exercise', 'mindfulness', 'problem-solving', 'communication']):
+                        coping_score += confidence * 0.4
+                    else:
+                        coping_score += confidence * 0.2
+                        
+            return min(coping_score, 1.0)
+        except:
+            return 0.5
+
+    def _assess_insight_development(self, pattern_analysis: Dict[str, Any]) -> float:
+        """Assess level of psychological insight development"""
+        try:
+            insight_score = 0.0
+            
+            # Check cognitive patterns for insight indicators
+            cognitive_patterns = pattern_analysis.get('cognitive_patterns', {})
+            for pattern_name, data in cognitive_patterns.items():
+                if isinstance(data, dict):
+                    confidence = data.get('confidence', 0)
+                    # Self-awareness and reflection patterns indicate insight
+                    if any(insight_word in pattern_name.lower() for insight_word in 
+                          ['awareness', 'reflection', 'understanding', 'realize', 'recognize']):
+                        insight_score += confidence * 0.3
+                        
+            return min(insight_score, 1.0)
+        except:
+            return 0.5
+
+    def _assess_progress_momentum(self, crisis_level: str, mood_score: Optional[float]) -> float:
+        """Assess overall progress momentum"""
+        try:
+            momentum_score = 0.0
+            
+            # Crisis level indicates current state
+            crisis_weights = {
+                'none': 1.0,
+                'low': 0.8,
+                'medium': 0.5,
+                'high': 0.2,
+                'critical': 0.0
+            }
+            momentum_score += crisis_weights.get(crisis_level, 0.5) * 0.5
+            
+            # Mood score indicates subjective wellbeing
+            if mood_score:
+                normalized_mood = mood_score / 10.0  # Assuming 0-10 scale
+                momentum_score += normalized_mood * 0.5
+                
+            return min(momentum_score, 1.0)
+        except:
+            return 0.5
+
+    def _assess_therapeutic_goals(self, pattern_analysis: Dict[str, Any]) -> Dict[str, float]:
+        """Assess progress toward common therapeutic goals"""
+        try:
+            goals_progress = {
+                'emotional_regulation': 0.0,
+                'stress_management': 0.0,
+                'relationship_skills': 0.0,
+                'self_awareness': 0.0,
+                'coping_skills': 0.0
+            }
+            
+            # Emotional regulation
+            emotional_patterns = pattern_analysis.get('emotional_patterns', {})
+            if emotional_patterns:
+                avg_confidence = sum(data.get('confidence', 0) for data in emotional_patterns.values() 
+                                   if isinstance(data, dict)) / len(emotional_patterns)
+                goals_progress['emotional_regulation'] = avg_confidence
+            
+            # Coping skills
+            coping_mechanisms = pattern_analysis.get('coping_mechanisms', {})
+            if coping_mechanisms:
+                avg_confidence = sum(data.get('confidence', 0) for data in coping_mechanisms.values() 
+                                   if isinstance(data, dict)) / len(coping_mechanisms)
+                goals_progress['coping_skills'] = avg_confidence
+            
+            # Self-awareness
+            core_patterns = pattern_analysis.get('core_patterns', {})
+            awareness_patterns = [data for name, data in core_patterns.items() 
+                                if isinstance(data, dict) and 'aware' in name.lower()]
+            if awareness_patterns:
+                avg_confidence = sum(data.get('confidence', 0) for data in awareness_patterns) / len(awareness_patterns)
+                goals_progress['self_awareness'] = avg_confidence
+                
+            return goals_progress
+        except:
+            return {goal: 0.5 for goal in ['emotional_regulation', 'stress_management', 
+                                         'relationship_skills', 'self_awareness', 'coping_skills']}
+
+    def _assess_risk_trend(self, current_crisis_level: str, user_hash: str) -> str:
+        """Assess risk level trend over time"""
+        try:
+            # Get recent crisis levels from database
+            recent_entries = list(self.long_term_progress.find(
+                {"user_id": user_hash}
+            ).sort("timestamp", -1).limit(5))
+            
+            if len(recent_entries) < 2:
+                return "insufficient_data"
+                
+            crisis_values = {'none': 0, 'low': 1, 'medium': 2, 'high': 3, 'critical': 4}
+            recent_values = [crisis_values.get(entry.get('crisis_level', 'none'), 0) 
+                           for entry in recent_entries]
+            
+            current_value = crisis_values.get(current_crisis_level, 0)
+            
+            if current_value < recent_values[1]:  # Improving
+                return "decreasing"
+            elif current_value > recent_values[1]:  # Worsening
+                return "increasing"
+            else:
+                return "stable"
+                
+        except:
+            return "unknown"
+
+    def _identify_resilience_indicators(self, pattern_analysis: Dict[str, Any]) -> List[str]:
+        """Identify resilience indicators from pattern analysis"""
+        try:
+            resilience_indicators = []
+            
+            # Check coping mechanisms for positive indicators
+            coping_mechanisms = pattern_analysis.get('coping_mechanisms', {})
+            for mechanism, data in coping_mechanisms.items():
+                if isinstance(data, dict) and data.get('confidence', 0) > 0.6:
+                    if any(resilient in mechanism.lower() for resilient in 
+                          ['support', 'exercise', 'mindfulness', 'problem-solving', 'help-seeking']):
+                        resilience_indicators.append(mechanism)
+            
+            # Check core patterns for resilience
+            core_patterns = pattern_analysis.get('core_patterns', {})
+            for pattern, data in core_patterns.items():
+                if isinstance(data, dict) and data.get('confidence', 0) > 0.6:
+                    if any(resilient in pattern.lower() for resilient in 
+                          ['optimism', 'hope', 'strength', 'perseverance', 'adaptability']):
+                        resilience_indicators.append(pattern)
+                        
+            return resilience_indicators[:5]  # Limit to top 5
+        except:
+            return []
+
+    def _update_profile_progress_summary(self, user_hash: str, progress_entry: Dict[str, Any]):
+        """Update psychological profile with progress summary"""
+        try:
+            progress_summary = {
+                'last_assessment': progress_entry['timestamp'].isoformat(),
+                'current_risk_trend': progress_entry.get('risk_level_trend', 'unknown'),
+                'therapeutic_momentum': progress_entry.get('session_quality_indicators', {}).get('progress_momentum', 0.5),
+                'resilience_indicators': progress_entry.get('resilience_indicators', [])
+            }
+            
+            self.psychological_profiles.update_one(
+                {"user_id": user_hash},
+                {"$set": {"long_term_progress": progress_summary}},
+                upsert=True
+            )
+            
+        except Exception as e:
+            print(f"❌ Error updating profile progress summary: {e}")
+
+    def _extract_patterns_from_text(self, ai_text: str) -> Dict[str, Any]:
+        """Fallback method to extract patterns when JSON parsing fails"""
+        try:
+            patterns = {
+                'core_patterns': {},
+                'cognitive_patterns': {},
+                'emotional_patterns': {},
+                'coping_mechanisms': {},
+                'trigger_patterns': {}
+            }
+            
+            lines = ai_text.split('\n')
+            current_category = None
+            
+            for line in lines:
+                line = line.strip()
+                if any(category in line.lower() for category in patterns.keys()):
+                    for category in patterns.keys():
+                        if category.replace('_', ' ') in line.lower():
+                            current_category = category
+                            break
+                elif current_category and ':' in line:
+                    pattern_name = line.split(':')[0].strip()
+                    if pattern_name:
+                        patterns[current_category][pattern_name] = {
+                            'evidence': line,
+                            'confidence': 0.7,
+                            'implications': 'Requires further assessment'
+                        }
+            
+            return patterns
+        except:
+            return {
+                'core_patterns': {},
+                'cognitive_patterns': {},
+                'emotional_patterns': {},
+                'coping_mechanisms': {},
+                'trigger_patterns': {}
+            }
 
     def get_user_analytics(self, user_login: Optional[str] = None) -> Dict:
         """Get user analytics and insights"""
@@ -1776,22 +2471,32 @@ Instructions:
 3. Look for both explicit and implicit crisis indicators
 4. Identify if the harm is directed toward self, others, or both
 
+IMPORTANT: General sadness, anxiety, or emotional distress WITHOUT explicit harm thoughts should be:
+- CRISIS_LEVEL: LOW (if emotional distress) or NONE (if mild)
+- HARM_TYPE: NONE (unless explicit harm ideation is present)
+
+Examples:
+- "I'm feeling down" → LOW/NONE
+- "I'm worried about my future" → LOW/NONE  
+- "I want to hurt myself" → HIGH/SELF_HARM
+- "I have thoughts of ending it" → HIGH/SELF_HARM
+
 Return your analysis in this EXACT format:
 CRISIS_LEVEL: [one of: CRITICAL, HIGH, MEDIUM, LOW, NONE]
 HARM_TYPE: [one of: SELF_HARM, HARM_TO_OTHERS, BOTH, NONE]
 
 Crisis Levels:
 - CRITICAL: Immediate intent or plan to harm self or others
-- HIGH: Strong ideation or distress about harming self or others
-- MEDIUM: Moderate emotional distress or concerning thoughts about harm
-- LOW: Mild emotional difficulties
+- HIGH: Strong ideation or distress with specific thoughts about harming self or others
+- MEDIUM: Moderate emotional distress WITH concerning thoughts about harm (not general sadness)
+- LOW: General emotional difficulties, sadness, or anxiety WITHOUT harm ideation
 - NONE: No crisis indicators
 
 Harm Types:
-- SELF_HARM: Intent/thoughts about harming oneself
+- SELF_HARM: Explicit intent/thoughts about physically harming oneself (NOT general sadness/depression)
 - HARM_TO_OTHERS: Intent/thoughts about harming other people
 - BOTH: Both self-harm and harm to others mentioned
-- NONE: No harm indicators
+- NONE: No harm indicators (includes general sadness, anxiety, stress without harm thoughts)
 
 Analysis:"""
 
@@ -1926,10 +2631,14 @@ You are a mental health safety analyst detecting harm patterns in text.
 Text: "{text}"
 
 Analyze for specific harm intentions or expressions:
-1. SELF_HARM patterns: Any expressions of wanting to harm, hurt, or endanger oneself
-2. HARM_TO_OTHERS patterns: Any expressions of wanting to harm, hurt, or endanger other people
+1. SELF_HARM patterns: EXPLICIT expressions of wanting to physically harm, hurt, or endanger oneself
+   - Look for specific harm intentions, NOT general sadness or emotional distress
+   - Examples: "hurt myself", "want to die", "end my life" (NOT "feeling down", "sad", "depressed")
 
-Consider context and intent, not just keywords. Look for actual harmful intentions.
+2. HARM_TO_OTHERS patterns: EXPLICIT expressions of wanting to harm, hurt, or endanger other people
+   - Look for specific threats or intentions against others
+
+CRITICAL: General emotional states like sadness, anxiety, worry, or feeling down are NOT harm patterns unless they explicitly mention harming behaviors.
 
 Respond with detected patterns (can be multiple):
 - SELF_HARM_DETECTED: Self-harm patterns found
@@ -1973,13 +2682,19 @@ Analyze this text for harm intentions. This is a critical safety assessment.
 
 Text: "{text}"
 
-Determine if the text expresses:
-1. SELF_HARM: Intent, thoughts, or plans to harm oneself
-2. HARM_TO_OTHERS: Intent, thoughts, or plans to harm other people  
+Determine if the text expresses EXPLICIT harm intentions:
+1. SELF_HARM: EXPLICIT intent, thoughts, or plans to physically harm oneself
+2. HARM_TO_OTHERS: EXPLICIT intent, thoughts, or plans to harm other people  
 3. BOTH: Both self-harm and harm to others mentioned
-4. NONE: No specific harm intentions detected
+4. NONE: No specific harm intentions (includes general sadness, depression, anxiety, worry)
 
-Consider context, metaphorical language, and actual intent.
+CRITICAL EXAMPLES:
+- "I'm feeling down/sad/depressed" → NONE
+- "I'm worried about my future" → NONE  
+- "I want to hurt myself" → SELF_HARM
+- "I'm thinking of ending my life" → SELF_HARM
+
+Consider context, metaphorical language, and actual intent. General emotional distress is NOT harm.
 
 Return ONLY one word: SELF_HARM, HARM_TO_OTHERS, BOTH, or NONE
 
@@ -1988,15 +2703,30 @@ Assessment:"""
                 ai_response = self.llm.invoke(harm_analysis_prompt)
                 ai_harm_assessment = self._extract_llm_content(ai_response).upper().strip()
                 
+                # Safety check: Don't classify general emotional distress as self-harm
+                general_distress_patterns = ['feeling down', 'feel down', 'feeling sad', 'feel sad', 
+                                           'feeling depressed', 'feel depressed', 'feeling anxious', 
+                                           'feel anxious', 'worried about', 'uncertain future', 
+                                           'feeling stressed', 'feel stressed']
+                
+                is_general_distress = any(pattern in text.lower() for pattern in general_distress_patterns)
+                has_explicit_harm = any(harm_word in text.lower() for harm_word in 
+                                      ['hurt myself', 'harm myself', 'kill myself', 'end my life', 
+                                       'want to die', 'suicide', 'self harm'])
+                
                 # Combine AI analysis with pattern detection (safety first)
                 if 'BOTH' in ai_harm_assessment or (pattern_self_harm and pattern_harm_others):
                     harm_type = HarmType.BOTH
                 elif 'HARM_TO_OTHERS' in ai_harm_assessment or pattern_harm_others:
                     harm_type = HarmType.HARM_TO_OTHERS
-                elif 'SELF_HARM' in ai_harm_assessment or pattern_self_harm:
+                elif ('SELF_HARM' in ai_harm_assessment or pattern_self_harm) and not (is_general_distress and not has_explicit_harm):
                     harm_type = HarmType.SELF_HARM
                 else:
                     harm_type = HarmType.NONE
+                    
+                # Log when safety check prevents false positive
+                if is_general_distress and not has_explicit_harm and ('SELF_HARM' in ai_harm_assessment or pattern_self_harm):
+                    print(f"🛡️ Safety check: Prevented general distress from being classified as self-harm")
                     
                 if harm_type != HarmType.NONE:
                     print(f"🤖 AI harm analysis: {ai_harm_assessment} (Final: {harm_type.value})")
@@ -3511,12 +4241,187 @@ Provide 2-3 sentences of relevant therapeutic approach or supportive guidance:""
             print(f"⚠️ Context retrieval error: {e}")
             return ""
 
+    def _get_dynamic_context_with_profile(self, query: str, crisis_level: CrisisLevel, 
+                                        response_type: str, profile: PsychologicalProfile) -> str:
+        """Enhanced context retrieval incorporating psychological profile insights"""
+        try:
+            # Create profile-informed query enhancement
+            if self.llm:
+                profile_context = self._create_profile_context_summary(profile)
+                
+                enhanced_query_prompt = f"""
+You are a mental health knowledge specialist creating a personalized query for therapeutic context retrieval.
+
+Original Query: "{query}"
+Crisis Level: {crisis_level.value}
+Response Type: {response_type}
+
+User's Psychological Profile Context:
+{profile_context}
+
+Create an enhanced search query that incorporates:
+1. The user's known psychological patterns
+2. Their cultural context and therapeutic preferences  
+3. Identified trauma indicators (if any)
+4. Their effective coping mechanisms
+5. Appropriate therapeutic approaches for their profile
+
+Enhanced Query (max 150 characters):"""
+
+                try:
+                    enhancement_response = self.llm.invoke(enhanced_query_prompt)
+                    enhanced_query = self._extract_llm_content(enhancement_response)[:150]
+                    print(f"🧠 Profile-enhanced query: {enhanced_query}")
+                except Exception as e:
+                    print(f"⚠️ Query enhancement failed: {e}")
+                    enhanced_query = query
+            else:
+                enhanced_query = query
+
+            # Get base therapeutic context
+            base_context = self._get_dynamic_context(enhanced_query, crisis_level, response_type)
+            
+            # Add profile-specific therapeutic guidance
+            profile_guidance = self._generate_profile_specific_guidance(profile, crisis_level, response_type)
+            
+            # Combine contexts
+            if profile_guidance:
+                combined_context = f"{base_context}\n\nPersonalized Therapeutic Approach:\n{profile_guidance}"
+                print(f"🎯 Added {len(profile_guidance)} chars of personalized guidance")
+                return combined_context[:1500]  # Limit total context size
+            else:
+                return base_context
+                
+        except Exception as e:
+            print(f"⚠️ Profile-enhanced context retrieval error: {e}")
+            return self._get_dynamic_context(query, crisis_level, response_type)
+
+    def _get_basic_context_with_profile(self, profile: PsychologicalProfile) -> str:
+        """Get basic context enhanced with profile awareness"""
+        try:
+            if not profile.core_patterns and not profile.cultural_context:
+                return "Basic supportive conversation guidelines: be warm, empathetic, and present."
+            
+            # Create profile-aware basic guidance
+            profile_insights = []
+            
+            if profile.cultural_context:
+                cultural_keys = list(profile.cultural_context.keys())[:2]
+                if cultural_keys:
+                    profile_insights.append(f"Cultural awareness: {', '.join(cultural_keys)}")
+            
+            if profile.therapeutic_preferences:
+                pref_keys = list(profile.therapeutic_preferences.keys())[:2]
+                if pref_keys:
+                    profile_insights.append(f"Therapeutic preferences: {', '.join(pref_keys)}")
+            
+            if profile.coping_mechanisms:
+                coping_keys = list(profile.coping_mechanisms.keys())[:2]
+                if coping_keys:
+                    profile_insights.append(f"Known coping strategies: {', '.join(coping_keys)}")
+            
+            base_context = "Be warm, empathetic, and culturally sensitive."
+            if profile_insights:
+                context_addition = " Consider: " + "; ".join(profile_insights)
+                return base_context + context_addition
+            else:
+                return base_context
+                
+        except Exception as e:
+            print(f"⚠️ Basic profile context error: {e}")
+            return "Basic supportive conversation guidelines: be warm, empathetic, and present."
+
+    def _create_profile_context_summary(self, profile: PsychologicalProfile) -> str:
+        """Create a concise summary of psychological profile for context"""
+        try:
+            summary_parts = []
+            
+            # Core patterns (most important)
+            if profile.core_patterns:
+                patterns = list(profile.core_patterns.keys())[:3]
+                summary_parts.append(f"Core patterns: {', '.join(patterns)}")
+            
+            # Cultural context
+            if profile.cultural_context:
+                cultural_info = []
+                if 'cultural_background' in profile.cultural_context:
+                    cultural_info.append("cultural background identified")
+                if 'communication_style' in profile.cultural_context:
+                    style = profile.cultural_context['communication_style']
+                    if isinstance(style, dict):
+                        cultural_info.append(f"{style.get('directness', 'unknown')} communication")
+                if cultural_info:
+                    summary_parts.append(f"Cultural: {', '.join(cultural_info)}")
+            
+            # Trauma indicators (handle sensitively)
+            if profile.trauma_indicators:
+                trauma_count = len([t for t in profile.trauma_indicators.values() 
+                                 if isinstance(t, dict) and t.get('present')])
+                if trauma_count > 0:
+                    summary_parts.append(f"Trauma-informed approach needed ({trauma_count} indicators)")
+            
+            # Coping mechanisms
+            if profile.coping_mechanisms:
+                coping = list(profile.coping_mechanisms.keys())[:2]
+                summary_parts.append(f"Effective coping: {', '.join(coping)}")
+            
+            # Therapeutic preferences
+            if profile.therapeutic_preferences:
+                prefs = list(profile.therapeutic_preferences.keys())[:2]
+                summary_parts.append(f"Therapeutic preferences: {', '.join(prefs)}")
+            
+            return " | ".join(summary_parts) if summary_parts else "Profile being developed"
+            
+        except Exception as e:
+            print(f"⚠️ Profile summary creation error: {e}")
+            return "Profile context unavailable"
+
+    def _generate_profile_specific_guidance(self, profile: PsychologicalProfile, 
+                                          crisis_level: CrisisLevel, response_type: str) -> str:
+        """Generate specific therapeutic guidance based on user's psychological profile"""
+        try:
+            if not self.llm:
+                return ""
+                
+            profile_summary = self._create_profile_context_summary(profile)
+            
+            guidance_prompt = f"""
+You are a clinical psychologist creating personalized therapeutic guidance.
+
+User's Profile: {profile_summary}
+Current Crisis Level: {crisis_level.value}
+Response Type: {response_type}
+
+Based on this psychological profile, provide specific therapeutic guidance for:
+1. Communication approach that matches their style
+2. Therapeutic techniques most suitable for their patterns
+3. Cultural considerations for effective therapy
+4. Trauma-informed modifications (if applicable)
+5. Specific triggers or sensitivities to be aware of
+
+Keep guidance concise (max 300 words) and practical for immediate use.
+
+Personalized Therapeutic Guidance:"""
+
+            response = self.llm.invoke(guidance_prompt)
+            guidance = self._extract_llm_content(response)
+            
+            if guidance and len(guidance.strip()) > 20:
+                print(f"🎯 Generated personalized therapeutic guidance: {len(guidance)} chars")
+                return guidance.strip()[:300]  # Limit size
+            else:
+                return ""
+                
+        except Exception as e:
+            print(f"⚠️ Profile-specific guidance generation error: {e}")
+            return ""
+
 
 
     @require_valid_session
     @rate_limit_check
     def generate_enhanced_response(self, user_input: str, user_id: str, session_id: str) -> Tuple[str, CrisisLevel, HarmType]:
-        """Securely generate responses with comprehensive security controls"""
+        """Securely generate responses with comprehensive security controls and deep psychological understanding"""
         try:
             # Security validation
             if not user_input or len(user_input.strip()) == 0:
@@ -3537,6 +4442,10 @@ Provide 2-3 sentences of relevant therapeutic approach or supportive guidance:""
             
             # Use sanitized input for analysis
             final_input = sanitized_input
+            
+            # Get or create psychological profile for deep understanding
+            psychological_profile = self.storage.get_or_create_psychological_profile(user_id)
+            print(f"🧠 Retrieved psychological profile with {len(psychological_profile.core_patterns)} core patterns")
             
             # Enhanced crisis detection
             crisis_level, harm_type = self.crisis_detector.detect_crisis_level(final_input, user_id)
@@ -3563,16 +4472,16 @@ Provide 2-3 sentences of relevant therapeutic approach or supportive guidance:""
             print(f"🔒 Session isolated context: {session_context}")
             print(f"📝 Session isolated summary: {conversation_summary}")
 
-            # Get therapeutic context based on complexity analysis and response type
+            # Get therapeutic context enhanced with psychological profile
             if complexity_analysis['requires_ai_context'] or response_type in ['crisis', 'therapeutic']:
-                context = self._get_dynamic_context(final_input, crisis_level, response_type)
-                print(f"📚 Retrieved context ({response_type}): {len(context)} chars")
+                context = self._get_dynamic_context_with_profile(final_input, crisis_level, response_type, psychological_profile)
+                print(f"📚 Retrieved enhanced context ({response_type}): {len(context)} chars")
                 if context:
-                    print(f"📖 Context preview: {context[:100]}...")
+                    print(f"📖 Enhanced context preview: {context[:100]}...")
             else:
-                # Use minimal context for simple interactions
-                context = "Basic supportive conversation guidelines: be warm, empathetic, and present."
-                print(f"📚 Using minimal context for {complexity_analysis['complexity']} interaction")
+                # Use minimal context for simple interactions, still profile-aware
+                context = self._get_basic_context_with_profile(psychological_profile)
+                print(f"📚 Using profile-aware minimal context for {complexity_analysis['complexity']} interaction")
 
             # Generate response based on type
             if response_type == "crisis":
@@ -3624,7 +4533,7 @@ Provide 2-3 sentences of relevant therapeutic approach or supportive guidance:""
             #  Update session memory after generating response
             self._update_session_memory(user_id, session_id, final_input, response)
 
-            # Save conversation
+            # Save conversation and update psychological profile
             mood_score = self._calculate_mood_score(final_input)
             self.storage.save_conversation(
                 user_id=user_id,
@@ -3634,6 +4543,10 @@ Provide 2-3 sentences of relevant therapeutic approach or supportive guidance:""
                 crisis_level=crisis_level.value,
                 mood_score=mood_score
             )
+            
+            # Update psychological profile with conversation insights
+            self.storage.update_psychological_profile(user_id, final_input, crisis_level.value, mood_score, self.llm)
+            print(f"🧠 Updated psychological profile based on conversation")
 
             # Store complexity analysis for session learning
             if hasattr(self, 'session_memories') and user_id and session_id:
@@ -4318,7 +5231,7 @@ Timestamp: {datetime.now().strftime('%H:%M:%S')}
         print(backend_log)  # This goes to backend logs only
 
     def get_session_summary(self) -> str:
-        """Generate secure enhanced session summary with memory insights"""
+        """Generate secure enhanced session summary with psychological insights"""
         if not self.current_session_id:
             return "No active session to summarize."
 
@@ -4354,6 +5267,9 @@ Timestamp: {datetime.now().strftime('%H:%M:%S')}
             memory = self.therapy_bot._get_or_create_session_memory(
                 self.current_user_id, self.current_session_id
             )
+            
+            # Get psychological profile for deeper insights
+            psychological_profile = self.therapy_bot.storage.get_or_create_psychological_profile(self.current_user_id)
 
             # Calculate session metrics dynamically
             total_messages = len(history)
@@ -4365,7 +5281,7 @@ Timestamp: {datetime.now().strftime('%H:%M:%S')}
             # Get current timestamp for summary
             current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
 
-            summary = f"""📋 **Session Summary**
+            summary = f"""📋 **Enhanced Session Summary**
 Generated: {current_time}
 
 **📊 Session Metrics:**
@@ -4381,11 +5297,20 @@ Generated: {current_time}
 **💪 Strengths Identified:**
 {self._extract_strengths(history)}
 
+**🧠 Psychological Insights:**
+{self._get_psychological_insights(psychological_profile)}
+
+**📈 Progress Indicators:**
+{self._get_progress_indicators(psychological_profile, avg_mood, crisis_events)}
+
+**🌍 Cultural Context:**
+{self._get_cultural_insights(psychological_profile)}
+
 **🧠 Session Memory Insights:**
 {self._get_memory_insights(memory)}
 
-**🌱 Recommended Next Steps:**
-{self._generate_recommendations(history, memory)}"""
+**🌱 Personalized Recommendations:**
+{self._generate_personalized_recommendations(history, memory, psychological_profile)}"""
 
             return summary
 
@@ -4677,6 +5602,314 @@ Personalized Recommendations:"""
 
         except:
             return "• 🤝 Continue building on our conversation\n• 🌱 Practice the coping strategies we discussed"
+
+    def _get_psychological_insights(self, profile: PsychologicalProfile) -> str:
+        """Generate psychological insights from user profile"""
+        try:
+            insights = []
+            
+            # Core psychological patterns
+            if profile.core_patterns:
+                pattern_count = len(profile.core_patterns)
+                top_patterns = list(profile.core_patterns.keys())[:3]
+                insights.append(f"• 🧠 {pattern_count} core psychological patterns identified: {', '.join(top_patterns)}")
+            
+            # Cognitive patterns
+            if profile.cognitive_patterns:
+                cognitive_count = len(profile.cognitive_patterns)
+                insights.append(f"• 💭 {cognitive_count} cognitive patterns recognized")
+            
+            # Coping mechanisms
+            if profile.coping_mechanisms:
+                effective_coping = [name for name, data in profile.coping_mechanisms.items() 
+                                  if isinstance(data, dict) and data.get('confidence', 0) > 0.7]
+                if effective_coping:
+                    insights.append(f"• 💪 Effective coping strategies: {', '.join(effective_coping[:3])}")
+            
+            # Trauma-informed insights (handle sensitively)
+            if profile.trauma_indicators:
+                trauma_count = len([t for t in profile.trauma_indicators.values() 
+                                  if isinstance(t, dict) and t.get('present')])
+                if trauma_count > 0:
+                    insights.append(f"• 🛡️ Trauma-informed approach being used ({trauma_count} indicators)")
+            
+            return "\n".join(insights) if insights else "• 🌱 Psychological profile being developed through our conversations"
+            
+        except Exception as e:
+            print(f"⚠️ Error generating psychological insights: {e}")
+            return "• 🧠 Psychological insights being gathered"
+
+    def _get_progress_indicators(self, profile: PsychologicalProfile, avg_mood: float, crisis_events: int) -> str:
+        """Generate progress indicators from profile and session data"""
+        try:
+            indicators = []
+            
+            # Long-term progress summary
+            if profile.long_term_progress:
+                trend = profile.long_term_progress.get('current_risk_trend', 'unknown')
+                momentum = profile.long_term_progress.get('therapeutic_momentum', 0)
+                
+                if trend == 'decreasing':
+                    indicators.append("• 📈 Risk level trending downward (positive)")
+                elif trend == 'increasing':
+                    indicators.append("• 📊 Risk level needs attention (monitoring)")
+                elif trend == 'stable':
+                    indicators.append("• ➡️ Risk level stable")
+                
+                if momentum > 0.7:
+                    indicators.append("• 🚀 Strong therapeutic momentum")
+                elif momentum > 0.4:
+                    indicators.append("• 📈 Moderate therapeutic progress")
+            
+            # Current session indicators
+            if avg_mood >= 7.0:
+                indicators.append(f"• 😊 Above-average mood reported ({avg_mood:.1f}/10)")
+            elif avg_mood >= 5.0:
+                indicators.append(f"• 😐 Neutral mood range ({avg_mood:.1f}/10)")
+            else:
+                indicators.append(f"• 😔 Below-average mood reported ({avg_mood:.1f}/10)")
+            
+            if crisis_events == 0:
+                indicators.append("• ✅ No crisis events in this session")
+            else:
+                indicators.append(f"• ⚠️ {crisis_events} crisis event(s) addressed")
+            
+            # Resilience indicators
+            if profile.resilience_factors:
+                resilience_count = len(profile.resilience_factors)
+                indicators.append(f"• 💎 {resilience_count} resilience factors identified")
+            
+            return "\n".join(indicators) if indicators else "• 📊 Progress tracking initialized"
+            
+        except Exception as e:
+            print(f"⚠️ Error generating progress indicators: {e}")
+            return "• 📈 Progress indicators being tracked"
+
+    def _get_cultural_insights(self, profile: PsychologicalProfile) -> str:
+        """Generate cultural context insights from profile"""
+        try:
+            insights = []
+            
+            if not profile.cultural_context:
+                return "• 🌍 Cultural context being understood through our conversations"
+            
+            # Cultural background
+            if 'cultural_background' in profile.cultural_context:
+                bg_data = profile.cultural_context['cultural_background']
+                if isinstance(bg_data, dict) and bg_data.get('confidence', 0) > 0.6:
+                    insights.append("• 🌍 Cultural background context identified")
+            
+            # Communication style
+            if 'communication_style' in profile.cultural_context:
+                comm_data = profile.cultural_context['communication_style']
+                if isinstance(comm_data, dict):
+                    style = comm_data.get('directness', 'adaptive')
+                    orientation = comm_data.get('orientation', 'balanced')
+                    insights.append(f"• 💬 Communication style: {style}, {orientation} approach")
+            
+            # Family dynamics
+            if 'family_dynamics' in profile.cultural_context:
+                family_data = profile.cultural_context['family_dynamics']
+                if isinstance(family_data, dict):
+                    support_level = family_data.get('support_level', 'unknown')
+                    if support_level != 'unknown':
+                        insights.append(f"• 👨‍👩‍👧‍👦 Family support level: {support_level}")
+            
+            # Cultural strengths
+            if 'cultural_strengths' in profile.cultural_context:
+                strengths = profile.cultural_context['cultural_strengths']
+                if isinstance(strengths, list) and strengths:
+                    insights.append(f"• 💪 Cultural strengths: {', '.join(strengths[:3])}")
+            
+            # Mental health stigma awareness
+            if 'mental_health_stigma' in profile.cultural_context:
+                stigma_data = profile.cultural_context['mental_health_stigma']
+                if isinstance(stigma_data, dict) and stigma_data.get('present'):
+                    level = stigma_data.get('level', 'moderate')
+                    insights.append(f"• 🤝 Mental health stigma considerations: {level} level")
+            
+            return "\n".join(insights) if insights else "• 🌍 Cultural context being developed"
+            
+        except Exception as e:
+            print(f"⚠️ Error generating cultural insights: {e}")
+            return "• 🌍 Cultural awareness being integrated"
+
+    def _generate_personalized_recommendations(self, history: List[Dict], memory: SessionMemory, 
+                                             profile: PsychologicalProfile) -> str:
+        """Generate personalized recommendations based on psychological profile"""
+        try:
+            if self.therapy_bot and self.therapy_bot.llm:
+                # Create comprehensive context for personalized recommendations
+                profile_summary = self._create_profile_context_summary(profile)
+                crisis_count = sum(1 for conv in history if conv.get('crisis_level') in ['high', 'critical'])
+                mood_scores = [conv.get('mood_score', 5.0) for conv in history if conv.get('mood_score')]
+                avg_mood = sum(mood_scores) / len(mood_scores) if mood_scores else 5.0
+                
+                all_text = " ".join([conv['user_input'] for conv in history[-5:]])  # Last 5 conversations
+                
+                personalized_prompt = f"""
+You are a mental health professional creating highly personalized recommendations.
+
+Session Context:
+- Primary issue: {memory.primary_issue if memory.primary_issue else 'General support'}
+- Crisis events: {crisis_count}
+- Average mood: {avg_mood:.1f}/10
+- Conversation count: {len(history)}
+
+Psychological Profile Summary:
+{profile_summary}
+
+Recent conversation context: "{all_text[:400]}..."
+
+Create 4-5 highly personalized recommendations that consider:
+1. Their specific psychological patterns and cultural context
+2. Their effective coping mechanisms and build on them
+3. Their trauma-informed needs (if applicable)
+4. Their communication style and cultural background
+5. Their identified strengths and resilience factors
+6. Specific, actionable steps tailored to their unique profile
+
+Format as:
+• 🎯 Recommendation: Specific personalized action
+• 🧠 Recommendation: Cognitive/emotional strategy
+• 🌍 Recommendation: Culturally-informed approach
+• 💪 Recommendation: Strength-based intervention
+
+Make each recommendation specific to their profile, not generic advice.
+
+Personalized Recommendations:"""
+
+                response = self.therapy_bot.llm.invoke(personalized_prompt)
+                ai_recommendations = self.therapy_bot._extract_llm_content(response)
+                
+                if ai_recommendations and len(ai_recommendations.strip()) > 50:
+                    print(f"🎯 Generated personalized recommendations: {len(ai_recommendations)} chars")
+                    return ai_recommendations.strip()
+                else:
+                    print(f"⚠️ AI personalized recommendation generation failed, using enhanced fallback")
+                    return self._enhanced_fallback_recommendations(history, memory, profile)
+            else:
+                print(f"⚠️ LLM unavailable for personalized recommendations")
+                return self._enhanced_fallback_recommendations(history, memory, profile)
+                
+        except Exception as e:
+            print(f"⚠️ Personalized recommendation generation error: {e}")
+            return self._enhanced_fallback_recommendations(history, memory, profile)
+
+    def _enhanced_fallback_recommendations(self, history: List[Dict], memory: SessionMemory, 
+                                         profile: PsychologicalProfile) -> str:
+        """Enhanced fallback recommendations using profile data"""
+        try:
+            recommendations = []
+            
+            # Profile-based recommendations
+            if profile.coping_mechanisms:
+                effective_coping = [name for name, data in profile.coping_mechanisms.items() 
+                                  if isinstance(data, dict) and data.get('confidence', 0) > 0.6]
+                if effective_coping:
+                    recommendations.append(f"• 💪 Continue using your effective coping strategies: {', '.join(effective_coping[:2])}")
+            
+            # Cultural considerations
+            if profile.cultural_context and 'cultural_strengths' in profile.cultural_context:
+                strengths = profile.cultural_context['cultural_strengths']
+                if isinstance(strengths, list) and strengths:
+                    recommendations.append(f"• 🌍 Draw on your cultural strengths: {', '.join(strengths[:2])}")
+            
+            # Crisis-informed recommendations
+            crisis_count = sum(1 for conv in history if conv.get('crisis_level') in ['high', 'critical'])
+            if crisis_count > 0:
+                recommendations.append("• 🆘 Continue building your crisis management skills with professional support")
+            
+            # Progress-based recommendations
+            if profile.long_term_progress:
+                momentum = profile.long_term_progress.get('therapeutic_momentum', 0)
+                if momentum > 0.6:
+                    recommendations.append("• 📈 Maintain your positive therapeutic momentum")
+                else:
+                    recommendations.append("• 🌱 Focus on small, consistent steps for progress")
+            
+            # Issue-specific recommendations
+            if memory.primary_issue:
+                if 'work' in memory.primary_issue:
+                    recommendations.append("• 💼 Develop workplace-specific stress management techniques")
+                elif 'anxiety' in memory.primary_issue:
+                    recommendations.append("• 🌬️ Practice daily anxiety management techniques")
+                elif 'relationship' in memory.primary_issue:
+                    recommendations.append("• 💕 Focus on communication and boundary-setting skills")
+            
+            # Default recommendations if none generated
+            if not recommendations:
+                recommendations = [
+                    "• 🤝 Continue our therapeutic conversations",
+                    "• 🧠 Practice self-awareness and mindfulness",
+                    "• 💪 Build on the strengths you've shown",
+                    "• 🌱 Take things one step at a time"
+                ]
+            
+            return "\n".join(recommendations[:5])  # Limit to 5 recommendations
+            
+        except Exception as e:
+            print(f"⚠️ Enhanced fallback recommendations error: {e}")
+            return "• 🤝 Continue building on our therapeutic relationship\n• 🌱 Practice the insights we've discovered together"
+
+    def _create_profile_context_summary(self, profile: PsychologicalProfile) -> str:
+        """Create a concise summary of psychological profile for context (enhanced version)"""
+        try:
+            summary_parts = []
+            
+            # Core patterns (most important)
+            if profile.core_patterns:
+                patterns = list(profile.core_patterns.keys())[:3]
+                summary_parts.append(f"Core patterns: {', '.join(patterns)}")
+            
+            # Cultural context (enhanced)
+            if profile.cultural_context:
+                cultural_info = []
+                if 'cultural_background' in profile.cultural_context:
+                    cultural_info.append("cultural background identified")
+                if 'communication_style' in profile.cultural_context:
+                    style = profile.cultural_context['communication_style']
+                    if isinstance(style, dict):
+                        cultural_info.append(f"{style.get('directness', 'adaptive')} communication")
+                if 'family_dynamics' in profile.cultural_context:
+                    family = profile.cultural_context['family_dynamics']
+                    if isinstance(family, dict):
+                        support = family.get('support_level', 'unknown')
+                        if support != 'unknown':
+                            cultural_info.append(f"{support} family support")
+                if cultural_info:
+                    summary_parts.append(f"Cultural: {', '.join(cultural_info)}")
+            
+            # Trauma indicators (handle sensitively)
+            if profile.trauma_indicators:
+                trauma_count = len([t for t in profile.trauma_indicators.values() 
+                                 if isinstance(t, dict) and t.get('present')])
+                if trauma_count > 0:
+                    summary_parts.append(f"Trauma-informed approach needed ({trauma_count} indicators)")
+            
+            # Coping mechanisms (enhanced)
+            if profile.coping_mechanisms:
+                effective_coping = [name for name, data in profile.coping_mechanisms.items() 
+                                  if isinstance(data, dict) and data.get('confidence', 0) > 0.6]
+                if effective_coping:
+                    summary_parts.append(f"Effective coping: {', '.join(effective_coping[:2])}")
+            
+            # Therapeutic preferences
+            if profile.therapeutic_preferences:
+                prefs = list(profile.therapeutic_preferences.keys())[:2]
+                summary_parts.append(f"Therapeutic preferences: {', '.join(prefs)}")
+            
+            # Progress indicators
+            if profile.long_term_progress:
+                trend = profile.long_term_progress.get('current_risk_trend', 'unknown')
+                if trend != 'unknown':
+                    summary_parts.append(f"Progress trend: {trend}")
+            
+            return " | ".join(summary_parts) if summary_parts else "Comprehensive profile being developed"
+            
+        except Exception as e:
+            print(f"⚠️ Enhanced profile summary creation error: {e}")
+            return "Profile context available"
 
 # Initialize interface
 if therapy_bot:
