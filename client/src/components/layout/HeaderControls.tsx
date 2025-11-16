@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal, Moon } from 'lucide-react';
 import DarkModeToggle from '@/components/DarkModeToggle';
 
 interface HeaderControlsProps {
@@ -15,9 +15,9 @@ export default function HeaderControls({
   return (
     <>
       <div className={className}>
-        {/* Dark Mode with Text - Exact match from child-dashboard */}
+        {/* Dark Mode with Icon */}
         <div className="flex items-center gap-2">
-          <span className="text-lg font-semibold">Dark Mode</span>
+          <Moon className="w-5 h-5 text-foreground" />
           <DarkModeToggle />
         </div>
         
