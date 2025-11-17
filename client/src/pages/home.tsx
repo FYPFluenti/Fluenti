@@ -60,6 +60,14 @@ export default function Home() {
   const [showDemo, setShowDemo] = useState(false);
   const [showChatHelper, setShowChatHelper] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
+  const [selectedTherapistType, setSelectedTherapistType] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [therapists, setTherapists] = useState<any[]>([]);
+  const [isLoadingTherapists, setIsLoadingTherapists] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [requestingLocation, setRequestingLocation] = useState(false);
+  const [locationPermissionDenied, setLocationPermissionDenied] = useState(false);
+  const [chatMessages, setChatMessages] = useState<Array<{ type: 'user' | 'ai'; content: string; timestamp: Date }>>([]);
   
   const hideTimer = useRef<NodeJS.Timeout | null>(null);
 
@@ -102,6 +110,162 @@ export default function Home() {
     setShowFeedback(false);
     setFeedback("");
   };
+
+  // Get user location with explicit permission request
+  const getUserLocation = (): Promise<{ lat: number; lng: number }> => {
+    return new Promise((resolve, reject) => {
+      if (!navigator.geolocation) {
+        reject(new Error('Geolocation is not supported by your browser. Please use a modern browser.'));
+        return;
+      }
+
+      setRequestingLocation(true);
+      setLocationPermissionDenied(false);
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setRequestingLocation(false);
+          resolve({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => {
+          setRequestingLocation(false);
+          let errorMessage = 'Location access denied.';
+          
+          if (error.code === error.PERMISSION_DENIED) {
+            setLocationPermissionDenied(true);
+            errorMessage = 'Location permission denied. Please allow location access to find nearby therapists.';
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            errorMessage = 'Location information unavailable. Please check your device settings.';
+          } else if (error.code === error.TIMEOUT) {
+            errorMessage = 'Location request timed out. Please try again.';
+          } else {
+            errorMessage = `Location error: ${error.message}`;
+          }
+          
+          reject(new Error(errorMessage));
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        }
+      );
+    });
+  };
+
+  // Find therapists
+  const findTherapists = async (therapistType: string) => {
+    setIsLoadingTherapists(true);
+    setLocationError(null);
+
+    try {
+      // Get user location
+      const location = await getUserLocation();
+      setUserLocation(location);
+
+      // Call API to find therapists
+      const API_BASE_URL = import.meta.env.PROD 
+        ? 'https://fluentiai-backend.onrender.com' 
+        : 'http://localhost:3000';
+
+      const response = await fetch(`${API_BASE_URL}/api/therapists/find`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          latitude: location.lat,
+          longitude: location.lng,
+          therapistType: therapistType,
+          radius: 10000 // 10km radius
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to find therapists');
+      }
+
+      const data = await response.json();
+      
+      if (data.success && data.therapists) {
+        setTherapists(data.therapists);
+        
+        // Add AI response message
+        const totalFound = data.totalFound || data.therapists.length;
+        const aiMessage = data.therapists.length > 0
+          ? `I analyzed ${totalFound} nearby ${therapistType} therapist${totalFound > 1 ? 's' : ''} and found the top 3 with the highest reviews and ratings:`
+          : `I couldn't find any ${therapistType} therapists in your immediate area. Try expanding your search radius or check back later.`;
+        
+        setChatMessages(prev => [...prev, {
+          type: 'ai',
+          content: aiMessage,
+          timestamp: new Date()
+        }]);
+      } else {
+        throw new Error(data.error || 'No therapists found');
+      }
+    } catch (error) {
+      console.error('Error finding therapists:', error);
+      setLocationError(error instanceof Error ? error.message : 'Failed to find therapists');
+      
+      setChatMessages(prev => [...prev, {
+        type: 'ai',
+        content: `I'm sorry, I encountered an error while searching for therapists. ${error instanceof Error ? error.message : 'Please try again later.'}`,
+        timestamp: new Date()
+      }]);
+    } finally {
+      setIsLoadingTherapists(false);
+    }
+  };
+
+  // Handle therapist type selection
+  const handleTherapistTypeSelection = (type: 'speech' | 'emotional' | 'mental') => {
+    setSelectedTherapistType(type);
+    const typeLabel = type === 'speech' ? 'speech therapist' : type === 'emotional' ? 'emotional therapist' : 'mental health therapist';
+    
+    // Add user message
+    const userMessage = type === 'speech' 
+      ? "I need a speech therapist"
+      : "I need an emotional/mental health therapist";
+    
+    setChatMessages(prev => [...prev, {
+      type: 'user',
+      content: userMessage,
+      timestamp: new Date()
+    }]);
+
+    // Add AI message requesting location permission
+    setChatMessages(prev => [...prev, {
+      type: 'ai',
+      content: `Great! I'll help you find ${typeLabel}s near you. To find the closest therapists, I need to access your location. Please allow location access when prompted by your browser.`,
+      timestamp: new Date()
+    }]);
+
+    // Find therapists (this will request location permission)
+    findTherapists(type);
+  };
+
+  // Reset chat when modal opens
+  useEffect(() => {
+    if (showChatHelper) {
+      setChatMessage("");
+      setSelectedTherapistType(null);
+      setTherapists([]);
+      setLocationError(null);
+      setRequestingLocation(false);
+      setLocationPermissionDenied(false);
+      setUserLocation(null);
+      setChatMessages([{
+        type: 'ai',
+        content: "Hi! I'm here to help you find qualified speech and emotional therapists in your area. What type of support are you looking for?",
+        timestamp: new Date()
+      }]);
+    }
+  }, [showChatHelper]);
 
   if (isLoading) {
     return (
@@ -845,68 +1009,293 @@ export default function Home() {
         <div className="flex-1 p-6 overflow-y-auto">
           <div className="space-y-4">
             
-            {/* Welcome Message */}
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-[#ff6b1d] rounded-full flex items-center justify-center flex-shrink-0">
-                <span className="text-white text-xs font-semibold">AI</span>
-              </div>
-              <div className="bg-gray-100 rounded-lg p-4 max-w-[80%]">
-                <p className="text-gray-800 text-sm">
-                  Hi! I'm here to help you find qualified speech and emotional therapists in your area. 
-                  What type of support are you looking for?
-                </p>
-              </div>
-            </div>
-
-            {/* Quick Options */}
-            <div className="space-y-2">
-              <button 
-                onClick={() => setChatMessage("I need a speech therapist for my child")}
-                className="w-full text-left p-3 bg-[#ff6b1d]/10 hover:bg-[#ff6b1d]/20 rounded-lg border border-[#ff6b1d]/20 transition-colors"
-              >
-                <span className="text-sm font-medium text-gray-800">Speech Therapist for Child</span>
-                <p className="text-xs text-gray-600 mt-1">Find certified pediatric speech-language pathologists</p>
-              </button>
-              
-              <button 
-                onClick={() => setChatMessage("I need an emotional therapist for myself")}
-                className="w-full text-left p-3 bg-[#ff6b1d]/10 hover:bg-[#ff6b1d]/20 rounded-lg border border-[#ff6b1d]/20 transition-colors"
-              >
-                <span className="text-sm font-medium text-gray-800">Emotional Therapist</span>
-                <p className="text-xs text-gray-600 mt-1">Connect with licensed mental health professionals</p>
-              </button>
-            </div>
-
-            {/* Placeholder for future chatbot messages */}
-            {chatMessage && (
-              <div className="flex items-start gap-3 justify-end">
-                <div className="bg-[#ff6b1d] rounded-lg p-4 max-w-[80%]">
-                  <p className="text-white text-sm">{chatMessage}</p>
+            {/* Chat Messages */}
+            {chatMessages.map((msg, idx) => (
+              <div key={idx} className={`flex items-start gap-3 ${msg.type === 'user' ? 'justify-end' : ''}`}>
+                {msg.type === 'ai' && (
+                  <div className="w-8 h-8 bg-[#ff6b1d] rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-white text-xs font-semibold">AI</span>
+                  </div>
+                )}
+                <div className={`rounded-lg p-4 max-w-[80%] ${
+                  msg.type === 'user' 
+                    ? 'bg-[#ff6b1d] text-white' 
+                    : 'bg-gray-100 text-gray-800'
+                }`}>
+                  <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                 </div>
-                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-gray-600 text-xs font-semibold">YOU</span>
-                </div>
+                {msg.type === 'user' && (
+                  <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-gray-600 text-xs font-semibold">YOU</span>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Quick Options - Show only if no therapist type selected */}
+            {!selectedTherapistType && chatMessages.length === 1 && (
+              <div className="space-y-2">
+                <button 
+                  onClick={() => handleTherapistTypeSelection('speech')}
+                  className="w-full text-left p-3 bg-[#ff6b1d]/10 hover:bg-[#ff6b1d]/20 rounded-lg border border-[#ff6b1d]/20 transition-colors"
+                >
+                  <span className="text-sm font-medium text-gray-800">Speech Therapist</span>
+                  <p className="text-xs text-gray-600 mt-1">Find certified speech-language pathologists</p>
+                </button>
+                
+                <button 
+                  onClick={() => handleTherapistTypeSelection('emotional')}
+                  className="w-full text-left p-3 bg-[#ff6b1d]/10 hover:bg-[#ff6b1d]/20 rounded-lg border border-[#ff6b1d]/20 transition-colors"
+                >
+                  <span className="text-sm font-medium text-gray-800">Emotional/Mental Health Therapist</span>
+                  <p className="text-xs text-gray-600 mt-1">Connect with licensed mental health professionals</p>
+                </button>
               </div>
             )}
 
-            {chatMessage && (
-              <div className="flex items-start gap-3">
-                <div className="w-8 h-8 bg-[#ff6b1d] rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-white text-xs font-semibold">AI</span>
-                </div>
-                <div className="bg-gray-100 rounded-lg p-4 max-w-[80%]">
-                  <p className="text-gray-800 text-sm">
-                    Great! I'm analyzing therapists in your area. This feature will be fully integrated soon. 
-                    For now, you can sign up to get early access to our therapist recommendation system.
-                  </p>
-                  <div className="mt-3">
-                    <Link href="/signup">
-                      <button className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
-                        Get Early Access
-                      </button>
-                    </Link>
+            {/* Loading State */}
+            {isLoadingTherapists && (
+              <div className="flex flex-col items-center justify-center py-4">
+                {requestingLocation && (
+                  <div className="mb-3 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff6b1d] mx-auto mb-2"></div>
+                    <p className="text-sm text-gray-600 font-medium">Requesting location access...</p>
+                    <p className="text-xs text-gray-500 mt-1">Please allow location access in your browser</p>
                   </div>
-                </div>
+                )}
+                {!requestingLocation && (
+                  <>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ff6b1d] mb-2"></div>
+                    <p className="text-sm text-gray-600">Searching for therapists...</p>
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* Location Error */}
+            {locationError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm text-red-800 font-medium mb-2">{locationError}</p>
+                {locationPermissionDenied && (
+                  <div className="mt-3 p-3 bg-white rounded border border-red-200">
+                    <p className="text-xs text-gray-700 mb-2">To enable location access:</p>
+                    <ol className="text-xs text-gray-600 list-decimal list-inside space-y-1">
+                      <li>Click the lock icon in your browser's address bar</li>
+                      <li>Select "Allow" for location permissions</li>
+                      <li>Refresh the page and try again</li>
+                    </ol>
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    setLocationError(null);
+                    setLocationPermissionDenied(false);
+                    if (selectedTherapistType) {
+                      handleTherapistTypeSelection(selectedTherapistType as 'speech' | 'emotional' | 'mental');
+                    }
+                  }}
+                  className="mt-3 text-sm bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  Try again
+                </button>
+              </div>
+            )}
+
+            {/* Therapist Results - Show top 3 best matching therapists */}
+            {therapists.length > 0 && (
+              <div className="space-y-3 mt-4">
+                <h4 className="text-sm font-semibold text-gray-900">
+                  Top 3 Best Matching Therapists:
+                </h4>
+                <p className="text-xs text-gray-500 mb-2">
+                  Selected based on highest reviews and ratings
+                </p>
+                {therapists.map((therapist, idx) => (
+                  <div key={therapist.id || idx} className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        {/* Name and Badge */}
+                        <div className="flex items-center gap-2 mb-1">
+                          <h5 className="font-semibold text-gray-900 text-sm">{therapist.name}</h5>
+                          {idx === 0 && (
+                            <span className="text-xs bg-[#ff6b1d] text-white px-2 py-0.5 rounded-full font-medium">
+                              #1 Best Match
+                            </span>
+                          )}
+                          {therapist.businessStatus && therapist.businessStatus !== 'OPERATIONAL' && (
+                            <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">
+                              {therapist.businessStatus}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Address */}
+                        <p className="text-xs text-gray-600 mt-1">{therapist.address}</p>
+                        {therapist.vicinity && therapist.vicinity !== therapist.address && (
+                          <p className="text-xs text-gray-500 mt-0.5">{therapist.vicinity}</p>
+                        )}
+
+                        {/* Rating, Reviews, and Distance */}
+                        <div className="flex items-center gap-3 mt-2 flex-wrap">
+                          {therapist.rating && (
+                            <div className="flex items-center gap-1">
+                              <span className="text-xs text-yellow-600 font-semibold">⭐ {therapist.rating.toFixed(1)}</span>
+                              {therapist.userRatingsTotal > 0 && (
+                                <span className="text-xs text-gray-500 font-medium">({therapist.userRatingsTotal.toLocaleString()} reviews)</span>
+                              )}
+                            </div>
+                          )}
+                          {therapist.distance !== null && (
+                            <p className="text-xs text-gray-500 font-medium">
+                              📍 {therapist.distanceText || `${therapist.distance.toFixed(1)} km`} away from your location
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Description */}
+                        {therapist.editorialSummary && (
+                          <p className="text-xs text-gray-600 mt-2 italic">{therapist.editorialSummary}</p>
+                        )}
+
+                        {/* Contact Information */}
+                        <div className="mt-3 space-y-2 border-t border-gray-100 pt-2">
+                          <p className="text-xs font-semibold text-gray-700 mb-1.5">Contact Information:</p>
+                          
+                          {therapist.phone && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">📞</span>
+                              <a 
+                                href={`tel:${therapist.internationalPhone || therapist.phone}`} 
+                                className="text-xs text-[#ff6b1d] hover:text-[#e55a1a] hover:underline font-medium"
+                              >
+                                {therapist.phone}
+                              </a>
+                            </div>
+                          )}
+                          
+                          {therapist.website && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-500">🌐</span>
+                              <a 
+                                href={therapist.website} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="text-xs text-[#ff6b1d] hover:text-[#e55a1a] hover:underline font-medium break-all"
+                              >
+                                {therapist.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}
+                              </a>
+                            </div>
+                          )}
+
+                          {/* Note: Google Places API doesn't provide email directly */}
+                          {therapist.website && (
+                            <div className="flex items-start gap-2">
+                              <span className="text-xs text-gray-500">✉️</span>
+                              <p className="text-xs text-gray-600">
+                                Email: Check website for contact email
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Opening Hours - Complete Schedule */}
+                        {therapist.openingHours && (
+                          <div className="mt-3 border-t border-gray-100 pt-2">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs text-gray-500">🕐</span>
+                              <p className="text-xs font-semibold text-gray-700">Opening Hours:</p>
+                              {therapist.openingHours.openNow ? (
+                                <span className="text-xs text-green-600 font-medium">• Open Now</span>
+                              ) : (
+                                <span className="text-xs text-red-600 font-medium">• Closed Now</span>
+                              )}
+                            </div>
+                            
+                            {/* Show full weekly schedule if available */}
+                            {therapist.openingHours.schedule && therapist.openingHours.schedule.length > 0 ? (
+                              <div className="space-y-1 mt-1.5">
+                                {therapist.openingHours.schedule.map((schedule: any, scheduleIdx: number) => (
+                                  <div key={scheduleIdx} className="flex items-center justify-between text-xs">
+                                    <span className="text-gray-600 font-medium w-20">{schedule.day}:</span>
+                                    {schedule.isClosed ? (
+                                      <span className="text-red-600">Closed</span>
+                                    ) : schedule.close ? (
+                                      <span className="text-gray-700">
+                                        {schedule.open} - {schedule.close}
+                                      </span>
+                                    ) : (
+                                      <span className="text-gray-700">Open 24 hours</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : therapist.openingHours.weekdayText && therapist.openingHours.weekdayText.length > 0 ? (
+                              <div className="space-y-1 mt-1.5">
+                                {therapist.openingHours.weekdayText.map((day: string, dayIdx: number) => (
+                                  <p key={dayIdx} className="text-xs text-gray-700">{day}</p>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-gray-500 italic">Hours not available</p>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Recent Reviews */}
+                        {therapist.reviews && therapist.reviews.length > 0 && (
+                          <div className="mt-3 border-t border-gray-100 pt-2">
+                            <p className="text-xs font-semibold text-gray-700 mb-1">Recent Reviews:</p>
+                            <div className="space-y-2 max-h-32 overflow-y-auto">
+                              {therapist.reviews.slice(0, 2).map((review: any, reviewIdx: number) => (
+                                <div key={reviewIdx} className="bg-gray-50 rounded p-2">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xs font-medium text-gray-800">{review.authorName}</span>
+                                    <span className="text-xs text-yellow-600">⭐ {review.rating}</span>
+                                    {review.relativeTimeDescription && (
+                                      <span className="text-xs text-gray-400">{review.relativeTimeDescription}</span>
+                                    )}
+                                  </div>
+                                  <p className="text-xs text-gray-600 line-clamp-2">{review.text}</p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="mt-3 flex gap-2 flex-wrap">
+                      {therapist.googleMapsUrl ? (
+                        <a
+                          href={therapist.googleMapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 text-center text-xs bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-3 py-2 rounded-lg font-medium transition-colors"
+                        >
+                          View on Google Maps →
+                        </a>
+                      ) : (
+                        <a
+                          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(therapist.name + ' ' + therapist.address)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 text-center text-xs bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-3 py-2 rounded-lg font-medium transition-colors"
+                        >
+                          View on Google Maps →
+                        </a>
+                      )}
+                      {therapist.phone && (
+                        <a
+                          href={`tel:${therapist.internationalPhone || therapist.phone}`}
+                          className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-2 rounded-lg font-medium transition-colors"
+                        >
+                          📞 Call
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
 
@@ -924,11 +1313,35 @@ export default function Home() {
               className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#ff6b1d] focus:border-[#ff6b1d]"
             />
             <button
-              onClick={() => {
-                // Placeholder for future chatbot integration
-                console.log('Chat message sent:', chatMessage);
+              onClick={async () => {
+                if (!chatMessage.trim()) return;
+
+                const message = chatMessage.trim();
+                setChatMessage("");
+
+                // Add user message
+                setChatMessages(prev => [...prev, {
+                  type: 'user',
+                  content: message,
+                  timestamp: new Date()
+                }]);
+
+                // Check if message contains therapist type keywords
+                const lowerMessage = message.toLowerCase();
+                if (lowerMessage.includes('speech')) {
+                  handleTherapistTypeSelection('speech');
+                } else if (lowerMessage.includes('emotional') || lowerMessage.includes('mental') || lowerMessage.includes('psychologist') || lowerMessage.includes('counselor')) {
+                  handleTherapistTypeSelection('emotional');
+                } else {
+                  // Generic response
+                  setChatMessages(prev => [...prev, {
+                    type: 'ai',
+                    content: "I can help you find speech therapists or emotional/mental health therapists. Please select one of the options above or specify which type you're looking for.",
+                    timestamp: new Date()
+                  }]);
+                }
               }}
-              disabled={!chatMessage.trim()}
+              disabled={!chatMessage.trim() || isLoadingTherapists}
               className="bg-[#ff6b1d] hover:bg-[#e55a1a] disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg transition-colors"
             >
               Send

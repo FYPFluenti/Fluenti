@@ -1609,6 +1609,360 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
     }
   });
 
+  // Find nearby therapists endpoint
+  app.post('/api/therapists/find', async (req: Request, res: Response) => {
+    try {
+      const { latitude, longitude, therapistType, radius = 5000 } = req.body;
+
+      if (!latitude || !longitude) {
+        return res.status(400).json({ 
+          success: false,
+          error: 'Latitude and longitude are required' 
+        });
+      }
+
+      if (!therapistType || !['speech', 'emotional', 'mental'].includes(therapistType)) {
+        return res.status(400).json({ 
+          success: false,
+          error: 'Therapist type must be "speech", "emotional", or "mental"' 
+        });
+      }
+
+      const googleMapsApiKey = process.env.GOOGLE_MAPS_API_KEY;
+      if (!googleMapsApiKey) {
+        return res.status(500).json({ 
+          success: false,
+          error: 'Google Maps API key not configured' 
+        });
+      }
+
+      // Use reverse geocoding to get accurate location coordinates
+      let accurateLatitude = latitude;
+      let accurateLongitude = longitude;
+      
+      try {
+        const geocodeUrl = `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${googleMapsApiKey}`;
+        const geocodeResponse = await fetch(geocodeUrl);
+        
+        if (geocodeResponse.ok) {
+          const geocodeData = await geocodeResponse.json();
+          
+          if (geocodeData.status === 'OK' && geocodeData.results && geocodeData.results.length > 0) {
+            // Get the most accurate location from geocoding
+            const location = geocodeData.results[0].geometry.location;
+            accurateLatitude = location.lat;
+            accurateLongitude = location.lng;
+            console.log('📍 Geocoded location:', { 
+              original: { lat: latitude, lng: longitude },
+              geocoded: { lat: accurateLatitude, lng: accurateLongitude }
+            });
+          }
+        }
+      } catch (geocodeError) {
+        console.warn('⚠️ Geocoding failed, using original coordinates:', geocodeError);
+        // Continue with original coordinates if geocoding fails
+      }
+
+      // Determine search query based on therapist type
+      let searchQuery = '';
+      if (therapistType === 'speech') {
+        searchQuery = 'speech therapist|speech-language pathologist|speech therapy';
+      } else if (therapistType === 'emotional' || therapistType === 'mental') {
+        searchQuery = 'mental health therapist|psychologist|psychiatrist|emotional therapist|counselor';
+      }
+
+      // Use Google Places API Text Search to find nearby therapists with geocoded location
+      const placesUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(searchQuery)}&location=${accurateLatitude},${accurateLongitude}&radius=${radius}&key=${googleMapsApiKey}`;
+      
+      console.log('🔍 Searching for therapists:', { 
+        latitude: accurateLatitude, 
+        longitude: accurateLongitude, 
+        therapistType, 
+        radius 
+      });
+
+      const placesResponse = await fetch(placesUrl);
+      if (!placesResponse.ok) {
+        throw new Error(`Google Places API error: ${placesResponse.status}`);
+      }
+
+      const placesData = await placesResponse.json();
+
+      if (placesData.status !== 'OK' && placesData.status !== 'ZERO_RESULTS') {
+        throw new Error(`Google Places API error: ${placesData.status} - ${placesData.error_message || 'Unknown error'}`);
+      }
+
+      // Process results
+      const therapists = (placesData.results || []).map((place: any) => {
+        // Get place details for more information
+        return {
+          id: place.place_id,
+          name: place.name,
+          address: place.formatted_address,
+          location: {
+            lat: place.geometry.location.lat,
+            lng: place.geometry.location.lng
+          },
+          rating: place.rating || null,
+          userRatingsTotal: place.user_ratings_total || 0,
+          types: place.types || [],
+          photos: place.photos ? place.photos.map((photo: any) => ({
+            reference: photo.photo_reference,
+            url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photo.photo_reference}&key=${googleMapsApiKey}`
+          })) : [],
+          distance: null // Will calculate if needed
+        };
+      });
+
+      // Calculate road distances using Google Distance Matrix API for accuracy
+      // Use geocoded coordinates for accurate distance calculation
+      // Batch process therapists in groups of 25 (API limit)
+      const batchSize = 25;
+      const therapistBatches = [];
+      for (let i = 0; i < therapists.length; i += batchSize) {
+        therapistBatches.push(therapists.slice(i, i + batchSize));
+      }
+
+      // Process each batch
+      for (const batch of therapistBatches) {
+        // Build destinations string for Distance Matrix API
+        const destinations = batch.map((t: any) => `${t.location.lat},${t.location.lng}`).join('|');
+        
+        // Call Google Distance Matrix API with geocoded origin coordinates
+        const distanceMatrixUrl = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${accurateLatitude},${accurateLongitude}&destinations=${destinations}&units=metric&key=${googleMapsApiKey}`;
+        
+        try {
+          const distanceResponse = await fetch(distanceMatrixUrl);
+          if (!distanceResponse.ok) {
+            console.warn('Distance Matrix API error, falling back to straight-line distance');
+            // Fallback to straight-line distance if API fails (using geocoded coordinates)
+            batch.forEach((therapist: any) => {
+              const R = 6371; // Radius of the Earth in km
+              const dLat = (therapist.location.lat - accurateLatitude) * Math.PI / 180;
+              const dLon = (therapist.location.lng - accurateLongitude) * Math.PI / 180;
+              const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(accurateLatitude * Math.PI / 180) * Math.cos(therapist.location.lat * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+              therapist.distance = R * c;
+            });
+            continue;
+          }
+
+          const distanceData = await distanceResponse.json();
+          
+          if (distanceData.status === 'OK' && distanceData.rows && distanceData.rows[0] && distanceData.rows[0].elements) {
+            batch.forEach((therapist: any, index: number) => {
+              const element = distanceData.rows[0].elements[index];
+              if (element.status === 'OK' && element.distance) {
+                // Convert meters to kilometers
+                therapist.distance = element.distance.value / 1000;
+              } else {
+                // Fallback to straight-line distance if route not found (using geocoded coordinates)
+                const R = 6371;
+                const dLat = (therapist.location.lat - accurateLatitude) * Math.PI / 180;
+                const dLon = (therapist.location.lng - accurateLongitude) * Math.PI / 180;
+                const a = 
+                  Math.sin(dLat/2) * Math.sin(dLat/2) +
+                  Math.cos(accurateLatitude * Math.PI / 180) * Math.cos(therapist.location.lat * Math.PI / 180) * 
+                  Math.sin(dLon/2) * Math.sin(dLon/2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+                therapist.distance = R * c;
+              }
+            });
+          } else {
+            // Fallback to straight-line distance (using geocoded coordinates)
+            batch.forEach((therapist: any) => {
+              const R = 6371;
+              const dLat = (therapist.location.lat - accurateLatitude) * Math.PI / 180;
+              const dLon = (therapist.location.lng - accurateLongitude) * Math.PI / 180;
+              const a = 
+                Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(accurateLatitude * Math.PI / 180) * Math.cos(therapist.location.lat * Math.PI / 180) * 
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+              therapist.distance = R * c;
+            });
+          }
+        } catch (error) {
+          console.warn('Distance Matrix API error:', error);
+          // Fallback to straight-line distance (using geocoded coordinates)
+          batch.forEach((therapist: any) => {
+            const R = 6371;
+            const dLat = (therapist.location.lat - accurateLatitude) * Math.PI / 180;
+            const dLon = (therapist.location.lng - accurateLongitude) * Math.PI / 180;
+            const a = 
+              Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(accurateLatitude * Math.PI / 180) * Math.cos(therapist.location.lat * Math.PI / 180) * 
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            therapist.distance = R * c;
+          });
+        }
+      }
+
+      // Analyze and sort therapists by quality metrics
+      // Priority: 1) Review count (highest first), 2) Rating (highest first), 3) Distance (closest first)
+      therapists.sort((a: any, b: any) => {
+        const reviewsA = a.userRatingsTotal || 0;
+        const reviewsB = b.userRatingsTotal || 0;
+        const ratingA = a.rating || 0;
+        const ratingB = b.rating || 0;
+        const distanceA = a.distance || Infinity;
+        const distanceB = b.distance || Infinity;
+        
+        // Primary sort: by review count (highest first)
+        if (reviewsA !== reviewsB) {
+          return reviewsB - reviewsA;
+        }
+        
+        // Secondary sort: by rating (highest first)
+        if (Math.abs(ratingA - ratingB) > 0.1) {
+          return ratingB - ratingA;
+        }
+        
+        // Tertiary sort: by distance (closest first) - tiebreaker
+        return distanceA - distanceB;
+      });
+
+      // Return only top 3 best matching therapists (prioritized by reviews, then rating, then distance)
+      const topTherapists = therapists.slice(0, 3);
+
+      // Fetch complete detailed information for each therapist using Google Places API Place Details
+      const therapistsWithDetails = await Promise.all(
+        topTherapists.map(async (therapist: any) => {
+          try {
+            // Fetch comprehensive place details from Google Maps
+            const placeDetailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${therapist.id}&fields=name,formatted_address,formatted_phone_number,international_phone_number,website,opening_hours,rating,user_ratings_total,photos,geometry,types,business_status,vicinity,plus_code,editorial_summary,reviews,price_level,url&key=${googleMapsApiKey}`;
+            
+            const detailsResponse = await fetch(placeDetailsUrl);
+            if (detailsResponse.ok) {
+              const detailsData = await detailsResponse.json();
+              
+              if (detailsData.status === 'OK' && detailsData.result) {
+                const place = detailsData.result;
+                
+                // Return complete therapist information
+                return {
+                  ...therapist,
+                  // Basic Information
+                  name: place.name || therapist.name,
+                  address: place.formatted_address || therapist.address,
+                  vicinity: place.vicinity || null,
+                  
+                  // Contact Information
+                  phone: place.formatted_phone_number || null,
+                  internationalPhone: place.international_phone_number || null,
+                  website: place.website || null,
+                  googleMapsUrl: place.url || null,
+                  
+                  // Location Details
+                  location: {
+                    lat: place.geometry?.location?.lat || therapist.location.lat,
+                    lng: place.geometry?.location?.lng || therapist.location.lng
+                  },
+                  plusCode: place.plus_code ? {
+                    globalCode: place.plus_code.global_code,
+                    compoundCode: place.plus_code.compound_code
+                  } : null,
+                  
+                  // Ratings & Reviews
+                  rating: place.rating || therapist.rating,
+                  userRatingsTotal: place.user_ratings_total || therapist.userRatingsTotal,
+                  priceLevel: place.price_level || null,
+                  reviews: place.reviews ? place.reviews.slice(0, 5).map((review: any) => ({
+                    authorName: review.author_name,
+                    rating: review.rating,
+                    text: review.text,
+                    time: review.time,
+                    relativeTimeDescription: review.relative_time_description
+                  })) : [],
+                  
+                  // Business Information
+                  openingHours: place.opening_hours ? {
+                    openNow: place.opening_hours.open_now,
+                    weekdayText: place.opening_hours.weekday_text || [],
+                    periods: place.opening_hours.periods || [],
+                    // Parse periods to get opening/closing times for each day
+                    schedule: place.opening_hours.periods ? place.opening_hours.periods.map((period: any) => {
+                      const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                      const formatTime = (time: string) => {
+                        if (!time) return null;
+                        const hour = parseInt(time.substring(0, 2));
+                        const minute = time.substring(2, 4);
+                        const period = hour >= 12 ? 'PM' : 'AM';
+                        const displayHour = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
+                        return `${displayHour}:${minute} ${period}`;
+                      };
+                      return {
+                        day: dayNames[period.open.day],
+                        dayIndex: period.open.day,
+                        open: formatTime(period.open.time),
+                        close: period.close ? formatTime(period.close.time) : null,
+                        isClosed: !period.close
+                      };
+                    }).sort((a: any, b: any) => a.dayIndex - b.dayIndex) : []
+                  } : null,
+                  businessStatus: place.business_status || 'OPERATIONAL',
+                  
+                  // Media
+                  photos: place.photos ? place.photos.map((photo: any) => ({
+                    reference: photo.photo_reference,
+                    url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photoreference=${photo.photo_reference}&key=${googleMapsApiKey}`,
+                    width: photo.width,
+                    height: photo.height
+                  })) : therapist.photos || [],
+                  
+                  // Categories & Types
+                  types: place.types || therapist.types,
+                  
+                  // Description
+                  editorialSummary: place.editorial_summary ? place.editorial_summary.overview : null,
+                  
+                  // Distance (already calculated - road distance from user location)
+                  distance: therapist.distance,
+                  distanceText: therapist.distance ? `${therapist.distance.toFixed(1)} km` : null
+                };
+              }
+            }
+          } catch (detailsError) {
+            console.warn(`⚠️ Failed to fetch details for ${therapist.name}:`, detailsError);
+          }
+          
+          // Fallback: return therapist with existing data if details fetch fails
+          return {
+            ...therapist,
+            distanceText: therapist.distance ? `${therapist.distance.toFixed(1)} km` : null
+          };
+        })
+      );
+
+      res.json({
+        success: true,
+        therapists: therapistsWithDetails, // Return top 3 with complete Google Maps details
+        count: therapistsWithDetails.length,
+        totalFound: therapists.length,
+        searchLocation: { 
+          latitude: accurateLatitude, 
+          longitude: accurateLongitude,
+          originalLatitude: latitude,
+          originalLongitude: longitude,
+          geocoded: accurateLatitude !== latitude || accurateLongitude !== longitude
+        },
+        therapistType
+      });
+
+    } catch (error) {
+      console.error("❌ Error finding therapists:", error);
+      res.status(500).json({ 
+        success: false,
+        error: 'Failed to find therapists',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Get session summary endpoint  
   app.post('/api/therapy/session-summary', async (req: Request, res: Response) => {
     try {
