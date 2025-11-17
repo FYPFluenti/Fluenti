@@ -11,7 +11,7 @@ vite.config.ts.*
 .env.production
 .env.development
 .env.example
-
+.env.backup
 # Python virtual environment - Large files, don't commit
 .venv/
 venv/
