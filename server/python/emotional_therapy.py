@@ -746,15 +746,37 @@ class MongoDBStorage:
         except Exception as e:
             print(f"❌ Error sending crisis alert: {e}")
 
-    @require_valid_session
-    def get_conversation_history(self, user_id: str, session_id: str, limit: int = 10) -> List[Dict]:
-        """Securely retrieve conversation history from MongoDB with decryption"""
+    def get_conversation_history(self, user_id: str, session_id: str, limit: int = 10, skip_token_validation: bool = False) -> List[Dict]:
+        """Securely retrieve conversation history from MongoDB with decryption
+        
+        Args:
+            user_id: User identifier
+            session_id: Session identifier
+            limit: Maximum number of conversations to retrieve
+            skip_token_validation: If True, skip session token validation (for session restoration)
+        """
+        # Validate session token unless explicitly skipped (for restoration)
+        if not skip_token_validation:
+            try:
+                if not self.security_manager.validate_session_token(user_id, session_id):
+                    self.security_manager.audit_log(
+                        'INVALID_SESSION_ACCESS',
+                        user_id, session_id,
+                        {'function': 'get_conversation_history'},
+                        'WARNING'
+                    )
+                    # For restoration purposes, we'll still try to get history
+                    # but log the warning. Don't raise exception.
+                    print(f"⚠️ Session token validation failed, but attempting to retrieve history for restoration")
+            except Exception as e:
+                print(f"⚠️ Session token validation error (continuing for restoration): {e}")
+        
         try:
             # Audit log access
             self.security_manager.audit_log(
                 'CONVERSATION_HISTORY_ACCESS',
                 user_id, session_id,
-                {'limit': limit}
+                {'limit': limit, 'skip_validation': skip_token_validation}
             )
             
             # Hash IDs for database query
@@ -3865,6 +3887,8 @@ RESPONSE GUIDELINES:
 
 CRITICAL: Only reference information from the CURRENT session shown above. Never reference information not explicitly mentioned in this conversation.
 
+IMPORTANT: If the user asks about previous conversations or what was discussed before, check the conversation_history above. If history exists, acknowledge it and reference what was discussed. If no history exists, it's a new conversation.
+
 Respond naturally like a skilled therapist who understands modern communication - warm, genuine, and appropriately brief for simple interactions. Match the user's energy while maintaining professional support.
 
 Your natural, expression-aware response:"""
@@ -3893,6 +3917,8 @@ CRITICAL SESSION ISOLATION RULES:
 - ONLY reference information from the CURRENT session conversation history shown above
 - NEVER reference information not explicitly mentioned in this conversation
 - Do NOT make assumptions about previous conversations or sessions
+- If the user asks about what was discussed before, check the conversation_history above - if it contains previous exchanges, acknowledge and reference them
+- If conversation_history is empty, this is truly a new conversation
 - If you don't have enough context from THIS session, ask for clarification
 - Build understanding based ONLY on what the user has shared in THIS conversation
 
@@ -3934,18 +3960,115 @@ Your personalized crisis intervention response:"""
         )
 
     def _get_or_create_session_memory(self, user_id: str, session_id: str) -> SessionMemory:
-        """ Get or create session memory with strict isolation"""
+        """ Get or create session memory with strict isolation, loading from MongoDB if history exists"""
         session_key = f"{user_id}_{session_id}"
         if session_key not in self.session_memories:
-            self.session_memories[session_key] = SessionMemory(
-                session_id=session_id,
-                created_at=datetime.now().isoformat(),
-                issue_details={},
-                progress_notes=[],
-                key_themes=[],
-                user_preferences={}
-            )
-            print(f"🆕 Created new isolated session memory for {session_key}")
+            # Try to load existing history from MongoDB to populate memory
+            try:
+                history = self.storage.get_conversation_history(user_id, session_id, limit=50, skip_token_validation=True)
+                
+                if history and len(history) > 0:
+                    print(f"📚 Found {len(history)} existing conversations, populating session memory from history")
+                    
+                    # Extract primary issue from first conversation
+                    primary_issue = ""
+                    issue_details = {}
+                    progress_notes = []
+                    key_themes = []
+                    
+                    # Get primary issue from first meaningful conversation
+                    for conv in history[:5]:  # Check first 5 conversations
+                        if conv.get('user_input') and len(conv.get('user_input', '')) > 10:
+                            # Try to extract issue from user input
+                            user_input = conv.get('user_input', '')
+                            if not primary_issue and self.llm:
+                                try:
+                                    issue_prompt = f"""Identify the primary therapeutic concern from this user input: "{user_input[:200]}"
+                                    
+Return ONLY one of these categories:
+- work_stress
+- relationship_issues
+- anxiety_disorders
+- depression_symptoms
+- trauma_related
+- self_esteem_issues
+- life_transitions
+- grief_loss
+- family_dynamics
+- academic_stress
+- financial_stress
+- health_concerns
+- substance_related
+- anger_management
+- social_anxiety
+- general_support
+
+Category:"""
+                                    response = self.llm.invoke(issue_prompt)
+                                    primary_issue = self._extract_llm_content(response).strip().lower()
+                                    if primary_issue and len(primary_issue) > 3:
+                                        issue_details['initial_description'] = user_input[:200]
+                                        break
+                                except Exception as e:
+                                    print(f"⚠️ Could not extract primary issue from history: {e}")
+                            
+                            # Build progress notes from history
+                            progress_notes.append({
+                                'timestamp': conv.get('timestamp', datetime.now().isoformat()),
+                                'session_id': session_id,
+                                'user_input': user_input,
+                                'bot_response': conv.get('bot_response', '')[:100],
+                                'themes': self._extract_themes_from_text(user_input)
+                            })
+                            
+                            # Extract themes
+                            themes = self._extract_themes_from_text(user_input)
+                            key_themes.extend(themes)
+                    
+                    # Create session memory with loaded data
+                    memory = SessionMemory(
+                        session_id=session_id,
+                        created_at=history[0].get('timestamp', datetime.now().isoformat()) if history else datetime.now().isoformat(),
+                        primary_issue=primary_issue or "",
+                        issue_details=issue_details if issue_details else {},
+                        progress_notes=progress_notes,
+                        key_themes=list(set(key_themes))[:10],  # Unique themes, max 10
+                        user_preferences={}
+                    )
+                    
+                    # Create conversation summary from history
+                    if len(history) >= 2:
+                        memory.conversation_summary = f"We've had {len(history)} exchanges in this session. " + \
+                            f"Primary focus: {primary_issue or 'general support'}"
+                    else:
+                        memory.conversation_summary = "This is the beginning of our conversation."
+                    
+                    self.session_memories[session_key] = memory
+                    print(f"✅ Restored session memory from MongoDB with {len(history)} conversations")
+                else:
+                    # No history found, create new empty memory
+                    self.session_memories[session_key] = SessionMemory(
+                        session_id=session_id,
+                        created_at=datetime.now().isoformat(),
+                        issue_details={},
+                        progress_notes=[],
+                        key_themes=[],
+                        user_preferences={}
+                    )
+                    print(f"🆕 Created new isolated session memory for {session_key}")
+            except Exception as e:
+                print(f"⚠️ Error loading session memory from history: {e}, creating new memory")
+                # Fallback to creating new memory
+                self.session_memories[session_key] = SessionMemory(
+                    session_id=session_id,
+                    created_at=datetime.now().isoformat(),
+                    issue_details={},
+                    progress_notes=[],
+                    key_themes=[],
+                    user_preferences={}
+                )
+                print(f"🆕 Created new isolated session memory for {session_key} (fallback)")
+        
         return self.session_memories[session_key]
 
     def _verify_session_isolation(self, user_id: str, session_id: str) -> bool:
@@ -4125,7 +4248,7 @@ Themes:"""
             return ["general_support"]
 
     def _create_session_context(self, user_id: str, session_id: str) -> str:
-        """ Create session context with strict isolation"""
+        """ Create session context with strict isolation, checking MongoDB if memory is empty"""
         # Verify session isolation
         if not self._verify_session_isolation(user_id, session_id):
             return "New isolated session"
@@ -4153,21 +4276,55 @@ Themes:"""
             if unique_themes:
                 context_parts.append(f"Recent Themes (this session): {', '.join(unique_themes[:5])}")
 
-        return " | ".join(context_parts) if context_parts else "New conversation - no prior context"
+        # If memory is empty but we have context parts, use them
+        if context_parts:
+            return " | ".join(context_parts)
+        
+        # If no context from memory, check MongoDB directly for existing history
+        try:
+            history = self.storage.get_conversation_history(user_id, session_id, limit=5, skip_token_validation=True)
+            if history and len(history) > 0:
+                # Extract themes from recent history
+                recent_themes = []
+                for conv in history[-3:]:
+                    if conv.get('user_input'):
+                        themes = self._extract_themes_from_text(conv.get('user_input', ''))
+                        recent_themes.extend(themes)
+                
+                unique_themes = list(set(recent_themes))
+                if unique_themes:
+                    return f"Continuing conversation | Recent Themes: {', '.join(unique_themes[:5])}"
+                else:
+                    return f"Continuing conversation with {len(history)} previous exchanges"
+        except Exception as e:
+            print(f"⚠️ Error checking MongoDB history for context: {e}")
+
+        return "New conversation - no prior context"
 
     def _create_conversation_summary(self, user_id: str, session_id: str) -> str:
-        """ Create conversation summary with strict session isolation"""
+        """ Create conversation summary with strict session isolation, checking MongoDB if memory is empty"""
         # Verify session isolation
         if not self._verify_session_isolation(user_id, session_id):
             return "This is a new isolated session."
 
         memory = self._get_or_create_session_memory(user_id, session_id)
 
-        if not memory.progress_notes:
-            return "This is the beginning of our conversation."
-
         # Filter notes to THIS session only
-        session_notes = [note for note in memory.progress_notes if note.get('session_id') == session_id]
+        session_notes = [note for note in memory.progress_notes if note.get('session_id') == session_id] if memory.progress_notes else []
+
+        # If no notes in memory, check MongoDB directly
+        if not session_notes:
+            try:
+                history = self.storage.get_conversation_history(user_id, session_id, limit=10, skip_token_validation=True)
+                if history and len(history) > 0:
+                    # Create summary from MongoDB history
+                    if len(history) >= 2:
+                        return f"We've been having a conversation with {len(history)} exchanges. " + \
+                               f"Let me recall what we've discussed so far."
+                    else:
+                        return "This is the beginning of our conversation."
+            except Exception as e:
+                print(f"⚠️ Error checking MongoDB history for summary: {e}")
 
         if not session_notes:
             return "This is the beginning of our conversation."
@@ -4196,8 +4353,8 @@ Themes:"""
     def _format_conversation_history(self, user_id: str, session_id: str, limit: int = 10) -> str:
         """ Format conversation history with strict session isolation"""
         try:
-            # ONLY get history from the current session
-            history = self.storage.get_conversation_history(user_id, session_id, limit=limit)
+            # ONLY get history from the current session (skip token validation if needed for restoration)
+            history = self.storage.get_conversation_history(user_id, session_id, limit=limit, skip_token_validation=True)
             formatted_history = []
 
             for conv in history[-limit:]:

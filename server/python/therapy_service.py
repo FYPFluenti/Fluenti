@@ -179,8 +179,8 @@ def restore_session_from_mongodb(user_id: str, session_id: str):
         
         storage = therapy_bot.storage
         
-        # Get conversation history for this session
-        history = storage.get_conversation_history(user_id, session_id, limit=50)
+        # Get conversation history for this session (skip token validation for restoration)
+        history = storage.get_conversation_history(user_id, session_id, limit=50, skip_token_validation=True)
         
         print(f"🔍 Attempting to restore session for user: {user_id}, session: {session_id}")
         
@@ -198,11 +198,30 @@ def restore_session_from_mongodb(user_id: str, session_id: str):
         session_interface.current_user_id = user_id
         session_interface.session_start_time = datetime.now()
         
+        # Create session token for restored session so it can be used normally
+        if hasattr(therapy_bot, 'storage') and hasattr(therapy_bot.storage, 'security_manager'):
+            try:
+                session_token = therapy_bot.storage.security_manager.create_session_token(user_id, session_id)
+                print(f"🔐 Created session token for restored session")
+            except Exception as e:
+                print(f"⚠️ Could not create session token for restored session: {e}")
+        
+        # Pre-populate session memory by calling _get_or_create_session_memory
+        # This will load the history into memory
+        if hasattr(therapy_bot, '_get_or_create_session_memory'):
+            try:
+                therapy_bot._get_or_create_session_memory(user_id, session_id)
+                print(f"📚 Pre-populated session memory from {len(history)} conversations")
+            except Exception as e:
+                print(f"⚠️ Could not pre-populate session memory: {e}")
+        
         print(f"✅ Restored session {session_id} with {len(history)} messages")
         return session_interface
         
     except Exception as e:
         print(f"❌ Error restoring session from MongoDB: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 @app.route('/health', methods=['GET'])
