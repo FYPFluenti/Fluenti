@@ -19,9 +19,9 @@ import html
 
 # Security imports with graceful fallback
 try:
-    from cryptography.fernet import Fernet
-    from cryptography.hazmat.primitives import hashes
-    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    from cryptography.fernet import Fernet  # type: ignore
+    from cryptography.hazmat.primitives import hashes  # type: ignore
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC  # type: ignore
     import base64
     CRYPTO_AVAILABLE = True
 except ImportError:
@@ -134,9 +134,9 @@ class SecurityManager:
             return
             
         try:
-            from cryptography.fernet import Fernet as CryptoFernet
-            from cryptography.hazmat.primitives import hashes as crypto_hashes
-            from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC as CryptoPBKDF2HMAC
+            from cryptography.fernet import Fernet as CryptoFernet  # type: ignore
+            from cryptography.hazmat.primitives import hashes as crypto_hashes  # type: ignore
+            from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC as CryptoPBKDF2HMAC  # type: ignore
             
             # Get encryption key from environment or generate one
             key_material = os.getenv('ENCRYPTION_KEY')
@@ -167,6 +167,25 @@ class SecurityManager:
         
         # Create secure log handler
         log_file = os.getenv('AUDIT_LOG_FILE', 'therapy_audit.log')
+        
+        # Resolve log file path relative to script directory
+        if not os.path.isabs(log_file):
+            # If path contains directory separator, resolve relative to script directory
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            log_file = os.path.join(script_dir, log_file)
+        
+        # Ensure the log directory exists
+        log_dir = os.path.dirname(log_file)
+        if log_dir and not os.path.exists(log_dir):
+            try:
+                os.makedirs(log_dir, exist_ok=True)
+                print(f"✅ Created log directory: {log_dir}")
+            except OSError as e:
+                print(f"⚠️ Warning: Could not create log directory {log_dir}: {e}")
+                # Fallback to script directory if directory creation fails
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+                log_file = os.path.join(script_dir, os.path.basename(log_file))
+        
         handler = logging.FileHandler(log_file)
         
         # Secure log format - no PII in logs
