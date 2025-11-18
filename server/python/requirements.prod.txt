@@ -20,7 +20,7 @@ langchain-groq>=0.2.0
 langchain-core>=0.3.0
 langchain-community>=0.3.0
 vaderSentiment==3.3.2
-chromadb>=1.2.1
+# chromadb removed - requires Rust compilation and not used in code
 
 # ML and NLP
 sentence-transformers==2.2.2
