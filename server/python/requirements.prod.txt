@@ -37,7 +37,7 @@ pycryptodome>=3.19.0  # Additional cryptographic functions
 
 # Input validation and sanitization
 bleach>=6.0.0         # HTML sanitization
-html-sanitizer>=2.4   # Advanced HTML cleaning
+# html-sanitizer removed - requires Rust compilation and not used (code uses html.escape() and bleach)
 
 # Authentication and session management
 PyJWT>=2.8.0          # JWT token handling
