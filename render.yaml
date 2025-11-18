@@ -33,7 +33,7 @@ services:
   - type: web
     name: fluenti-therapy-service
     env: python
-    buildCommand: pip install -r server/python/requirements.txt
+    buildCommand: export CARGO_HOME=/tmp/cargo && export RUSTUP_HOME=/tmp/rustup && mkdir -p /tmp/cargo /tmp/rustup && pip install --upgrade pip && pip install --prefer-binary -r server/python/requirements.txt
     startCommand: cd server/python && python therapy_service.py
     envVars:
       - key: THERAPY_PORT
@@ -46,4 +46,8 @@ services:
         sync: false  # Set this in Render dashboard
       - key: THERAPY_PRODUCTION
         value: "true"
+      - key: CARGO_HOME
+        value: /tmp/cargo
+      - key: RUSTUP_HOME
+        value: /tmp/rustup
 
