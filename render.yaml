@@ -1,0 +1,49 @@
+services:
+  # Backend Node.js Service
+  - type: web
+    name: fluenti-backend
+    env: node
+    buildCommand: npm install && npm run build:backend
+    startCommand: npm run start:backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false  # Set this in Render dashboard
+      - key: JWT_SECRET
+        sync: false  # Set this in Render dashboard
+      - key: GROQ_API_KEY
+        sync: false  # Set this in Render dashboard
+      - key: OPENAI_API_KEY
+        sync: false  # Set this in Render dashboard
+      - key: GOOGLE_MAPS_API_KEY
+        sync: false  # Set this in Render dashboard
+      - key: THERAPY_SERVICE_URL
+        sync: false  # Will be set after Python service is deployed
+      - key: EMERGENCY_EMAIL_USER
+        sync: false  # Optional
+      - key: EMERGENCY_EMAIL_PASS
+        sync: false  # Optional
+      - key: EMERGENCY_NOTIFICATION_EMAIL
+        sync: false  # Optional
+
+  # Python Therapy Service
+  - type: web
+    name: fluenti-therapy-service
+    env: python
+    buildCommand: pip install -r server/python/requirements.txt
+    startCommand: cd server/python && python therapy_service.py
+    envVars:
+      - key: THERAPY_PORT
+        value: 10000
+      - key: MONGODB_URI
+        sync: false  # Set this in Render dashboard (same as backend)
+      - key: GROQ_API_KEY
+        sync: false  # Set this in Render dashboard
+      - key: OPENAI_API_KEY
+        sync: false  # Set this in Render dashboard
+      - key: THERAPY_PRODUCTION
+        value: "true"
+

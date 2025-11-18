@@ -10,7 +10,7 @@
     "build:frontend": "vite build",
     "build:netlify": "node netlify-debug.js && npm run build:frontend",
     "build:safe": "node build-safe.mjs",
-    "build:backend": "esbuild server/backend.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build:backend": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --outfile=dist/backend.js",
     "start": "NODE_ENV=production node dist/backend.js",
     "start:backend": "NODE_ENV=production node dist/backend.js",
     "check": "tsc",

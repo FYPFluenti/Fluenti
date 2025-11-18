@@ -167,9 +167,9 @@ export default function Home() {
       setUserLocation(location);
 
       // Call API to find therapists
-      const API_BASE_URL = import.meta.env.PROD 
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
         ? 'https://fluentiai-backend.onrender.com' 
-        : 'http://localhost:3000';
+        : 'http://localhost:3000');
 
       const response = await fetch(`${API_BASE_URL}/api/therapists/find`, {
         method: 'POST',

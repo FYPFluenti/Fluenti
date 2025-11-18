@@ -27,3 +27,54 @@ huggingface-hub==0.19.4
 # Utilities
 python-dotenv==1.0.0
 requests==2.31.0
+
+# Security and Privacy Requirements for Emotional Therapy Bot
+# Install with: pip install -r requirements_security.txt
+
+# Core security libraries
+cryptography>=41.0.0  # For encryption and key derivation
+pycryptodome>=3.19.0  # Additional cryptographic functions
+
+# Input validation and sanitization
+bleach>=6.0.0         # HTML sanitization
+html-sanitizer>=2.4   # Advanced HTML cleaning
+
+# Authentication and session management
+PyJWT>=2.8.0          # JWT token handling
+passlib>=1.7.4        # Password hashing utilities
+
+# Rate limiting and throttling
+slowapi>=0.1.9        # Rate limiting for FastAPI/async
+limits>=3.6.0         # General rate limiting
+
+# Secure headers and CORS
+secure>=0.3.0         # Security headers management
+
+# Environment and configuration
+python-dotenv>=1.0.0  # Environment variable management
+pydantic>=2.5.0       # Data validation and settings
+
+# Monitoring and logging
+structlog>=23.2.0     # Structured logging
+python-json-logger>=2.0.7  # JSON log formatting
+
+# Network security
+requests>=2.31.0      # HTTP requests with security features
+urllib3>=2.0.0        # URL handling with security
+
+# Database security (if using additional DB features)
+sqlalchemy>=2.0.0     # ORM with security features
+pymongo>=4.6.0        # MongoDB driver with security
+
+# Development and testing security tools
+bandit>=1.7.5         # Security linting
+safety>=2.3.0         # Dependency vulnerability scanning
+semgrep>=1.45.0       # Static analysis security scanner
+
+# Optional: Advanced security features
+hvac>=1.2.1           # HashiCorp Vault client (for key management)
+azure-keyvault-secrets>=4.7.0  # Azure Key Vault (for cloud deployments)
+
+# Performance monitoring (security-related)
+psutil>=5.9.0         # System monitoring
+memory-profiler>=0.61.0  # Memory usage monitoring

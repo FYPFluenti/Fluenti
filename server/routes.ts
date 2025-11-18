@@ -1258,7 +1258,8 @@ This is an automated alert from the Fluenti Crisis Detection System.
           console.log('📝 Session context - AuthUserId:', finalUserId, 'SessionId:', stableSessionId, 'Original sessionId:', sessionId, 'Original userId:', userId);
 
           // Call Python therapy service (same as emotional-support-chat)
-          const pythonServiceResponse = await fetch('http://localhost:5001/api/therapy/chat', {
+          const THERAPY_SERVICE_URL = process.env.THERAPY_SERVICE_URL || 'http://localhost:5001';
+          const pythonServiceResponse = await fetch(`${THERAPY_SERVICE_URL}/api/therapy/chat`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -1452,7 +1453,8 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
       });
 
       // Call Python therapy service with authenticated user ID
-      const pythonServiceResponse = await fetch('http://localhost:5001/api/therapy/chat', {
+      const THERAPY_SERVICE_URL = process.env.THERAPY_SERVICE_URL || 'http://localhost:5001';
+      const pythonServiceResponse = await fetch(`${THERAPY_SERVICE_URL}/api/therapy/chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1578,7 +1580,8 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
 
       console.log('🆕 Starting new therapy session for user:', userId);
 
-      const pythonServiceResponse = await fetch('http://localhost:5001/api/therapy/start-session', {
+      const THERAPY_SERVICE_URL = process.env.THERAPY_SERVICE_URL || 'http://localhost:5001';
+      const pythonServiceResponse = await fetch(`${THERAPY_SERVICE_URL}/api/therapy/start-session`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -1977,7 +1980,8 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
 
       console.log('📋 Getting session summary for:', sessionKey);
 
-      const pythonServiceResponse = await fetch('http://localhost:5001/api/therapy/session-summary', {
+      const THERAPY_SERVICE_URL = process.env.THERAPY_SERVICE_URL || 'http://localhost:5001';
+      const pythonServiceResponse = await fetch(`${THERAPY_SERVICE_URL}/api/therapy/session-summary`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -2011,7 +2015,8 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
   // Therapy service health check
   app.get('/api/therapy/health', async (req: Request, res: Response) => {
     try {
-      const pythonServiceResponse = await fetch('http://localhost:5001/health');
+      const THERAPY_SERVICE_URL = process.env.THERAPY_SERVICE_URL || 'http://localhost:5001';
+      const pythonServiceResponse = await fetch(`${THERAPY_SERVICE_URL}/health`);
       
       if (!pythonServiceResponse.ok) {
         throw new Error(`Python service health check failed: ${pythonServiceResponse.status}`);
@@ -2047,7 +2052,8 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
       }
       console.log(`🧠 Fetching psychological profile for user: ${userId}`);
 
-      const pythonServiceResponse = await fetch(`http://localhost:5001/api/therapy/psychological-profile?userId=${encodeURIComponent(userId)}`, {
+      const THERAPY_SERVICE_URL = process.env.THERAPY_SERVICE_URL || 'http://localhost:5001';
+      const pythonServiceResponse = await fetch(`${THERAPY_SERVICE_URL}/api/therapy/psychological-profile?userId=${encodeURIComponent(userId)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -2081,7 +2087,8 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
       const days = req.query.days || '30';
       console.log(`📊 Fetching long-term progress for user: ${userId}, days: ${days}`);
 
-      const pythonServiceResponse = await fetch(`http://localhost:5001/api/therapy/long-term-progress?userId=${encodeURIComponent(userId)}&days=${days}`, {
+      const THERAPY_SERVICE_URL = process.env.THERAPY_SERVICE_URL || 'http://localhost:5001';
+      const pythonServiceResponse = await fetch(`${THERAPY_SERVICE_URL}/api/therapy/long-term-progress?userId=${encodeURIComponent(userId)}&days=${days}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
