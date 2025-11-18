@@ -18,21 +18,61 @@ from functools import wraps
 import html
 
 # Security imports with graceful fallback
+CRYPTO_AVAILABLE = False
+Fernet = None
+PBKDF2HMAC = None
+hashes = None
+
+# First check if cryptography module exists at all
 try:
-    from cryptography.fernet import Fernet  # type: ignore
-    from cryptography.hazmat.primitives import hashes  # type: ignore
-    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC  # type: ignore
-    import base64
-    CRYPTO_AVAILABLE = True
+    import cryptography  # type: ignore
+    _crypto_available = True
 except ImportError:
-    print("⚠️ WARNING: cryptography package not found. Security features will be limited.")
-    print("Install with: pip install cryptography")
-    CRYPTO_AVAILABLE = False
-    # Define None to avoid import conflicts
-    Fernet = None
-    PBKDF2HMAC = None
-    hashes = None
-    import base64
+    _crypto_available = False
+
+if _crypto_available:
+    try:
+        from cryptography.fernet import Fernet  # type: ignore
+        from cryptography.hazmat.primitives import hashes  # type: ignore
+        from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC  # type: ignore
+        import base64
+        # Verify the imports actually work
+        _ = Fernet
+        _ = hashes
+        _ = PBKDF2HMAC
+        CRYPTO_AVAILABLE = True
+    except ImportError as e:
+        # Specific import error (e.g., missing submodule)
+        error_msg = str(e)
+        if "No module named" in error_msg and "cryptography" in error_msg:
+            # Only warn if cryptography package itself is missing
+            print("⚠️ WARNING: cryptography package not found. Security features will be limited.")
+            print(f"   Error: {e}")
+            print("   Install with: pip install cryptography")
+        # Otherwise, it's a submodule issue - don't warn, just disable
+        CRYPTO_AVAILABLE = False
+    except Exception as e:
+        # Other errors (like missing dependencies)
+        print(f"⚠️ WARNING: Error loading cryptography: {e}")
+        print("   Security features will be limited.")
+        CRYPTO_AVAILABLE = False
+else:
+    # Cryptography package not installed - check if we're in venv
+    import sys
+    in_venv = (
+        hasattr(sys, 'real_prefix') or 
+        (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix)
+    )
+    if not in_venv:
+        print("⚠️ WARNING: cryptography package not found. Security features will be limited.")
+        print(f"   Current Python: {sys.executable}")
+        print("   You may be using system Python instead of virtual environment.")
+        print("   Make sure to activate venv: & venv\\Scripts\\Activate.ps1")
+    else:
+        print("⚠️ WARNING: cryptography package not found. Security features will be limited.")
+        print("   Install with: pip install cryptography")
+
+import base64
 
 # Load environment variables
 from dotenv import load_dotenv
@@ -1689,7 +1729,23 @@ class DataLoader:
             # Dataset 4: Mental health conversations - Alternative smaller dataset
             try:
                 print("Loading focused mental health conversations...")
-                dataset4 = load_dataset("Amod/mental_health_counseling_conversations", split='train[:1000]')  # Limit to 1000
+                # Try different split configurations
+                try:
+                    dataset4 = load_dataset("Amod/mental_health_counseling_conversations", split='train[:1000]')  # Limit to 1000
+                except Exception:
+                    # Fallback: load full train split and manually limit
+                    dataset4_full = load_dataset("Amod/mental_health_counseling_conversations", split='train')
+                    # Manually limit to 1000 if dataset is large and supports select
+                    if hasattr(dataset4_full, 'select') and hasattr(dataset4_full, '__len__'):
+                        try:
+                            if len(dataset4_full) > 1000:  # type: ignore
+                                dataset4 = dataset4_full.select(range(1000))  # type: ignore
+                            else:
+                                dataset4 = dataset4_full
+                        except (TypeError, AttributeError):
+                            dataset4 = dataset4_full
+                    else:
+                        dataset4 = dataset4_full
                 datasets.append(dataset4)
                 print(f"✅ Loaded {safe_dataset_len(dataset4)} additional conversations")
             except Exception as e:
@@ -1700,7 +1756,23 @@ class DataLoader:
             # Dataset 6: Mental health support - LIMITED SIZE
             try:
                 print("Loading limited support conversations...")
-                dataset6 = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft[:10000]')  # Only 10k instead of 200k
+                # Try different split configurations for ultrachat dataset
+                try:
+                    dataset6 = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft[:10000]')  # Only 10k instead of 200k
+                except Exception:
+                    # Fallback: try without split limit first, then slice
+                    dataset6_full = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft')
+                    # Manually limit to 10000 if dataset is large and supports select
+                    if hasattr(dataset6_full, 'select') and hasattr(dataset6_full, '__len__'):
+                        try:
+                            if len(dataset6_full) > 10000:  # type: ignore
+                                dataset6 = dataset6_full.select(range(10000))  # type: ignore
+                            else:
+                                dataset6 = dataset6_full
+                        except (TypeError, AttributeError):
+                            dataset6 = dataset6_full
+                    else:
+                        dataset6 = dataset6_full
                 datasets.append(dataset6)
                 print(f"✅ Loaded {safe_dataset_len(dataset6)} support conversations")
             except Exception as e:
@@ -1709,7 +1781,23 @@ class DataLoader:
             # Dataset 7: Therapeutic conversations - LIMITED SIZE
             try:
                 print("Loading limited therapeutic conversations...")
-                dataset7 = load_dataset("nvidia/HelpSteer", split='train[:5000]')  # Only 5k instead of 35k
+                # Try different split configurations for HelpSteer dataset
+                try:
+                    dataset7 = load_dataset("nvidia/HelpSteer", split='train[:5000]')  # Only 5k instead of 35k
+                except Exception:
+                    # Fallback: load full train split and manually limit
+                    dataset7_full = load_dataset("nvidia/HelpSteer", split='train')
+                    # Manually limit to 5000 if dataset is large and supports select
+                    if hasattr(dataset7_full, 'select') and hasattr(dataset7_full, '__len__'):
+                        try:
+                            if len(dataset7_full) > 5000:  # type: ignore
+                                dataset7 = dataset7_full.select(range(5000))  # type: ignore
+                            else:
+                                dataset7 = dataset7_full
+                        except (TypeError, AttributeError):
+                            dataset7 = dataset7_full
+                    else:
+                        dataset7 = dataset7_full
                 datasets.append(dataset7)
                 print(f"✅ Loaded {safe_dataset_len(dataset7)} therapeutic conversations")
             except Exception as e:
@@ -1718,7 +1806,23 @@ class DataLoader:
             # Dataset 8: Mental health Q&A dataset
             try:
                 print("Loading mental health Q&A dataset...")
-                dataset8 = load_dataset("squad", split='train[:5000]')  # Limited size
+                # Try different approaches for squad dataset
+                try:
+                    dataset8 = load_dataset("squad", split='train[:5000]')  # Limited size
+                except Exception:
+                    # Fallback: load full train split and manually limit
+                    dataset8_full = load_dataset("squad", split='train')
+                    # Manually limit to 5000 if dataset is large and supports select
+                    if hasattr(dataset8_full, 'select') and hasattr(dataset8_full, '__len__'):
+                        try:
+                            if len(dataset8_full) > 5000:  # type: ignore
+                                dataset8 = dataset8_full.select(range(5000))  # type: ignore
+                            else:
+                                dataset8 = dataset8_full
+                        except (TypeError, AttributeError):
+                            dataset8 = dataset8_full
+                    else:
+                        dataset8 = dataset8_full
                 datasets.append(dataset8)
                 print(f"✅ Loaded {safe_dataset_len(dataset8)} Q&A examples")
             except Exception as e:
@@ -1729,7 +1833,23 @@ class DataLoader:
             # Dataset 10: Mental health classification dataset
             try:
                 print("Loading mental health classification dataset...")
-                dataset10 = load_dataset("emotion", split='train[:2000]')  # Limited size
+                # Try different split configurations for emotion dataset
+                try:
+                    dataset10 = load_dataset("emotion", split='train[:2000]')  # Limited size
+                except Exception:
+                    # Fallback: load full train split and manually limit
+                    dataset10_full = load_dataset("emotion", split='train')
+                    # Manually limit to 2000 if dataset is large and supports select
+                    if hasattr(dataset10_full, 'select') and hasattr(dataset10_full, '__len__'):
+                        try:
+                            if len(dataset10_full) > 2000:  # type: ignore
+                                dataset10 = dataset10_full.select(range(2000))  # type: ignore
+                            else:
+                                dataset10 = dataset10_full
+                        except (TypeError, AttributeError):
+                            dataset10 = dataset10_full
+                    else:
+                        dataset10 = dataset10_full
                 datasets.append(dataset10)
                 print(f"✅ Loaded {safe_dataset_len(dataset10)} emotion classification examples")
             except Exception as e:

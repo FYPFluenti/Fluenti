@@ -10,7 +10,7 @@ langchain-huggingface>=0.0.1
 langchain-text-splitters
 
 # Existing dependencies from emotional_therapy.py
-pymongo==4.5.0
+pymongo>=4.6.0
 nltk==3.8.1
 datasets>=2.20.0
 langchain-groq>=0.2.0
@@ -64,7 +64,7 @@ urllib3>=2.0.0        # URL handling with security
 
 # Database security (if using additional DB features)
 sqlalchemy>=2.0.0     # ORM with security features
-pymongo>=4.6.0        # MongoDB driver with security
+# pymongo>=4.6.0 - Already specified above in "Existing dependencies"
 
 # Development and testing security tools
 bandit>=1.7.5         # Security linting

@@ -5,6 +5,26 @@ from typing import Dict, Any, Optional
 import traceback
 from datetime import datetime
 
+# Check if running in virtual environment
+def check_venv():
+    """Check if we're running in a virtual environment and warn if not"""
+    in_venv = (
+        hasattr(sys, 'real_prefix') or 
+        (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix)
+    )
+    if not in_venv:
+        venv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'venv')
+        if os.path.exists(venv_path):
+            print("⚠️ WARNING: Not running in virtual environment!")
+            print(f"   Current Python: {sys.executable}")
+            print(f"   Virtual environment found at: {venv_path}")
+            print(f"   Activate it with: & {venv_path}\\Scripts\\Activate.ps1")
+            print("   Or use: venv\\Scripts\\python.exe server\\python\\therapy_service.py")
+    return in_venv
+
+# Check virtual environment
+_venv_check = check_venv()
+
 # Load environment variables
 try:
     from dotenv import load_dotenv
