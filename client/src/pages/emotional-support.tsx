@@ -534,14 +534,7 @@ Your wellbeing is important.`,
         {/* Service Status Alert */}
         {serviceStatus === 'unhealthy' && (
           <div className="mb-4 space-y-4">
-            <Alert className="border-red-200 bg-red-50">
-              <AlertTriangle className="h-4 w-4 text-red-600" />
-              <AlertDescription className="text-red-800">
-                The therapy service is currently unavailable. If you're in crisis, please contact:
-                <br />
-                <strong>1019</strong> - Mental Health Crisis Line or <strong>1166</strong> - National Emergency
-              </AlertDescription>
-            </Alert>
+            
             
             {/* Crisis Resources Banner - Only when service is offline */}
             <div className="bg-muted/40 backdrop-blur-sm border border-border/50 rounded-lg p-3">
