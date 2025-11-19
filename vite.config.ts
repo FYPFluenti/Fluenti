@@ -8,7 +8,10 @@ const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   plugins: [react()],
-  define: {},
+  define: {
+    // Support for environment variables in the game
+    'process.env.API_KEY': JSON.stringify(process.env.VITE_GEMINI_API_KEY || process.env.VITE_API_KEY || ''),
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "client", "src"),

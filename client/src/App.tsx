@@ -14,6 +14,7 @@ import OnboardingStatistics from "@/pages/onboarding-statistics";
 import ChildDashboard from "@/pages/child-dashboard";
 import AdultDashboard from "@/pages/adult-dashboard";
 import SpeechTherapy from "@/pages/speech-therapy";
+import StoryGame from "@/pages/story-game";
 import ProgressDashboard from "@/pages/progress-dashboard";
 import EmotionalSupport from "@/pages/emotional-support";
 import EmotionalSupportVoice from "@/pages/emotional-support-voice";
@@ -92,6 +93,12 @@ export default function App() {
             <Route path="/speech-therapy">
               <ProtectedRoute>
                 <SpeechTherapy />
+              </ProtectedRoute>
+            </Route>
+            
+            <Route path="/story-game">
+              <ProtectedRoute>
+                <StoryGame />
               </ProtectedRoute>
             </Route>
             

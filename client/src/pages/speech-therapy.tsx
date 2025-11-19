@@ -229,22 +229,38 @@ export default function SpeechTherapyPage() {
               </div>
             </div>
 
-            {/* No Games Available */}
-            <div className="text-center py-12">
-              <div className="w-24 h-24 mx-auto mb-6 rounded-xl bg-muted/50 flex items-center justify-center">
-                <Sparkles className="w-12 h-12 text-muted-foreground" />
+            {/* Game Options */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <button 
+                onClick={() => setLocation('/story-game')}
+                className="bg-gradient-to-r from-[#ff6b1d] to-orange-500 hover:from-[#e55a1a] hover:to-orange-600 text-white p-8 rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1"
+              >
+                <div className="text-center">
+                  <Sparkles className="w-16 h-16 mx-auto mb-4" />
+                  <h3 className="text-2xl font-bold mb-2">Story Builder Game</h3>
+                  <p className="text-white/90">
+                    Create amazing stories while practicing your speech skills!
+                  </p>
+                </div>
+              </button>
+              
+              <div className="bg-card border border-border rounded-xl p-8 text-center opacity-60">
+                <Sparkles className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-2xl font-semibold mb-2 text-muted-foreground">More Games Coming Soon!</h3>
+                <p className="text-muted-foreground">
+                  We're working hard to bring you more exciting speech games.
+                </p>
               </div>
-              <h2 className="text-2xl font-semibold mb-4">Games Coming Soon!</h2>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                We're working hard to bring you exciting new speech games. Stay tuned for updates!
-              </p>
+            </div>
+            
+            <div className="text-center">
               <button 
                 onClick={() => setLocation('/child-dashboard')}
                 className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-6 py-2 rounded-lg transition-colors"
               >
                 Back to Dashboard
               </button>
-        </div>
+            </div>
       </main>
 
       {/* Feedback Modal */}

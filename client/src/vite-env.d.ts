@@ -12,6 +12,8 @@ interface ImportMetaEnv {
   readonly VITE_ARTICULATION_API_KEY: string
   readonly VITE_ENABLE_SPEECH_RECOGNITION: string
   readonly VITE_APP_ENV: string
+  readonly VITE_GEMINI_API_KEY?: string
+  readonly VITE_API_KEY?: string
 }
 
 interface ImportMeta {

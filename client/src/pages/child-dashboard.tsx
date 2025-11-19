@@ -93,16 +93,16 @@ export default function ChildDashboard() {
               <Mic className="w-6 h-6 sm:w-7 sm:h-7 text-[#F5B82E]" />
             </h2>
             <div className="w-full space-y-4">
-              {/*<button 
-                onClick={() => setLocation('/voice-model')} 
-                className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-full max-w-sm mx-auto flex items-center justify-between hover:bg-muted transition-all child-dashboard-button"
+              <button 
+                onClick={() => setLocation('/story-game')} 
+                className="border rounded-xl px-4 py-3 text-left shadow bg-gradient-to-r from-[#ff6b1d] to-orange-500 text-white border-[#ff6b1d] w-full max-w-sm mx-auto flex items-center justify-between hover:shadow-lg transition-all duration-200"
               >
                 <div>
-                  <h3 className="text-base font-semibold">Start Speech Practice</h3>
-                  <p className="text-sm text-muted-foreground">Talk with your AI friend!</p>
+                  <h3 className="text-base font-semibold">Start Story Game</h3>
+                  <p className="text-sm text-white/90">Build stories and practice speech!</p>
                 </div>
                 <ArrowRight className="w-5 h-5 flex-shrink-0" />
-              </button>*/}
+              </button>
 
               <button 
                 onClick={() => setLocation('/onboarding')} 

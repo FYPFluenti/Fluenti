@@ -12,9 +12,24 @@
   --popover-foreground: hsl(215, 28%, 17%);
   --card: hsl(0, 0%, 100%);
   --card-foreground: hsl(215, 28%, 17%);
+  --card-background: hsl(0, 0%, 100%);
   --border: hsl(210, 15%, 90%);
   --input: hsl(210, 15%, 90%);
    --brand-orange: #ff6b1d;
+  
+  /* Story Game CSS Variables - These override for game components */
+  /* Note: Game components use these specific variable names */
+  --game-primary: #ff6b1d; /* Vibrant Orange - matches brand-orange */
+  --game-primary-light: #ff8a4d;
+  --game-primary-dark: #e6580c;
+  --game-primary-bg-light: #fff0e8;
+  --game-secondary: #F5B82E; /* Golden Yellow */
+  --game-secondary-light: #fef8e9;
+  --game-secondary-dark: #b8860b;
+  --game-text-light: hsl(215, 16%, 47%);
+  --game-subtle-border: hsl(210, 15%, 90%);
+  --game-gradient-main-start: #FEF6E4; /* Light Cream */
+  --game-gradient-main-end: #FDEBD0; /* Lighter Peach */
   
   /* New Teal-Blue Color Palette */
   --primary: hsl(183, 25%, 43%);           /* #356e6f - Medium Teal */
