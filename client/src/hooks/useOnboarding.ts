@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { getQueryFn } from "@/lib/queryClient";
+import { OnboardingData } from "@/types/auth";
 
 interface OnboardingStatus {
   isCompleted: boolean;
@@ -34,7 +35,7 @@ export function useOnboardingStatus() {
 export function useOnboardingData() {
   const { isAuthenticated, user } = useAuth();
   
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading, error } = useQuery<OnboardingData | null>({
     queryKey: ["/api/onboarding"],
     queryFn: getQueryFn({ on401: "returnNull" }),
     enabled: !!isAuthenticated && !!user,

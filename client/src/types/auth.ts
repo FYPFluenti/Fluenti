@@ -19,7 +19,7 @@ export interface OnboardingData {
   childBirthYear?: number;
   childName?: string;
   childGender?: 'girl' | 'boy';
-  childBirthDate?: Date;
+  childBirthDate?: Date | string; // Can be Date object or ISO string from API
   interests?: string[];
   vocabularyLevel?: string;
   seekingSpeechTherapy?: boolean;
@@ -31,7 +31,7 @@ export interface OnboardingData {
     comprehension?: Array<{ question: string; answer: 'yes' | 'no' | 'cant-tell' }>;
   };
   evaluationBooking?: {
-    selectedDate?: Date;
+    selectedDate?: Date | string; // Can be Date object or ISO string from API
     selectedTime?: string;
     timezone?: string;
   };

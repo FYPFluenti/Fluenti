@@ -13,6 +13,135 @@ if (!apiKey) {
 const TEXT_GENERATION_MODEL = "gemini-2.5-flash";
 const ASSESSMENT_MODEL = "gemini-2.5-pro";
 
+// --- ONBOARDING DATA UTILITIES ---
+/**
+ * Interface for child age information
+ */
+export interface ChildAge {
+    years: number;
+    months: number;
+}
+
+/**
+ * Interface for onboarding data structure
+ */
+interface OnboardingData {
+    childBirthDate?: Date | string;
+    childBirthYear?: number;
+    childName?: string;
+    childGender?: 'girl' | 'boy';
+}
+
+/**
+ * Calculate child age from birth date or birth year
+ * @param birthDate - Full birth date (preferred)
+ * @param birthYear - Birth year (fallback)
+ * @returns Age object with years and months
+ */
+export function calculateChildAge(birthDate?: Date | string, birthYear?: number): ChildAge {
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth();
+    
+    if (birthDate) {
+        // Use full birth date for accurate calculation
+        const birth = typeof birthDate === 'string' ? new Date(birthDate) : birthDate;
+        const birthYearFromDate = birth.getFullYear();
+        const birthMonth = birth.getMonth();
+        const birthDay = birth.getDate();
+        
+        let years = currentYear - birthYearFromDate;
+        let months = currentMonth - birthMonth;
+        
+        // Adjust if birthday hasn't occurred this year
+        if (currentMonth < birthMonth || (currentMonth === birthMonth && currentDate.getDate() < birthDay)) {
+            years--;
+            months += 12;
+        }
+        
+        // Adjust months if day hasn't occurred this month
+        if (currentDate.getDate() < birthDay) {
+            months--;
+            if (months < 0) {
+                months += 12;
+            }
+        }
+        
+        return { years, months };
+    } else if (birthYear) {
+        // Fallback to birth year with estimated month
+        const estimatedBirthMonth = 6; // Mid-year estimate
+        let years = currentYear - birthYear;
+        let months = currentMonth - estimatedBirthMonth;
+        
+        if (months < 0) {
+            years--;
+            months += 12;
+        }
+        
+        return { years, months };
+    }
+    
+    // Default age if no data available (5-7 year old range, use 6 as default)
+    return { years: 6, months: 0 };
+}
+
+/**
+ * Fetch onboarding data from the API
+ * Uses the same authentication pattern as the rest of the app (cookie-based)
+ * @returns Promise with onboarding data or null if not found
+ */
+export async function fetchOnboardingData(): Promise<OnboardingData | null> {
+    try {
+        // Use the same pattern as getQueryFn - rely on httpOnly cookies for auth
+        // No need for Authorization header - cookies are sent automatically with credentials: 'include'
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
+            ? 'https://fluentiai-backend.onrender.com' 
+            : 'http://localhost:3000');
+        
+        const response = await fetch(`${API_BASE_URL}/api/onboarding`, {
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include' // Important: include cookies in request (httpOnly cookies for auth)
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            return data;
+        } else if (response.status === 401) {
+            // User not authenticated - this is expected if they haven't logged in
+            console.log('User not authenticated for onboarding data fetch (expected if not logged in)');
+            return null;
+        } else {
+            console.warn('Failed to fetch onboarding data:', response.status, response.statusText);
+            return null;
+        }
+    } catch (error) {
+        console.error('Error fetching onboarding data:', error);
+        return null;
+    }
+}
+
+/**
+ * Get child age from onboarding data
+ * Fetches onboarding data and calculates age
+ * @returns Promise with child age object
+ */
+export async function getChildAgeFromOnboarding(): Promise<ChildAge> {
+    try {
+        const onboardingData = await fetchOnboardingData();
+        if (onboardingData) {
+            return calculateChildAge(onboardingData.childBirthDate, onboardingData.childBirthYear);
+        }
+    } catch (error) {
+        console.error('Error getting child age from onboarding:', error);
+    }
+    
+    // Return default age if fetch fails
+    return { years: 6, months: 0 };
+}
+
 // Helper function to extract retry delay from error
 function extractRetryDelay(error: any): number | null {
     try {
@@ -506,7 +635,17 @@ export const testApiKey = async (): Promise<{ success: boolean; message: string;
 
 // --- API FUNCTIONS ---
 
-export const assessSpeechLevel = async (results: AssessmentResult[], therapyType: TherapyType): Promise<{ level: number; title: string; feedbackText: string; }> => {
+export const assessSpeechLevel = async (
+    results: AssessmentResult[], 
+    therapyType: TherapyType,
+    childAge?: ChildAge
+): Promise<{ level: number; title: string; feedbackText: string; }> => {
+    
+    // Fetch child age from onboarding if not provided
+    const age = childAge || await getChildAgeFromOnboarding();
+    const ageDescription = age.years > 0 
+        ? `${age.years} year${age.years !== 1 ? 's' : ''}${age.months > 0 ? ` and ${age.months} month${age.months !== 1 ? 's' : ''}` : ''} old`
+        : '5-7 years old';
     
     const resultsForPrompt = results.map(({ sentence, transcript, targetWord }) => ({ sentence, transcript, targetWord }));
     
@@ -514,7 +653,7 @@ export const assessSpeechLevel = async (results: AssessmentResult[], therapyType
 
     const prompt = `
     --- OBJECTIVE ---
-    Your task is to holistically assess a 5-7 year old child's skill for the specific therapy focus of **'${therapyType}'**, considering their performance across all 3 assessment rounds provided. Based on this holistic analysis, you will assign a single skill level from 1 (beginner) to 20 (advanced).
+    Your task is to holistically assess a ${ageDescription} child's skill for the specific therapy focus of **'${therapyType}'**, considering their performance across all 3 assessment rounds provided. Based on this holistic analysis, you will assign a single skill level from 1 (beginner) to 20 (advanced).
 
     --- IMPORTANT: LEVEL SYSTEM UNDERSTANDING ---
     The game has a leveling system with 20 total levels (1-20). Each level requires the child to complete 5 challenges successfully before advancing to the next level. 
@@ -649,12 +788,21 @@ export const assessSpeechLevel = async (results: AssessmentResult[], therapyType
     }
 };
 
-export const analyzeSocialCommunication = async (results: SocialAssessmentResult[]): Promise<{ level: number; title: string; feedbackText: string }> => {
+export const analyzeSocialCommunication = async (
+    results: SocialAssessmentResult[],
+    childAge?: ChildAge
+): Promise<{ level: number; title: string; feedbackText: string }> => {
+    // Fetch child age from onboarding if not provided
+    const age = childAge || await getChildAgeFromOnboarding();
+    const ageDescription = age.years > 0 
+        ? `${age.years} year${age.years !== 1 ? 's' : ''}${age.months > 0 ? ` and ${age.months} month${age.months !== 1 ? 's' : ''}` : ''} old`
+        : '5-7 years old';
+    
     const systemInstruction = `You are an expert pediatric speech-language pathologist AI specializing in Social (Pragmatic) Communication Disorder. Your function is to accurately assess a child's social communication skill level and assign them a level from 1 to 20.`;
 
     const prompt = `
         --- OBJECTIVE ---
-        Your task is to holistically assess a 5-7 year old child's social communication skills based on their responses to a series of social scenarios. Based on this holistic analysis, you will assign a single skill level from 1 (beginner) to 20 (advanced).
+        Your task is to holistically assess a ${ageDescription} child's social communication skills based on their responses to a series of social scenarios. Based on this holistic analysis, you will assign a single skill level from 1 (beginner) to 20 (advanced).
 
         --- IMPORTANT: LEVEL SYSTEM UNDERSTANDING ---
         The game has a leveling system with 20 total levels (1-20). Each level requires the child to complete 5 challenges successfully before advancing to the next level. 
@@ -892,14 +1040,26 @@ You are a creative children's storyteller. Your task is to create an opening sce
     }
 };
 
-export const startStory = async (theme: Theme, characterName: string): Promise<{ storyChunk: string, suggestions: string[] }> => {
+export const startStory = async (
+    theme: Theme, 
+    characterName: string,
+    childAge?: ChildAge
+): Promise<{ storyChunk: string, suggestions: string[] }> => {
+    // Fetch child age from onboarding if not provided
+    const age = childAge || await getChildAgeFromOnboarding();
+    const ageDescription = age.years > 0 
+        ? `${age.years} year${age.years !== 1 ? 's' : ''}${age.months > 0 ? ` and ${age.months} month${age.months !== 1 ? 's' : ''}` : ''} old`
+        : '5-7 years old';
+    
     const prompt = `
-You are a creative children's storyteller. Your task is to start an engaging story.
+You are a creative children's storyteller. Your task is to start an engaging story for a ${ageDescription} child.
 
 **STORY REQUIREMENTS:**
 - Theme: "${theme}"
 - Main Character: ${characterName}
-- Write a warm, gentle, one-paragraph starting scene (3-5 sentences)
+- Target Audience: ${ageDescription} child
+- Write a warm, gentle, one-paragraph starting scene (3-5 sentences) appropriate for a ${ageDescription} child
+- Use age-appropriate language and concepts that match the child's developmental level
 - The scene must end with an open-ended question for the child to answer (e.g., "What should ${characterName} do next?")
 - Provide exactly three short, creative action suggestions (2-4 words each) like "Explore the cave", "Follow the sound", "Ask the butterfly"
     `;
@@ -975,8 +1135,15 @@ export const continueStory = async (
     currentSpeechScore: number,
     isOriginalIdea: boolean,
     focusStars: number,
-    speechChallengesCompleted: number
+    speechChallengesCompleted: number,
+    childAge?: ChildAge
 ): Promise<{ storyChunk: string, emotion: Emotion, suggestions: string[], creativityScore: number, speechFeedback: SpeechFeedback, thematicFeedback: ThematicFeedback, languageFeedback?: LanguageFeedback, challengeSuccess?: boolean, challenge?: StoryChunk['challenge'], endingType?: EndingType }> => {
+    
+    // Fetch child age from onboarding if not provided
+    const age = childAge || await getChildAgeFromOnboarding();
+    const ageDescription = age.years > 0 
+        ? `${age.years} year${age.years !== 1 ? 's' : ''}${age.months > 0 ? ` and ${age.months} month${age.months !== 1 ? 's' : ''}` : ''} old`
+        : '5-7 years old';
     
     // Convert existing story chunks to Gemini's 'Content' format
     const historyContents = story.map(chunk => ({
@@ -1021,7 +1188,7 @@ export const continueStory = async (
 
 
     const prompt = `
-    You are a storyteller AI for a 5-7 year old child. Your primary goal is to create a fun, collaborative story while providing targeted therapeutic practice. You MUST follow all rules precisely.
+    You are a storyteller AI for a ${ageDescription} child. Your primary goal is to create a fun, collaborative story while providing targeted therapeutic practice. You MUST follow all rules precisely. Use age-appropriate language and concepts that match the child's developmental level (${ageDescription}).
 
     --- CORE GAME MECHANICS (NON-NEGOTIABLE - APPLIES TO ALL THERAPY TYPES) ---
     1.  **Story End Conditions (ONLY TWO WAYS)**:
@@ -1509,8 +1676,15 @@ export const generateRewardContent = async (
     level: number,
     character: Character | null,
     theme: Theme | null,
-    therapyType: TherapyType
+    therapyType: TherapyType,
+    childAge?: ChildAge
 ): Promise<RewardContent> => {
+    // Fetch child age from onboarding if not provided
+    const age = childAge || await getChildAgeFromOnboarding();
+    const ageDescription = age.years > 0 
+        ? `${age.years} year${age.years !== 1 ? 's' : ''}${age.months > 0 ? ` and ${age.months} month${age.months !== 1 ? 's' : ''}` : ''} old`
+        : '5-7 years old';
+    
     const prompt = `
         The storytelling game has ended.
         - Final story tone: ${endingType}
@@ -1519,10 +1693,12 @@ export const generateRewardContent = async (
         - Character: ${character?.name || 'a brave hero'}
         - Theme: ${theme || 'a wondrous land'}
         - Therapy Focus: ${therapyType}
+        - Child's Age: ${ageDescription}
 
-        Generate a short, positive, and personalized reward message for the 5-7 year old child.
-        - The title should be celebratory.
+        Generate a short, positive, and personalized reward message for the ${ageDescription} child.
+        - The title should be celebratory and age-appropriate.
         - The message should briefly mention the character and theme.
+        - Use language and concepts appropriate for a ${ageDescription} child.
         - The badge text should be a fun, creative title based on their performance.
         - If the final therapy level is greater than 1, this is a WIN! Make the message extra celebratory and congratulate them on leveling up their skills.
     `;

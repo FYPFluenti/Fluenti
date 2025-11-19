@@ -8,7 +8,9 @@ import CustomAdventureScreen from './CustomAdventureScreen';
 import CharacterSelectionScreen from './CharacterSelectionScreen';
 import AssessmentScreen from './AssessmentScreen';
 import AnalysisResultScreen from './AnalysisResultScreen';
-import { startStory, continueStory, createCustomStory, assessSpeechLevel, generateRewardContent, analyzeSocialCommunication, testApiKey } from '@/services/geminiService';
+import { startStory, continueStory, createCustomStory, assessSpeechLevel, generateRewardContent, analyzeSocialCommunication, testApiKey, getChildAgeFromOnboarding, calculateChildAge, ChildAge } from '@/services/geminiService';
+import { useOnboardingData } from '@/hooks/useOnboarding';
+import { OnboardingData } from '@/types/auth';
 import TherapySelectionScreen from './TherapySelectionScreen';
 import SocialAssessmentScreen from './SocialAssessmentScreen';
 
@@ -411,6 +413,19 @@ const StoryGameApp: React.FC = () => {
   
   const { phase, endingType, totalScore, levels, therapyType, character, theme } = state;
   const currentLevel = therapyType !== 'none' ? levels[therapyType] : 1;
+  
+  // Fetch onboarding data to get child age
+  const { onboardingData } = useOnboardingData();
+  
+  // Calculate child age from onboarding data
+  const childAge: ChildAge = React.useMemo(() => {
+    if (onboardingData) {
+      // calculateChildAge handles both Date and string types for childBirthDate
+      return calculateChildAge(onboardingData.childBirthDate, onboardingData.childBirthYear);
+    }
+    // Return default age if onboarding data not available
+    return { years: 6, months: 0 };
+  }, [onboardingData]);
 
   // Expose API test function to browser console for debugging
   useEffect(() => {
@@ -436,7 +451,7 @@ const StoryGameApp: React.FC = () => {
       const fetchReward = async () => {
         dispatch({ type: 'FETCH_REWARD_CONTENT_START' });
         try {
-          const content = await generateRewardContent(endingType || 'neutral', totalScore, currentLevel, character, theme, therapyType);
+          const content = await generateRewardContent(endingType || 'neutral', totalScore, currentLevel, character, theme, therapyType, childAge);
           dispatch({ type: 'FETCH_REWARD_CONTENT_SUCCESS', payload: content });
         } catch(e: any) {
           dispatch({ type: 'FETCH_REWARD_CONTENT_FAILURE', payload: e.message });
@@ -444,13 +459,13 @@ const StoryGameApp: React.FC = () => {
       };
       fetchReward();
     }
-  }, [phase, endingType, totalScore, currentLevel, character, theme, therapyType, state.rewardContent, state.isLoading]);
+  }, [phase, endingType, totalScore, currentLevel, character, theme, therapyType, state.rewardContent, state.isLoading, childAge]);
 
   const handleAssessmentComplete = async (results: AssessmentResult[]) => {
     if (state.therapyType === 'none' || state.therapyType === 'social') return;
     dispatch({ type: 'START_ASSESSMENT_ANALYSIS' });
     try {
-      const { level, title, feedbackText } = await assessSpeechLevel(results, state.therapyType);
+      const { level, title, feedbackText } = await assessSpeechLevel(results, state.therapyType, childAge);
       dispatch({ type: 'ASSESSMENT_ANALYSIS_SUCCESS', payload: { level, title, feedback: feedbackText } });
     } catch (e: any) {
       dispatch({ type: 'ASSESSMENT_ANALYSIS_FAILURE', payload: e.message });
@@ -460,7 +475,7 @@ const StoryGameApp: React.FC = () => {
   const handleSocialAssessmentComplete = async (results: SocialAssessmentResult[]) => {
     dispatch({ type: 'START_SOCIAL_ASSESSMENT_ANALYSIS' });
     try {
-      const { level, title, feedbackText } = await analyzeSocialCommunication(results);
+      const { level, title, feedbackText } = await analyzeSocialCommunication(results, childAge);
       dispatch({ type: 'ASSESSMENT_ANALYSIS_SUCCESS', payload: { level, title, feedback: feedbackText } });
     } catch (e: any) {
       dispatch({ type: 'SOCIAL_ASSESSMENT_FAILURE', payload: e.message });
@@ -478,7 +493,7 @@ const StoryGameApp: React.FC = () => {
     }
     dispatch({ type: 'START_GAME', payload: theme });
     try {
-      const initialStory = await startStory(theme, state.character.name);
+      const initialStory = await startStory(theme, state.character.name, childAge);
       dispatch({ type: 'START_STORY_SUCCESS', payload: initialStory });
     } catch (e: any) {
       dispatch({ type: 'START_STORY_FAILURE', payload: e.message });
@@ -516,7 +531,7 @@ const StoryGameApp: React.FC = () => {
     dispatch({ type: 'CONTINUE_STORY_START', payload: userInput });
     try {
       // Pass the corrected `storyForApi` array instead of the stale `state.story`.
-      const result = await continueStory(storyForApi, userInput, state.therapyType, currentLevel, state.totalScore, state.speechScore, isOriginalIdea, state.focusStars, state.speechChallengesCompletedInLevel);
+      const result = await continueStory(storyForApi, userInput, state.therapyType, currentLevel, state.totalScore, state.speechScore, isOriginalIdea, state.focusStars, state.speechChallengesCompletedInLevel, childAge);
       dispatch({ type: 'CONTINUE_STORY_SUCCESS', payload: result });
 
       if (!result.endingType && state.focusStars > 0) {
