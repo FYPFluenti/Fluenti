@@ -3785,8 +3785,8 @@ Complexity Analysis:"""
 
             # Enhanced text splitter with therapeutic context preservation
             text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=800,
-                chunk_overlap=150,
+                chunk_size=1200,
+                chunk_overlap=200,
                 separators=["\n\n", "\n", ". ", "? ", "! ", "; ", ", ", " "],
                 length_function=len,
                 keep_separator=True
@@ -3796,7 +3796,11 @@ Complexity Analysis:"""
             chunks = []
             chunk_metadata = []
 
-            for i, text in enumerate(all_texts[:1500]):
+            # Process up to 5000 texts for better coverage (or all if fewer than 5000)
+            # This significantly increases dataset utilization from the previous 1500 limit
+            process_limit = min(5000, len(all_texts))
+            print(f"📊 Processing {process_limit} texts out of {len(all_texts)} available")
+            for i, text in enumerate(all_texts[:process_limit]):
                 try:
                     text_chunks = text_splitter.split_text(text)
                     for chunk_idx, chunk in enumerate(text_chunks):
@@ -3835,13 +3839,14 @@ Complexity Analysis:"""
                 persist_directory="/content/therapy_enhanced_chroma_db"
             )
 
-            # Create specialized retrievers
+            # Create specialized retrievers with increased retrieval depth
+            # Removed restrictive filter to allow access to all relevant crisis content
             self.crisis_retriever = self.vector_store.as_retriever(
-                search_kwargs={"k": 3, "filter": {"type": "counseling_conversation"}}
+                search_kwargs={"k": 6}  # Increased from 3 to 6 for better crisis coverage
             )
 
             self.general_retriever = self.vector_store.as_retriever(
-                search_kwargs={"k": 3}
+                search_kwargs={"k": 6}  # Increased from 3 to 6 for better therapeutic coverage
             )
 
             print(f"✅ Enhanced knowledge base ready with {len(chunks)} chunks!")
@@ -4480,18 +4485,18 @@ Enhanced Query (max 100 characters):"""
             if crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
                 final_query = f"crisis intervention emergency safety {enhanced_query}"
                 retriever = self.crisis_retriever
-                context_limit = 1200  # More context for crisis situations
-                docs_to_retrieve = 3
+                context_limit = 2000  # Increased from 1200 for better crisis coverage
+                docs_to_retrieve = 6  # Increased from 3 to 6 for comprehensive crisis knowledge
             elif response_type == "casual":
                 final_query = f"supportive empathetic conversation {enhanced_query}"
                 retriever = self.general_retriever
-                context_limit = 600  # Lighter context for casual interactions
-                docs_to_retrieve = 2
+                context_limit = 1000  # Increased from 600 for better casual support
+                docs_to_retrieve = 4  # Increased from 2 to 4 for casual interactions
             else:  # therapeutic responses
                 final_query = f"therapeutic counseling mental health {enhanced_query}"
                 retriever = self.general_retriever
-                context_limit = 1000  # Full context for therapeutic responses
-                docs_to_retrieve = 3
+                context_limit = 1500  # Increased from 1000 for comprehensive therapeutic guidance
+                docs_to_retrieve = 6  # Increased from 3 to 6 for thorough therapeutic knowledge
 
             # Check if knowledge base is available (should be loaded during startup)
             if not self._knowledge_base_loaded:
