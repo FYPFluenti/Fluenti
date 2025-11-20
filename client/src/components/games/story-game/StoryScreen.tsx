@@ -2,6 +2,17 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { GameState, StoryChunk, GameAction, Theme, SpeechFeedback, ThematicFeedback, PronunciationBadge, MAX_SCORE, CHALLENGES_PER_LEVEL, MAX_FOCUS_STARS, TherapyType } from '@/types/games/story-game';
 import { LoadingSpinner } from './LoadingSpinner';
 import { FoxIcon, MicrophoneIcon, SpeakerIcon, FantasyForestIcon, JungleAdventureIcon, SpaceQuestIcon, MagicalSchoolIcon, SparkleIcon, TrophyIcon, StarIcon } from './icons';
+import { X } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface StoryScreenProps {
   gameState: GameState;
@@ -38,6 +49,7 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
   const [totalScoreAnimation, setTotalScoreAnimation] = useState('');
   const [speechScoreAnimation, setSpeechScoreAnimation] = useState('');
   const [starAnimation, setStarAnimation] = useState('');
+  const [showQuitDialog, setShowQuitDialog] = useState(false);
 
   const utteranceQueue = useRef<SpeechSynthesisUtterance[]>([]);
   const isSpeaking = useRef(false);
@@ -343,11 +355,55 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
       return "Tap the mic to tell me what happens next!";
   }
 
+  const handleQuitClick = () => {
+    setShowQuitDialog(true);
+  };
+
+  const handleQuitConfirm = () => {
+    // Clear saved story state from localStorage
+    try {
+      const STORY_GAME_STORAGE_KEY = 'storyGameState';
+      const savedState = localStorage.getItem(STORY_GAME_STORAGE_KEY);
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
+        // Only clear if we're in the playing phase
+        if (parsed.phase === 'playing') {
+          // Clear story-related state but keep levels and therapy type
+          parsed.phase = 'characterSelection';
+          parsed.story = [];
+          parsed.character = null;
+          parsed.theme = null;
+          parsed.totalScore = 0;
+          parsed.speechScore = 0;
+          parsed.speechChallengesCompletedInLevel = 0;
+          parsed.focusStars = 3;
+          parsed.endingType = null;
+          parsed.rewardContent = null;
+          localStorage.setItem(STORY_GAME_STORAGE_KEY, JSON.stringify(parsed));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to update saved state on quit:', error);
+    }
+    setShowQuitDialog(false);
+    dispatch({ type: 'QUIT_GAME' });
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-yellow-50 flex flex-col w-full overflow-x-hidden">
-      <header className="bg-white border-b border-orange-200 shadow-sm p-3 md:p-4 sticky top-0 z-10 w-full">
-        <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-4 max-w-full px-2 relative">
-          <h1 className="text-lg md:text-xl font-bold text-[#ff6b1d] whitespace-nowrap order-1 md:order-none md:absolute md:left-4">{gameState.theme}</h1>
+    <>
+      <div className="min-h-screen bg-gradient-to-b from-orange-50 to-yellow-50 flex flex-col w-full overflow-x-hidden">
+        <header className="bg-white border-b border-orange-200 shadow-sm p-3 md:p-4 sticky top-0 z-10 w-full">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-4 max-w-full px-2 md:px-4 relative">
+            <h1 className="text-lg md:text-xl font-bold text-[#ff6b1d] whitespace-nowrap order-1 md:order-none md:absolute md:left-4">{gameState.theme}</h1>
+            <button
+              onClick={handleQuitClick}
+              className="absolute right-1 md:right-4 top-1/2 -translate-y-1/2 px-2 py-1.5 md:px-3 md:py-2 rounded-lg hover:bg-red-50 transition-colors text-gray-700 hover:text-red-600 border border-gray-300 hover:border-red-300 z-20 flex items-center gap-1.5 md:gap-2 text-xs md:text-sm font-medium whitespace-nowrap max-w-[120px] md:max-w-none"
+              aria-label="Quit game"
+              title="Quit game"
+            >
+              <X className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
+              <span className="hidden sm:inline truncate">Quit Game</span>
+            </button>
           <div className="flex items-center justify-center flex-wrap gap-3 md:gap-4 text-center order-2 md:order-none md:flex-1 md:justify-center">
             <div className="text-sm md:text-lg font-bold text-blue-600">
                 <div className="text-xs md:text-sm">{therapyName} Lvl.</div>
@@ -468,6 +524,34 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
         )}
       </footer>
     </div>
+
+    <AlertDialog open={showQuitDialog} onOpenChange={setShowQuitDialog}>
+      <AlertDialogContent className="bg-white border-orange-200 rounded-xl shadow-lg max-w-md">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="text-2xl font-bold text-gray-800 text-center">
+            Quit Game?
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-gray-600 text-center text-base pt-2">
+            Are you sure you want to quit? Your progress will be saved, but you'll need to start a new story.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="flex-row gap-3 justify-center sm:justify-center pt-4">
+          <AlertDialogCancel 
+            onClick={() => setShowQuitDialog(false)}
+            className="px-6 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 font-medium"
+          >
+            Cancel
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleQuitConfirm}
+            className="px-6 py-2 rounded-lg bg-gradient-to-r from-[#ff6b1d] to-orange-500 text-white border-[#ff6b1d] hover:from-[#e55a1a] hover:to-orange-600 font-medium shadow-md"
+          >
+            Quit Game
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  </>
   );
 };
 

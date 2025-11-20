@@ -69,6 +69,19 @@ function shuffle(array: BadgeInfo[]) {
 
 function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
+    case 'RESTORE_STATE': {
+      // Restore state from localStorage, merging with current state
+      const restoredState = action.payload;
+      return {
+        ...state,
+        ...restoredState,
+        // Reset transient states
+        isLoading: false,
+        error: null,
+        isListening: false,
+        isOnCooldown: false,
+      };
+    }
     case 'LOAD_SAVED_PROGRESS': {
       const { levels, therapyType, assessmentTitle, assessmentFeedback } = action.payload;
       // Initialize sessionBadges if not already set (needed when skipping assessment)
@@ -468,6 +481,41 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         isOnCooldown: false,
         customStoryInputs: initialCustomInputs,
       };
+    case 'QUIT_GAME':
+      // Quit the current game and go back to character selection
+      return {
+        ...state,
+        phase: 'characterSelection',
+        character: null,
+        theme: null,
+        story: [],
+        totalScore: 0,
+        speechScore: 0,
+        speechChallengesCompletedInLevel: 0,
+        focusStars: INITIAL_FOCUS_STARS,
+        latestSpeechFeedback: null,
+        latestThematicFeedback: null,
+        latestLanguageFeedback: null,
+        wordBank: [],
+        latestBadgeEarned: null,
+        endingType: null,
+        rewardContent: null,
+        isLoading: false,
+        error: null,
+        isListening: false,
+        isOnCooldown: false,
+        customStoryInputs: initialCustomInputs,
+      };
+    case 'GO_BACK':
+      // Navigate back based on current phase
+      if (state.phase === 'start') {
+        return { ...state, phase: 'characterSelection', character: null, theme: null };
+      }
+      if (state.phase === 'characterSelection') {
+        return { ...state, phase: 'therapySelection' };
+      }
+      // For other phases, just return current state (no back navigation)
+      return state;
     case 'START_COOLDOWN':
         return { ...state, isOnCooldown: true };
     case 'END_COOLDOWN':
@@ -477,8 +525,34 @@ function gameReducer(state: GameState, action: GameAction): GameState {
   }
 }
 
+const STORY_GAME_STORAGE_KEY = 'storyGameState';
+
 const StoryGameApp: React.FC = () => {
   const [state, dispatch] = useReducer(gameReducer, initialState);
+  
+  // Restore saved state from localStorage on mount
+  const hasRestoredState = React.useRef(false);
+  useEffect(() => {
+    if (hasRestoredState.current) return; // Only restore once
+    
+    try {
+      const savedState = localStorage.getItem(STORY_GAME_STORAGE_KEY);
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
+        // Only restore if we have a valid phase and it's not 'welcome'
+        if (parsed.phase && parsed.phase !== 'welcome') {
+          console.log('🔄 Restoring game state from localStorage:', parsed.phase);
+          dispatch({
+            type: 'RESTORE_STATE',
+            payload: parsed
+          } as any);
+          hasRestoredState.current = true;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to restore saved game state:', error);
+    }
+  }, []); // Only run once on mount
   
   const { phase, endingType, totalScore, levels, therapyType, character, theme } = state;
   const currentLevel = therapyType !== 'none' ? levels[therapyType] : 1;
@@ -486,6 +560,84 @@ const StoryGameApp: React.FC = () => {
   // Session tracking
   const sessionStartTimeRef = React.useRef<Date | null>(null);
   const sessionIdRef = React.useRef<string | null>(null);
+  
+  // Save game state to localStorage whenever it changes (except for transient states)
+  useEffect(() => {
+    // Don't save welcome phase (initial state)
+    if (phase === 'welcome') {
+      localStorage.removeItem(STORY_GAME_STORAGE_KEY);
+      return;
+    }
+    
+    // Don't save if we just restored state (avoid immediate overwrite)
+    if (hasRestoredState.current && phase === initialState.phase) {
+      return;
+    }
+    
+    // Save state to localStorage, excluding transient UI states
+    try {
+      const stateToSave = {
+        phase: state.phase,
+        therapyType: state.therapyType,
+        assessmentFeedback: state.assessmentFeedback,
+        assessmentTitle: state.assessmentTitle,
+        sessionBadges: state.sessionBadges,
+        character: state.character,
+        theme: state.theme,
+        story: state.story,
+        totalScore: state.totalScore,
+        speechScore: state.speechScore,
+        levels: state.levels,
+        speechChallengesCompletedInLevel: state.speechChallengesCompletedInLevel,
+        focusStars: state.focusStars,
+        latestSpeechFeedback: state.latestSpeechFeedback,
+        latestThematicFeedback: state.latestThematicFeedback,
+        latestLanguageFeedback: state.latestLanguageFeedback,
+        wordBank: state.wordBank,
+        latestBadgeEarned: state.latestBadgeEarned,
+        endingType: state.endingType,
+        rewardContent: state.rewardContent,
+        customStoryInputs: state.customStoryInputs,
+        // Don't save: isLoading, error, isListening, isOnCooldown (transient states)
+      };
+      localStorage.setItem(STORY_GAME_STORAGE_KEY, JSON.stringify(stateToSave));
+    } catch (error) {
+      console.error('Failed to save game state:', error);
+    }
+  }, [
+    phase,
+    state.therapyType,
+    state.character,
+    state.theme,
+    state.story.length, // Only track length to avoid deep comparison
+    state.totalScore,
+    state.speechScore,
+    state.levels,
+    state.speechChallengesCompletedInLevel,
+    state.focusStars,
+    state.endingType,
+    state.rewardContent,
+    state.customStoryInputs,
+    // Use a ref to track story content changes without deep comparison
+  ]);
+  
+  // Save story content separately when it changes (using a ref to avoid excessive saves)
+  const prevStoryLengthRef = React.useRef(state.story.length);
+  useEffect(() => {
+    if (state.story.length !== prevStoryLengthRef.current && phase !== 'welcome') {
+      prevStoryLengthRef.current = state.story.length;
+      try {
+        const savedState = localStorage.getItem(STORY_GAME_STORAGE_KEY);
+        if (savedState) {
+          const parsed = JSON.parse(savedState);
+          parsed.story = state.story;
+          localStorage.setItem(STORY_GAME_STORAGE_KEY, JSON.stringify(parsed));
+        }
+      } catch (error) {
+        console.error('Failed to save story update:', error);
+      }
+    }
+  }, [state.story, phase]);
   
   // Fetch onboarding data to get child age
   const { onboardingData } = useOnboardingData();
@@ -507,6 +659,11 @@ const StoryGameApp: React.FC = () => {
 
   // Load saved progress on mount - only redirect on initial load, not during assessment flow
   useEffect(() => {
+    // Don't override restored state if we're already past welcome phase
+    if (hasRestoredState.current || (phase !== 'welcome' && phase !== initialState.phase)) {
+      return; // State was restored from localStorage, don't override
+    }
+    
     if (storyGameProgress && !progressLoading) {
       // Load saved levels (always load if available)
       if (storyGameProgress.currentLevels) {
@@ -811,6 +968,8 @@ const StoryGameApp: React.FC = () => {
     // Reset session tracking
     sessionStartTimeRef.current = null;
     sessionIdRef.current = null;
+    // Clear saved state from localStorage
+    localStorage.removeItem(STORY_GAME_STORAGE_KEY);
     dispatch({ type: 'RESTART_GAME' });
   };
   
@@ -901,9 +1060,18 @@ const StoryGameApp: React.FC = () => {
                   onProceed={() => dispatch({ type: 'PROCEED_TO_CHARACTER_SELECTION' })} 
                />;
       case 'characterSelection':
-        return <CharacterSelectionScreen onSelect={handleSelectCharacter} />;
+        return <CharacterSelectionScreen 
+          onSelect={handleSelectCharacter} 
+          onBack={() => dispatch({ type: 'GO_BACK' })} 
+        />;
       case 'start':
-        return <StartScreen onStart={handleStart} isLoading={state.isLoading} character={state.character} error={state.error} />;
+        return <StartScreen 
+          onStart={handleStart} 
+          onBack={() => dispatch({ type: 'GO_BACK' })} 
+          isLoading={state.isLoading} 
+          character={state.character} 
+          error={state.error} 
+        />;
       case 'customizing':
         return <CustomAdventureScreen 
                     onCreateStory={handleCreateCustomStory} 
