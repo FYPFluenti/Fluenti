@@ -184,7 +184,10 @@ export type GameAction =
   | { type: 'FETCH_REWARD_CONTENT_FAILURE'; payload: string }
   | { type: 'FINISH_STORY_NARRATION' }
   | { type: 'RESTART_GAME' }
+  | { type: 'QUIT_GAME' }
+  | { type: 'GO_BACK' }
   | { type: 'START_COOLDOWN' }
   | { type: 'END_COOLDOWN' }
-  | { type: 'LOAD_SAVED_PROGRESS'; payload: { levels: { pronunciation: number; fluency: number; dld: number; social: number }; therapyType: TherapyType; assessmentTitle?: string | null; assessmentFeedback?: string | null } };
+  | { type: 'LOAD_SAVED_PROGRESS'; payload: { levels: { pronunciation: number; fluency: number; dld: number; social: number }; therapyType: TherapyType; assessmentTitle?: string | null; assessmentFeedback?: string | null } }
+  | { type: 'RESTORE_STATE'; payload: Partial<GameState> };
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Character } from '@/types/games/story-game';
 import { LionIcon, NatureIcon, InventorIcon, CreateIcon, FoxIcon, SparkleIcon } from './icons';
+import { ArrowLeft } from 'lucide-react';
 
 const CHARACTERS: Character[] = [
     { id: 'leo', name: 'Leo the Lion', role: 'The Brave Leader', icon: LionIcon },
@@ -11,9 +12,10 @@ const CHARACTERS: Character[] = [
 
 interface CharacterSelectionScreenProps {
   onSelect: (character: Character) => void;
+  onBack?: () => void;
 }
 
-const CharacterSelectionScreen: React.FC<CharacterSelectionScreenProps> = ({ onSelect }) => {
+const CharacterSelectionScreen: React.FC<CharacterSelectionScreenProps> = ({ onSelect, onBack }) => {
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(CHARACTERS[0]);
 
   const handleSelect = () => {
@@ -24,7 +26,16 @@ const CharacterSelectionScreen: React.FC<CharacterSelectionScreenProps> = ({ onS
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-2xl bg-white border border-orange-200 rounded-xl shadow-lg p-6 md:p-10">
+      <div className="w-full max-w-2xl bg-white border border-orange-200 rounded-xl shadow-lg p-6 md:p-10 relative">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="absolute top-4 left-4 p-2 rounded-full hover:bg-orange-50 transition-colors text-gray-600 hover:text-[#ff6b1d]"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+        )}
         <FoxIcon className="w-20 h-20 mx-auto text-[#ff6b1d] mb-4" />
         <h1 className="text-3xl md:text-4xl font-bold text-gray-800 text-center mb-2">Welcome, Storyteller!</h1>
         <p className="text-gray-600 text-center mb-8 text-lg">Every great story needs a hero.</p>

@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Theme, THEMES, Character } from '@/types/games/story-game';
 import { FoxIcon, SparkleIcon } from './icons';
+import { ArrowLeft } from 'lucide-react';
 
 interface StartScreenProps {
   onStart: (theme: Theme) => void;
+  onBack?: () => void;
   isLoading: boolean;
   character: Character | null;
   error?: string | null;
@@ -17,12 +19,21 @@ const THEME_COLORS: Record<Theme, { bg: string; text: string; border: string; se
     'Custom Adventure': { bg: 'bg-orange-100', text: 'text-orange-800', border: 'border-orange-500', selected: 'ring-orange-400' },
 };
 
-const StartScreen: React.FC<StartScreenProps> = ({ onStart, isLoading, character, error }) => {
+const StartScreen: React.FC<StartScreenProps> = ({ onStart, onBack, isLoading, character, error }) => {
   const [selectedTheme, setSelectedTheme] = useState<Theme>(THEMES[0]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-lg bg-white border border-orange-200 rounded-xl shadow-lg p-6 md:p-10">
+      <div className="w-full max-w-lg bg-white border border-orange-200 rounded-xl shadow-lg p-6 md:p-10 relative">
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="absolute top-4 left-4 p-2 rounded-full hover:bg-orange-50 transition-colors text-gray-600 hover:text-[#ff6b1d]"
+            aria-label="Go back"
+          >
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+        )}
         {character?.icon && <character.icon className="w-20 h-20 mx-auto text-[#ff6b1d] mb-4" />}
         <h1 className="text-3xl md:text-4xl font-bold text-gray-800 text-center mb-2">{character?.name}'s Story</h1>
         <p className="text-gray-600 text-center mb-8 text-lg">Let's create an adventure together!</p>
