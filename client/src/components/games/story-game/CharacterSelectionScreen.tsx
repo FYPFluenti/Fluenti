@@ -23,13 +23,13 @@ const CharacterSelectionScreen: React.FC<CharacterSelectionScreenProps> = ({ onS
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[--gradient-main-start] to-[--gradient-main-end] flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-2xl bg-[--card-background] rounded-3xl shadow-2xl p-6 md:p-10 text-center">
-        <FoxIcon className="w-20 h-20 mx-auto text-[--primary] mb-4" />
-        <h1 className="text-4xl md:text-5xl font-bold text-[--foreground]">Welcome, Storyteller!</h1>
-        <p className="text-[--text-light] mt-2 mb-8 text-lg">Every great story needs a hero.</p>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-2xl bg-white border border-orange-200 rounded-xl shadow-lg p-6 md:p-10">
+        <FoxIcon className="w-20 h-20 mx-auto text-[#ff6b1d] mb-4" />
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 text-center mb-2">Welcome, Storyteller!</h1>
+        <p className="text-gray-600 text-center mb-8 text-lg">Every great story needs a hero.</p>
         
-        <h2 className="text-2xl font-bold text-[--primary] mb-6">Choose Your Hero</h2>
+        <h2 className="text-2xl font-bold text-[#ff6b1d] mb-6 text-center">Choose Your Hero</h2>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {CHARACTERS.map((char) => {
@@ -38,19 +38,19 @@ const CharacterSelectionScreen: React.FC<CharacterSelectionScreenProps> = ({ onS
               <div
                 key={char.id}
                 onClick={() => setSelectedCharacter(char)}
-                className={`p-4 rounded-2xl border-4 cursor-pointer transition-all duration-200 transform ${
+                className={`p-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
                   isSelected 
-                    ? 'border-[--primary] bg-[--primary-bg-light] scale-105 shadow-xl' 
-                    : 'border-[--subtle-border] bg-white hover:border-[--primary-light] hover:bg-[--primary-bg-light]'
+                    ? 'border-[#ff6b1d] bg-orange-50 shadow-lg' 
+                    : 'border-orange-200 bg-white hover:border-[#ff6b1d] hover:bg-orange-50 hover:shadow-lg'
                 }`}
               >
                 <div className="flex items-center space-x-4">
-                  <div className="flex-shrink-0 w-16 h-16 bg-[--primary-light] rounded-full flex items-center justify-center">
-                    <char.icon className="w-10 h-10 text-[--primary-dark]" />
+                  <div className="flex-shrink-0 w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center">
+                    <char.icon className="w-10 h-10 text-[#ff6b1d]" />
                   </div>
                   <div>
-                    <h3 className="text-xl font-bold text-[--foreground] text-left">{char.name}</h3>
-                    <p className="text-[--text-light] text-left">{char.role}</p>
+                    <h3 className="text-xl font-bold text-gray-800 text-left">{char.name}</h3>
+                    <p className="text-gray-600 text-left">{char.role}</p>
                   </div>
                 </div>
               </div>
@@ -61,10 +61,13 @@ const CharacterSelectionScreen: React.FC<CharacterSelectionScreenProps> = ({ onS
         <button
           onClick={handleSelect}
           disabled={!selectedCharacter}
-          className="w-full mt-8 bg-[--primary] text-white font-bold text-2xl py-4 px-6 rounded-2xl shadow-lg hover:bg-[--primary-dark] transform hover:-translate-y-1 transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
+          className="w-full max-w-sm mx-auto mt-8 border rounded-xl px-4 py-3 text-left shadow bg-gradient-to-r from-[#ff6b1d] to-orange-500 text-white border-[#ff6b1d] flex items-center justify-between hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-            <SparkleIcon className="w-8 h-8"/>
-            <span>Let's Begin!</span>
+            <div>
+              <h3 className="text-base font-semibold">Let's Begin!</h3>
+              <p className="text-sm text-white/90">Start your adventure</p>
+            </div>
+            <SparkleIcon className="w-5 h-5 flex-shrink-0"/>
         </button>
       </div>
     </div>

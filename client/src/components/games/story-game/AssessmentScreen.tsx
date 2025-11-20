@@ -451,34 +451,34 @@ const AssessmentScreen: React.FC<AssessmentScreenProps> = ({ onComplete, isLoadi
   const currentPrompt = prompts[currentRound];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[--gradient-main-start] to-[--gradient-main-end] flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-lg bg-[--card-background] rounded-3xl shadow-2xl p-6 md-p-10 text-center">
-        <FoxIcon className="w-20 h-20 mx-auto text-[--primary] mb-4" />
-        <h1 className="text-3xl md:text-4xl font-bold text-[--foreground]">{screenConfig.title}</h1>
-        <p className="text-[--text-light] mt-2 mb-8 text-lg">{screenConfig.subtitle}</p>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-lg bg-white border border-orange-200 rounded-xl shadow-lg p-6 md:p-10">
+        <FoxIcon className="w-20 h-20 mx-auto text-[#ff6b1d] mb-4" />
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 text-center mb-2">{screenConfig.title}</h1>
+        <p className="text-gray-600 text-center mb-8 text-lg">{screenConfig.subtitle}</p>
         
-        <div className="my-8 p-6 bg-[--secondary-light] border-2 border-[--secondary] rounded-2xl min-h-[150px] flex flex-col justify-center">
+        <div className="my-8 p-6 bg-yellow-50 border border-yellow-200 rounded-xl min-h-[150px] flex flex-col justify-center">
           {isFetchingPrompts ? (
             <LoadingSpinner />
           ) : !currentPrompt ? null : (
               (therapyType === 'pronunciation' || therapyType === 'fluency' || therapyType === 'dld') ? (
                   <div>
-                      <p className="text-lg text-[--secondary-dark] mb-2">
+                      <p className="text-lg text-yellow-700 mb-2">
                           (Round {currentRound + 1} of {prompts.length})
                       </p>
-                      <p className="text-xl text-center text-[--foreground] leading-relaxed mb-3">
+                      <p className="text-xl text-center text-gray-800 leading-relaxed mb-3">
                         {currentPrompt.scenario}
                       </p>
-                       <p className="text-2xl text-center font-bold text-[--primary] leading-relaxed">
+                       <p className="text-2xl text-center font-bold text-[#ff6b1d] leading-relaxed">
                         {currentPrompt.action}
                       </p>
                   </div>
               ) : (
                   <>
-                      <p className="text-lg text-[--secondary-dark] mb-2">
+                      <p className="text-lg text-yellow-700 mb-2">
                           (Round {currentRound + 1} of {prompts.length}):
                       </p>
-                      <p className="text-2xl font-bold text-[--secondary-dark]">"{currentPrompt}"</p>
+                      <p className="text-2xl font-bold text-yellow-700">"{currentPrompt}"</p>
                   </>
               )
           )}
@@ -487,7 +487,7 @@ const AssessmentScreen: React.FC<AssessmentScreenProps> = ({ onComplete, isLoadi
         {isLoading ? (
             <div className="flex flex-col items-center justify-center min-h-[120px]">
                 <LoadingSpinner />
-                <p className="mt-4 text-[--text-light]">Analyzing your voice...</p>
+                <p className="mt-4 text-muted-foreground">Analyzing your voice...</p>
             </div>
         ) : (
             <div className="flex flex-col items-center justify-center min-h-[120px]">
@@ -495,26 +495,29 @@ const AssessmentScreen: React.FC<AssessmentScreenProps> = ({ onComplete, isLoadi
                     <button 
                         onClick={handleStartInteraction}
                         disabled={isFetchingPrompts}
-                        className="p-4 rounded-2xl text-white bg-[--primary] hover:bg-[--primary-dark] shadow-lg transform hover:-translate-y-1 transition-all duration-200 flex items-center space-x-3 text-2xl font-bold disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        className="w-full max-w-sm mx-auto border rounded-xl px-4 py-3 text-left shadow bg-gradient-to-r from-[#ff6b1d] to-orange-500 text-white border-[#ff6b1d] flex items-center justify-between hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         aria-label="I'm Ready, start assessment"
                     >
-                        <SparkleIcon className="w-8 h-8"/>
-                        <span>I'm Ready!</span>
+                        <div>
+                          <h3 className="text-base font-semibold">I'm Ready!</h3>
+                          <p className="text-sm text-white/90">Start the assessment</p>
+                        </div>
+                        <SparkleIcon className="w-5 h-5 flex-shrink-0"/>
                     </button>
                 ) : (
                     <div 
-                        className={`p-5 rounded-full text-white transition-all duration-300 shadow-lg transform ${isListening ? 'bg-red-500 animate-pulse scale-110' : (isNarrating ? 'bg-gray-400' : 'bg-[--success]')}`}
+                        className={`p-5 rounded-full text-white transition-all duration-300 shadow-lg ${isListening ? 'bg-red-500 animate-pulse scale-110' : (isNarrating ? 'bg-gray-400' : 'bg-green-500')}`}
                     >
                         <MicrophoneIcon className="w-10 h-10" />
                     </div>
                 )}
-                <p className="mt-4 text-sm text-[--text-light] h-5">
+                <p className="mt-4 text-sm text-muted-foreground h-5">
                     {getStatusText()}
                 </p>
             </div>
         )}
 
-        {error && <p className="mt-4 text-red-600 bg-red-100 p-2 rounded-md">{error}</p>}
+        {error && <p className="mt-4 text-red-600 bg-red-50 border border-red-200 p-2 rounded-lg">{error}</p>}
       </div>
     </div>
   );

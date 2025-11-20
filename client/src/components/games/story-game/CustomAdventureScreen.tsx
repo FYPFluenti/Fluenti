@@ -234,16 +234,16 @@ const CustomAdventureScreen: React.FC<CustomAdventureScreenProps> = ({ onCreateS
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[--gradient-main-start] to-[--gradient-main-end] flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-lg bg-[--card-background] rounded-3xl shadow-2xl p-6 md:p-10 text-center">
-        <h1 className="text-3xl md:text-4xl font-bold text-[--foreground]">Create Your Own Adventure!</h1>
-        <p className="text-[--text-light] mt-2 mb-8 text-lg">Let's build a story together. Just answer my questions!</p>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-lg bg-white border border-orange-200 rounded-xl shadow-lg p-6 md:p-10">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 text-center mb-2">Create Your Own Adventure!</h1>
+        <p className="text-gray-600 text-center mb-8 text-lg">Let's build a story together. Just answer my questions!</p>
         
         <div className="my-8 min-h-[80px]">
           {(isLoading || (currentStep === 'done' && isLoading)) ? (
              <LoadingSpinner />
           ) : (
-            <p className="text-2xl font-bold text-[--primary]">{currentQuestion}</p>
+            <p className="text-2xl font-bold text-[#ff6b1d] text-center">{currentQuestion}</p>
           )}
         </div>
         
@@ -253,7 +253,7 @@ const CustomAdventureScreen: React.FC<CustomAdventureScreenProps> = ({ onCreateS
                     <button
                         key={index}
                         onClick={() => handleSuggestionClick(suggestion)}
-                        className="font-semibold py-2 px-4 rounded-full border-2 bg-[--secondary-light] text-[--secondary-dark] border-[--secondary] hover:bg-opacity-80 hover:border-opacity-80 hover:scale-105 transition-all duration-200 transform"
+                        className="font-semibold py-2 px-4 rounded-xl border border-border bg-yellow-50 text-yellow-700 hover:bg-yellow-100 hover:border-yellow-300 transition-all duration-200"
                     >
                         {suggestion}
                     </button>
@@ -266,27 +266,27 @@ const CustomAdventureScreen: React.FC<CustomAdventureScreenProps> = ({ onCreateS
         {currentStep !== 'done' && !isLoading && !isLoadingSuggestions && (
             <div className="flex flex-col items-center">
                  <div className="flex items-center space-x-4">
-                    <button onClick={() => speakText(currentQuestion, suggestions)} className="p-4 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors" aria-label="Repeat question">
-                        <SpeakerIcon className="w-8 h-8 text-gray-700"/>
+                    <button onClick={() => speakText(currentQuestion, suggestions)} className="p-4 bg-card border border-border rounded-full hover:bg-muted transition-colors" aria-label="Repeat question">
+                        <SpeakerIcon className="w-8 h-8 text-foreground"/>
                     </button>
                     <button 
                         onClick={handleListen} 
                         disabled={isListening}
-                        className={`p-5 rounded-full text-white transition-all duration-300 shadow-lg transform ${isListening ? 'bg-red-500 animate-pulse scale-110' : 'bg-[--primary] hover:bg-[--primary-dark]'}`}
+                        className={`p-5 rounded-full text-white transition-all duration-300 shadow-lg ${isListening ? 'bg-red-500 animate-pulse scale-110' : 'bg-[#ff6b1d] hover:bg-[#e55a1a]'}`}
                         aria-label="Record your answer"
                     >
                         <MicrophoneIcon className="w-10 h-10" />
                     </button>
                     <div className="w-16 h-16"></div>
                 </div>
-                 <p className="mt-4 text-sm text-[--text-light]">
+                 <p className="mt-4 text-sm text-muted-foreground">
                     {isListening ? "I'm listening..." : "Tap the mic or a suggestion to answer!"}
                 </p>
             </div>
         )}
 
         {isLoading && currentStep === 'done' && (
-            <div className="flex items-center justify-center space-x-3 text-xl font-bold text-[--primary]">
+            <div className="flex items-center justify-center space-x-3 text-xl font-bold text-[#ff6b1d]">
                 <SparkleIcon className="w-8 h-8 animate-pulse"/>
                 <span>Making your story!</span>
             </div>

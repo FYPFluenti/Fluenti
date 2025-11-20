@@ -101,12 +101,12 @@ const AnalysisResultScreen: React.FC<AnalysisResultScreenProps> = ({ title, feed
   }[therapyType];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[--gradient-main-start] to-[--gradient-main-end] flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-lg bg-[--card-background] rounded-3xl shadow-2xl p-6 md:p-10 text-center animate-pop">
-        <FoxIcon className="w-20 h-20 mx-auto text-[--primary] mb-4" />
-        <h1 className="text-3xl md:text-4xl font-bold text-[--foreground]">Check-up Complete!</h1>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-lg bg-white border border-orange-200 rounded-xl shadow-lg p-6 md:p-10">
+        <FoxIcon className="w-20 h-20 mx-auto text-[#ff6b1d] mb-4" />
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 text-center mb-6">Check-up Complete!</h1>
         
-        <div className={`my-8 p-6 ${config.bgColor} border-2 ${config.borderColor} rounded-2xl`}>
+        <div className={`my-8 p-6 ${config.bgColor} border ${config.borderColor} rounded-xl`}>
             {level > 0 && therapyType !== 'social' && (
                 <div className="mb-4">
                     <p className={`text-lg font-bold ${config.textColor}`}>{therapyName} Skill Level</p>
@@ -114,18 +114,21 @@ const AnalysisResultScreen: React.FC<AnalysisResultScreenProps> = ({ title, feed
                 </div>
             )}
             <h2 className={`text-2xl font-bold ${config.textColor} mb-2`}>{title}</h2>
-            <p className="text-lg text-[--foreground] leading-relaxed">
+            <p className="text-lg text-gray-800 leading-relaxed">
                 {feedback}
             </p>
         </div>
 
         <button 
             onClick={onProceed}
-            className="w-full p-4 rounded-2xl text-white bg-[--primary] hover:bg-[--primary-dark] shadow-lg transform hover:-translate-y-1 transition-all duration-200 flex items-center justify-center space-x-3 text-2xl font-bold"
+            className="w-full max-w-sm mx-auto border rounded-xl px-4 py-3 text-left shadow bg-gradient-to-r from-[#ff6b1d] to-orange-500 text-white border-[#ff6b1d] flex items-center justify-between hover:shadow-lg transition-all duration-200"
             aria-label="Continue to story"
         >
-            <SparkleIcon className="w-8 h-8"/>
-            <span>Let's Go!</span>
+            <div>
+              <h3 className="text-base font-semibold">Let's Go!</h3>
+              <p className="text-sm text-white/90">Continue to story</p>
+            </div>
+            <SparkleIcon className="w-5 h-5 flex-shrink-0"/>
         </button>
       </div>
     </div>

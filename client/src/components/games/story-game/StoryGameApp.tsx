@@ -922,7 +922,7 @@ const StoryGameApp: React.FC = () => {
 
   return (
     <div 
-      className="story-game-container min-h-screen w-full max-w-full overflow-x-hidden" 
+      className="story-game-container min-h-screen w-full max-w-full overflow-x-hidden child-friendly-theme" 
       style={{
         '--primary': '#ff6b1d',
         '--primary-light': '#ff8a4d',
@@ -932,12 +932,19 @@ const StoryGameApp: React.FC = () => {
         '--secondary-light': '#fef8e9',
         '--secondary-dark': '#b8860b',
         '--text-light': 'hsl(215, 16%, 47%)',
-        '--subtle-border': 'hsl(210, 15%, 90%)',
+        '--subtle-border': 'hsl(210, 15%, 90%)',    
         '--gradient-main-start': '#FEF6E4',
         '--gradient-main-end': '#FDEBD0',
         '--card-background': '#FFFFFF',
         '--background': '#FFFBF5',
         '--foreground': '#4A4A4A',
+        // Force child-friendly theme even in dark mode
+        '--story-bg': '#fef7ed', // orange-50 
+        '--story-bg-gradient': 'linear-gradient(to bottom right, #fef7ed, #fef3c7)', // orange-50 to yellow-50
+        '--story-card': '#ffffff',
+        '--story-border': '#fed7aa', // orange-200
+        '--story-text': '#1f2937', // gray-800
+        '--story-text-muted': '#4b5563', // gray-600
       } as React.CSSProperties}
     >
       {renderContent()}

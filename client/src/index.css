@@ -286,6 +286,27 @@
       box-shadow: 0 0 0 10px transparent;
     }
   }
+
+  /* Child-Friendly Story Game Theme Override */
+  .child-friendly-theme {
+    /* Force light theme for story game regardless of system theme */
+    --background: #fef7ed !important; /* orange-50 */
+    --foreground: #1f2937 !important; /* gray-800 */
+    --card: #ffffff !important;
+    --card-foreground: #1f2937 !important;
+    --muted-foreground: #4b5563 !important; /* gray-600 */
+    --border: #fed7aa !important; /* orange-200 */
+  }
+
+  /* Dark mode override - story game stays child-friendly */
+  .dark .child-friendly-theme {
+    --background: #fef7ed !important; /* orange-50 */
+    --foreground: #1f2937 !important; /* gray-800 */ 
+    --card: #ffffff !important;
+    --card-foreground: #1f2937 !important;
+    --muted-foreground: #4b5563 !important; /* gray-600 */
+    --border: #fed7aa !important; /* orange-200 */
+  }
 }
 
 @layer utilities {

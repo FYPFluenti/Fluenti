@@ -191,22 +191,22 @@ const SocialAssessmentScreen: React.FC<SocialAssessmentScreenProps> = ({ onCompl
   const currentScenario = scenarios[currentRound];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[--gradient-main-start] to-[--gradient-main-end] flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-lg bg-[--card-background] rounded-3xl shadow-2xl p-6 md-p-10 text-center">
-        <FoxIcon className="w-20 h-20 mx-auto text-[--primary] mb-4" />
-        <h1 className="text-3xl md:text-4xl font-bold text-[--foreground]">Friendship Check-up</h1>
-        <p className="text-[--text-light] mt-2 mb-8 text-lg">Let's practice talking with friends!</p>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-lg bg-white border border-orange-200 rounded-xl shadow-lg p-6 md:p-10">
+        <FoxIcon className="w-20 h-20 mx-auto text-[#ff6b1d] mb-4" />
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 text-center mb-2">Friendship Check-up</h1>
+        <p className="text-gray-600 text-center mb-8 text-lg">Let's practice talking with friends!</p>
         
-        <div className="my-8 p-6 bg-[--success-light] border-2 border-[--success] rounded-2xl min-h-[150px] flex flex-col justify-center">
+        <div className="my-8 p-6 bg-green-50 border border-green-200 rounded-xl min-h-[150px] flex flex-col justify-center">
           {isFetchingScenarios ? (
             <LoadingSpinner />
           ) : (
             currentScenario && <>
-                <p className="text-lg text-[--success-dark] mb-2">Round {currentRound + 1} of {scenarios.length}</p>
-                <p className="text-xl text-[--success-dark] mb-2">
+                <p className="text-lg text-green-700 mb-2">Round {currentRound + 1} of {scenarios.length}</p>
+                <p className="text-xl text-green-700 mb-2">
                     {currentScenario.scenario}
                 </p>
-                <p className="text-2xl font-bold text-[--success-dark]">"{currentScenario.question}"</p>
+                <p className="text-2xl font-bold text-green-700">"{currentScenario.question}"</p>
             </>
           )}
         </div>
@@ -214,7 +214,7 @@ const SocialAssessmentScreen: React.FC<SocialAssessmentScreenProps> = ({ onCompl
         {isLoading ? (
             <div className="flex flex-col items-center justify-center min-h-[120px]">
                 <LoadingSpinner />
-                <p className="mt-4 text-[--text-light]">Thinking about your answers...</p>
+                <p className="mt-4 text-gray-600">Thinking about your answers...</p>
             </div>
         ) : (
             <div className="flex flex-col items-center justify-center min-h-[120px]">
@@ -222,19 +222,22 @@ const SocialAssessmentScreen: React.FC<SocialAssessmentScreenProps> = ({ onCompl
                     <button 
                         onClick={handleStartInteraction}
                         disabled={isFetchingScenarios}
-                        className="p-4 rounded-2xl text-white bg-[--primary] hover:bg-[--primary-dark] shadow-lg transform hover:-translate-y-1 transition-all duration-200 flex items-center space-x-3 text-2xl font-bold disabled:bg-gray-400 disabled:cursor-not-allowed"
+                        className="w-full max-w-sm mx-auto border rounded-xl px-4 py-3 text-left shadow bg-gradient-to-r from-[#ff6b1d] to-orange-500 text-white border-[#ff6b1d] flex items-center justify-between hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         aria-label="I'm Ready, start assessment"
                     >
-                        <SparkleIcon className="w-8 h-8"/>
-                        <span>I'm Ready!</span>
+                        <div>
+                          <h3 className="text-base font-semibold">I'm Ready!</h3>
+                          <p className="text-sm text-white/90">Start the assessment</p>
+                        </div>
+                        <SparkleIcon className="w-5 h-5 flex-shrink-0"/>
                     </button>
                 ) : (
                      <div className="flex items-center space-x-4">
-                        <button onClick={speakText} className="p-4 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors" aria-label="Repeat question">
-                            <SpeakerIcon className="w-8 h-8 text-gray-700"/>
+                        <button onClick={speakText} className="p-4 bg-card border border-border rounded-full hover:bg-muted transition-colors" aria-label="Repeat question">
+                            <SpeakerIcon className="w-8 h-8 text-foreground"/>
                         </button>
                         <div 
-                            className={`p-5 rounded-full text-white transition-all duration-300 shadow-lg transform ${isListening ? 'bg-red-500 animate-pulse scale-110' : 'bg-[--success]'}`}
+                            className={`p-5 rounded-full text-white transition-all duration-300 shadow-lg ${isListening ? 'bg-red-500 animate-pulse scale-110' : 'bg-green-500'}`}
                             aria-label="Microphone active"
                         >
                             <MicrophoneIcon className="w-10 h-10" />
@@ -242,13 +245,13 @@ const SocialAssessmentScreen: React.FC<SocialAssessmentScreenProps> = ({ onCompl
                         <div className="w-16 h-16"></div>
                     </div>
                 )}
-                 <p className="mt-4 text-sm text-[--text-light] h-5">
+                 <p className="mt-4 text-sm text-muted-foreground h-5">
                     {isListening ? "I'm listening for your idea..." : (hasStarted ? "Tell me what you would do!" : "Let's get started!")}
                 </p>
             </div>
         )}
 
-        {error && <p className="mt-4 text-red-600 bg-red-100 p-2 rounded-md">{error}</p>}
+        {error && <p className="mt-4 text-red-600 bg-red-50 border border-red-200 p-2 rounded-lg">{error}</p>}
       </div>
     </div>
   );

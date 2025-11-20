@@ -321,10 +321,10 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
     }
     return (
       <div key={chunk.id} className={`flex items-start gap-4 my-4 ${isAI ? '' : 'flex-row-reverse'}`}>
-        <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${isAI ? 'bg-[--primary]' : 'bg-[--secondary]'}`}>
+        <div className={`w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0 ${isAI ? 'bg-[#ff6b1d]' : 'bg-[#F5B82E]'}`}>
           {isAI ? getThemeIcon(theme) : <span className="text-2xl font-bold text-white">Y</span>}
         </div>
-        <div className={`p-4 rounded-2xl max-w-xs md:max-w-md lg:max-w-lg ${isAI ? 'bg-[--primary-bg-light] text-[--primary-dark]' : 'bg-gray-100 text-gray-800'}`}>
+        <div className={`p-4 rounded-xl border max-w-xs md:max-w-md lg:max-w-lg ${isAI ? 'bg-orange-50 border-orange-200 text-foreground' : 'bg-card border-border text-foreground'}`}>
           <p>{chunk.text.replace(/\*\*/g, '')}</p>
         </div>
       </div>
@@ -344,10 +344,10 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
   }
 
   return (
-    <div className="min-h-screen bg-[--background] flex flex-col w-full overflow-x-hidden">
-      <header className="bg-[--card-background] shadow-md p-3 md:p-4 sticky top-0 z-10 w-full relative">
+    <div className="min-h-screen bg-gradient-to-b from-orange-50 to-yellow-50 flex flex-col w-full overflow-x-hidden">
+      <header className="bg-white border-b border-orange-200 shadow-sm p-3 md:p-4 sticky top-0 z-10 w-full">
         <div className="flex flex-col md:flex-row items-center justify-center gap-3 md:gap-4 max-w-full px-2 relative">
-          <h1 className="text-lg md:text-xl font-bold text-[--primary] whitespace-nowrap order-1 md:order-none md:absolute md:left-4">{gameState.theme}</h1>
+          <h1 className="text-lg md:text-xl font-bold text-[#ff6b1d] whitespace-nowrap order-1 md:order-none md:absolute md:left-4">{gameState.theme}</h1>
           <div className="flex items-center justify-center flex-wrap gap-3 md:gap-4 text-center order-2 md:order-none md:flex-1 md:justify-center">
             <div className="text-sm md:text-lg font-bold text-blue-600">
                 <div className="text-xs md:text-sm">{therapyName} Lvl.</div>
@@ -382,11 +382,11 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
             {isLoading && story.length === 0 ? (
               <div className="text-center p-8">
                 <LoadingSpinner />
-                <p className="mt-4 text-[--text-light]">Our storyteller is starting your adventure...</p>
+                <p className="mt-4 text-muted-foreground">Our storyteller is starting your adventure...</p>
               </div>
             ) : story.length === 0 ? (
               <div className="text-center p-8">
-                <p className="text-lg text-[--text-light]">The story is about to begin...</p>
+                <p className="text-lg text-muted-foreground">The story is about to begin...</p>
               </div>
             ) : (
               <>
@@ -397,17 +397,17 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
           </div>
       </main>
       
-      {error && <div className="text-center p-2 bg-red-100 text-red-700">{error}</div>}
+      {error && <div className="text-center p-2 bg-red-50 border border-red-200 text-red-700 rounded-lg">{error}</div>}
 
-      <footer className="bg-[--card-background] pt-2 pb-4 sticky bottom-0 border-t">
+      <footer className="bg-white border-t border-orange-200 pt-2 pb-4 sticky bottom-0">
         {endingType ? (
             <div className="text-center p-4 pointer-events-none">
-                <p className="text-2xl font-bold text-[--primary]">The End</p>
+                <p className="text-2xl font-bold text-[#ff6b1d]">The End</p>
             </div>
         ) : (
             <>
                 {lastChunk?.challenge && (
-                    <div className="text-center p-4 font-bold text-[--primary] text-xl animate-pulse">
+                    <div className="text-center p-4 font-bold text-[#ff6b1d] text-xl animate-pulse">
                         {getChallengePrompt()}
                     </div>
                 )}
@@ -415,22 +415,23 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
                     <div className="pb-4">
                         <div className="max-w-2xl mx-auto flex flex-wrap justify-center gap-3">
                             {lastChunk.suggestions?.map((suggestion, index) => (
-                                <div
+                                <button
                                     key={index}
-                                    className="font-semibold py-2 px-4 rounded-full border-2 bg-[--secondary-light] text-[--secondary-dark] border-[--secondary]"
+                                    onClick={() => onContinue(suggestion)}
+                                    className="font-semibold py-2 px-4 rounded-xl border border-border bg-yellow-50 text-yellow-700 hover:bg-yellow-100 hover:border-yellow-300 transition-all duration-200"
                                 >
                                     {suggestion}
-                                </div>
+                                </button>
                             ))}
                         </div>
                     </div>
                 )}
                 {isDldChallenge && wordBank.length > 0 && (
                     <div className="pb-4">
-                        <p className="text-center text-sm font-bold text-gray-600 mb-2">✨ Your New Words! ✨</p>
+                        <p className="text-center text-sm font-bold text-foreground mb-2">✨ Your New Words! ✨</p>
                         <div className="max-w-2xl mx-auto flex flex-wrap justify-center gap-3">
                             {wordBank.map((word, index) => (
-                                <div key={index} className="font-semibold py-1 px-3 rounded-full bg-yellow-100 text-yellow-800 border-yellow-200 border">
+                                <div key={index} className="font-semibold py-1 px-3 rounded-xl bg-yellow-50 text-yellow-800 border border-yellow-200">
                                     {word}
                                 </div>
                             ))}
@@ -441,17 +442,17 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
                   {isLoading ? (
                     <div className="text-center">
                       <LoadingSpinner />
-                      <p className="mt-2 text-[--text-light]">Our storyteller is thinking...</p>
+                      <p className="mt-2 text-muted-foreground">Our storyteller is thinking...</p>
                     </div>
                   ) : (
                     <div className="flex items-center space-x-4">
-                        <button onClick={() => speakFromQueue([{text: (lastSpokenText || '').replace(/\*\*/g, '')}])} className="p-4 bg-gray-200 rounded-full hover:bg-gray-300 transition-colors" aria-label="Repeat last sentence" disabled={isNarrating}>
-                            <SpeakerIcon className="w-8 h-8 text-gray-700"/>
+                        <button onClick={() => speakFromQueue([{text: (lastSpokenText || '').replace(/\*\*/g, '')}])} className="p-4 bg-card border border-border rounded-full hover:bg-muted transition-colors" aria-label="Repeat last sentence" disabled={isNarrating}>
+                            <SpeakerIcon className="w-8 h-8 text-foreground"/>
                         </button>
                         <button 
                           onClick={handleListen} 
                           disabled={isOnCooldown || isNarrating || isListening}
-                          className={`p-5 rounded-full text-white transition-all duration-300 shadow-lg transform ${isListening ? 'bg-red-500 animate-pulse scale-110' : (isOnCooldown || isNarrating) ? 'bg-gray-400 cursor-not-allowed' : 'bg-[--primary] hover:bg-[--primary-dark]'}`}
+                          className={`p-5 rounded-full text-white transition-all duration-300 shadow-lg ${isListening ? 'bg-red-500 animate-pulse scale-110' : (isOnCooldown || isNarrating) ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#ff6b1d] hover:bg-[#e55a1a]'}`}
                           aria-label="Record your voice"
                         >
                           <MicrophoneIcon className="w-10 h-10" />
@@ -459,7 +460,7 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
                         <div className="w-16 h-16"></div>
                     </div>
                   )}
-                  <p className="mt-2 text-sm text-[--text-light] min-h-[20px]">
+                  <p className="mt-2 text-sm text-muted-foreground min-h-[20px]">
                     {getFooterText()}
                   </p>
                 </div>

@@ -71,11 +71,11 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[--gradient-main-start] to-[--gradient-main-end] flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-lg bg-[--card-background] rounded-3xl shadow-2xl p-6 md:p-10 text-center animate-pop">
-        <FoxIcon className="w-24 h-24 mx-auto text-[--primary] mb-6" />
-        <h1 className="text-4xl md:text-5xl font-bold text-[--foreground]">Hello, Storyteller!</h1>
-        <p className="text-[--text-light] mt-4 mb-10 text-lg leading-relaxed">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-lg bg-white border border-orange-200 rounded-xl shadow-lg p-6 md:p-10 text-center">
+        <FoxIcon className="w-20 h-20 mx-auto text-[#ff6b1d] mb-6" />
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Hello, Storyteller!</h1>
+        <p className="text-gray-600 mb-8 text-lg leading-relaxed">
           I'm so excited to create a magical adventure with you.
           Together, we'll use our voices to build a wonderful story,
           choose our heroes, and explore amazing new worlds!
@@ -84,10 +84,13 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onStart }) => {
         <button 
             onClick={handleStart}
             disabled={isNarrating}
-            className="w-full p-4 rounded-2xl text-white bg-[--primary] hover:bg-[--primary-dark] shadow-lg transform hover:-translate-y-1 transition-all duration-200 flex items-center justify-center space-x-3 text-2xl font-bold disabled:bg-gray-400 disabled:cursor-not-allowed"
+            className="w-full max-w-sm mx-auto border rounded-xl px-4 py-3 text-left shadow bg-gradient-to-r from-[#ff6b1d] to-orange-500 text-white border-[#ff6b1d] flex items-center justify-between hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-            <SparkleIcon className="w-8 h-8"/>
-            <span>Let's Begin!</span>
+            <div>
+              <h3 className="text-base font-semibold">Let's Begin!</h3>
+              <p className="text-sm text-white/90">Start your story adventure</p>
+            </div>
+            <SparkleIcon className="w-5 h-5 flex-shrink-0"/>
         </button>
       </div>
     </div>

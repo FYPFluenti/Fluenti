@@ -21,14 +21,14 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStart, isLoading, character
   const [selectedTheme, setSelectedTheme] = useState<Theme>(THEMES[0]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[--gradient-main-start] to-[--gradient-main-end] flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-lg bg-[--card-background] rounded-3xl shadow-2xl p-6 md:p-10 text-center transform transition-all hover:scale-101 duration-300">
-        {character?.icon && <character.icon className="w-20 h-20 mx-auto text-[--primary] mb-4" />}
-        <h1 className="text-4xl md:text-5xl font-bold text-[--foreground]">{character?.name}'s Story</h1>
-        <p className="text-[--text-light] mt-2 mb-8 text-lg">Let's create an adventure together!</p>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex flex-col justify-center items-center p-4">
+      <div className="w-full max-w-lg bg-white border border-orange-200 rounded-xl shadow-lg p-6 md:p-10">
+        {character?.icon && <character.icon className="w-20 h-20 mx-auto text-[#ff6b1d] mb-4" />}
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 text-center mb-2">{character?.name}'s Story</h1>
+        <p className="text-gray-600 text-center mb-8 text-lg">Let's create an adventure together!</p>
 
         <div className="mb-8">
-          <h2 className="text-2xl font-bold text-[--primary] mb-4">Choose Your Adventure</h2>
+          <h2 className="text-2xl font-bold text-[#ff6b1d] mb-4 text-center">Choose Your Adventure</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {THEMES.map((theme) => {
               const colors = THEME_COLORS[theme];
@@ -37,10 +37,10 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStart, isLoading, character
                 <button
                   key={theme}
                   onClick={() => setSelectedTheme(theme)}
-                  className={`p-4 rounded-xl border-2 transition-all duration-200 text-base font-bold
+                  className={`p-4 rounded-xl border transition-all duration-200 text-base font-semibold
                     ${ isSelected 
-                      ? `${colors.bg} ${colors.text} ${colors.border} scale-105 shadow-lg ring-4 ${colors.selected}` 
-                      : 'bg-gray-50 text-gray-600 border-gray-200 hover:border-gray-400'
+                      ? `${colors.bg} ${colors.text} ${colors.border} shadow-lg` 
+                      : 'bg-white text-gray-800 border-orange-200 hover:border-[#ff6b1d] hover:bg-orange-50 hover:shadow-lg'
                     }`
                   }
                 >
@@ -54,23 +54,29 @@ const StartScreen: React.FC<StartScreenProps> = ({ onStart, isLoading, character
         <button
           onClick={() => onStart(selectedTheme)}
           disabled={isLoading}
-          className="w-full bg-[--primary] text-white font-bold text-2xl py-4 px-6 rounded-2xl shadow-lg hover:bg-[--primary-dark] transform hover:-translate-y-1 transition-all duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center space-x-3"
+          className="w-full max-w-sm mx-auto border rounded-xl px-4 py-3 text-left shadow bg-gradient-to-r from-[#ff6b1d] to-orange-500 text-white border-[#ff6b1d] flex items-center justify-between hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isLoading ? (
             <>
-              <span>Thinking...</span>
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+              <div>
+                <h3 className="text-base font-semibold">Thinking...</h3>
+                <p className="text-sm text-white/90">Creating your story</p>
+              </div>
+              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
             </>
           ) : (
             <>
-              <SparkleIcon className="w-8 h-8"/>
-              <span>Start Story!</span>
+              <div>
+                <h3 className="text-base font-semibold">Start Story!</h3>
+                <p className="text-sm text-white/90">Begin your adventure</p>
+              </div>
+              <SparkleIcon className="w-5 h-5 flex-shrink-0"/>
             </>
           )}
         </button>
         
         {error && (
-          <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg">
             <p className="font-semibold">Oops! Something went wrong:</p>
             <p className="text-sm">{error}</p>
             <p className="text-xs mt-2 text-red-600">Please try again or select a different theme.</p>
