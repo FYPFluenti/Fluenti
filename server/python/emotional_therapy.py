@@ -1712,6 +1712,181 @@ print("✅ Core classes and imports ready!")
 
 class DataLoader:
     """Enhanced mental health data loader with focused, efficient datasets"""
+    
+    # Mental health keywords for relevance filtering
+    MENTAL_HEALTH_KEYWORDS = [
+        'anxiety', 'depression', 'stress', 'therapy', 'counseling', 'therapist',
+        'mental health', 'emotion', 'feeling', 'support', 'crisis', 'trauma',
+        'ptsd', 'bipolar', 'ocd', 'adhd', 'autism', 'suicide', 'self-harm',
+        'panic', 'phobia', 'addiction', 'substance', 'abuse', 'eating disorder',
+        'anorexia', 'bulimia', 'ptsd', 'ptsd', 'dissociative', 'personality disorder',
+        'schizophrenia', 'psychosis', 'mood', 'emotional', 'psychological', 'psychiatric',
+        'medication', 'antidepressant', 'antipsychotic', 'therapy session', 'counselor',
+        'psychologist', 'psychiatrist', 'mental illness', 'wellness', 'mindfulness',
+        'meditation', 'coping', 'grief', 'loss', 'bereavement', 'anger', 'fear',
+        'worry', 'sadness', 'loneliness', 'isolation', 'social anxiety', 'panic attack'
+    ]
+    
+    @staticmethod
+    def normalize_text(text: str) -> str:
+        """Normalize text: remove HTML/XML tags, clean artifacts, normalize whitespace"""
+        if not text:
+            return ""
+        
+        # Remove HTML/XML tags
+        text = re.sub(r'<[^>]+>', '', text)
+        
+        # Remove special tokens/artifacts
+        text = re.sub(r'\[.*?\]', '', text)  # Remove brackets
+        text = re.sub(r'\{.*?\}', '', text)  # Remove braces
+        
+        # Normalize quotes
+        text = text.replace('"', '"').replace('"', '"')
+        text = text.replace(''', "'").replace(''', "'")
+        
+        # Normalize whitespace
+        text = re.sub(r'\s+', ' ', text)
+        
+        return text.strip()
+    
+    @staticmethod
+    def count_words(text: str) -> int:
+        """Count words in text"""
+        if not text:
+            return 0
+        return len(text.split())
+    
+    @staticmethod
+    def is_mental_health_relevant(text: str) -> bool:
+        """Check if text is relevant to mental health"""
+        if not text:
+            return False
+        
+        text_lower = text.lower()
+        # Check for mental health keywords
+        return any(keyword in text_lower for keyword in DataLoader.MENTAL_HEALTH_KEYWORDS)
+    
+    @staticmethod
+    def validate_text_quality(text: str, min_words: int = 20, max_words: int = 2000) -> bool:
+        """Validate text meets quality standards"""
+        if not text or not text.strip():
+            return False
+        
+        word_count = DataLoader.count_words(text)
+        
+        # Minimum therapeutic value
+        if word_count < min_words:
+            return False
+        
+        # Maximum reasonable length
+        if word_count > max_words:
+            return False
+        
+        # Check for meaningful content (not just repeated characters/words)
+        words = text.split()
+        if len(set(words)) < 3:  # At least 3 unique words
+            return False
+        
+        return True
+    
+    @staticmethod
+    def extract_dataset_fields(item: Dict, dataset_name: str) -> Tuple[str, str]:
+        """Extract fields based on dataset-specific structure"""
+        text = ""
+        source_type = "unknown"
+        
+        # Dataset-specific extraction
+        if 'Amod/mental_health' in dataset_name or 'mental_health_counseling' in dataset_name:
+            # Counseling conversations: Context/Response format
+            if 'Context' in item and 'Response' in item:
+                text = f"Context: {item['Context']}\nResponse: {item['Response']}"
+                source_type = "counseling_conversation"
+            elif 'context' in item and 'response' in item:
+                text = f"Context: {item['context']}\nResponse: {item['response']}"
+                source_type = "counseling_conversation"
+        
+        elif 'counsel-chat' in dataset_name or 'nbertagnolli' in dataset_name:
+            # Counsel Chat: May have different structure
+            if 'Context' in item and 'Response' in item:
+                text = f"Context: {item['Context']}\nResponse: {item['Response']}"
+                source_type = "counsel_chat"
+            elif 'question' in item and 'answer' in item:
+                text = f"Question: {item['question']}\nAnswer: {item['answer']}"
+                source_type = "counsel_chat"
+            elif 'input' in item and 'output' in item:
+                text = f"Question: {item['input']}\nAnswer: {item['output']}"
+                source_type = "counsel_chat"
+        
+        elif 'emotion' in dataset_name:
+            # Emotion dataset: text + label
+            if 'text' in item:
+                text = item['text']
+                if 'label' in item:
+                    # Preserve emotion label in text
+                    emotion_labels = ['sadness', 'joy', 'love', 'anger', 'fear', 'surprise']
+                    if isinstance(item['label'], int) and item['label'] < len(emotion_labels):
+                        label = emotion_labels[item['label']]
+                        text = f"Emotion: {label}\nText: {text}"
+                source_type = "emotion_classification"
+        
+        elif 'squad' in dataset_name:
+            # SQuAD: question + context + answers
+            if 'question' in item and 'context' in item:
+                question = item['question']
+                context = item['context']
+                answers = item.get('answers', {}).get('text', [])
+                answer_text = answers[0] if answers else ""
+                text = f"Question: {question}\nContext: {context}\nAnswer: {answer_text}"
+                source_type = "qa_pair"
+        
+        elif 'HelpSteer' in dataset_name or 'nvidia' in dataset_name:
+            # HelpSteer: May have helpfulness scores
+            if 'prompt' in item and 'response' in item:
+                prompt = item['prompt']
+                response = item['response']
+                # Include helpfulness if available
+                helpfulness = item.get('helpfulness', '')
+                if helpfulness:
+                    text = f"Prompt: {prompt}\nResponse: {response}\nHelpfulness: {helpfulness}"
+                else:
+                    text = f"Prompt: {prompt}\nResponse: {response}"
+                source_type = "helpful_conversation"
+        
+        elif 'ultrachat' in dataset_name or 'HuggingFaceH4' in dataset_name:
+            # UltraChat: May have messages array
+            if 'messages' in item:
+                messages = item['messages']
+                if isinstance(messages, list):
+                    text_parts = []
+                    for msg in messages:
+                        if isinstance(msg, dict) and 'content' in msg:
+                            role = msg.get('role', 'user')
+                            content = msg['content']
+                            text_parts.append(f"{role.title()}: {content}")
+                    text = "\n".join(text_parts)
+                    source_type = "chat_conversation"
+        
+        # Fallback: Generic field extraction
+        if not text:
+            if 'input' in item and 'output' in item:
+                text = f"Question: {item['input']}\nAnswer: {item['output']}"
+                source_type = "qa_pair"
+            elif 'question' in item and 'answer' in item:
+                text = f"Question: {item['question']}\nAnswer: {item['answer']}"
+                source_type = "qa_pair"
+            elif 'text' in item:
+                text = item['text']
+                source_type = "general_text"
+            else:
+                # Try to combine all available fields
+                text_parts = []
+                for field in ['conversation', 'context', 'response', 'content', 'input', 'output', 'prompt', 'message']:
+                    if field in item and item[field]:
+                        text_parts.append(f"{field.title()}: {str(item[field])}")
+                text = "\n".join(text_parts)
+                source_type = "combined_fields"
+        
+        return text, source_type
 
     @staticmethod
     def load_mental_health_datasets():
@@ -1725,8 +1900,9 @@ class DataLoader:
             try:
                 print("Loading counseling conversations dataset...")
                 dataset1 = load_dataset("Amod/mental_health_counseling_conversations", split='train')
-                datasets.append(dataset1)
-                print(f"✅ Loaded {safe_dataset_len(dataset1)} counseling conversations")
+                datasets.append((dataset1, "Amod/mental_health_counseling_conversations"))
+                dataset1_size = safe_dataset_len(dataset1)
+                print(f"✅ Loaded {dataset1_size} counseling conversations")
             except Exception as e:
                 print(f"⚠️ Could not load counseling dataset: {e}")
 
@@ -1734,8 +1910,9 @@ class DataLoader:
             try:
                 print("Loading mental health chatbot dataset...")
                 dataset2 = load_dataset("heliosbrahma/mental_health_chatbot_dataset", split='train')
-                datasets.append(dataset2)
-                print(f"✅ Loaded {safe_dataset_len(dataset2)} chatbot conversations")
+                datasets.append((dataset2, "heliosbrahma/mental_health_chatbot_dataset"))
+                dataset2_size = safe_dataset_len(dataset2)
+                print(f"✅ Loaded {dataset2_size} chatbot conversations")
             except Exception as e:
                 print(f"⚠️ Could not load chatbot dataset: {e}")
 
@@ -1743,41 +1920,19 @@ class DataLoader:
             try:
                 print("Loading counsel chat therapy dataset...")
                 dataset3 = load_dataset("nbertagnolli/counsel-chat", split='train')
-                datasets.append(dataset3)
-                print(f"✅ Loaded {safe_dataset_len(dataset3)} counsel chat conversations")
+                datasets.append((dataset3, "nbertagnolli/counsel-chat"))
+                dataset3_size = safe_dataset_len(dataset3)
+                print(f"✅ Loaded {dataset3_size} counsel chat conversations")
             except Exception as e:
                 print(f"⚠️ Could not load counsel chat dataset: {e}")
 
-            # Dataset 4: Mental health conversations - Alternative smaller dataset
+            # REMOVED: Dataset 4 was duplicate of dataset1 (Amod/mental_health_counseling_conversations)
+
+
+
+            # Dataset 6: Mental health support - LIMITED SIZE (WILL BE FILTERED FOR MENTAL HEALTH RELEVANCE)
             try:
-                print("Loading focused mental health conversations...")
-                # Try different split configurations
-                try:
-                    dataset4 = load_dataset("Amod/mental_health_counseling_conversations", split='train[:1000]')  # Limit to 1000
-                except Exception:
-                    # Fallback: load full train split and manually limit
-                    dataset4_full = load_dataset("Amod/mental_health_counseling_conversations", split='train')
-                    # Manually limit to 1000 if dataset is large and supports select
-                    if hasattr(dataset4_full, 'select') and hasattr(dataset4_full, '__len__'):
-                        try:
-                            if len(dataset4_full) > 1000:  # type: ignore
-                                dataset4 = dataset4_full.select(range(1000))  # type: ignore
-                            else:
-                                dataset4 = dataset4_full
-                        except (TypeError, AttributeError):
-                            dataset4 = dataset4_full
-                    else:
-                        dataset4 = dataset4_full
-                datasets.append(dataset4)
-                print(f"✅ Loaded {safe_dataset_len(dataset4)} additional conversations")
-            except Exception as e:
-                print(f"⚠️ Could not load additional conversations: {e}")
-
-
-
-            # Dataset 6: Mental health support - LIMITED SIZE
-            try:
-                print("Loading limited support conversations...")
+                print("Loading limited support conversations (will filter for mental health relevance)...")
                 # Try different split configurations for ultrachat dataset
                 try:
                     dataset6 = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft[:10000]')  # Only 10k instead of 200k
@@ -1795,14 +1950,15 @@ class DataLoader:
                             dataset6 = dataset6_full
                     else:
                         dataset6 = dataset6_full
-                datasets.append(dataset6)
-                print(f"✅ Loaded {safe_dataset_len(dataset6)} support conversations")
+                datasets.append((dataset6, "HuggingFaceH4/ultrachat_200k"))
+                dataset6_size = safe_dataset_len(dataset6)
+                print(f"✅ Loaded {dataset6_size} support conversations (will filter for mental health)")
             except Exception as e:
                 print(f"⚠️ Could not load support dataset: {e}")
 
-            # Dataset 7: Therapeutic conversations - LIMITED SIZE
+            # Dataset 7: Therapeutic conversations - LIMITED SIZE (WILL BE FILTERED FOR MENTAL HEALTH RELEVANCE)
             try:
-                print("Loading limited therapeutic conversations...")
+                print("Loading limited therapeutic conversations (will filter for mental health relevance)...")
                 # Try different split configurations for HelpSteer dataset
                 try:
                     dataset7 = load_dataset("nvidia/HelpSteer", split='train[:5000]')  # Only 5k instead of 35k
@@ -1820,14 +1976,15 @@ class DataLoader:
                             dataset7 = dataset7_full
                     else:
                         dataset7 = dataset7_full
-                datasets.append(dataset7)
-                print(f"✅ Loaded {safe_dataset_len(dataset7)} therapeutic conversations")
+                datasets.append((dataset7, "nvidia/HelpSteer"))
+                dataset7_size = safe_dataset_len(dataset7)
+                print(f"✅ Loaded {dataset7_size} therapeutic conversations (will filter for mental health)")
             except Exception as e:
                 print(f"⚠️ Could not load therapeutic dataset: {e}")
 
-            # Dataset 8: Mental health Q&A dataset
+            # Dataset 8: Mental health Q&A dataset (WILL BE FILTERED FOR MENTAL HEALTH RELEVANCE)
             try:
-                print("Loading mental health Q&A dataset...")
+                print("Loading mental health Q&A dataset (will filter for mental health relevance)...")
                 # Try different approaches for squad dataset
                 try:
                     dataset8 = load_dataset("squad", split='train[:5000]')  # Limited size
@@ -1845,8 +2002,9 @@ class DataLoader:
                             dataset8 = dataset8_full
                     else:
                         dataset8 = dataset8_full
-                datasets.append(dataset8)
-                print(f"✅ Loaded {safe_dataset_len(dataset8)} Q&A examples")
+                datasets.append((dataset8, "squad"))
+                dataset8_size = safe_dataset_len(dataset8)
+                print(f"✅ Loaded {dataset8_size} Q&A examples (will filter for mental health)")
             except Exception as e:
                 print(f"⚠️ Could not load Q&A dataset: {e}")
 
@@ -1872,16 +2030,18 @@ class DataLoader:
                             dataset10 = dataset10_full
                     else:
                         dataset10 = dataset10_full
-                datasets.append(dataset10)
-                print(f"✅ Loaded {safe_dataset_len(dataset10)} emotion classification examples")
+                datasets.append((dataset10, "emotion"))
+                dataset10_size = safe_dataset_len(dataset10)
+                print(f"✅ Loaded {dataset10_size} emotion classification examples")
             except Exception as e:
                 print(f"⚠️ Could not load emotion dataset: {e}")
 
             if datasets:
-                # Safely calculate total entries
+                # Safely calculate total entries (handle tuple format)
                 total_entries = 0
                 dataset_count = 0
-                for dataset in datasets:
+                for dataset_item in datasets:
+                    dataset = dataset_item[0] if isinstance(dataset_item, tuple) else dataset_item
                     dataset_size = safe_dataset_len(dataset)
                     if dataset_size != 'unknown':
                         try:
@@ -3591,6 +3751,12 @@ class TherapyBot:
             
             print(f"🔄 TherapyBot updated user context to: {user_context.get('login', 'unknown')}")
 
+    def _count_words(self, text: str) -> int:
+        """Count words in text for consistent word-based reporting"""
+        if not text:
+            return 0
+        return len(text.split())
+
     def _extract_llm_content(self, response) -> str:
         """Safely extract content from LLM response"""
         try:
@@ -3737,58 +3903,93 @@ Complexity Analysis:"""
         try:
             print("🧠 Building enhanced knowledge base...")
 
-            # Process all datasets with better text extraction
+            # Process all datasets with enhanced preprocessing
             all_texts = []
             metadata_list = []
+            seen_texts = set()  # For deduplication
+            filtered_count = 0
+            duplicate_count = 0
+            quality_filtered = 0
 
-            for dataset_idx, dataset in enumerate(datasets):
-                if isinstance(dataset, list):
+            print("🔍 Starting dataset preprocessing with quality filtering...")
+
+            for dataset_idx, dataset_item in enumerate(datasets):
+                if isinstance(dataset_item, list):
                     # Skip list-type datasets (fallback data removed)
                     continue
+                
+                # Extract dataset and name (handle tuple format)
+                if isinstance(dataset_item, tuple):
+                    dataset, dataset_name = dataset_item
                 else:
-                    # Handle HuggingFace datasets with improved extraction
-                    for item_idx, item in enumerate(dataset):
-                        text = ""
-                        source_type = "unknown"
-
-                        # Enhanced field extraction
-                        if 'Context' in item and 'Response' in item:
-                            text = f"Context: {item['Context']}\nResponse: {item['Response']}"
-                            source_type = "counseling_conversation"
-                        elif 'input' in item and 'output' in item:
-                            text = f"Question: {item['input']}\nAnswer: {item['output']}"
-                            source_type = "qa_pair"
-                        elif 'question' in item and 'answer' in item:
-                            text = f"Question: {item['question']}\nAnswer: {item['answer']}"
-                            source_type = "qa_pair"
-                        elif 'text' in item:
-                            text = item['text']
-                            source_type = "general_text"
-                        else:
-                            # Try to combine all available fields
-                            text_parts = []
-                            for field in ['conversation', 'context', 'response', 'content', 'input', 'output']:
-                                if field in item and item[field]:
-                                    text_parts.append(f"{field.title()}: {str(item[field])}")
-                            text = "\n".join(text_parts)
-                            source_type = "combined_fields"
-
-                        if text.strip() and len(text.strip()) > 10:
-                            all_texts.append(text.strip())
-                            metadata_list.append({
-                                'source': f'dataset_{dataset_idx}',
-                                'index': item_idx,
-                                'type': source_type
-                            })
+                    dataset = dataset_item
+                    dataset_name = f"dataset_{dataset_idx}"
+                
+                # Handle HuggingFace datasets with improved extraction
+                for item_idx, item in enumerate(dataset):
+                    # Dataset-specific field extraction
+                    text, source_type = DataLoader.extract_dataset_fields(item, dataset_name)
+                    
+                    if not text or not text.strip():
+                        continue
+                    
+                    # Text normalization
+                    text = DataLoader.normalize_text(text)
+                    
+                    if not text or not text.strip():
+                        continue
+                    
+                    # Quality validation (minimum 20 words, maximum 2000 words)
+                    if not DataLoader.validate_text_quality(text, min_words=20, max_words=2000):
+                        quality_filtered += 1
+                        continue
+                    
+                    # Mental health relevance filtering for general datasets
+                    general_datasets = ['ultrachat', 'squad', 'HelpSteer', 'HuggingFaceH4']
+                    is_general_dataset = any(gen_ds in dataset_name for gen_ds in general_datasets)
+                    
+                    if is_general_dataset:
+                        if not DataLoader.is_mental_health_relevant(text):
+                            filtered_count += 1
+                            continue
+                    
+                    # Deduplication (hash-based)
+                    text_hash = hashlib.md5(text.lower().strip().encode()).hexdigest()
+                    if text_hash in seen_texts:
+                        duplicate_count += 1
+                        continue
+                    seen_texts.add(text_hash)
+                    
+                    # Add to processed texts
+                    all_texts.append(text.strip())
+                    metadata_list.append({
+                        'source': dataset_name,
+                        'dataset_idx': dataset_idx,
+                        'index': item_idx,
+                        'type': source_type
+                    })
+            
+            print(f"📊 Preprocessing complete:")
+            print(f"   ✅ Processed: {len(all_texts)} high-quality texts")
+            print(f"   🚫 Filtered (non-mental health): {filtered_count}")
+            print(f"   🚫 Filtered (quality): {quality_filtered}")
+            print(f"   🚫 Removed (duplicates): {duplicate_count}")
 
             print(f"📄 Processing {len(all_texts)} enhanced documents...")
 
+            # Word-counting function for word-based chunking
+            def count_words(text: str) -> int:
+                """Count words in text for word-based chunking"""
+                return len(text.split())
+            
             # Enhanced text splitter with therapeutic context preservation
+            # Using standard word-based chunking: 1000 words per chunk with 150 word overlap (15%)
+            # This follows industry best practices for RAG/vector database chunking
             text_splitter = RecursiveCharacterTextSplitter(
-                chunk_size=1200,
-                chunk_overlap=200,
+                chunk_size=1000,  # Standard word-based chunk size (1000 words)
+                chunk_overlap=150,  # 15% overlap (150 words) for context preservation
                 separators=["\n\n", "\n", ". ", "? ", "! ", "; ", ", ", " "],
-                length_function=len,
+                length_function=count_words,  # Use word count instead of character count
                 keep_separator=True
             )
 
@@ -3796,24 +3997,50 @@ Complexity Analysis:"""
             chunks = []
             chunk_metadata = []
 
-            # Process up to 5000 texts for better coverage (or all if fewer than 5000)
-            # This significantly increases dataset utilization from the previous 1500 limit
-            process_limit = min(5000, len(all_texts))
-            print(f"📊 Processing {process_limit} texts out of {len(all_texts)} available")
-            for i, text in enumerate(all_texts[:process_limit]):
+            # Configurable processing limit via environment variable
+            # Default: 10000 (balanced performance vs coverage)
+            # Set KB_PROCESS_LIMIT=-1 to process all documents
+            # Set KB_PROCESS_LIMIT=<number> for specific limit
+            process_limit_env = os.getenv('KB_PROCESS_LIMIT', '10000')
+            if process_limit_env == '-1' or process_limit_env.lower() == 'all':
+                process_limit = len(all_texts)
+                print(f"📊 Processing ALL {len(all_texts)} texts (no limit)")
+            else:
                 try:
-                    text_chunks = text_splitter.split_text(text)
-                    for chunk_idx, chunk in enumerate(text_chunks):
-                        if len(chunk.strip()) > 20:
-                            chunks.append(chunk)
-                            chunk_metadata.append({
-                                **metadata_list[i],
-                                'chunk_index': chunk_idx,
-                                'chunk_length': len(chunk)
-                            })
-                except Exception as e:
-                    print(f"⚠️ Error processing text {i}: {e}")
-                    continue
+                    process_limit = min(int(process_limit_env), len(all_texts))
+                except ValueError:
+                    process_limit = min(10000, len(all_texts))  # Fallback to default
+                print(f"📊 Processing {process_limit} texts out of {len(all_texts)} available (limit: {process_limit_env})")
+            
+            # Process in batches for better memory management with large datasets
+            batch_size = 500  # Process 500 texts at a time
+            total_batches = (process_limit + batch_size - 1) // batch_size
+            
+            for batch_num in range(total_batches):
+                start_idx = batch_num * batch_size
+                end_idx = min(start_idx + batch_size, process_limit)
+                batch_texts = all_texts[start_idx:end_idx]
+                batch_metadata = metadata_list[start_idx:end_idx]
+                
+                if total_batches > 1:
+                    print(f"   Processing batch {batch_num + 1}/{total_batches} (texts {start_idx + 1}-{end_idx})...")
+                
+                for i, text in enumerate(batch_texts):
+                    try:
+                        text_chunks = text_splitter.split_text(text)
+                        for chunk_idx, chunk in enumerate(text_chunks):
+                            if len(chunk.strip()) > 20:  # Minimum 20 characters (roughly 3-4 words)
+                                chunks.append(chunk)
+                                chunk_metadata.append({
+                                    **batch_metadata[i],
+                                    'chunk_index': chunk_idx,
+                                    'chunk_length': len(chunk),  # Character length
+                                    'chunk_word_count': count_words(chunk)  # Word count for clarity
+                                })
+                    except Exception as e:
+                        actual_idx = start_idx + i
+                        print(f"⚠️ Error processing text {actual_idx}: {e}")
+                        continue
 
             print(f"📚 Created {len(chunks)} enhanced knowledge chunks")
 
@@ -4482,21 +4709,25 @@ Enhanced Query (max 100 characters):"""
                 enhanced_query = query
 
             # Determine retrieval strategy based on crisis level and response type
+            # Standard RAG retrieval: 200-300 words (industry best practice)
             if crisis_level in [CrisisLevel.HIGH, CrisisLevel.CRITICAL]:
                 final_query = f"crisis intervention emergency safety {enhanced_query}"
                 retriever = self.crisis_retriever
-                context_limit = 2000  # Increased from 1200 for better crisis coverage
+                context_limit_words = 300  # Standard upper range for crisis (needs more context)
                 docs_to_retrieve = 6  # Increased from 3 to 6 for comprehensive crisis knowledge
             elif response_type == "casual":
                 final_query = f"supportive empathetic conversation {enhanced_query}"
                 retriever = self.general_retriever
-                context_limit = 1000  # Increased from 600 for better casual support
+                context_limit_words = 200  # Standard lower range for casual (less context needed)
                 docs_to_retrieve = 4  # Increased from 2 to 4 for casual interactions
             else:  # therapeutic responses
                 final_query = f"therapeutic counseling mental health {enhanced_query}"
                 retriever = self.general_retriever
-                context_limit = 1500  # Increased from 1000 for comprehensive therapeutic guidance
+                context_limit_words = 250  # Standard middle range for therapeutic (optimal balance)
                 docs_to_retrieve = 6  # Increased from 3 to 6 for thorough therapeutic knowledge
+            
+            # Convert word limit to approximate character limit (avg 5 chars/word + spaces)
+            context_limit = context_limit_words * 6  # Conservative estimate for truncation
 
             # Check if knowledge base is available (should be loaded during startup)
             if not self._knowledge_base_loaded:
@@ -4530,15 +4761,19 @@ Return the most relevant context pieces combined into a coherent therapeutic kno
                     try:
                         context_response = self.llm.invoke(context_selection_prompt)
                         ai_selected_context = self._extract_llm_content(context_response)
-                        final_context = ai_selected_context[:context_limit]
-                        print(f"🧠 AI-selected context: {len(final_context)} chars")
+                        # Truncate to word limit (standard: 200-300 words)
+                        words = ai_selected_context.split()
+                        final_context = ' '.join(words[:context_limit_words])
+                        print(f"🧠 AI-selected context: {self._count_words(final_context)}w (limit: {context_limit_words}w)")
                         return final_context
                     except Exception as e:
                         print(f"⚠️ AI context selection failed, using direct retrieval: {e}")
                 
-                # Fallback: use direct document content
+                # Fallback: use direct document content (truncate to word limit)
                 context = "\n\n".join([doc.page_content for doc in docs[:docs_to_retrieve]])
-                return context[:context_limit]
+                words = context.split()
+                truncated_context = ' '.join(words[:context_limit_words])
+                return truncated_context
             else:
                 print(f"⚠️ No retriever available or knowledge base not loaded")
                 # Provide AI-generated contextual guidance as fallback
@@ -4555,8 +4790,11 @@ Provide 2-3 sentences of relevant therapeutic approach or supportive guidance:""
                         
                         fallback_response = self.llm.invoke(fallback_prompt)
                         fallback_context = self._extract_llm_content(fallback_response)
-                        print(f"🤖 Generated fallback context: {len(fallback_context)} chars")
-                        return fallback_context[:500]  # Limit context size
+                        # Limit fallback to standard word count (200 words max)
+                        words = fallback_context.split()
+                        truncated_fallback = ' '.join(words[:200])
+                        print(f"🤖 Generated fallback context: {self._count_words(truncated_fallback)}w")
+                        return truncated_fallback
                     except Exception as e:
                         print(f"⚠️ Fallback context generation failed: {e}")
                 
@@ -4609,11 +4847,14 @@ Enhanced Query (max 150 characters):"""
             # Add profile-specific therapeutic guidance
             profile_guidance = self._generate_profile_specific_guidance(profile, crisis_level, response_type)
             
-            # Combine contexts
+            # Combine contexts (limit total to standard 300 words max)
             if profile_guidance:
                 combined_context = f"{base_context}\n\nPersonalized Therapeutic Approach:\n{profile_guidance}"
-                print(f"🎯 Added {len(profile_guidance)} chars of personalized guidance")
-                return combined_context[:1500]  # Limit total context size
+                print(f"🎯 Added {self._count_words(profile_guidance)}w of personalized guidance")
+                # Truncate combined context to standard word limit (300 words max)
+                words = combined_context.split()
+                truncated_combined = ' '.join(words[:300])
+                return truncated_combined
             else:
                 return base_context
                 
@@ -4736,8 +4977,11 @@ Personalized Therapeutic Guidance:"""
             guidance = self._extract_llm_content(response)
             
             if guidance and len(guidance.strip()) > 20:
-                print(f"🎯 Generated personalized therapeutic guidance: {len(guidance)} chars")
-                return guidance.strip()[:300]  # Limit size
+                # Limit profile guidance to 50 words (supplementary to base context)
+                words = guidance.strip().split()
+                truncated_guidance = ' '.join(words[:50])
+                print(f"🎯 Generated personalized therapeutic guidance: {self._count_words(truncated_guidance)}w")
+                return truncated_guidance
             else:
                 return ""
                 
@@ -4804,7 +5048,7 @@ Personalized Therapeutic Guidance:"""
             # Get therapeutic context enhanced with psychological profile
             if complexity_analysis['requires_ai_context'] or response_type in ['crisis', 'therapeutic']:
                 context = self._get_dynamic_context_with_profile(final_input, crisis_level, response_type, psychological_profile)
-                print(f"📚 Retrieved enhanced context ({response_type}): {len(context)} chars")
+                print(f"📚 Retrieved enhanced context ({response_type}): {self._count_words(context)}w")
                 if context:
                     print(f"📖 Enhanced context preview: {context[:100]}...")
             else:
@@ -4971,7 +5215,7 @@ Crisis Support Resources:"""
                 ai_resources = self._extract_llm_content(resources_response)
                 
                 if ai_resources and len(ai_resources.strip()) > 10:
-                    print(f"🤖 Generated AI crisis resources: {len(ai_resources)} chars")
+                    print(f"🤖 Generated AI crisis resources: {self._count_words(ai_resources)}w")
                     return response + "\n\n" + ai_resources.strip()
                 else:
                     print(f"⚠️ AI crisis resources generation failed, using fallback")
@@ -5184,7 +5428,7 @@ Welcome back message:"""
             ai_continuation = self.therapy_bot._extract_llm_content(response)
             
             if ai_continuation and len(ai_continuation.strip()) > 10:
-                print(f"🤖 Generated AI continuation message: {len(ai_continuation)} chars")
+                print(f"🤖 Generated AI continuation message: {self.therapy_bot._count_words(ai_continuation)}w")
                 return ai_continuation.strip()
             else:
                 return self._fallback_continuation_message()
@@ -5329,7 +5573,7 @@ Welcome message:"""
                 ai_welcome = self.therapy_bot._extract_llm_content(response)
                 
                 if ai_welcome and len(ai_welcome.strip()) > 20:
-                    print(f"🤖 Generated AI welcome message: {len(ai_welcome)} chars")
+                    print(f"🤖 Generated AI welcome message: {self.therapy_bot._count_words(ai_welcome)}w")
                     return ai_welcome.strip()
                 else:
                     print(f"⚠️ AI welcome generation failed, using fallback")
@@ -5753,7 +5997,7 @@ Main Themes:"""
                 ai_themes = self.therapy_bot._extract_llm_content(response)
                 
                 if ai_themes and len(ai_themes.strip()) > 20:
-                    print(f"🎯 AI-extracted conversation themes: {len(ai_themes)} chars")
+                    print(f"🎯 AI-extracted conversation themes: {self.therapy_bot._count_words(ai_themes)}w")
                     return ai_themes.strip()
                 else:
                     print(f"⚠️ AI theme extraction failed, using fallback")
@@ -5831,7 +6075,7 @@ Identified Strengths:"""
                 ai_strengths = self.therapy_bot._extract_llm_content(response)
                 
                 if ai_strengths and len(ai_strengths.strip()) > 20:
-                    print(f"🎯 AI-identified strengths: {len(ai_strengths)} chars")
+                    print(f"🎯 AI-identified strengths: {self.therapy_bot._count_words(ai_strengths)}w")
                     return ai_strengths.strip()
                 else:
                     print(f"⚠️ AI strength identification failed, using fallback")
@@ -5908,7 +6152,7 @@ Personalized Recommendations:"""
                 ai_recommendations = self.therapy_bot._extract_llm_content(response)
                 
                 if ai_recommendations and len(ai_recommendations.strip()) > 20:
-                    print(f"🎯 AI-generated recommendations: {len(ai_recommendations)} chars")
+                    print(f"🎯 AI-generated recommendations: {self.therapy_bot._count_words(ai_recommendations)}w")
                     return ai_recommendations.strip()
                 else:
                     print(f"⚠️ AI recommendation generation failed, using fallback")
@@ -6139,7 +6383,7 @@ Personalized Recommendations:"""
                 ai_recommendations = self.therapy_bot._extract_llm_content(response)
                 
                 if ai_recommendations and len(ai_recommendations.strip()) > 50:
-                    print(f"🎯 Generated personalized recommendations: {len(ai_recommendations)} chars")
+                    print(f"🎯 Generated personalized recommendations: {self.therapy_bot._count_words(ai_recommendations)}w")
                     return ai_recommendations.strip()
                 else:
                     print(f"⚠️ AI personalized recommendation generation failed, using enhanced fallback")

@@ -1,0 +1,14 @@
+[providers]
+python = "nixpacks"
+
+[phases.setup]
+nixPkgs = ["python313", "rustc", "cargo"]
+
+[phases.install]
+cmds = [
+  "chmod +x build.sh && ./build.sh"
+]
+
+[start]
+cmd = "python therapy_service.py"
+
