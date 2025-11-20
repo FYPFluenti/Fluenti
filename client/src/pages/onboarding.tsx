@@ -12,14 +12,6 @@ import {
   ChildNameScreen,
   GenderSelectionScreen,
   BirthDateScreen,
-  InterestsSelectionScreen,
-  VocabularyAssessmentScreen,
-  SpeechTherapyScreen,
-  EvaluationQuestionScreen,
-  HearingAssessmentScreen,
-  PragmaticsAssessmentScreen,
-  PlayAssessmentScreen,
-  ReportScreen,
 } from '@/components/onboarding';
 
 interface OnboardingData {
@@ -46,7 +38,7 @@ interface OnboardingData {
   isCompleted?: boolean;
 }
 
-const TOTAL_STEPS = 20;
+const TOTAL_STEPS = 5; // Only basic info: welcome, age, name, gender, birth date
 
 export default function OnboardingPage() {
   const { isAuthenticated, isLoading, user } = useAuth();
@@ -97,7 +89,11 @@ export default function OnboardingPage() {
         }
       }
     } catch (error) {
-      console.error('Failed to load onboarding data:', error);
+      // Silently fail if backend is not available
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (!errorMessage.includes('Failed to fetch') && !errorMessage.includes('ERR_CONNECTION_REFUSED')) {
+        console.error('Failed to load onboarding data:', error);
+      }
     }
   };
 
@@ -119,12 +115,20 @@ export default function OnboardingPage() {
         throw new Error(`Failed to save onboarding data: ${response.status}`);
       }
     } catch (error) {
-      console.error('Failed to save onboarding data:', error);
-      toast({
-        title: "Error",
-        description: "Failed to save your progress. Please try again.",
-        variant: "destructive"
-      });
+      // Only log error, don't show toast for network errors (server might be down)
+      // This prevents spam errors when backend is not running
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('ERR_CONNECTION_REFUSED')) {
+        // Silently fail - backend server is likely not running
+        console.warn('Backend server not available, saving locally only');
+      } else {
+        console.error('Failed to save onboarding data:', error);
+        toast({
+          title: "Error",
+          description: "Failed to save your progress. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
 
@@ -132,11 +136,7 @@ export default function OnboardingPage() {
     const updatedData = { ...onboardingData, ...stepData };
     setOnboardingData(updatedData);
     
-    let nextStep = currentStep + 1;
-    
-    if (currentStep === 8 && updatedData.seekingSpeechTherapy === false) {
-      nextStep = 9;
-    }
+    const nextStep = currentStep + 1;
     
     await saveOnboardingData(updatedData, nextStep);
     
@@ -149,12 +149,7 @@ export default function OnboardingPage() {
 
   const handleBack = () => {
     if (currentStep > 1) {
-      let previousStep = currentStep - 1;
-      
-      if (currentStep === 9 && onboardingData.seekingSpeechTherapy === false) {
-        previousStep = 8;
-      }
-      
+      const previousStep = currentStep - 1;
       setCurrentStep(previousStep);
       saveOnboardingData(onboardingData, previousStep);
     }
@@ -259,25 +254,7 @@ export default function OnboardingPage() {
       case 3: return <ChildNameScreen {...stepProps} />;
       case 4: return <GenderSelectionScreen {...stepProps} />;
       case 5: return <BirthDateScreen {...stepProps} />;
-      case 6: return <InterestsSelectionScreen {...stepProps} />;
-      case 7: return <VocabularyAssessmentScreen {...stepProps} />;
-      case 8: return <SpeechTherapyScreen {...stepProps} />;
-      case 9: return <EvaluationQuestionScreen {...stepProps} />;
-      case 10: return <HearingAssessmentScreen {...stepProps} />;
-      case 11: return <PragmaticsAssessmentScreen {...stepProps} step={1} />;
-      case 12: return <PragmaticsAssessmentScreen {...stepProps} step={2} />;
-      case 13: return <PragmaticsAssessmentScreen {...stepProps} step={3} />;
-      case 14: return <PragmaticsAssessmentScreen {...stepProps} step={4} />;
-      case 15: return <PlayAssessmentScreen {...stepProps} step={1} />;
-      case 16: return <PlayAssessmentScreen {...stepProps} step={2} />;
-      case 17: return <PlayAssessmentScreen {...stepProps} step={3} />;
-      case 18: return <PlayAssessmentScreen {...stepProps} step={4} />;
-      case 19: return <PlayAssessmentScreen {...stepProps} step={5} />;
-      case 20: return <ReportScreen 
-                        data={onboardingData} 
-                        onStartPracticing={handleStartPracticing}
-                        onLearnMore={handleLearnMore}
-                      />;
+      // All assessment screens removed - only basic info collection
       default: return <WelcomeScreen {...stepProps} onSkip={handleMaybeLater} />;
     }
   };
