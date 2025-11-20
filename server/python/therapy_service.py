@@ -926,13 +926,17 @@ if __name__ == '__main__':
         print("❌ Therapy bot failed to load - service will have limited functionality")
     
     # Get port from environment (for deployment platforms)
-    port = int(os.environ.get('THERAPY_PORT', 5001))
+    # Railway uses PORT, Render uses PORT, other platforms may use THERAPY_PORT
+    port = int(os.environ.get('PORT') or os.environ.get('THERAPY_PORT', 5001))
     
     # Auto-detect production environment
+    # Railway sets PORT and RAILWAY environment variables
     is_production = (
         os.getenv('RENDER') or 
+        os.getenv('RAILWAY') or
         os.getenv('RAILWAY_ENVIRONMENT') or 
         os.getenv('DYNO') or 
+        os.getenv('PORT') or  # Railway and most platforms set PORT
         os.getenv('THERAPY_PRODUCTION', 'false').lower() == 'true'
     )
     
