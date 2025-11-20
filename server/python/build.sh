@@ -17,8 +17,8 @@ pip install --upgrade pip setuptools wheel
 
 # Install CPU-only PyTorch first (much smaller than GPU version)
 pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu \
-    torch>=2.0.0,<3.0.0 \
-    torchvision>=0.15.0,<1.0.0
+    "torch>=2.0.0,<3.0.0" \
+    "torchvision>=0.15.0,<1.0.0"
 
 echo "📦 Installing other dependencies (including ChromaDB)..."
 # Install remaining dependencies with Rust environment set
