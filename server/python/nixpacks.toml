@@ -1,5 +1,8 @@
+[providers]
+python = "nixpacks"
+
 [phases.setup]
-nixPkgs = ["python311", "rustc", "cargo"]
+nixPkgs = ["python313", "rustc", "cargo"]
 
 [phases.install]
 cmds = [

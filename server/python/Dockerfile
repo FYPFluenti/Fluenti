@@ -1,5 +1,5 @@
 # Multi-stage build to reduce final image size
-FROM python:3.11-slim as builder
+FROM python:3.13-slim as builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -16,10 +16,10 @@ COPY requirements.prod.txt /tmp/requirements.txt
 RUN pip install --no-cache-dir -r /tmp/requirements.txt
 
 # Final stage - minimal runtime image
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 # Copy only installed packages from builder
-COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Set working directory
