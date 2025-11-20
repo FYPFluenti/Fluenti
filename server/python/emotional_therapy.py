@@ -1933,12 +1933,37 @@ class DataLoader:
             # Dataset 6: Mental health support - LIMITED SIZE (WILL BE FILTERED FOR MENTAL HEALTH RELEVANCE)
             try:
                 print("Loading limited support conversations (will filter for mental health relevance)...")
-                # Try different split configurations for ultrachat dataset
+                # Use streaming mode for faster loading
                 try:
-                    dataset6 = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft[:5000]')  # Only 5k instead of 200k
-                except Exception:
-                    # Fallback: try without split limit first, then slice
-                    dataset6_full = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft')
+                    # First try streaming mode which is much faster
+                    cache_dir = os.path.join(os.getcwd(), "models", "hf_cache", "datasets")
+                    os.makedirs(cache_dir, exist_ok=True)
+                    dataset6_stream = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft', streaming=True, cache_dir=cache_dir)
+                    # Take only first 5000 examples from stream
+                    dataset6_list = []
+                    print("📊 Streaming examples... (this is much faster than generating full split)")
+                    for i, example in enumerate(dataset6_stream):
+                        if i >= 5000:
+                            break
+                        dataset6_list.append(example)
+                        # Show progress every 1000 examples
+                        if (i + 1) % 1000 == 0:
+                            print(f"   📥 Streamed {i + 1}/5000 examples...")
+                    # Convert back to dataset format
+                    from datasets import Dataset
+                    dataset6 = Dataset.from_list(dataset6_list)
+                    print(f"✅ Loaded via streaming: {len(dataset6_list)} examples")
+                except Exception as e:
+                    print(f"⚠️ Streaming failed ({e}), trying traditional method...")
+                    # Fallback: try with multiprocessing for faster loading
+                    try:
+                        import multiprocessing
+                        num_proc = min(4, multiprocessing.cpu_count())  # Use up to 4 cores
+                        dataset6_full = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft', num_proc=num_proc)
+                    except Exception:
+                        # Final fallback: single process
+                        dataset6_full = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft')
+                    
                     # Manually limit to 5000 if dataset is large and supports select
                     if hasattr(dataset6_full, 'select') and hasattr(dataset6_full, '__len__'):
                         try:
@@ -1959,12 +1984,31 @@ class DataLoader:
             # Dataset 7: Therapeutic conversations - LIMITED SIZE (WILL BE FILTERED FOR MENTAL HEALTH RELEVANCE)
             try:
                 print("Loading limited therapeutic conversations (will filter for mental health relevance)...")
-                # Try different split configurations for HelpSteer dataset
+                # Try streaming mode first for faster loading
                 try:
-                    dataset7 = load_dataset("nvidia/HelpSteer", split='train[:3000]')  # Only 3k instead of 35k
-                except Exception:
-                    # Fallback: load full train split and manually limit
-                    dataset7_full = load_dataset("nvidia/HelpSteer", split='train')
+                    cache_dir = os.path.join(os.getcwd(), "models", "hf_cache", "datasets")
+                    dataset7_stream = load_dataset("nvidia/HelpSteer", split='train', streaming=True, cache_dir=cache_dir)
+                    dataset7_list = []
+                    print("📊 Streaming therapeutic conversations...")
+                    for i, example in enumerate(dataset7_stream):
+                        if i >= 3000:
+                            break
+                        dataset7_list.append(example)
+                        if (i + 1) % 500 == 0:
+                            print(f"   📥 Streamed {i + 1}/3000 examples...")
+                    from datasets import Dataset
+                    dataset7 = Dataset.from_list(dataset7_list)
+                    print(f"✅ Loaded via streaming: {len(dataset7_list)} therapeutic examples")
+                except Exception as e:
+                    print(f"⚠️ Streaming failed ({e}), trying traditional method...")
+                    # Fallback: load full train split and manually limit with multiprocessing
+                    try:
+                        import multiprocessing
+                        num_proc = min(4, multiprocessing.cpu_count())
+                        dataset7_full = load_dataset("nvidia/HelpSteer", split='train', num_proc=num_proc)
+                    except Exception:
+                        dataset7_full = load_dataset("nvidia/HelpSteer", split='train')
+                    
                     # Manually limit to 3000 if dataset is large and supports select
                     if hasattr(dataset7_full, 'select') and hasattr(dataset7_full, '__len__'):
                         try:
