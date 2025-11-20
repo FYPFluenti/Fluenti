@@ -4,14 +4,7 @@ import { useLocation } from 'wouter';
 import { motion } from 'framer-motion';
 import { 
   User, 
-  CheckCircle, 
   Clock, 
-  Heart,
-  Brain,
-  Gamepad2,
-  Volume2,
-  MessageSquare,
-  BarChart3,
   Calendar,
   ArrowRight,
   Award
@@ -102,13 +95,10 @@ export default function OnboardingStatistics() {
 
   const calculateProgress = () => {
     if (!onboardingData) return 0;
-    const totalSteps = 21;
+    const totalSteps = 5; // Updated to match new onboarding flow (only basic info)
     return Math.round(((onboardingData.currentStep || 1) / totalSteps) * 100);
   };
 
-  const getAssessmentCount = (category: keyof NonNullable<UserOnboardingData['assessmentResponses']>) => {
-    return onboardingData?.assessmentResponses?.[category]?.length || 0;
-  };
 
   if (isLoading || loading) {
     return (
@@ -173,10 +163,10 @@ export default function OnboardingStatistics() {
             {/* Header */}
             <div className="mb-8">
               <h1 className="text-[26px] font-bold">
-                your onboarding progress
+                your onboarding details
               </h1>
               <p className="text-[15px] text-muted-foreground mt-1">
-                Track your assessment completion and child's profile
+                Track your onboarding completion and child's profile
               </p>
             </div>
 
@@ -197,7 +187,7 @@ export default function OnboardingStatistics() {
                   <p className="text-sm text-muted-foreground mt-1">
                     {onboardingData.isCompleted 
                       ? 'All steps completed successfully'
-                      : `Step ${onboardingData.currentStep || 1} of 21`
+                      : `Step ${onboardingData.currentStep || 1} of 5`
                     }
                   </p>
                 </div>
@@ -228,7 +218,7 @@ export default function OnboardingStatistics() {
             </div>
 
             {/* Profile Overview */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-2 lg:grid-cols-2 gap-4 mb-8">
               <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <User className="w-4 h-4 text-blue-500" />
@@ -257,108 +247,17 @@ export default function OnboardingStatistics() {
                     : 'Unknown'}
                 </div>
               </div>
-
-              <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Brain className="w-4 h-4 text-purple-500" />
-                  <span className="text-xs font-medium text-muted-foreground">VOCABULARY</span>
-                </div>
-                <div className="text-xl font-bold capitalize">
-                  {onboardingData.vocabularyLevel?.replace(/-/g, ' ') || 'Not assessed'}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Current level
-                </div>
-              </div>
-
-              <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Heart className="w-4 h-4 text-orange-500" />
-                  <span className="text-xs font-medium text-muted-foreground">THERAPY</span>
-                </div>
-                <div className="text-xl font-bold">
-                  {onboardingData.seekingSpeechTherapy === true ? 'Yes' : onboardingData.seekingSpeechTherapy === false ? 'No' : 'Not set'}
-                </div>
-                <div className="text-xs text-muted-foreground">
-                  Seeking help
-                </div>
-              </div>
             </div>
 
-            {/* Interests & Assessments */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-8">
-              {/* Interests */}
-              <div className="bg-card border border-border rounded-xl p-6">
-                <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
-                  <Heart className="w-4 h-4" />
-                  child's interests
-                </h3>
-                
-                {onboardingData.interests && onboardingData.interests.length > 0 ? (
-                  <div className="flex flex-wrap gap-2">
-                    {onboardingData.interests.map((interest, index) => (
-                      <span
-                        key={index}
-                        className="px-3 py-1.5 bg-[#F5B82E]/10 text-[#F5B82E] rounded-lg text-sm font-medium capitalize"
-                      >
-                        {interest}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No interests selected yet</p>
-                )}
-              </div>
-
-              {/* Assessment Progress */}
-              <div className="bg-card border border-border rounded-xl p-6">
-                <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4" />
-                  assessment responses
-                </h3>
-                
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Volume2 className="w-4 h-4 text-blue-500" />
-                      <span className="text-sm font-medium">Hearing</span>
-                    </div>
-                    <span className="text-sm font-bold text-[#F5B82E]">
-                      {getAssessmentCount('hearing')} {getAssessmentCount('hearing') === 1 ? 'question' : 'questions'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <MessageSquare className="w-4 h-4 text-purple-500" />
-                      <span className="text-sm font-medium">Pragmatics</span>
-                    </div>
-                    <span className="text-sm font-bold text-[#F5B82E]">
-                      {getAssessmentCount('pragmatics')} {getAssessmentCount('pragmatics') === 1 ? 'question' : 'questions'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Gamepad2 className="w-4 h-4 text-green-500" />
-                      <span className="text-sm font-medium">Play</span>
-                    </div>
-                    <span className="text-sm font-bold text-[#F5B82E]">
-                      {getAssessmentCount('play')} {getAssessmentCount('play') === 1 ? 'question' : 'questions'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Brain className="w-4 h-4 text-orange-500" />
-                      <span className="text-sm font-medium">Comprehension</span>
-                    </div>
-                    <span className="text-sm font-bold text-[#F5B82E]">
-                      {getAssessmentCount('comprehension')} {getAssessmentCount('comprehension') === 1 ? 'question' : 'questions'}
-                    </span>
-                  </div>
-                </div>
-              </div>
+            {/* Basic Info Note */}
+            <div className="bg-card border border-border rounded-xl p-6 mb-8">
+              <h3 className="text-sm font-medium mb-2 flex items-center gap-2">
+                <User className="w-4 h-4" />
+                Profile Information
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Your child's basic profile information has been collected. Assessment questions have been removed from the onboarding process.
+              </p>
             </div>
 
             {/* Timeline Info */}

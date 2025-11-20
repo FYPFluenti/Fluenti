@@ -25,7 +25,7 @@ export default function ChildNameScreen({ data, onNext, onBack, onSkip }: ChildN
         transition={{ delay: 0.2 }}
       >
         <h1 className="text-2xl font-normal text-foreground mb-16">
-          what's your name?
+          what's your child name?
         </h1>
 
         {/* Name Input */}
