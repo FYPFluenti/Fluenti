@@ -33,7 +33,7 @@ services:
   - type: web
     name: fluenti-therapy-service
     env: python
-    buildCommand: cd server/python && pip install --upgrade pip && pip install -r requirements.prod.txt
+    buildCommand: cd server/python && export CARGO_HOME=/tmp/cargo && export RUSTUP_HOME=/tmp/rustup && export CARGO_TARGET_DIR=/tmp/cargo-target && mkdir -p /tmp/cargo /tmp/rustup /tmp/cargo-target && pip install --upgrade pip setuptools wheel && CARGO_HOME=/tmp/cargo RUSTUP_HOME=/tmp/rustup CARGO_TARGET_DIR=/tmp/cargo-target pip install --prefer-binary -r requirements.prod.txt
     startCommand: cd server/python && python therapy_service.py
     envVars:
       - key: THERAPY_PORT
