@@ -1935,15 +1935,15 @@ class DataLoader:
                 print("Loading limited support conversations (will filter for mental health relevance)...")
                 # Try different split configurations for ultrachat dataset
                 try:
-                    dataset6 = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft[:10000]')  # Only 10k instead of 200k
+                    dataset6 = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft[:5000]')  # Only 5k instead of 200k
                 except Exception:
                     # Fallback: try without split limit first, then slice
                     dataset6_full = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft')
-                    # Manually limit to 10000 if dataset is large and supports select
+                    # Manually limit to 5000 if dataset is large and supports select
                     if hasattr(dataset6_full, 'select') and hasattr(dataset6_full, '__len__'):
                         try:
-                            if len(dataset6_full) > 10000:  # type: ignore
-                                dataset6 = dataset6_full.select(range(10000))  # type: ignore
+                            if len(dataset6_full) > 5000:  # type: ignore
+                                dataset6 = dataset6_full.select(range(5000))  # type: ignore
                             else:
                                 dataset6 = dataset6_full
                         except (TypeError, AttributeError):
@@ -1961,15 +1961,15 @@ class DataLoader:
                 print("Loading limited therapeutic conversations (will filter for mental health relevance)...")
                 # Try different split configurations for HelpSteer dataset
                 try:
-                    dataset7 = load_dataset("nvidia/HelpSteer", split='train[:5000]')  # Only 5k instead of 35k
+                    dataset7 = load_dataset("nvidia/HelpSteer", split='train[:3000]')  # Only 3k instead of 35k
                 except Exception:
                     # Fallback: load full train split and manually limit
                     dataset7_full = load_dataset("nvidia/HelpSteer", split='train')
-                    # Manually limit to 5000 if dataset is large and supports select
+                    # Manually limit to 3000 if dataset is large and supports select
                     if hasattr(dataset7_full, 'select') and hasattr(dataset7_full, '__len__'):
                         try:
-                            if len(dataset7_full) > 5000:  # type: ignore
-                                dataset7 = dataset7_full.select(range(5000))  # type: ignore
+                            if len(dataset7_full) > 3000:  # type: ignore
+                                dataset7 = dataset7_full.select(range(3000))  # type: ignore
                             else:
                                 dataset7 = dataset7_full
                         except (TypeError, AttributeError):
@@ -1987,15 +1987,15 @@ class DataLoader:
                 print("Loading mental health Q&A dataset (will filter for mental health relevance)...")
                 # Try different approaches for squad dataset
                 try:
-                    dataset8 = load_dataset("squad", split='train[:5000]')  # Limited size
+                    dataset8 = load_dataset("squad", split='train[:2000]')  # Limited size
                 except Exception:
                     # Fallback: load full train split and manually limit
                     dataset8_full = load_dataset("squad", split='train')
-                    # Manually limit to 5000 if dataset is large and supports select
+                    # Manually limit to 2000 if dataset is large and supports select
                     if hasattr(dataset8_full, 'select') and hasattr(dataset8_full, '__len__'):
                         try:
-                            if len(dataset8_full) > 5000:  # type: ignore
-                                dataset8 = dataset8_full.select(range(5000))  # type: ignore
+                            if len(dataset8_full) > 2000:  # type: ignore
+                                dataset8 = dataset8_full.select(range(2000))  # type: ignore
                             else:
                                 dataset8 = dataset8_full
                         except (TypeError, AttributeError):
