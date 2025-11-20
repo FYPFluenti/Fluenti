@@ -24,8 +24,8 @@ vaderSentiment==3.3.2
 
 # ML and NLP
 sentence-transformers==2.2.2
-transformers==4.35.2
-huggingface-hub==0.19.4
+transformers>=4.40.0  # Updated to support newer tokenizers
+huggingface-hub>=0.33.4,<1.0  # Updated to be compatible with langchain-huggingface
 
 # Utilities
 python-dotenv==1.0.0

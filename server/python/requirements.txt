@@ -6,7 +6,7 @@ flask-cors==4.0.0
 waitress>=2.1.2
 
 # Updated embeddings support
-langchain-huggingface>=0.0.1
+langchain-huggingface>=0.0.1,<2.0.0  # Constrain to avoid breaking changes
 langchain-text-splitters
 
 # Existing dependencies from emotional_therapy.py
@@ -21,8 +21,8 @@ chromadb>=1.2.1
 
 # ML and NLP
 sentence-transformers==2.2.2
-transformers==4.35.2
-huggingface-hub==0.19.4
+transformers>=4.40.0,<5.0.0  # Updated to support newer tokenizers (>=0.19.1)
+huggingface-hub>=0.33.4,<1.0.0  # Updated to be compatible with langchain-huggingface
 
 # Utilities
 python-dotenv==1.0.0
