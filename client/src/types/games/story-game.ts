@@ -159,6 +159,7 @@ export interface GameState {
 export type GameAction =
   | { type: 'PROCEED_TO_THERAPY_SELECTION' }
   | { type: 'SELECT_THERAPY_GROUP'; payload: 'pronunciation' | 'fluency' | 'dld' | 'social' }
+  | { type: 'SELECT_THERAPY_GROUP_SKIP_ASSESSMENT'; payload: 'pronunciation' | 'fluency' | 'dld' | 'social' }
   | { type: 'START_ASSESSMENT_ANALYSIS' }
   | { type: 'ASSESSMENT_ANALYSIS_SUCCESS'; payload: { level: number; title: string; feedback: string } }
   | { type: 'ASSESSMENT_ANALYSIS_FAILURE'; payload: string }
@@ -184,5 +185,6 @@ export type GameAction =
   | { type: 'FINISH_STORY_NARRATION' }
   | { type: 'RESTART_GAME' }
   | { type: 'START_COOLDOWN' }
-  | { type: 'END_COOLDOWN' };
+  | { type: 'END_COOLDOWN' }
+  | { type: 'LOAD_SAVED_PROGRESS'; payload: { levels: { pronunciation: number; fluency: number; dld: number; social: number }; therapyType: TherapyType; assessmentTitle?: string | null; assessmentFeedback?: string | null } };
 

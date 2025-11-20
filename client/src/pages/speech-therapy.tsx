@@ -4,15 +4,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { 
-  Star,
   Clock,
   Volume2,
   VolumeX,
   Play,
-  Crown,
-  Zap,
-  Target,
-  Award,
   Sparkles,
   Mic,
   MicOff,
@@ -113,8 +108,6 @@ export default function SpeechTherapyPage() {
     fetchInitialData();
   }, [isAuthenticated, toast]);
 
-  // Today's goal progress
-  const dailyProgress = Math.min((userStats.todaysSessions / userStats.dailyGoal) * 100, 100);
 
   if (!isAuthenticated) {
     return (
@@ -174,59 +167,6 @@ export default function SpeechTherapyPage() {
               </p>
             </div>
           </div>
-
-              {/* Daily Progress */}
-              <div className="bg-card border border-border rounded-xl p-6 mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <Target className="w-5 h-5 text-[#ff6b1d]" />
-                    Today's Goal
-                  </h2>
-                  <span className="text-sm text-muted-foreground">
-                    {userStats.todaysSessions}/{userStats.dailyGoal} sessions
-                  </span>
-                </div>
-                <div className="w-full bg-muted rounded-full h-3 mb-2">
-                  <div 
-                    className="bg-[#ff6b1d] h-3 rounded-full transition-all duration-500"
-                    style={{ width: `${dailyProgress}%` }}
-                  />
-                </div>
-                <p className="text-sm text-muted-foreground flex items-center gap-2">
-                  {dailyProgress >= 100 ? (
-                    <>
-                      <span>Daily goal completed!</span>
-                      <Award className="w-4 h-4 text-[#ff6b1d]" />
-                    </>
-                  ) : (
-                    `${Math.round(dailyProgress)}% complete`
-                  )}
-                </p>
-              </div>
-
-              {/* Quick Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-                <div className="bg-card border border-border rounded-xl p-4 text-center hover:shadow-md transition-shadow">
-                  <Crown className="w-6 h-6 mx-auto mb-2 text-[#ff6b1d]" />
-                  <div className="text-xl font-bold">{userStats.level}</div>
-                  <div className="text-xs text-muted-foreground">Level</div>
-                </div>
-                <div className="bg-card border border-border rounded-xl p-4 text-center hover:shadow-md transition-shadow">
-                  <Star className="w-6 h-6 mx-auto mb-2 text-[#ff6b1d]" />
-                  <div className="text-xl font-bold">{userStats.stars}</div>
-                  <div className="text-xs text-muted-foreground">Stars</div>
-                </div>
-                <div className="bg-card border border-border rounded-xl p-4 text-center hover:shadow-md transition-shadow">
-                  <Zap className="w-6 h-6 mx-auto mb-2 text-[#ff6b1d]" />
-                  <div className="text-xl font-bold">{userStats.xp}</div>
-                  <div className="text-xs text-muted-foreground">XP</div>
-                </div>
-                <div className="bg-card border border-border rounded-xl p-4 text-center hover:shadow-md transition-shadow">
-                  <Target className="w-6 h-6 mx-auto mb-2 text-[#ff6b1d]" />
-                  <div className="text-xl font-bold">{userStats.streak}</div>
-                  <div className="text-xs text-muted-foreground">Streak</div>
-                </div>
-              </div>
             </div>
 
             {/* Game Options */}

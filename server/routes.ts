@@ -1091,6 +1091,418 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Story Game Progress Routes
+  app.get('/api/story-game/progress', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const { StoryGameProgress } = await import('./models');
+      const { v4: uuidv4 } = await import('uuid');
+      
+      let progress = await StoryGameProgress.findOne({ userId });
+      
+      // If no progress exists, create a new one
+      if (!progress) {
+        progress = new StoryGameProgress({
+          id: uuidv4(),
+          userId,
+          hasCompletedInitialSetup: false,
+          selectedTherapyType: null,
+          assessments: {},
+          currentLevels: {
+            pronunciation: 1,
+            fluency: 1,
+            dld: 1,
+            social: 1
+          },
+          totalGamesPlayed: 0,
+          totalStoriesCompleted: 0,
+          totalChallengesCompleted: 0,
+          highestScore: 0,
+          badgesEarned: {
+            pronunciation: [],
+            fluency: [],
+            dld: [],
+            social: []
+          },
+          therapyStats: {
+            pronunciation: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 },
+            fluency: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 },
+            dld: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 },
+            social: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 }
+          }
+        });
+        await progress.save();
+      }
+      
+      // Ensure currentLevels exists (for legacy records that might not have it)
+      const progressObj = progress.toObject();
+      if (!progressObj.currentLevels) {
+        progressObj.currentLevels = {
+          pronunciation: 1,
+          fluency: 1,
+          dld: 1,
+          social: 1
+        };
+      }
+      
+      // Ensure assessments exists
+      if (!progressObj.assessments) {
+        progressObj.assessments = {};
+      }
+      
+      // Ensure badgesEarned structure exists (migrate legacy format)
+      if (!progressObj.badgesEarned || Array.isArray(progressObj.badgesEarned)) {
+        progressObj.badgesEarned = {
+          pronunciation: Array.isArray(progressObj.badgesEarned) ? progressObj.badgesEarned : [],
+          fluency: [],
+          dld: [],
+          social: []
+        };
+      }
+      
+      // Ensure therapyStats exists
+      if (!progressObj.therapyStats) {
+        progressObj.therapyStats = {
+          pronunciation: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 },
+          fluency: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 },
+          dld: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 },
+          social: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 }
+        };
+      }
+      
+      res.json(progressObj);
+    } catch (error) {
+      console.error("Error fetching story game progress:", error);
+      res.status(500).json({ message: "Failed to fetch story game progress" });
+    }
+  });
+
+  app.post('/api/story-game/progress', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const { StoryGameProgress } = await import('./models');
+      const { v4: uuidv4 } = await import('uuid');
+      
+      const {
+        hasCompletedInitialSetup,
+        selectedTherapyType,
+        assessment,
+        currentLevels,
+        totalGamesPlayed,
+        totalStoriesCompleted,
+        totalChallengesCompleted,
+        highestScore,
+        badgesEarned
+      } = req.body;
+
+      let progress = await StoryGameProgress.findOne({ userId });
+      
+      if (!progress) {
+        progress = new StoryGameProgress({
+          id: uuidv4(),
+          userId
+        });
+      }
+
+      // CRITICAL: Migrate badgesEarned from legacy array format FIRST
+      // Check the raw MongoDB document to see if badgesEarned is actually an array
+      // Mongoose might convert it to an object when reading, but MongoDB still has it as an array
+      const rawProgressDoc = await StoryGameProgress.findOne({ userId }).lean();
+      const rawProgress = rawProgressDoc as any;
+      const needsMigration = rawProgress && rawProgress.badgesEarned && Array.isArray(rawProgress.badgesEarned);
+      
+      if (needsMigration) {
+        const legacyBadges = rawProgress.badgesEarned as any[];
+        const migratedBadges = {
+          pronunciation: selectedTherapyType === 'pronunciation' ? [...legacyBadges] : [],
+          fluency: selectedTherapyType === 'fluency' ? [...legacyBadges] : [],
+          dld: selectedTherapyType === 'dld' ? [...legacyBadges] : [],
+          social: selectedTherapyType === 'social' ? [...legacyBadges] : []
+        };
+        
+        // Use $set alone - it will replace the field regardless of its current type (array or object)
+        // Cannot use $unset and $set together on the same field - MongoDB rejects this
+        await StoryGameProgress.updateOne(
+          { userId },
+          { $set: { badgesEarned: migratedBadges } }
+        );
+        
+        // Reload the document to get the updated structure
+        progress = await StoryGameProgress.findOne({ userId });
+        if (!progress) {
+          return res.status(404).json({ message: "Progress not found after migration" });
+        }
+      }
+      
+      // Ensure badgesEarned structure exists (initialize if missing)
+      if (!progress.badgesEarned || typeof progress.badgesEarned !== 'object' || Array.isArray(progress.badgesEarned)) {
+        progress.badgesEarned = {
+          pronunciation: [],
+          fluency: [],
+          dld: [],
+          social: []
+        };
+        progress.markModified('badgesEarned');
+      }
+
+      // Update fields
+      if (hasCompletedInitialSetup !== undefined) {
+        progress.hasCompletedInitialSetup = hasCompletedInitialSetup;
+      }
+      if (selectedTherapyType !== undefined) {
+        progress.selectedTherapyType = selectedTherapyType;
+      }
+      if (assessment) {
+        // assessment should be: { therapyType: 'pronunciation', level: 5, title: '...', feedback: '...' }
+        const { therapyType, level, title, feedback } = assessment;
+        if (therapyType && ['pronunciation', 'fluency', 'dld', 'social'].includes(therapyType)) {
+          progress.assessments[therapyType] = {
+            level,
+            title,
+            feedback,
+            completedAt: new Date()
+          };
+          // Also update current level
+          if (level) {
+            progress.currentLevels[therapyType] = level;
+          }
+        }
+      }
+      if (currentLevels) {
+        // Ensure current level never goes below initial assessment level
+        const updatedLevels = { ...progress.currentLevels, ...currentLevels };
+        (['pronunciation', 'fluency', 'dld', 'social'] as const).forEach((therapyType) => {
+          const initialLevel = progress.assessments?.[therapyType]?.level;
+          if (initialLevel && updatedLevels[therapyType] < initialLevel) {
+            // If current level is below initial assessment level, keep it at initial level
+            updatedLevels[therapyType] = initialLevel;
+          }
+        });
+        progress.currentLevels = updatedLevels;
+      }
+      if (totalGamesPlayed !== undefined) progress.totalGamesPlayed = totalGamesPlayed;
+      if (totalStoriesCompleted !== undefined) progress.totalStoriesCompleted = totalStoriesCompleted;
+      if (totalChallengesCompleted !== undefined) progress.totalChallengesCompleted = totalChallengesCompleted;
+      if (highestScore !== undefined) progress.highestScore = Math.max(progress.highestScore || 0, highestScore);
+      
+      // Handle badges per therapy type (now safe because badgesEarned is guaranteed to be an object)
+      // Use direct MongoDB update to avoid Mongoose trying to do nested updates that might fail
+      if (badgesEarned && typeof badgesEarned === 'object' && !Array.isArray(badgesEarned)) {
+        // New format: { pronunciation: ['badge1'], fluency: ['badge2'] }
+        const badgesUpdate: Record<string, string[]> = {};
+        Object.keys(badgesEarned).forEach((therapyType) => {
+          if (['pronunciation', 'fluency', 'dld', 'social'].includes(therapyType)) {
+            const existingBadges = progress.badgesEarned[therapyType] || [];
+            const newBadges = badgesEarned[therapyType] || [];
+            badgesUpdate[`badgesEarned.${therapyType}`] = Array.from(new Set([...existingBadges, ...newBadges]));
+          }
+        });
+        if (Object.keys(badgesUpdate).length > 0) {
+          await StoryGameProgress.updateOne({ userId }, { $set: badgesUpdate });
+          // Reload to get updated badges
+          progress = await StoryGameProgress.findOne({ userId });
+          if (!progress) {
+            return res.status(404).json({ message: "Progress not found after badge update" });
+          }
+        }
+      } else if (Array.isArray(badgesEarned)) {
+        // Legacy format in request: ['badge1', 'badge2'] - assign to selected therapy type
+        if (selectedTherapyType && ['pronunciation', 'fluency', 'dld', 'social'].includes(selectedTherapyType)) {
+          const existingBadges = progress.badgesEarned[selectedTherapyType] || [];
+          const updatedBadges = Array.from(new Set([...existingBadges, ...badgesEarned]));
+          await StoryGameProgress.updateOne(
+            { userId },
+            { $set: { [`badgesEarned.${selectedTherapyType}`]: updatedBadges } }
+          );
+          // Reload to get updated badges
+          progress = await StoryGameProgress.findOne({ userId });
+          if (!progress) {
+            return res.status(404).json({ message: "Progress not found after badge update" });
+          }
+        }
+      }
+      
+      // Ensure therapyStats structure exists
+      if (!progress.therapyStats) {
+        progress.therapyStats = {
+          pronunciation: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 },
+          fluency: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 },
+          dld: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 },
+          social: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 }
+        };
+      }
+
+      progress.updatedAt = new Date();
+      await progress.save();
+      
+      res.json(progress.toObject());
+    } catch (error) {
+      console.error("Error saving story game progress:", error);
+      res.status(500).json({ message: "Failed to save story game progress" });
+    }
+  });
+
+  app.post('/api/story-game/session', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const { StoryGameSession, StoryGameProgress } = await import('./models');
+      const { v4: uuidv4 } = await import('uuid');
+      
+      const {
+        sessionId,
+        therapyType,
+        character,
+        theme,
+        totalScore,
+        speechScore,
+        creativityScore,
+        endingType,
+        challengesCompleted,
+        levelAtStart,
+        levelAtEnd,
+        levelUp,
+        storyLength,
+        wordBank,
+        startTime,
+        endTime
+      } = req.body;
+
+      if (!sessionId || !therapyType) {
+        return res.status(400).json({ message: "Missing required fields: sessionId, therapyType" });
+      }
+
+      // IMPORTANT: Check if this session was already saved to prevent duplicate counting
+      // This can happen if the save was called multiple times before the fix
+      const existingSession = await StoryGameSession.findOne({ sessionId });
+      if (existingSession) {
+        console.log(`⚠️ Session ${sessionId} already exists, skipping duplicate save`);
+        return res.json({ success: true, sessionId: existingSession.id, message: 'Session already exists' });
+      }
+
+      const duration = endTime && startTime 
+        ? Math.floor((new Date(endTime).getTime() - new Date(startTime).getTime()) / 1000)
+        : undefined;
+
+      const session = new StoryGameSession({
+        id: uuidv4(),
+        userId,
+        sessionId,
+        therapyType,
+        character,
+        theme,
+        totalScore: totalScore || 0,
+        speechScore: speechScore || 0,
+        creativityScore: creativityScore || 0,
+        endingType,
+        challengesCompleted: challengesCompleted || 0,
+        levelAtStart,
+        levelAtEnd,
+        levelUp: levelUp || false,
+        storyLength: storyLength || 0,
+        wordBank: wordBank || [],
+        startTime: startTime ? new Date(startTime) : new Date(),
+        endTime: endTime ? new Date(endTime) : new Date(),
+        duration
+      });
+
+      await session.save();
+
+      // Update progress statistics
+
+      let progress = await StoryGameProgress.findOne({ userId });
+      if (progress) {
+        progress.totalGamesPlayed = (progress.totalGamesPlayed || 0) + 1;
+        if (endingType === 'happy') {
+          progress.totalStoriesCompleted = (progress.totalStoriesCompleted || 0) + 1;
+        }
+        progress.totalChallengesCompleted = (progress.totalChallengesCompleted || 0) + (challengesCompleted || 0);
+        if (totalScore) {
+          progress.highestScore = Math.max(progress.highestScore || 0, totalScore);
+        }
+        if (levelAtEnd && therapyType) {
+          progress.currentLevels[therapyType] = levelAtEnd;
+        }
+        
+        // Update therapy-specific statistics
+        if (therapyType && ['pronunciation', 'fluency', 'dld', 'social'].includes(therapyType)) {
+          // Ensure therapyStats structure exists
+          if (!progress.therapyStats) {
+            progress.therapyStats = {
+              pronunciation: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 },
+              fluency: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 },
+              dld: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 },
+              social: { totalSessions: 0, totalStoriesCompleted: 0, totalChallengesCompleted: 0, highestScore: 0, averageScore: 0 }
+            };
+          }
+          
+          const stats = progress.therapyStats[therapyType];
+          stats.totalSessions = (stats.totalSessions || 0) + 1;
+          if (endingType === 'happy') {
+            stats.totalStoriesCompleted = (stats.totalStoriesCompleted || 0) + 1;
+          }
+          stats.totalChallengesCompleted = (stats.totalChallengesCompleted || 0) + (challengesCompleted || 0);
+          if (totalScore) {
+            stats.highestScore = Math.max(stats.highestScore || 0, totalScore);
+            // Update average score
+            const currentTotal = (stats.averageScore || 0) * (stats.totalSessions - 1);
+            stats.averageScore = Math.round((currentTotal + totalScore) / stats.totalSessions);
+          }
+        }
+        
+        progress.updatedAt = new Date();
+        await progress.save();
+      }
+
+      res.json({ success: true, sessionId: session.id });
+    } catch (error) {
+      console.error("Error saving story game session:", error);
+      res.status(500).json({ message: "Failed to save story game session" });
+    }
+  });
+
+  app.get('/api/story-game/sessions', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "User not authenticated" });
+      }
+
+      const { StoryGameSession } = await import('./models');
+      const limit = parseInt(req.query.limit as string) || 10;
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      const sessions = await StoryGameSession.find({ userId })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .skip(offset)
+        .lean();
+
+      const total = await StoryGameSession.countDocuments({ userId });
+
+      res.json({
+        sessions,
+        total,
+        limit,
+        offset
+      });
+    } catch (error) {
+      console.error("Error fetching story game sessions:", error);
+      res.status(500).json({ message: "Failed to fetch story game sessions" });
+    }
+  });
+
   // Emergency notification endpoint for crisis situations
   app.post('/api/emergency-notification', async (req: Request, res: Response) => {
     try {

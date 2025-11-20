@@ -246,6 +246,152 @@ const EmotionalSessionSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+// Story Game Progress Schema - Stores therapy focus, assessment data, and game progress
+const StoryGameProgressSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  userId: { type: String, required: true, ref: 'User', unique: true },
+  
+  // First-time player flag
+  hasCompletedInitialSetup: { type: Boolean, default: false },
+  
+  // Therapy focus selection (pronunciation, fluency, dld, social)
+  selectedTherapyType: {
+    type: String,
+    enum: ['pronunciation', 'fluency', 'dld', 'social', null],
+    default: null
+  },
+  
+  // Assessment data for each therapy type
+  assessments: {
+    pronunciation: {
+      level: { type: Number, min: 1, max: 20 },
+      title: { type: String },
+      feedback: { type: String },
+      completedAt: { type: Date }
+    },
+    fluency: {
+      level: { type: Number, min: 1, max: 20 },
+      title: { type: String },
+      feedback: { type: String },
+      completedAt: { type: Date }
+    },
+    dld: {
+      level: { type: Number, min: 1, max: 20 },
+      title: { type: String },
+      feedback: { type: String },
+      completedAt: { type: Date }
+    },
+    social: {
+      level: { type: Number, min: 1, max: 20 },
+      title: { type: String },
+      feedback: { type: String },
+      completedAt: { type: Date }
+    }
+  },
+  
+  // Current levels for each therapy type (can be updated during gameplay)
+  currentLevels: {
+    pronunciation: { type: Number, default: 1, min: 1, max: 20 },
+    fluency: { type: Number, default: 1, min: 1, max: 20 },
+    dld: { type: Number, default: 1, min: 1, max: 20 },
+    social: { type: Number, default: 1, min: 1, max: 20 }
+  },
+  
+  // Game statistics
+  totalGamesPlayed: { type: Number, default: 0 },
+  totalStoriesCompleted: { type: Number, default: 0 },
+  totalChallengesCompleted: { type: Number, default: 0 },
+  highestScore: { type: Number, default: 0 },
+  
+  // Badges earned per therapy type
+  badgesEarned: {
+    pronunciation: [{ type: String }],
+    fluency: [{ type: String }],
+    dld: [{ type: String }],
+    social: [{ type: String }]
+  },
+  
+  // Scores and statistics per therapy type
+  therapyStats: {
+    pronunciation: {
+      totalSessions: { type: Number, default: 0 },
+      totalStoriesCompleted: { type: Number, default: 0 },
+      totalChallengesCompleted: { type: Number, default: 0 },
+      highestScore: { type: Number, default: 0 },
+      averageScore: { type: Number, default: 0 }
+    },
+    fluency: {
+      totalSessions: { type: Number, default: 0 },
+      totalStoriesCompleted: { type: Number, default: 0 },
+      totalChallengesCompleted: { type: Number, default: 0 },
+      highestScore: { type: Number, default: 0 },
+      averageScore: { type: Number, default: 0 }
+    },
+    dld: {
+      totalSessions: { type: Number, default: 0 },
+      totalStoriesCompleted: { type: Number, default: 0 },
+      totalChallengesCompleted: { type: Number, default: 0 },
+      highestScore: { type: Number, default: 0 },
+      averageScore: { type: Number, default: 0 }
+    },
+    social: {
+      totalSessions: { type: Number, default: 0 },
+      totalStoriesCompleted: { type: Number, default: 0 },
+      totalChallengesCompleted: { type: Number, default: 0 },
+      highestScore: { type: Number, default: 0 },
+      averageScore: { type: Number, default: 0 }
+    }
+  },
+  
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+// Story Game Session Schema - Stores individual game session data
+const StoryGameSessionSchema = new mongoose.Schema({
+  id: { type: String, required: true, unique: true },
+  userId: { type: String, required: true, ref: 'User' },
+  sessionId: { type: String, required: true },
+  
+  // Game session data
+  therapyType: {
+    type: String,
+    enum: ['pronunciation', 'fluency', 'dld', 'social'],
+    required: true
+  },
+  character: { type: String },
+  theme: { type: String },
+  
+  // Scores
+  totalScore: { type: Number, default: 0 },
+  speechScore: { type: Number, default: 0 },
+  creativityScore: { type: Number, default: 0 },
+  
+  // Game outcome
+  endingType: {
+    type: String,
+    enum: ['happy', 'sad', 'neutral', null],
+    default: null
+  },
+  
+  // Progress during session
+  challengesCompleted: { type: Number, default: 0 },
+  levelAtStart: { type: Number },
+  levelAtEnd: { type: Number },
+  levelUp: { type: Boolean, default: false },
+  
+  // Story data (summary, not full story)
+  storyLength: { type: Number, default: 0 },
+  wordBank: [{ type: String }],
+  
+  // Timestamps
+  startTime: { type: Date, default: Date.now },
+  endTime: { type: Date },
+  duration: { type: Number }, // in seconds
+  
+  createdAt: { type: Date, default: Date.now }
+});
+
 // Create models
 export const User = mongoose.models.User || mongoose.model('User', UserSchema);
 export const Session = mongoose.models.Session || mongoose.model('Session', SessionSchema);
@@ -254,3 +400,5 @@ export const SpeechRecord = mongoose.models.SpeechRecord || mongoose.model('Spee
 export const UserProgress = mongoose.models.UserProgress || mongoose.model('UserProgress', UserProgressSchema);
 export const ChildOnboarding = mongoose.models.ChildOnboarding || mongoose.model('ChildOnboarding', ChildOnboardingSchema);
 export const EmotionalSession = mongoose.models.EmotionalSession || mongoose.model('EmotionalSession', EmotionalSessionSchema);
+export const StoryGameProgress = mongoose.models.StoryGameProgress || mongoose.model('StoryGameProgress', StoryGameProgressSchema);
+export const StoryGameSession = mongoose.models.StoryGameSession || mongoose.model('StoryGameSession', StoryGameSessionSchema);
