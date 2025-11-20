@@ -17,10 +17,7 @@ export interface PsychologicalProfile {
       count: number;
       effective: string[];
     };
-    culturalContext: {
-      identified: boolean;
-      aspects: string[];
-    };
+    // culturalContext removed as requested
     traumaInformed: {
       indicators: number;
       approach_needed: boolean;
@@ -32,7 +29,7 @@ export interface PsychologicalProfile {
     };
   };
   recommendations: {
-    culturally_informed: boolean;
+    // culturally_informed removed as requested
     trauma_informed: boolean;
     strengths_based: boolean;
   };
@@ -109,10 +106,7 @@ export class PsychologicalProfileService {
             count: data.profile?.insights?.copingMechanisms?.count || 0,
             effective: data.profile?.insights?.copingMechanisms?.effective || []
           },
-          culturalContext: {
-            identified: data.profile?.insights?.culturalContext?.identified || false,
-            aspects: data.profile?.insights?.culturalContext?.aspects || []
-          },
+          // culturalContext removed as requested
           traumaInformed: {
             indicators: data.profile?.insights?.traumaInformed?.indicators || 0,
             approach_needed: data.profile?.insights?.traumaInformed?.approach_needed || false
@@ -124,7 +118,7 @@ export class PsychologicalProfileService {
           }
         },
         recommendations: {
-          culturally_informed: data.profile?.recommendations?.culturally_informed || false,
+          // culturally_informed removed as requested
           trauma_informed: data.profile?.recommendations?.trauma_informed || false,
           strengths_based: data.profile?.recommendations?.strengths_based || false
         }

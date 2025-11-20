@@ -210,30 +210,7 @@ const InsightsSection: React.FC<InsightsSectionProps> = ({ profile }) => (
         </div>
       </div>
 
-      {/* Cultural Context */}
-      <div className="space-y-3">
-        <h4 className="font-medium text-foreground flex items-center">
-          <Users className="w-4 h-4 mr-2 text-fluenti-primary" />
-          Cultural Context
-        </h4>
-        <div className="space-y-2">
-          {profile?.insights?.culturalContext?.identified ? (
-            (profile.insights.culturalContext.aspects || []).slice(0, 3).map((aspect, index) => (
-              <div key={index} className="flex items-start space-x-2">
-                <CheckCircle className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
-                <span className="text-sm text-muted-foreground">{aspect}</span>
-              </div>
-            ))
-          ) : (
-            <div className="flex items-start space-x-2">
-              <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-              <span className="text-sm text-muted-foreground">
-                No specific cultural context identified yet
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Cultural Context section removed as requested */}
 
       {/* Trauma-Informed Indicators */}
       <div className="space-y-3">
@@ -429,13 +406,7 @@ export default function PsychologicalInsights() {
               }
               colorClass="text-green-500"
             />
-            <StatCard
-              title="Cultural Context"
-              value={profile?.insights?.culturalContext?.identified ? 'Identified' : 'Pending'}
-              icon={Users}
-              description={`${profile?.insights?.culturalContext?.aspects?.length || 0} aspects`}
-              colorClass="text-purple-500"
-            />
+            {/* Cultural Context StatCard removed as requested */}
             <StatCard
               title="Resilience Factors"
               value={profile?.insights?.progressTracking?.resilience_factors || 0}
@@ -492,12 +463,7 @@ export default function PsychologicalInsights() {
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="flex items-center space-x-3">
-                <div className={`w-3 h-3 rounded-full ${
-                  profile?.recommendations?.culturally_informed ? 'bg-green-500' : 'bg-gray-400'
-                }`} />
-                <span className="text-sm text-foreground">Culturally Informed Care</span>
-              </div>
+              {/* Culturally Informed Care indicator removed as requested */}
               <div className="flex items-center space-x-3">
                 <div className={`w-3 h-3 rounded-full ${
                   profile?.recommendations?.trauma_informed ? 'bg-green-500' : 'bg-gray-400'

@@ -85,7 +85,6 @@ class PsychologicalProfile:
     user_id: str
     core_patterns: Dict[str, Any] = field(default_factory=dict)
     trauma_indicators: Dict[str, Any] = field(default_factory=dict)
-    cultural_context: Dict[str, Any] = field(default_factory=dict)
     long_term_progress: Dict[str, Any] = field(default_factory=dict)
     therapeutic_preferences: Dict[str, Any] = field(default_factory=dict)
     risk_factors: Dict[str, Any] = field(default_factory=dict)
@@ -490,7 +489,6 @@ class MongoDBStorage:
             self.user_profiles = self.db.user_profiles
             self.psychological_profiles = self.db.psychological_profiles  # New collection for deep profiling
             self.long_term_progress = self.db.long_term_progress  # New collection for progress tracking
-            self.cultural_contexts = self.db.cultural_contexts  # New collection for cultural understanding
             
             # Also connect to fluenti database for EmotionalSession collection
             self.fluenti_db = self.client.fluenti
@@ -587,9 +585,7 @@ class MongoDBStorage:
             self.long_term_progress.create_index([("user_id", 1), ("timestamp", -1)])
             self.long_term_progress.create_index([("metric_type", 1), ("timestamp", -1)])
 
-            # Cultural contexts indexes
-            self.cultural_contexts.create_index([("user_id", 1)])
-            self.cultural_contexts.create_index([("cultural_background", 1)])
+
 
             print("📊 Database indexes created successfully")
 
@@ -974,7 +970,6 @@ class MongoDBStorage:
                     user_id=user_hash,
                     core_patterns=existing_profile.get('core_patterns', {}),
                     trauma_indicators=existing_profile.get('trauma_indicators', {}),
-                    cultural_context=existing_profile.get('cultural_context', {}),
                     long_term_progress=existing_profile.get('long_term_progress', {}),
                     therapeutic_preferences=existing_profile.get('therapeutic_preferences', {}),
                     risk_factors=existing_profile.get('risk_factors', {}),
@@ -998,7 +993,7 @@ class MongoDBStorage:
                     "user_id": user_hash,
                     "core_patterns": profile.core_patterns,
                     "trauma_indicators": profile.trauma_indicators,
-                    "cultural_context": profile.cultural_context,
+
                     "long_term_progress": profile.long_term_progress,
                     "therapeutic_preferences": profile.therapeutic_preferences,
                     "risk_factors": profile.risk_factors,
@@ -1043,10 +1038,7 @@ class MongoDBStorage:
                 if trauma_indicators:
                     profile.trauma_indicators.update(trauma_indicators)
                 
-                # Analyze cultural context
-                cultural_insights = self._analyze_cultural_context(conversation_text, profile, llm)
-                if cultural_insights:
-                    profile.cultural_context.update(cultural_insights)
+
                 
                 # Update progress tracking
                 self._update_long_term_progress(user_id, crisis_level, mood_score, pattern_analysis)
@@ -1166,7 +1158,6 @@ IMPORTANT:
 - Only note POTENTIAL indicators, not diagnoses
 - Focus on behavioral and emotional patterns
 - Be sensitive and non-judgmental
-- Consider cultural context
 
 IMPORTANT: Return ONLY valid JSON, no additional text or explanation.
 
@@ -1219,82 +1210,7 @@ Respond with JSON only:"""
             print(f"⚠️ Trauma indicator analysis failed: {e}")
             return {}
 
-    def _analyze_cultural_context(self, text: str, profile: PsychologicalProfile, llm=None) -> Dict[str, Any]:
-        """Analyze cultural context and adapt therapeutic approach accordingly"""
-        try:
-            if not llm:
-                return {}
-                
-            cultural_analysis_prompt = f"""
-You are a culturally-informed mental health professional analyzing text for cultural context.
 
-Text: "{text}"
-
-Current cultural context: {profile.cultural_context}
-
-Analyze for:
-1. Cultural background indicators (language use, cultural references, values)
-2. Religious or spiritual references
-3. Family dynamics and cultural expectations
-4. Cultural stigma around mental health
-5. Cultural strengths and resources
-6. Communication styles (direct/indirect, collectivist/individualist)
-7. Cultural coping mechanisms
-
-Consider Pakistani/South Asian context specifically, but remain open to other cultural indicators.
-
-IMPORTANT: Return ONLY valid JSON, no additional text or explanation.
-
-JSON format required:
-{{
-  "cultural_background": {{"indicators": [], "confidence": 0.8}},
-  "religious_spiritual": {{"present": false, "type": "", "role": "", "confidence": 0.5}},
-  "family_dynamics": {{"style": "individualist", "expectations": [], "support_level": "medium", "confidence": 0.6}},
-  "mental_health_stigma": {{"present": false, "level": "low", "manifestations": [], "confidence": 0.5}},
-  "cultural_strengths": [],
-  "communication_style": {{"directness": "direct", "orientation": "individualist", "confidence": 0.6}},
-  "cultural_coping": []
-}}
-
-Respond with JSON only:"""
-            
-            response = llm.invoke(cultural_analysis_prompt)
-            ai_analysis = self._extract_llm_content(response)
-            
-            import json
-            import re
-            try:
-                # First try direct JSON parsing
-                cultural_insights = json.loads(ai_analysis)
-            except json.JSONDecodeError:
-                # Try to extract JSON from text
-                json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', ai_analysis, re.DOTALL)
-                if json_match:
-                    try:
-                        cultural_insights = json.loads(json_match.group())
-                    except json.JSONDecodeError:
-                        print(f"⚠️ Could not parse cultural analysis JSON: {ai_analysis[:100]}...")
-                        return {}
-                else:
-                    print(f"⚠️ No JSON found in cultural analysis: {ai_analysis[:100]}...")
-                    return {}
-            
-            # Validate and process cultural insights
-            processed_insights = {}
-            if isinstance(cultural_insights, dict):
-                for key, value in cultural_insights.items():
-                    if isinstance(value, dict) and value.get('confidence', 0) > 0.5:
-                        processed_insights[key] = value
-                    elif isinstance(value, list) and value:
-                        processed_insights[key] = value
-                        
-            if processed_insights:
-                print(f"🌍 Identified cultural context insights: {list(processed_insights.keys())}")
-            return processed_insights
-                
-        except Exception as e:
-            print(f"⚠️ Cultural context analysis failed: {e}")
-            return {}
 
     def _update_long_term_progress(self, user_id: str, crisis_level: str, mood_score: Optional[float], 
                                   pattern_analysis: Dict[str, Any]):
@@ -1338,7 +1254,6 @@ Respond with JSON only:"""
                 "user_id": profile.user_id,
                 "core_patterns": profile.core_patterns,
                 "trauma_indicators": profile.trauma_indicators,
-                "cultural_context": profile.cultural_context,
                 "long_term_progress": profile.long_term_progress,
                 "therapeutic_preferences": profile.therapeutic_preferences,
                 "risk_factors": profile.risk_factors,
@@ -4868,7 +4783,7 @@ User's Psychological Profile Context:
 
 Create an enhanced search query that incorporates:
 1. The user's known psychological patterns
-2. Their cultural context and therapeutic preferences  
+2. Their therapeutic preferences  
 3. Identified trauma indicators (if any)
 4. Their effective coping mechanisms
 5. Appropriate therapeutic approaches for their profile
@@ -4909,16 +4824,13 @@ Enhanced Query (max 150 characters):"""
     def _get_basic_context_with_profile(self, profile: PsychologicalProfile) -> str:
         """Get basic context enhanced with profile awareness"""
         try:
-            if not profile.core_patterns and not profile.cultural_context:
+            if not profile.core_patterns:
                 return "Basic supportive conversation guidelines: be warm, empathetic, and present."
             
             # Create profile-aware basic guidance
             profile_insights = []
             
-            if profile.cultural_context:
-                cultural_keys = list(profile.cultural_context.keys())[:2]
-                if cultural_keys:
-                    profile_insights.append(f"Cultural awareness: {', '.join(cultural_keys)}")
+
             
             if profile.therapeutic_preferences:
                 pref_keys = list(profile.therapeutic_preferences.keys())[:2]
@@ -4930,7 +4842,7 @@ Enhanced Query (max 150 characters):"""
                 if coping_keys:
                     profile_insights.append(f"Known coping strategies: {', '.join(coping_keys)}")
             
-            base_context = "Be warm, empathetic, and culturally sensitive."
+            base_context = "Be warm, empathetic, and supportive."
             if profile_insights:
                 context_addition = " Consider: " + "; ".join(profile_insights)
                 return base_context + context_addition
@@ -4951,17 +4863,7 @@ Enhanced Query (max 150 characters):"""
                 patterns = list(profile.core_patterns.keys())[:3]
                 summary_parts.append(f"Core patterns: {', '.join(patterns)}")
             
-            # Cultural context
-            if profile.cultural_context:
-                cultural_info = []
-                if 'cultural_background' in profile.cultural_context:
-                    cultural_info.append("cultural background identified")
-                if 'communication_style' in profile.cultural_context:
-                    style = profile.cultural_context['communication_style']
-                    if isinstance(style, dict):
-                        cultural_info.append(f"{style.get('directness', 'unknown')} communication")
-                if cultural_info:
-                    summary_parts.append(f"Cultural: {', '.join(cultural_info)}")
+
             
             # Trauma indicators (handle sensitively)
             if profile.trauma_indicators:
@@ -5006,7 +4908,7 @@ CRITICAL: The therapist must ALWAYS maintain a professional therapeutic voice re
 
 Based on this psychological profile, provide specific therapeutic guidance for:
 1. Therapeutic techniques most suitable for their psychological patterns (maintain professional voice)
-2. Cultural considerations for effective therapy (while maintaining professional communication)
+2. Identified strengths and resilience factors (while maintaining professional communication)
 3. Trauma-informed modifications (if applicable) - use professional therapeutic language
 4. Specific triggers or sensitivities to be aware of
 5. Appropriate therapeutic interventions based on their patterns
@@ -5945,8 +5847,7 @@ Generated: {current_time}
 **📈 Progress Indicators:**
 {self._get_progress_indicators(psychological_profile, avg_mood, crisis_events)}
 
-**🌍 Cultural Context:**
-{self._get_cultural_insights(psychological_profile)}
+
 
 **🧠 Session Memory Insights:**
 {self._get_memory_insights(memory)}
@@ -6327,54 +6228,7 @@ Personalized Recommendations:"""
             print(f"⚠️ Error generating progress indicators: {e}")
             return "• 📈 Progress indicators being tracked"
 
-    def _get_cultural_insights(self, profile: PsychologicalProfile) -> str:
-        """Generate cultural context insights from profile"""
-        try:
-            insights = []
-            
-            if not profile.cultural_context:
-                return "• 🌍 Cultural context being understood through our conversations"
-            
-            # Cultural background
-            if 'cultural_background' in profile.cultural_context:
-                bg_data = profile.cultural_context['cultural_background']
-                if isinstance(bg_data, dict) and bg_data.get('confidence', 0) > 0.6:
-                    insights.append("• 🌍 Cultural background context identified")
-            
-            # Communication style
-            if 'communication_style' in profile.cultural_context:
-                comm_data = profile.cultural_context['communication_style']
-                if isinstance(comm_data, dict):
-                    style = comm_data.get('directness', 'adaptive')
-                    orientation = comm_data.get('orientation', 'balanced')
-                    insights.append(f"• 💬 Communication style: {style}, {orientation} approach")
-            
-            # Family dynamics
-            if 'family_dynamics' in profile.cultural_context:
-                family_data = profile.cultural_context['family_dynamics']
-                if isinstance(family_data, dict):
-                    support_level = family_data.get('support_level', 'unknown')
-                    if support_level != 'unknown':
-                        insights.append(f"• 👨‍👩‍👧‍👦 Family support level: {support_level}")
-            
-            # Cultural strengths
-            if 'cultural_strengths' in profile.cultural_context:
-                strengths = profile.cultural_context['cultural_strengths']
-                if isinstance(strengths, list) and strengths:
-                    insights.append(f"• 💪 Cultural strengths: {', '.join(strengths[:3])}")
-            
-            # Mental health stigma awareness
-            if 'mental_health_stigma' in profile.cultural_context:
-                stigma_data = profile.cultural_context['mental_health_stigma']
-                if isinstance(stigma_data, dict) and stigma_data.get('present'):
-                    level = stigma_data.get('level', 'moderate')
-                    insights.append(f"• 🤝 Mental health stigma considerations: {level} level")
-            
-            return "\n".join(insights) if insights else "• 🌍 Cultural context being developed"
-            
-        except Exception as e:
-            print(f"⚠️ Error generating cultural insights: {e}")
-            return "• 🌍 Cultural awareness being integrated"
+    
 
     def _generate_personalized_recommendations(self, history: List[Dict], memory: SessionMemory, 
                                              profile: PsychologicalProfile) -> str:
@@ -6404,19 +6258,17 @@ Psychological Profile Summary:
 Recent conversation context: "{all_text[:400]}..."
 
 Create 4-5 highly personalized recommendations that consider:
-1. Their specific psychological patterns and cultural context
+1. Their specific psychological patterns
 2. Their effective coping mechanisms and build on them
 3. Their trauma-informed needs (if applicable)
-4. Their cultural background and context (for understanding, not for adapting communication style)
-5. Their identified strengths and resilience factors
-6. Specific, actionable steps tailored to their unique profile
+4. Their identified strengths and resilience factors
+5. Specific, actionable steps tailored to their unique profile
 
 IMPORTANT: Recommendations should be provided in professional therapeutic language. Do not adapt communication style based on user's communication patterns - maintain professional therapeutic voice.
 
 Format as:
 • 🎯 Recommendation: Specific personalized action
 • 🧠 Recommendation: Cognitive/emotional strategy
-• 🌍 Recommendation: Culturally-informed approach
 • 💪 Recommendation: Strength-based intervention
 
 Make each recommendation specific to their profile, not generic advice.
@@ -6453,11 +6305,7 @@ Personalized Recommendations:"""
                 if effective_coping:
                     recommendations.append(f"• 💪 Continue using your effective coping strategies: {', '.join(effective_coping[:2])}")
             
-            # Cultural considerations
-            if profile.cultural_context and 'cultural_strengths' in profile.cultural_context:
-                strengths = profile.cultural_context['cultural_strengths']
-                if isinstance(strengths, list) and strengths:
-                    recommendations.append(f"• 🌍 Draw on your cultural strengths: {', '.join(strengths[:2])}")
+            
             
             # Crisis-informed recommendations
             crisis_count = sum(1 for conv in history if conv.get('crisis_level') in ['high', 'critical'])
@@ -6506,23 +6354,7 @@ Personalized Recommendations:"""
                 patterns = list(profile.core_patterns.keys())[:3]
                 summary_parts.append(f"Core patterns: {', '.join(patterns)}")
             
-            # Cultural context (enhanced)
-            if profile.cultural_context:
-                cultural_info = []
-                if 'cultural_background' in profile.cultural_context:
-                    cultural_info.append("cultural background identified")
-                if 'communication_style' in profile.cultural_context:
-                    style = profile.cultural_context['communication_style']
-                    if isinstance(style, dict):
-                        cultural_info.append(f"{style.get('directness', 'adaptive')} communication")
-                if 'family_dynamics' in profile.cultural_context:
-                    family = profile.cultural_context['family_dynamics']
-                    if isinstance(family, dict):
-                        support = family.get('support_level', 'unknown')
-                        if support != 'unknown':
-                            cultural_info.append(f"{support} family support")
-                if cultural_info:
-                    summary_parts.append(f"Cultural: {', '.join(cultural_info)}")
+           
             
             # Trauma indicators (handle sensitively)
             if profile.trauma_indicators:
