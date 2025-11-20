@@ -1,2 +1,1 @@
-web: cd server/python && python therapy_service.py
-
+web: python therapy_service.py
