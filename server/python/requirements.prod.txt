@@ -20,12 +20,14 @@ langchain-groq>=0.2.0
 langchain-core>=0.3.0
 langchain-community>=0.3.0
 vaderSentiment==3.3.2
-# chromadb removed - requires Rust compilation and not used in code
+chromadb>=1.2.1  # Vector database for embeddings storage
 
 # ML and NLP
+# Note: CPU-only PyTorch is installed separately in build.sh (saves ~2GB vs GPU version)
+# torch and torchvision are installed in build.sh before this file
 sentence-transformers==2.2.2
-transformers>=4.40.0  # Updated to support newer tokenizers
-huggingface-hub>=0.33.4,<1.0  # Updated to be compatible with langchain-huggingface
+transformers>=4.40.0,<5.0.0  # Updated to support newer tokenizers
+huggingface-hub>=0.33.4,<1.0.0  # Updated to be compatible with langchain-huggingface
 
 # Utilities
 python-dotenv==1.0.0

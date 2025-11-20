@@ -17,9 +17,14 @@ langchain-groq>=0.2.0
 langchain-core>=0.3.0
 langchain-community>=0.3.0
 vaderSentiment==3.3.2
-chromadb>=1.2.1
+chromadb>=1.2.1  # Vector database for embeddings storage
 
 # ML and NLP
+# CPU-only PyTorch (saves ~2GB vs GPU version)
+# Note: Install with: pip install --extra-index-url https://download.pytorch.org/whl/cpu torch torchvision
+# Or update Railway build command to include: pip install --extra-index-url https://download.pytorch.org/whl/cpu torch torchvision
+torch>=2.0.0,<3.0.0
+torchvision>=0.15.0,<1.0.0
 sentence-transformers==2.2.2
 transformers>=4.40.0,<5.0.0  # Updated to support newer tokenizers (>=0.19.1)
 huggingface-hub>=0.33.4,<1.0.0  # Updated to be compatible with langchain-huggingface
@@ -66,10 +71,11 @@ urllib3>=2.0.0        # URL handling with security
 sqlalchemy>=2.0.0     # ORM with security features
 # pymongo>=4.6.0 - Already specified above in "Existing dependencies"
 
-# Development and testing security tools
-bandit>=1.7.5         # Security linting
-safety>=2.3.0         # Dependency vulnerability scanning
-semgrep>=1.45.0       # Static analysis security scanner
+# Development and testing security tools (REMOVED for production - saves ~200MB)
+# Install separately for development: pip install bandit safety semgrep
+# bandit>=1.7.5         # Security linting
+# safety>=2.3.0         # Dependency vulnerability scanning
+# semgrep>=1.45.0       # Static analysis security scanner
 
 # Optional: Advanced security features
 hvac>=1.2.1           # HashiCorp Vault client (for key management)
