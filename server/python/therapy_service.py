@@ -666,7 +666,7 @@ def get_psychological_profile():
         # Format profile data for API response with actual data
         profile_data = {
             'userId': user_id,
-            'profileExists': bool(profile.core_patterns or profile.cultural_context or total_sessions > 0),
+            'profileExists': bool(profile.core_patterns or total_sessions > 0),
             'lastUpdated': profile.last_updated or datetime.now().isoformat(),
             'insights': {
                 'corePatterns': {
@@ -682,10 +682,6 @@ def get_psychological_profile():
                     'effective': [name for name, data in profile.coping_mechanisms.items() 
                                 if isinstance(data, dict) and data.get('confidence', 0) > 0.6][:3] if profile.coping_mechanisms else []
                 },
-                'culturalContext': {
-                    'identified': bool(profile.cultural_context),
-                    'aspects': list(profile.cultural_context.keys())[:4] if profile.cultural_context else []
-                },
                 'traumaInformed': {
                     'indicators': len([t for t in profile.trauma_indicators.values() 
                                      if isinstance(t, dict) and t.get('present')]) if profile.trauma_indicators else 0,
@@ -699,7 +695,6 @@ def get_psychological_profile():
                 }
             },
             'recommendations': {
-                'culturally_informed': bool(profile.cultural_context),
                 'trauma_informed': bool(profile.trauma_indicators),
                 'strengths_based': bool(profile.resilience_factors or latest_progress.get('resilience_indicators'))
             },
@@ -711,7 +706,6 @@ def get_psychological_profile():
             'profile': profile_data,
             'capabilities': {
                 'deep_understanding': True,
-                'cultural_awareness': True,
                 'trauma_informed': True,
                 'progress_tracking': True,
                 'personalized_recommendations': True
