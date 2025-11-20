@@ -1804,6 +1804,55 @@ class DataLoader:
         return text, source_type
 
     @staticmethod
+    def load_dataset_with_streaming(dataset_name: str, split: str, limit: Optional[int] = None, progress_interval: int = 1000):
+        """Load dataset using streaming mode for faster loading"""
+        cache_dir = os.path.join(os.getcwd(), "models", "hf_cache", "datasets")
+        os.makedirs(cache_dir, exist_ok=True)
+        
+        try:
+            # Try streaming mode first
+            dataset_stream = load_dataset(dataset_name, split=split, streaming=True, cache_dir=cache_dir)
+            dataset_list = []
+            print("📊 Streaming examples... (this is much faster than generating full split)")
+            
+            for i, example in enumerate(dataset_stream):
+                if limit and i >= limit:
+                    break
+                dataset_list.append(example)
+                # Show progress
+                if limit and (i + 1) % progress_interval == 0:
+                    print(f"   📥 Streamed {i + 1}/{limit} examples...")
+                elif not limit and (i + 1) % progress_interval == 0:
+                    print(f"   📥 Streamed {i + 1} examples...")
+            
+            # Convert to Dataset format
+            from datasets import Dataset
+            dataset = Dataset.from_list(dataset_list)
+            print(f"✅ Loaded via streaming: {len(dataset_list)} examples")
+            return dataset
+            
+        except Exception as e:
+            print(f"⚠️ Streaming failed ({e}), trying traditional method...")
+            # Fallback: try with multiprocessing
+            try:
+                import multiprocessing
+                num_proc = min(4, multiprocessing.cpu_count())
+                dataset_full = load_dataset(dataset_name, split=split, num_proc=num_proc)
+            except Exception:
+                # Final fallback: single process
+                dataset_full = load_dataset(dataset_name, split=split)
+            
+            # Manually limit if needed
+            if limit and hasattr(dataset_full, 'select') and hasattr(dataset_full, '__len__'):
+                try:
+                    if len(dataset_full) > limit:  # type: ignore
+                        return dataset_full.select(range(limit))  # type: ignore
+                except (TypeError, AttributeError):
+                    pass
+            
+            return dataset_full
+
+    @staticmethod
     def load_mental_health_datasets():
         """Load multiple mental health datasets from Hugging Face - optimized for speed"""
         datasets = []
@@ -1814,7 +1863,12 @@ class DataLoader:
             # Dataset 1: Mental health counseling conversations (KEEP - working well)
             try:
                 print("Loading counseling conversations dataset...")
-                dataset1 = load_dataset("Amod/mental_health_counseling_conversations", split='train')
+                dataset1 = DataLoader.load_dataset_with_streaming(
+                    "Amod/mental_health_counseling_conversations", 
+                    split='train',
+                    limit=None,  # Load all
+                    progress_interval=1000
+                )
                 datasets.append((dataset1, "Amod/mental_health_counseling_conversations"))
                 dataset1_size = safe_dataset_len(dataset1)
                 print(f"✅ Loaded {dataset1_size} counseling conversations")
@@ -1824,7 +1878,12 @@ class DataLoader:
             # Dataset 2: Mental health chatbot dataset (KEEP - working well)
             try:
                 print("Loading mental health chatbot dataset...")
-                dataset2 = load_dataset("heliosbrahma/mental_health_chatbot_dataset", split='train')
+                dataset2 = DataLoader.load_dataset_with_streaming(
+                    "heliosbrahma/mental_health_chatbot_dataset", 
+                    split='train',
+                    limit=None,  # Load all
+                    progress_interval=100
+                )
                 datasets.append((dataset2, "heliosbrahma/mental_health_chatbot_dataset"))
                 dataset2_size = safe_dataset_len(dataset2)
                 print(f"✅ Loaded {dataset2_size} chatbot conversations")
@@ -1834,7 +1893,12 @@ class DataLoader:
             # Dataset 3: Counsel Chat - Therapy conversations (KEEP - working well)
             try:
                 print("Loading counsel chat therapy dataset...")
-                dataset3 = load_dataset("nbertagnolli/counsel-chat", split='train')
+                dataset3 = DataLoader.load_dataset_with_streaming(
+                    "nbertagnolli/counsel-chat", 
+                    split='train',
+                    limit=None,  # Load all
+                    progress_interval=1000
+                )
                 datasets.append((dataset3, "nbertagnolli/counsel-chat"))
                 dataset3_size = safe_dataset_len(dataset3)
                 print(f"✅ Loaded {dataset3_size} counsel chat conversations")
@@ -1848,48 +1912,12 @@ class DataLoader:
             # Dataset 6: Mental health support - LIMITED SIZE (WILL BE FILTERED FOR MENTAL HEALTH RELEVANCE)
             try:
                 print("Loading limited support conversations (will filter for mental health relevance)...")
-                # Use streaming mode for faster loading
-                try:
-                    # First try streaming mode which is much faster
-                    cache_dir = os.path.join(os.getcwd(), "models", "hf_cache", "datasets")
-                    os.makedirs(cache_dir, exist_ok=True)
-                    dataset6_stream = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft', streaming=True, cache_dir=cache_dir)
-                    # Take only first 5000 examples from stream
-                    dataset6_list = []
-                    print("📊 Streaming examples... (this is much faster than generating full split)")
-                    for i, example in enumerate(dataset6_stream):
-                        if i >= 5000:
-                            break
-                        dataset6_list.append(example)
-                        # Show progress every 1000 examples
-                        if (i + 1) % 1000 == 0:
-                            print(f"   📥 Streamed {i + 1}/5000 examples...")
-                    # Convert back to dataset format
-                    from datasets import Dataset
-                    dataset6 = Dataset.from_list(dataset6_list)
-                    print(f"✅ Loaded via streaming: {len(dataset6_list)} examples")
-                except Exception as e:
-                    print(f"⚠️ Streaming failed ({e}), trying traditional method...")
-                    # Fallback: try with multiprocessing for faster loading
-                    try:
-                        import multiprocessing
-                        num_proc = min(4, multiprocessing.cpu_count())  # Use up to 4 cores
-                        dataset6_full = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft', num_proc=num_proc)
-                    except Exception:
-                        # Final fallback: single process
-                        dataset6_full = load_dataset("HuggingFaceH4/ultrachat_200k", split='train_sft')
-                    
-                    # Manually limit to 5000 if dataset is large and supports select
-                    if hasattr(dataset6_full, 'select') and hasattr(dataset6_full, '__len__'):
-                        try:
-                            if len(dataset6_full) > 5000:  # type: ignore
-                                dataset6 = dataset6_full.select(range(5000))  # type: ignore
-                            else:
-                                dataset6 = dataset6_full
-                        except (TypeError, AttributeError):
-                            dataset6 = dataset6_full
-                    else:
-                        dataset6 = dataset6_full
+                dataset6 = DataLoader.load_dataset_with_streaming(
+                    "HuggingFaceH4/ultrachat_200k", 
+                    split='train_sft',
+                    limit=5000,  # Limited size
+                    progress_interval=1000
+                )
                 datasets.append((dataset6, "HuggingFaceH4/ultrachat_200k"))
                 dataset6_size = safe_dataset_len(dataset6)
                 print(f"✅ Loaded {dataset6_size} support conversations (will filter for mental health)")
@@ -1899,42 +1927,12 @@ class DataLoader:
             # Dataset 7: Therapeutic conversations - LIMITED SIZE (WILL BE FILTERED FOR MENTAL HEALTH RELEVANCE)
             try:
                 print("Loading limited therapeutic conversations (will filter for mental health relevance)...")
-                # Try streaming mode first for faster loading
-                try:
-                    cache_dir = os.path.join(os.getcwd(), "models", "hf_cache", "datasets")
-                    dataset7_stream = load_dataset("nvidia/HelpSteer", split='train', streaming=True, cache_dir=cache_dir)
-                    dataset7_list = []
-                    print("📊 Streaming therapeutic conversations...")
-                    for i, example in enumerate(dataset7_stream):
-                        if i >= 3000:
-                            break
-                        dataset7_list.append(example)
-                        if (i + 1) % 500 == 0:
-                            print(f"   📥 Streamed {i + 1}/3000 examples...")
-                    from datasets import Dataset
-                    dataset7 = Dataset.from_list(dataset7_list)
-                    print(f"✅ Loaded via streaming: {len(dataset7_list)} therapeutic examples")
-                except Exception as e:
-                    print(f"⚠️ Streaming failed ({e}), trying traditional method...")
-                    # Fallback: load full train split and manually limit with multiprocessing
-                    try:
-                        import multiprocessing
-                        num_proc = min(4, multiprocessing.cpu_count())
-                        dataset7_full = load_dataset("nvidia/HelpSteer", split='train', num_proc=num_proc)
-                    except Exception:
-                        dataset7_full = load_dataset("nvidia/HelpSteer", split='train')
-                    
-                    # Manually limit to 3000 if dataset is large and supports select
-                    if hasattr(dataset7_full, 'select') and hasattr(dataset7_full, '__len__'):
-                        try:
-                            if len(dataset7_full) > 3000:  # type: ignore
-                                dataset7 = dataset7_full.select(range(3000))  # type: ignore
-                            else:
-                                dataset7 = dataset7_full
-                        except (TypeError, AttributeError):
-                            dataset7 = dataset7_full
-                    else:
-                        dataset7 = dataset7_full
+                dataset7 = DataLoader.load_dataset_with_streaming(
+                    "nvidia/HelpSteer", 
+                    split='train',
+                    limit=3000,  # Limited size
+                    progress_interval=500
+                )
                 datasets.append((dataset7, "nvidia/HelpSteer"))
                 dataset7_size = safe_dataset_len(dataset7)
                 print(f"✅ Loaded {dataset7_size} therapeutic conversations (will filter for mental health)")
@@ -1944,23 +1942,12 @@ class DataLoader:
             # Dataset 8: Mental health Q&A dataset (WILL BE FILTERED FOR MENTAL HEALTH RELEVANCE)
             try:
                 print("Loading mental health Q&A dataset (will filter for mental health relevance)...")
-                # Try different approaches for squad dataset
-                try:
-                    dataset8 = load_dataset("squad", split='train[:2000]')  # Limited size
-                except Exception:
-                    # Fallback: load full train split and manually limit
-                    dataset8_full = load_dataset("squad", split='train')
-                    # Manually limit to 2000 if dataset is large and supports select
-                    if hasattr(dataset8_full, 'select') and hasattr(dataset8_full, '__len__'):
-                        try:
-                            if len(dataset8_full) > 2000:  # type: ignore
-                                dataset8 = dataset8_full.select(range(2000))  # type: ignore
-                            else:
-                                dataset8 = dataset8_full
-                        except (TypeError, AttributeError):
-                            dataset8 = dataset8_full
-                    else:
-                        dataset8 = dataset8_full
+                dataset8 = DataLoader.load_dataset_with_streaming(
+                    "squad", 
+                    split='train',
+                    limit=2000,  # Limited size
+                    progress_interval=500
+                )
                 datasets.append((dataset8, "squad"))
                 dataset8_size = safe_dataset_len(dataset8)
                 print(f"✅ Loaded {dataset8_size} Q&A examples (will filter for mental health)")
@@ -1972,23 +1959,12 @@ class DataLoader:
             # Dataset 10: Mental health classification dataset
             try:
                 print("Loading mental health classification dataset...")
-                # Try different split configurations for emotion dataset
-                try:
-                    dataset10 = load_dataset("emotion", split='train[:2000]')  # Limited size
-                except Exception:
-                    # Fallback: load full train split and manually limit
-                    dataset10_full = load_dataset("emotion", split='train')
-                    # Manually limit to 2000 if dataset is large and supports select
-                    if hasattr(dataset10_full, 'select') and hasattr(dataset10_full, '__len__'):
-                        try:
-                            if len(dataset10_full) > 2000:  # type: ignore
-                                dataset10 = dataset10_full.select(range(2000))  # type: ignore
-                            else:
-                                dataset10 = dataset10_full
-                        except (TypeError, AttributeError):
-                            dataset10 = dataset10_full
-                    else:
-                        dataset10 = dataset10_full
+                dataset10 = DataLoader.load_dataset_with_streaming(
+                    "emotion", 
+                    split='train',
+                    limit=2000,  # Limited size
+                    progress_interval=500
+                )
                 datasets.append((dataset10, "emotion"))
                 dataset10_size = safe_dataset_len(dataset10)
                 print(f"✅ Loaded {dataset10_size} emotion classification examples")
