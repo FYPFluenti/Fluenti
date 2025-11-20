@@ -26,7 +26,7 @@ huggingface-hub>=0.33.4,<1.0.0  # Updated to be compatible with langchain-huggin
 
 # Utilities
 python-dotenv==1.0.0
-requests==2.31.0
+requests>=2.32.2  # Updated to satisfy datasets requirement
 
 # Security and Privacy Requirements for Emotional Therapy Bot
 # Install with: pip install -r requirements_security.txt
@@ -59,7 +59,7 @@ structlog>=23.2.0     # Structured logging
 python-json-logger>=2.0.7  # JSON log formatting
 
 # Network security
-requests>=2.31.0      # HTTP requests with security features
+# requests>=2.32.2 - Already specified above in Utilities
 urllib3>=2.0.0        # URL handling with security
 
 # Database security (if using additional DB features)

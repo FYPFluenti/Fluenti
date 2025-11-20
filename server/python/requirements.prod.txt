@@ -29,7 +29,7 @@ huggingface-hub>=0.33.4,<1.0  # Updated to be compatible with langchain-huggingf
 
 # Utilities
 python-dotenv==1.0.0
-requests==2.31.0
+requests>=2.32.2  # Updated to satisfy datasets requirement
 
 # Core security libraries
 cryptography>=41.0.0  # For encryption and key derivation
