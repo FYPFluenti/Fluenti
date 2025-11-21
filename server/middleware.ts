@@ -13,26 +13,11 @@ export async function extractAndValidateJWT(req: Request, res: Response, next: N
     // Try to get token from httpOnly cookie first (preferred)
     let token = req.cookies?.accessToken;
     
-    // Log cookie information for debugging (only for auth endpoints)
-    if (req.path.startsWith('/api/auth/')) {
-      console.log('🔍 JWT Extraction for:', req.path, {
-        hasCookies: !!req.cookies,
-        cookieKeys: req.cookies ? Object.keys(req.cookies) : [],
-        hasAccessToken: !!req.cookies?.accessToken,
-        hasRefreshToken: !!req.cookies?.refreshToken,
-        origin: req.headers.origin,
-        referer: req.headers.referer,
-      });
-    }
-    
     // Fallback to Authorization header for API clients
     if (!token && req.headers.authorization) {
       const authHeader = req.headers.authorization;
       if (authHeader.startsWith('Bearer ')) {
         token = authHeader.substring(7);
-        if (req.path.startsWith('/api/auth/')) {
-          console.log('📝 Using Authorization header token');
-        }
       }
     }
     
@@ -50,9 +35,7 @@ export async function extractAndValidateJWT(req: Request, res: Response, next: N
               ...user.toObject(),
               claims: { sub: user.id }
             };
-            if (req.path.startsWith('/api/auth/')) {
-              console.log('✅ Valid JWT token for user:', payload.userId);
-            }
+            console.log('✅ Valid JWT token for user:', payload.userId);
           } else {
             console.log('❌ User not found in database:', payload.userId);
           }
@@ -61,21 +44,13 @@ export async function extractAndValidateJWT(req: Request, res: Response, next: N
         const errorMessage = error instanceof Error ? error.message : String(error);
         
         if (errorMessage.includes('expired')) {
-          if (req.path.startsWith('/api/auth/')) {
-            console.log('⏰ Access token expired, client should refresh');
-          }
+          console.log('⏰ Access token expired, client should refresh');
           // Clear any existing user attachment
           (req as any).user = null;
         } else if (!errorMessage.includes('MongoDB') && !errorMessage.includes('connection')) {
-          if (req.path.startsWith('/api/auth/')) {
-            console.log('🔴 Token validation error:', errorMessage);
-          }
+          console.log('🔴 Token validation error:', errorMessage);
           (req as any).user = null;
         }
-      }
-    } else {
-      if (req.path.startsWith('/api/auth/')) {
-        console.log('⚠️ No access token found in cookies or Authorization header');
       }
     }
     
@@ -89,20 +64,15 @@ export async function extractAndValidateJWT(req: Request, res: Response, next: N
 
 // Alternative isAuthenticated middleware that checks for token auth as well
 export function tokenBasedAuth(req: Request, res: Response, next: NextFunction) {
-  const authInfo = {
+  console.log('🔐 tokenBasedAuth check:', {
     path: req.path,
     fullUrl: req.originalUrl,
     hasSession: !!(req as any).isAuthenticated?.(),
     hasUser: !!(req as any).user,
     userId: (req as any).user?.id,
     authHeader: req.headers.authorization ? 'present' : 'missing',
-    hasCookie: !!req.cookies?.accessToken,
-    hasRefreshCookie: !!req.cookies?.refreshToken,
-    origin: req.headers.origin,
-    cookieKeys: req.cookies ? Object.keys(req.cookies) : [],
-  };
-  
-  console.log('🔐 tokenBasedAuth check:', authInfo);
+    hasCookie: !!req.cookies?.accessToken
+  });
   
   // If user is already authenticated via session, continue
   if ((req as any).isAuthenticated?.() && (req as any).user) {
@@ -116,17 +86,7 @@ export function tokenBasedAuth(req: Request, res: Response, next: NextFunction) 
     return next();
   }
   
-  // No authentication found - provide detailed error for debugging
+  // No authentication found
   console.log('❌ No auth found, returning 401');
-  console.log('   Debug info:', {
-    cookiesReceived: !!req.cookies,
-    cookieCount: req.cookies ? Object.keys(req.cookies).length : 0,
-    accessTokenPresent: !!req.cookies?.accessToken,
-    refreshTokenPresent: !!req.cookies?.refreshToken,
-  });
-  
-  return res.status(401).json({ 
-    message: "Unauthorized",
-    debug: process.env.NODE_ENV === 'development' ? authInfo : undefined
-  });
+  return res.status(401).json({ message: "Unauthorized" });
 }

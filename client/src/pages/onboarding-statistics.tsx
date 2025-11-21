@@ -64,8 +64,7 @@ export default function OnboardingStatistics() {
 
   const fetchUserOnboardingData = async () => {
     try {
-      const { buildApiUrl } = await import('@/lib/apiUtils');
-      const response = await fetch(buildApiUrl('/api/onboarding'), {
+      const response = await fetch('/api/onboarding', {
         headers: {
           'Content-Type': 'application/json'
         },

@@ -8,7 +8,7 @@ export const normalizeUrl = (url: string): string => {
 export const getApiBaseUrl = (): string => {
   return normalizeUrl(
     import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
-      ? 'https://fluenti-backend.onrender.com' 
+      ? 'https://fluentiai-backend.onrender.com' 
       : 'http://localhost:3000')
   );
 };

@@ -7,16 +7,7 @@ const EMAIL_PORT = parseInt(process.env.EMAIL_PORT || '587');
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
 const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@fluenti.ai';
-// Use FRONTEND_URL for email links (points to Netlify frontend)
-// Fallback to APP_URL if FRONTEND_URL not set, then to localhost
-const APP_URL = process.env.FRONTEND_URL || process.env.APP_URL || (process.env.NODE_ENV === 'production' ? 'https://fluentiai.netlify.app' : 'http://localhost:5173');
-
-// Log APP_URL configuration on startup
-console.log('📧 Email service configuration:');
-console.log('   APP_URL (for email links):', APP_URL);
-console.log('   FRONTEND_URL:', process.env.FRONTEND_URL || 'NOT SET');
-console.log('   APP_URL (env):', process.env.APP_URL || 'NOT SET');
-console.log('   NODE_ENV:', process.env.NODE_ENV || 'NOT SET');
+const APP_URL = process.env.APP_URL || 'http://localhost:5000';
 
 // Create transporter
 let transporter: nodemailer.Transporter | null = null;
@@ -25,13 +16,6 @@ function getTransporter() {
   if (!transporter) {
     // Only create transporter if email credentials are provided
     if (EMAIL_USER && EMAIL_PASSWORD) {
-      console.log('✅ Email service configured:', {
-        host: EMAIL_HOST,
-        port: EMAIL_PORT,
-        from: EMAIL_FROM,
-        user: EMAIL_USER,
-        hasPassword: !!EMAIL_PASSWORD,
-      });
       transporter = nodemailer.createTransport({
         host: EMAIL_HOST,
         port: EMAIL_PORT,
@@ -40,20 +24,9 @@ function getTransporter() {
           user: EMAIL_USER,
           pass: EMAIL_PASSWORD,
         },
-        // Add connection timeout settings
-        connectionTimeout: 10000, // 10 seconds
-        socketTimeout: 10000, // 10 seconds
-        greetingTimeout: 10000, // 10 seconds
-        // Add TLS options for better connection handling
-        tls: {
-          rejectUnauthorized: false, // Allow self-signed certificates (for development)
-        },
       });
     } else {
       console.warn('⚠️ Email service not configured. Set EMAIL_USER and EMAIL_PASSWORD in environment variables.');
-      console.warn('   EMAIL_USER:', EMAIL_USER ? 'SET' : 'NOT SET');
-      console.warn('   EMAIL_PASSWORD:', EMAIL_PASSWORD ? 'SET' : 'NOT SET');
-      console.warn('   Using mock email transporter - emails will NOT be sent!');
       // Return a mock transporter for development
       transporter = {
         sendMail: async (mailOptions: any) => {
@@ -88,14 +61,7 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       throw new Error('Email service not configured');
     }
     
-    // Check if we're using mock transporter
-    const isMock = !EMAIL_USER || !EMAIL_PASSWORD;
-    if (isMock) {
-      console.warn('⚠️ Attempting to send email with mock transporter - email will NOT be delivered!');
-      console.warn('   Configure EMAIL_USER and EMAIL_PASSWORD environment variables for production.');
-    }
-    
-    const result = await transporter.sendMail({
+    await transporter.sendMail({
       from: EMAIL_FROM,
       to: options.to,
       subject: options.subject,
@@ -103,20 +69,10 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       text: options.text,
     });
     
-    if (isMock) {
-      console.log('📧 [MOCK] Email would be sent to:', options.to);
-    } else {
-      console.log('✅ Email sent successfully to:', options.to, 'Message ID:', result.messageId);
-    }
-  } catch (error: any) {
+    console.log('✅ Email sent successfully to:', options.to);
+  } catch (error) {
     console.error('❌ Failed to send email:', error);
-    console.error('   Error details:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-      response: error.response,
-    });
-    throw new Error(`Failed to send email: ${error.message || 'Unknown error'}`);
+    throw new Error('Failed to send email');
   }
 }
 

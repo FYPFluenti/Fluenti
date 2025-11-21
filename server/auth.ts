@@ -430,16 +430,8 @@ export class AuthService {
       const verifyDoc = await collection.findOne({ _id: user._id });
       console.log('  Token in DB:', verifyDoc?.emailVerificationToken ? 'YES' : 'NO');
 
-      // Send verification email (with error handling)
-      try {
-        await sendVerificationEmail(user.email, user.firstName, verificationToken);
-        console.log('✅ Verification email sent to:', user.email);
-      } catch (emailError: any) {
-        console.error('❌ Failed to send verification email:', emailError);
-        // Don't fail the request if email fails - user can request again
-        // But log the error for debugging
-        throw new Error(`Failed to send verification email. Please check email service configuration. Error: ${emailError.message}`);
-      }
+      // Send verification email
+      await sendVerificationEmail(user.email, user.firstName, verificationToken);
 
       return {
         success: true,
@@ -494,16 +486,9 @@ export class AuthService {
       console.log('  Verification - Expiry in DB:', verifyDoc?.passwordResetExpiry);
       console.log('  Tokens match:', verifyDoc?.passwordResetToken === resetToken);
 
-      // Send password reset email (with error handling)
-      try {
-        await sendPasswordResetEmail(user.email, user.firstName, resetToken);
-        console.log('✅ Password reset email sent to:', user.email);
-      } catch (emailError: any) {
-        console.error('❌ Failed to send password reset email:', emailError);
-        // Don't fail the request if email fails - return success to prevent email enumeration
-        // But log the error for debugging
-        console.warn('⚠️ Password reset token was generated but email failed to send. Token:', resetToken);
-      }
+      // Send password reset email (non-blocking)
+      sendPasswordResetEmail(user.email, user.firstName, resetToken)
+        .catch(err => console.error('Failed to send password reset email:', err));
 
       return {
         success: true,

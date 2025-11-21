@@ -14,64 +14,10 @@ import path from "path";
 
 const app = express();
 
-// Trust proxy for Render.com and other reverse proxies
-// This is required for rate limiting and correct IP detection
-app.set('trust proxy', 1);
-
 connectDB();
   
 // Add cookie parser middleware
 app.use(cookieParser());
-
-// CORS configuration MUST be before all routes to handle preflight requests
-app.use((req, res, next) => {
-  const allowedOrigins = [
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'https://fluentiai.netlify.app',
-    'https://fluenti.netlify.app', // Alternative domain
-    'https://fluenti-backend.onrender.com',
-    'https://web-production-7c65.up.railway.app',
-    process.env.FRONTEND_URL || 'https://fluentiai.netlify.app'
-  ];
-  
-  const origin = req.headers.origin;
-  
-  // Check if origin is in allowed list
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else if (origin) {
-    // For deployment troubleshooting, allow any origin in development
-    // In production, log but still allow for debugging (remove in final version)
-    if (process.env.NODE_ENV === 'development') {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-    } else {
-      // In production, only allow if it matches a pattern
-      const isNetlifyApp = origin.includes('.netlify.app');
-      const isLocalhost = origin.includes('localhost');
-      if (isNetlifyApp || isLocalhost) {
-        res.setHeader('Access-Control-Allow-Origin', origin);
-        console.log(`Allowing access from origin: ${origin}`);
-      } else {
-        console.warn(`Blocked CORS request from origin: ${origin}`);
-        return res.status(403).json({ message: 'CORS policy violation' });
-      }
-    }
-  }
-  
-  res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-  res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie');
-  
-  if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-    return;
-  }
-  
-  next();
-});
 
 // Explicit UTF-8 support for Urdu text
 app.use(express.json({ limit: '10mb' }));
@@ -105,6 +51,38 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 // Ensure UTF-8 encoding
 app.use((req, res, next) => {
   req.setEncoding = req.setEncoding || (() => {});
+  next();
+});
+
+// CORS configuration for production
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://fluentiai.netlify.app',
+    'https://fluentiai-backend.onrender.com',
+    process.env.FRONTEND_URL || 'https://your-site-name.vercel.app'
+  ];
+  
+  const origin = req.headers.origin;
+  if (origin && allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (origin) {
+    // For deployment troubleshooting, temporarily allow any origin
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    console.log(`Allowing access from origin: ${origin}`);
+  }
+  
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+    return;
+  }
+  
   next();
 });
 

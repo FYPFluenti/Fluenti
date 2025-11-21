@@ -1,5 +1,4 @@
 // Service for interacting with psychological profiling APIs
-import { buildApiUrl } from '@/lib/apiUtils';
 
 export interface PsychologicalProfile {
   userId: string;
@@ -63,12 +62,14 @@ export interface ProgressEntry {
 }
 
 export class PsychologicalProfileService {
+  private static readonly API_BASE = '/api/therapy';
+
   /**
    * Get psychological profile for a user
    */
   static async getProfile(userId: string): Promise<PsychologicalProfile> {
     try {
-      const response = await fetch(buildApiUrl(`/api/therapy/psychological-profile?userId=${encodeURIComponent(userId)}`), {
+      const response = await fetch(`${this.API_BASE}/psychological-profile?userId=${encodeURIComponent(userId)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -134,7 +135,7 @@ export class PsychologicalProfileService {
   static async getProgress(userId: string, days: number = 30): Promise<LongTermProgress> {
     try {
       const response = await fetch(
-        buildApiUrl(`/api/therapy/long-term-progress?userId=${encodeURIComponent(userId)}&days=${days}`),
+        `${this.API_BASE}/long-term-progress?userId=${encodeURIComponent(userId)}&days=${days}`,
         {
           method: 'GET',
           headers: {
@@ -182,7 +183,7 @@ export class PsychologicalProfileService {
    */
   static async getSessionHistory(userId: string): Promise<any[]> {
     try {
-      const response = await fetch(buildApiUrl(`/api/therapy/sessions?userId=${encodeURIComponent(userId)}`), {
+      const response = await fetch(`${this.API_BASE}/sessions?userId=${encodeURIComponent(userId)}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

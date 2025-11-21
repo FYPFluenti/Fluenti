@@ -72,10 +72,11 @@ export default function OnboardingPage() {
 
   const loadOnboardingData = async () => {
     try {
-      const { buildApiUrl } = await import('@/lib/apiUtils');
-      const response = await fetch(buildApiUrl('/api/onboarding'), {
+      const authToken = localStorage.getItem('authToken');
+      
+      const response = await fetch('/api/onboarding', {
         headers: {
-          'Content-Type': 'application/json'
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
         },
         credentials: 'include'
       });
@@ -98,13 +99,15 @@ export default function OnboardingPage() {
 
   const saveOnboardingData = async (data: Partial<OnboardingData>, step: number) => {
     try {
-      const { buildApiUrl } = await import('@/lib/apiUtils');
-      const response = await fetch(buildApiUrl('/api/onboarding'), {
+      const authToken = localStorage.getItem('authToken');
+      
+      const response = await fetch('/api/onboarding', {
         method: 'POST',
         headers: { 
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          ...(authToken && { 'Authorization': `Bearer ${authToken}` })
         },
-        credentials: 'include', // Cookies are sent automatically
+        credentials: 'include',
         body: JSON.stringify({ ...data, currentStep: step })
       });
       

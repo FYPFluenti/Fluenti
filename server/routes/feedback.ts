@@ -12,7 +12,7 @@ router.post('/submit', async (req: Request, res: Response) => {
       headers: req.headers['content-type']
     });
 
-    const { feedback, rating, userEmail, userName } = req.body;
+    const { feedback, userEmail, userName } = req.body;
     
     if (!feedback || !feedback.trim()) {
       return res.status(400).json({ 
@@ -49,7 +49,6 @@ router.post('/submit', async (req: Request, res: Response) => {
               <h3>📧 User Information</h3>
               <p><strong>Email:</strong> ${userEmail || 'Not provided'}</p>
               <p><strong>Name:</strong> ${userName || 'Anonymous'}</p>
-              ${rating ? `<p><strong>Rating:</strong> ${rating}/5 ⭐</p>` : ''}
               <p><strong>Submitted:</strong> ${new Date().toLocaleString()}</p>
             </div>
             
@@ -68,26 +67,18 @@ router.post('/submit', async (req: Request, res: Response) => {
       </html>
     `;
 
-    // Try to send email, but don't fail the request if email fails
-    // This allows feedback to be submitted even if email service is not configured
-    try {
-      const feedbackEmail = process.env.EMAIL_FROM || process.env.FEEDBACK_EMAIL || 'fluenitai@gmail.com';
-      
-      await sendEmail({
-        to: feedbackEmail,
-        subject: emailSubject,
-        html: emailHtml,
-        text: `New Feedback from Fluenti User\n\nUser: ${userName || 'Anonymous'} (${userEmail || 'No email provided'})\n${rating ? `Rating: ${rating}/5 ⭐\n` : ''}Submitted: ${new Date().toLocaleString()}\n\nFeedback:\n${feedback}`
-      });
-
-      console.log('✅ Feedback email sent successfully');
-    } catch (emailError) {
-      // Log email error but don't fail the request
-      console.warn('⚠️ Failed to send feedback email (feedback still saved):', emailError);
-      // Continue to return success - feedback was received even if email failed
-    }
+    // Send email to the configured feedback email address
+    const feedbackEmail = process.env.EMAIL_FROM || 'fluenitai@gmail.com';
     
-    // Always return success - feedback was received
+    await sendEmail({
+      to: feedbackEmail,
+      subject: emailSubject,
+      html: emailHtml,
+      text: `New Feedback from Fluenti User\n\nUser: ${userName || 'Anonymous'} (${userEmail || 'No email provided'})\nSubmitted: ${new Date().toLocaleString()}\n\nFeedback:\n${feedback}`
+    });
+
+    console.log('✅ Feedback email sent successfully');
+    
     res.json({ 
       success: true, 
       message: 'Feedback submitted successfully' 

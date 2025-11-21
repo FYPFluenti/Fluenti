@@ -26,13 +26,11 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     setIsSubmitting(true);
     
     try {
-      const { buildApiUrl } = await import('@/lib/apiUtils');
-      const response = await fetch(buildApiUrl('/api/feedback/submit'), {
+      const response = await fetch('/api/feedback/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           feedback: feedback.trim(),
           rating: rating || undefined,
@@ -40,25 +38,6 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
           userName: localStorage.getItem('userName') || undefined,
         }),
       });
-
-      // Check if response is ok before parsing JSON
-      if (!response.ok) {
-        // Try to parse error message, but handle HTML responses
-        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        } catch {
-          // If response is not JSON (e.g., HTML error page), use status text
-          const text = await response.text();
-          if (text.includes('<!DOCTYPE') || text.includes('<html')) {
-            errorMessage = 'Server returned an error page. Please check backend logs.';
-          } else {
-            errorMessage = text || errorMessage;
-          }
-        }
-        throw new Error(errorMessage);
-      }
 
       const data = await response.json();
 
@@ -75,12 +54,11 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         }, 2000);
       } else {
         console.error('Failed to submit feedback:', data.message);
-        alert(`Failed to submit feedback: ${data.message || 'Unknown error'}`);
+        alert('Failed to submit feedback. Please try again.');
       }
     } catch (error) {
       console.error('❌ Error submitting feedback:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      alert(`Failed to submit feedback: ${errorMessage}. Please check your connection and try again.`);
+      alert('Failed to submit feedback. Please check your connection and try again.');
     } finally {
       setIsSubmitting(false);
     }
