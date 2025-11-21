@@ -14,7 +14,15 @@ export const authRateLimiter = rateLimit({
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   skipSuccessfulRequests: false,
-  // Default keyGenerator handles both IPv4 and IPv6 correctly
+  // Use a safe key generator that works with proxies
+  keyGenerator: (req) => {
+    // In production with trust proxy, prefer X-Forwarded-For but fallback to connection IP
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (forwardedFor && typeof forwardedFor === 'string') {
+      return forwardedFor.split(',')[0].trim();
+    }
+    return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+  },
 });
 
 /**
@@ -30,7 +38,14 @@ export const passwordResetRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Default keyGenerator handles both IPv4 and IPv6 correctly
+  // Use a safe key generator that works with proxies
+  keyGenerator: (req) => {
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (forwardedFor && typeof forwardedFor === 'string') {
+      return forwardedFor.split(',')[0].trim();
+    }
+    return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+  },
 });
 
 /**
@@ -46,7 +61,14 @@ export const refreshTokenRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Default keyGenerator handles both IPv4 and IPv6 correctly
+  // Use a safe key generator that works with proxies
+  keyGenerator: (req) => {
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (forwardedFor && typeof forwardedFor === 'string') {
+      return forwardedFor.split(',')[0].trim();
+    }
+    return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+  },
 });
 
 /**
@@ -62,5 +84,12 @@ export const apiRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  // Default keyGenerator handles both IPv4 and IPv6 correctly
+  // Use a safe key generator that works with proxies
+  keyGenerator: (req) => {
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (forwardedFor && typeof forwardedFor === 'string') {
+      return forwardedFor.split(',')[0].trim();
+    }
+    return req.connection.remoteAddress || req.socket.remoteAddress || 'unknown';
+  },
 });

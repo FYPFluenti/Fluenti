@@ -14,6 +14,9 @@ import path from "path";
 
 const app = express();
 
+// Trust proxy for Render deployment (fixes X-Forwarded-For issues)
+app.set('trust proxy', true);
+
 connectDB();
   
 // Add cookie parser middleware

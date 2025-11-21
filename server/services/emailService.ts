@@ -14,6 +14,14 @@ let transporter: nodemailer.Transporter | null = null;
 
 function getTransporter() {
   if (!transporter) {
+    // Debug environment variables
+    console.log('📧 [EMAIL DEBUG] Configuration check:', {
+      EMAIL_HOST: EMAIL_HOST || 'NOT SET',
+      EMAIL_PORT: EMAIL_PORT || 'NOT SET',
+      EMAIL_USER: EMAIL_USER ? '***@' + EMAIL_USER.split('@')[1] : 'NOT SET',
+      EMAIL_PASSWORD: EMAIL_PASSWORD ? '***' + EMAIL_PASSWORD.slice(-4) : 'NOT SET'
+    });
+    
     // Only create transporter if email credentials are provided
     if (EMAIL_USER && EMAIL_PASSWORD) {
       transporter = nodemailer.createTransport({
@@ -54,14 +62,24 @@ export interface EmailOptions {
  * Send an email
  */
 export async function sendEmail(options: EmailOptions): Promise<void> {
+  console.log('📧 [EMAIL DEBUG] sendEmail called with:', {
+    to: options.to,
+    subject: options.subject,
+    from: EMAIL_FROM,
+    hasHtml: !!options.html,
+    hasText: !!options.text
+  });
+  
   try {
     const transporter = getTransporter();
     
     if (!transporter) {
+      console.error('❌ [EMAIL DEBUG] No transporter available');
       throw new Error('Email service not configured');
     }
     
-    await transporter.sendMail({
+    console.log('📧 [EMAIL DEBUG] Attempting to send email...');
+    const result = await transporter.sendMail({
       from: EMAIL_FROM,
       to: options.to,
       subject: options.subject,
@@ -69,9 +87,15 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       text: options.text,
     });
     
-    console.log('✅ Email sent successfully to:', options.to);
+    console.log('✅ Email sent successfully to:', options.to, 'MessageId:', result.messageId);
   } catch (error) {
     console.error('❌ Failed to send email:', error);
+    console.error('❌ [EMAIL DEBUG] Error details:', {
+      name: (error as any)?.name,
+      message: (error as any)?.message,
+      code: (error as any)?.code,
+      command: (error as any)?.command
+    });
     throw new Error('Failed to send email');
   }
 }

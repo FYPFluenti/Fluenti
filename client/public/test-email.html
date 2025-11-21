@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Email Functionality</title>
+</head>
+<body>
+    <h1>Test Email Debugging</h1>
+    
+    <h2>Email Configuration</h2>
+    <button onclick="checkEmailConfig()">Check Email Config</button>
+    <pre id="configResult"></pre>
+    
+    <h2>Test Password Reset</h2>
+    <input type="email" id="emailInput" placeholder="Enter email" value="test@example.com">
+    <button onclick="testPasswordReset()">Test Password Reset</button>
+    <pre id="resetResult"></pre>
+    
+    <h2>Test Feedback</h2>
+    <textarea id="feedbackInput" placeholder="Enter feedback">Test feedback message</textarea><br>
+    <input type="email" id="feedbackEmail" placeholder="Your email" value="user@example.com">
+    <input type="text" id="feedbackName" placeholder="Your name" value="Test User">
+    <button onclick="testFeedback()">Send Feedback</button>
+    <pre id="feedbackResult"></pre>
+
+    <script>
+        async function checkEmailConfig() {
+            try {
+                const response = await fetch('/api/feedback/debug-email-config');
+                const result = await response.json();
+                document.getElementById('configResult').textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('configResult').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testPasswordReset() {
+            try {
+                const email = document.getElementById('emailInput').value;
+                const response = await fetch('/api/auth/forgot-password', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: email })
+                });
+                const result = await response.json();
+                document.getElementById('resetResult').textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('resetResult').textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testFeedback() {
+            try {
+                const feedback = document.getElementById('feedbackInput').value;
+                const userEmail = document.getElementById('feedbackEmail').value;
+                const userName = document.getElementById('feedbackName').value;
+                
+                const response = await fetch('/api/feedback/submit', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        feedback: feedback,
+                        userEmail: userEmail,
+                        userName: userName
+                    })
+                });
+                const result = await response.json();
+                document.getElementById('feedbackResult').textContent = JSON.stringify(result, null, 2);
+            } catch (error) {
+                document.getElementById('feedbackResult').textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
