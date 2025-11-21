@@ -69,7 +69,22 @@ except ImportError as e:
     HarmType = None
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for frontend communication
+
+# Configure CORS with proper settings for cross-origin requests
+# Allow credentials (cookies) and specific origins
+CORS(app, 
+     origins=[
+         'http://localhost:5173',
+         'http://localhost:3000',
+         'http://localhost:3001',
+         'https://fluentiai.netlify.app',
+         'https://fluenti.netlify.app',
+         'https://fluenti-backend.onrender.com',
+         'https://web-production-7c65.up.railway.app',
+     ],
+     supports_credentials=True,  # Allow cookies/credentials
+     allow_headers=['Content-Type', 'Authorization', 'X-Requested-With'],
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'])
 
 #  Add request logging middleware to prevent duplication
 import uuid

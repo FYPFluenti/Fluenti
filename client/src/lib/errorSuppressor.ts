@@ -14,7 +14,8 @@ if (typeof window !== 'undefined') {
         message.includes('401 (Unauthorized)') ||
         message.includes('401 ()') ||
         message.includes('speech/session:1') ||
-        message.includes('fluentiai-backend') ||
+        message.includes('fluenti-backend') ||
+        message.includes('fluentiai-backend') || // Legacy reference
         message.includes('the server responded with a status of 401') ||
         message.includes('Host validation failed') ||
         message.includes('Host is not supported') ||

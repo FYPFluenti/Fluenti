@@ -62,7 +62,8 @@ app.use((req, res, next) => {
     'http://localhost:3001',
     'https://fluentiai.netlify.app',
     'https://fluenti.netlify.app', // Alternative domain
-    'https://fluentiai-backend.onrender.com',
+    'https://fluenti-backend.onrender.com',
+    'https://web-production-7c65.up.railway.app',
     process.env.FRONTEND_URL || 'https://fluentiai.netlify.app'
   ];
   
