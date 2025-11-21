@@ -9,28 +9,29 @@ const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
 const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@fluenti.ai';
 const APP_URL = process.env.APP_URL || 'http://localhost:5000';
 
-// Fallback SMTP configurations for production environments
+// Fallback SMTP configurations for production environments (based on known working solutions)
 const SMTP_CONFIGS = [
-  // Primary: Gmail SMTP with TLS
+  // Primary: Gmail service method (most reliable according to StackOverflow)
+  {
+    service: 'Gmail',
+    port: null, // service handles port automatically
+    secure: null, // service handles security automatically  
+    name: 'Gmail Service'
+  },
+  // Fallback 1: Gmail SMTP with requireTLS (proven solution for Render/server environments)
   {
     host: 'smtp.gmail.com',
     port: 587,
     secure: false,
-    name: 'Gmail SMTP (TLS 587)'
+    requireTLS: true,
+    name: 'Gmail SMTP (TLS 587 with requireTLS)'
   },
-  // Fallback 1: Gmail SMTP with SSL
+  // Fallback 2: Gmail SMTP with SSL
   {
     host: 'smtp.gmail.com',
     port: 465,
     secure: true,
     name: 'Gmail SMTP (SSL 465)'
-  },
-  // Fallback 2: Alternative Gmail port
-  {
-    host: 'smtp.gmail.com',
-    port: 25,
-    secure: false,
-    name: 'Gmail SMTP (Port 25)'
   }
 ];
 
@@ -64,10 +65,8 @@ async function createTransporterWithFallback() {
     try {
       console.log(`📧 [EMAIL DEBUG] Trying ${config.name}...`);
       
-      const testTransporter = nodemailer.createTransport({
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
+      // Create transport configuration based on whether it's service-based or host-based
+      let transportConfig: any = {
         auth: {
           user: EMAIL_USER,
           pass: EMAIL_PASSWORD,
@@ -75,7 +74,22 @@ async function createTransporterWithFallback() {
         connectionTimeout: 5000, // 5 seconds timeout for faster fallback
         greetingTimeout: 3000,
         socketTimeout: 5000,
-      });
+      };
+
+      if ((config as any).service) {
+        // Service-based configuration (e.g., Gmail service)
+        transportConfig.service = (config as any).service;
+      } else {
+        // Host-based configuration
+        transportConfig.host = (config as any).host;
+        transportConfig.port = (config as any).port;
+        transportConfig.secure = (config as any).secure;
+        if ((config as any).requireTLS) {
+          transportConfig.requireTLS = (config as any).requireTLS;
+        }
+      }
+      
+      const testTransporter = nodemailer.createTransport(transportConfig);
 
       // Test the connection with a quick timeout
       await new Promise((resolve, reject) => {
