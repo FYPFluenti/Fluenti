@@ -81,6 +81,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Cookie diagnostic endpoint (no auth required) - for debugging cookie issues
+  app.get('/api/auth/cookie-test', (req: Request, res: Response) => {
+    const testCookieValue = `test-${Date.now()}`;
+    const sameSiteValue = process.env.NODE_ENV === 'production' ? 'none' : 'lax';
+    const isSecure = process.env.NODE_ENV === 'production';
+    
+    // Set a test cookie
+    res.cookie('testCookie', testCookieValue, {
+      httpOnly: false, // Make it readable by JS for testing
+      secure: isSecure,
+      sameSite: sameSiteValue,
+      maxAge: 60 * 1000, // 1 minute
+      path: '/',
+    });
+    
+    res.json({
+      success: true,
+      message: 'Test cookie set',
+      receivedCookies: req.cookies || {},
+      cookieCount: req.cookies ? Object.keys(req.cookies).length : 0,
+      testCookieValue,
+      cookieOptions: {
+        sameSite: sameSiteValue,
+        secure: isSecure,
+        path: '/',
+      },
+      origin: req.headers.origin,
+      userAgent: req.headers['user-agent'],
+    });
+  });
+
   // Auth routes
   app.get('/api/auth/user', tokenBasedAuth, async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -281,17 +312,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Refresh token endpoint
     app.post('/api/auth/refresh', refreshTokenRateLimiter, async (req: Request, res: Response) => {
       try {
+        console.log('🔄 Refresh token request:', {
+          hasCookies: !!req.cookies,
+          cookieKeys: req.cookies ? Object.keys(req.cookies) : [],
+          hasRefreshToken: !!req.cookies?.refreshToken,
+          origin: req.headers.origin,
+        });
+        
         const refreshToken = req.cookies?.refreshToken;
         
         if (!refreshToken) {
+          console.error('❌ Refresh token not found in cookies');
           return res.status(401).json({ message: 'Refresh token not found' });
         }
         
         // Verify refresh token
-        const payload = verifyRefreshToken(refreshToken);
+        let payload;
+        try {
+          payload = verifyRefreshToken(refreshToken);
+          console.log('✅ Refresh token verified for user:', payload.userId);
+        } catch (verifyError: any) {
+          console.error('❌ Refresh token verification failed:', verifyError.message);
+          throw verifyError;
+        }
         
         // Get new token pair
         const tokens = await AuthService.refreshAccessToken(payload.userId, refreshToken);
+        console.log('✅ New tokens generated');
         
         // Set new cookies with cross-origin support
         const sameSiteValue = process.env.NODE_ENV === 'production' ? 'none' : 'lax';
@@ -313,9 +360,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           path: '/',
         });
         
+        console.log('✅ Cookies set with options:', { sameSite: sameSiteValue, secure: isSecure });
         res.json({ success: true, message: 'Token refreshed successfully' });
       } catch (error: any) {
-        console.error("Token refresh error:", error.message);
+        console.error("❌ Token refresh error:", error.message);
+        console.error("   Error stack:", error.stack);
         // Clear invalid cookies with same options as when they were set
         const sameSiteValue = process.env.NODE_ENV === 'production' ? 'none' : 'lax';
         const isSecure = process.env.NODE_ENV === 'production';
@@ -332,7 +381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           sameSite: sameSiteValue,
           path: '/',
         });
-        res.status(401).json({ message: 'Token refresh failed' });
+        res.status(401).json({ message: 'Token refresh failed', error: error.message });
       }
     });
 
