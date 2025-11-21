@@ -50,6 +50,7 @@ export default function ModelViewerAvatar({
   const [hasError, setHasError] = useState(false);
   const [lipSyncData, setLipSyncData] = useState<LipSyncData | null>(null);
   const [isProcessingLipSync, setIsProcessingLipSync] = useState(false);
+  const [supportsBlendShapes, setSupportsBlendShapes] = useState(true);
   const modelViewerRef = useRef<any>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const animationFrameRef = useRef<number>();
@@ -124,19 +125,45 @@ export default function ModelViewerAvatar({
 
   // Apply viseme to avatar
   const applyViseme = (viseme: string, weight: number) => {
-    if (!modelViewerRef.current) return;
+    if (!modelViewerRef.current) {
+      console.warn('ModelViewer ref not available');
+      return;
+    }
 
     const modelViewer = modelViewerRef.current;
+    
+    // Check if model is loaded and has blend shape functionality
+    if (!modelViewer.model) {
+      console.warn('Model not loaded yet');
+      return;
+    }
+    
+    // Check if setBlendShapeWeight function exists
+    if (typeof modelViewer.model.setBlendShapeWeight !== 'function') {
+      console.warn('setBlendShapeWeight function not available on this model');
+      setSupportsBlendShapes(false);
+      return;
+    }
+
     const blendShapeName = visemeBlendShapes[viseme] || 'mouthClose';
     
     try {
       // Reset all mouth blend shapes
       Object.values(visemeBlendShapes).forEach(shapeName => {
-        modelViewer.model?.setBlendShapeWeight(shapeName, 0);
+        try {
+          modelViewer.model.setBlendShapeWeight(shapeName, 0);
+        } catch (shapeError) {
+          // Some models might not have all blend shapes - this is ok
+          console.debug(`Blend shape ${shapeName} not available:`, shapeError);
+        }
       });
       
       // Apply current viseme
-      modelViewer.model?.setBlendShapeWeight(blendShapeName, weight);
+      try {
+        modelViewer.model.setBlendShapeWeight(blendShapeName, weight);
+      } catch (shapeError) {
+        console.debug(`Blend shape ${blendShapeName} not available:`, shapeError);
+      }
     } catch (error) {
       console.error('Error applying viseme:', error);
     }
@@ -253,10 +280,15 @@ export default function ModelViewerAvatar({
     setIsLoading(false);
     setHasError(false);
     
-    // Initialize blend shapes to neutral position
+    // Initialize blend shapes to neutral position with better timing
     setTimeout(() => {
-      applyViseme('sil', 1);
-    }, 100);
+      if (modelViewerRef.current?.model) {
+        console.log('✅ Model loaded, initializing blend shapes');
+        applyViseme('sil', 1);
+      } else {
+        console.warn('⚠️ Model loaded event fired but model not accessible');
+      }
+    }, 500); // Increased timeout for better reliability
   };
 
   const handleError = () => {
@@ -337,6 +369,15 @@ export default function ModelViewerAvatar({
           max-field-of-view="30deg"
           onLoad={handleLoad}
           onError={handleError}
+          onModelLoad={handleLoad}
+          onProgress={(event: any) => {
+            // Model loading progress
+            const progress = event.detail.totalProgress;
+            if (progress === 1) {
+              // Model fully loaded
+              setTimeout(() => handleLoad(), 100);
+            }
+          }}
         />
       </div>
     </div>

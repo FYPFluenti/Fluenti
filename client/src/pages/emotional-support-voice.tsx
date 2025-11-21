@@ -498,11 +498,11 @@ const EmotionalSupportVoice = () => {
         )}
         
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Main Content Area - Grid Layout for stable positioning */}
-          <div className="flex-1 grid grid-rows-[auto_1fr_auto] items-center px-6 py-8 gap-6 min-h-0">
+          {/* Main Content Area - Flex Layout with Avatar on Left */}
+          <div className="flex-1 flex items-center px-6 py-8 gap-8 min-h-0">
             
-            {/* Avatar Section - Fixed Top with Animation States */}
-            <div className="flex justify-center relative">
+            {/* Avatar Section - Fixed Left Side */}
+            <div className="flex-shrink-0 flex items-center justify-center">
               <div className="relative">
                 <ModelViewerAvatar
                   avatarUrl={avatarUrls.therapist}
@@ -561,8 +561,8 @@ const EmotionalSupportVoice = () => {
               </div>
             </div>
 
-            {/* Response Section - Scrollable Middle */}
-            <div className="flex justify-center overflow-y-auto min-h-0">
+            {/* Response Section - Centered Content Area */}
+            <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto min-h-0">
               {(response || displayedResponse) ? (
                 <div className="w-full max-w-2xl">
                   <div className="bg-card/60 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-xl">
@@ -595,8 +595,10 @@ const EmotionalSupportVoice = () => {
                 </div>
               )}
             </div>
+          </div>
 
-            {/* Controls - Fixed Bottom */}
+          {/* Controls Section - Fixed Bottom */}
+          <div className="px-6 pb-8">
             <div className="flex justify-center items-center gap-4">
               <Button 
                 onClick={() => {

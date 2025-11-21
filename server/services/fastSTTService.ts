@@ -49,7 +49,7 @@ async function tryCloudSTT(audioBuffer: Buffer, language: 'en' | 'ur' = 'en'): P
  */
 export async function fastTranscribeAudio(audioBuffer: Buffer, language: 'en' | 'ur' = 'en'): Promise<string> {
   // First try cloud STT (more reliable for production)
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' || process.env.PREFER_CLOUD_STT === 'true') {
     try {
       const cloudResult = await tryCloudSTT(audioBuffer, language);
       if (cloudResult && cloudResult.trim() && !cloudResult.includes('Audio message received')) {
