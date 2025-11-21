@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { getQueryFn } from "@/lib/queryClient";
+import { buildApiUrl } from "@/lib/apiUtils";
 
 export interface StoryGameProgress {
   id: string;
@@ -106,11 +107,7 @@ export function useSaveStoryGameProgress() {
   
   return useMutation({
     mutationFn: async (data: Partial<StoryGameProgress>) => {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
-        ? 'https://fluentiai-backend.onrender.com' 
-        : 'http://localhost:3000');
-      
-      const response = await fetch(`${API_BASE_URL}/api/story-game/progress`, {
+      const response = await fetch(buildApiUrl('/api/story-game/progress'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -166,11 +163,7 @@ export function useStoryGameSessions(limit: number = 50) {
   }>({
     queryKey: ["/api/story-game/sessions", limit],
     queryFn: async () => {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
-        ? 'https://fluentiai-backend.onrender.com' 
-        : 'http://localhost:3000');
-      
-      const response = await fetch(`${API_BASE_URL}/api/story-game/sessions?limit=${limit}&offset=0`, {
+      const response = await fetch(buildApiUrl(`/api/story-game/sessions?limit=${limit}&offset=0`), {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -179,13 +172,13 @@ export function useStoryGameSessions(limit: number = 50) {
 
       if (response.status === 401) {
         try {
-          const refreshRes = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+          const refreshRes = await fetch(buildApiUrl('/api/auth/refresh'), {
             method: 'POST',
             credentials: 'include',
           });
           
           if (refreshRes.ok) {
-            const retryResponse = await fetch(`${API_BASE_URL}/api/story-game/sessions?limit=${limit}&offset=0`, {
+            const retryResponse = await fetch(buildApiUrl(`/api/story-game/sessions?limit=${limit}&offset=0`), {
               headers: {
                 'Content-Type': 'application/json',
               },
@@ -241,11 +234,7 @@ export function useSaveStoryGameSession() {
       startTime?: string;
       endTime?: string;
     }) => {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
-        ? 'https://fluentiai-backend.onrender.com' 
-        : 'http://localhost:3000');
-      
-      let response = await fetch(`${API_BASE_URL}/api/story-game/session`, {
+      let response = await fetch(buildApiUrl('/api/story-game/session'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -257,14 +246,14 @@ export function useSaveStoryGameSession() {
       // Handle 401 by attempting token refresh
       if (response.status === 401) {
         try {
-          const refreshRes = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+          const refreshRes = await fetch(buildApiUrl('/api/auth/refresh'), {
             method: 'POST',
             credentials: 'include',
           });
           
           if (refreshRes.ok) {
             // Token refreshed, retry original request
-            response = await fetch(`${API_BASE_URL}/api/story-game/session`, {
+            response = await fetch(buildApiUrl('/api/story-game/session'), {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'

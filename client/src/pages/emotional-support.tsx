@@ -13,6 +13,7 @@ import { useNotificationSounds } from '@/hooks/useAudio';
 import { ThinkingIndicator, MessageAnimationWrapper, TypingIndicator } from '@/components/chat/ChatAnimations';
 import { MessageHeader } from '@/components/chat/MessageHeader';
 import type { User } from '@/types/auth';
+import { buildApiUrl } from '@/lib/apiUtils';
 
 interface Message {
   id: string;
@@ -247,10 +248,7 @@ const EmotionalSupport = () => {
 
   const checkServiceHealth = async () => {
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
-        ? 'https://fluentiai-backend.onrender.com' 
-        : 'http://localhost:3000');
-      const res = await fetch(`${API_BASE_URL}/api/therapy/health`, {
+      const res = await fetch(buildApiUrl('/api/therapy/health'), {
         credentials: 'include' // Include cookies for authentication
       });
       const data = await res.json();
@@ -295,10 +293,7 @@ const EmotionalSupport = () => {
     setShowThinking(true);
     
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
-        ? 'https://fluentiai-backend.onrender.com' 
-        : 'http://localhost:3000');
-      const res = await fetch(`${API_BASE_URL}/api/emotional-support-chat`, { 
+      const res = await fetch(buildApiUrl('/api/emotional-support-chat'), { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include', // Include cookies for authentication
