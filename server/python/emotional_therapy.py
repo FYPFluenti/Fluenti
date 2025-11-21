@@ -1995,9 +1995,38 @@ class DataLoader:
             raise
 
     
-# Load the enhanced datasets
-datasets = DataLoader.load_mental_health_datasets()
-print("📚 Enhanced mental health knowledge base ready!")
+# Lazy dataset loading - only load when actually needed (prevents OOM during startup)
+_datasets_cache = None
+_datasets_loading = False
+
+def get_datasets():
+    """Lazy loader for datasets - only loads on first use to prevent OOM during startup"""
+    global _datasets_cache, _datasets_loading
+    
+    if _datasets_cache is not None:
+        return _datasets_cache
+    
+    if _datasets_loading:
+        # If already loading, wait a bit and return empty list to prevent deadlock
+        import time
+        time.sleep(0.1)
+        return []
+    
+    _datasets_loading = True
+    try:
+        print("📚 Loading datasets on first use (lazy loading to save memory)...")
+        _datasets_cache = DataLoader.load_mental_health_datasets()
+        print("✅ Datasets loaded successfully!")
+        return _datasets_cache
+    except Exception as e:
+        print(f"⚠️ Error loading datasets: {e}")
+        return []
+    finally:
+        _datasets_loading = False
+
+# Keep datasets variable for backward compatibility, but make it lazy
+datasets = None  # Will be loaded via get_datasets() when needed
+print("📚 Dataset loading deferred (will load on first use to prevent OOM)")
 
 import re
 from typing import Dict, List, Set, Tuple, Any
@@ -3848,7 +3877,10 @@ Complexity Analysis:"""
 
             print("🔍 Starting dataset preprocessing with quality filtering...")
 
-            for dataset_idx, dataset_item in enumerate(datasets):
+            # Load datasets lazily if not already loaded
+            datasets_to_process = get_datasets()
+            
+            for dataset_idx, dataset_item in enumerate(datasets_to_process):
                 if isinstance(dataset_item, list):
                     # Skip list-type datasets (fallback data removed)
                     continue
