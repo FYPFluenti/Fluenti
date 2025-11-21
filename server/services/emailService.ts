@@ -11,14 +11,25 @@ const APP_URL = process.env.APP_URL || 'http://localhost:5000';
 
 // Fallback SMTP configurations for production environments (based on known working solutions)
 const SMTP_CONFIGS = [
-  // Primary: Gmail service method (most reliable according to StackOverflow)
+  // Primary: Resend SMTP (specifically designed to work with Render/Vercel)
+  {
+    host: 'smtp.resend.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: 'resend',
+      pass: process.env.RESEND_API_KEY // Resend API key as password
+    },
+    name: 'Resend SMTP (Render-compatible)'
+  },
+  // Fallback 1: Gmail service method (most reliable according to StackOverflow)
   {
     service: 'Gmail',
     port: null, // service handles port automatically
     secure: null, // service handles security automatically  
     name: 'Gmail Service'
   },
-  // Fallback 1: Gmail SMTP with requireTLS (proven solution for Render/server environments)
+  // Fallback 2: Gmail SMTP with requireTLS (proven solution for Render/server environments)
   {
     host: 'smtp.gmail.com',
     port: 587,
@@ -26,7 +37,7 @@ const SMTP_CONFIGS = [
     requireTLS: true,
     name: 'Gmail SMTP (TLS 587 with requireTLS)'
   },
-  // Fallback 2: Gmail SMTP with SSL
+  // Fallback 3: Gmail SMTP with SSL
   {
     host: 'smtp.gmail.com',
     port: 465,
@@ -65,12 +76,8 @@ async function createTransporterWithFallback() {
     try {
       console.log(`📧 [EMAIL DEBUG] Trying ${config.name}...`);
       
-      // Create transport configuration based on whether it's service-based or host-based
+      // Create transport configuration based on the configuration type
       let transportConfig: any = {
-        auth: {
-          user: EMAIL_USER,
-          pass: EMAIL_PASSWORD,
-        },
         connectionTimeout: 5000, // 5 seconds timeout for faster fallback
         greetingTimeout: 3000,
         socketTimeout: 5000,
@@ -79,11 +86,28 @@ async function createTransporterWithFallback() {
       if ((config as any).service) {
         // Service-based configuration (e.g., Gmail service)
         transportConfig.service = (config as any).service;
-      } else {
-        // Host-based configuration
+        transportConfig.auth = {
+          user: EMAIL_USER,
+          pass: EMAIL_PASSWORD,
+        };
+      } else if ((config as any).auth) {
+        // Special auth configuration (e.g., Resend with custom auth)
         transportConfig.host = (config as any).host;
         transportConfig.port = (config as any).port;
         transportConfig.secure = (config as any).secure;
+        transportConfig.auth = (config as any).auth;
+        if ((config as any).requireTLS) {
+          transportConfig.requireTLS = (config as any).requireTLS;
+        }
+      } else {
+        // Standard host-based configuration
+        transportConfig.host = (config as any).host;
+        transportConfig.port = (config as any).port;
+        transportConfig.secure = (config as any).secure;
+        transportConfig.auth = {
+          user: EMAIL_USER,
+          pass: EMAIL_PASSWORD,
+        };
         if ((config as any).requireTLS) {
           transportConfig.requireTLS = (config as any).requireTLS;
         }
