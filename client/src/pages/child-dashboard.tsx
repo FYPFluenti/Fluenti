@@ -112,7 +112,6 @@ export default function ChildDashboard() {
           onClose={() => setShowFeedback(false)} 
         />
 
-
       </main>
 
       {/* Mobile Bottom Navigation */}
@@ -121,14 +120,6 @@ export default function ChildDashboard() {
         currentPage="dashboard"
         userType="child"
       />
-
-      {/* Feedback Modal */}
-      {showFeedback && (
-        <FeedbackModal 
-          isOpen={showFeedback}
-          onClose={() => setShowFeedback(false)}
-        />
-      )}
     </div>
   );
 }

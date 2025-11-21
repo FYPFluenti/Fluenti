@@ -281,9 +281,9 @@ export default function Home() {
   
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-white relative overflow-hidden">
+      <div className="min-h-screen bg-white relative overflow-x-hidden">
         {/*  3D Background - Only Behind Hero Section */}
-        <div className="absolute inset-0 w-full h-screen z-0"> {/* CHANGED: fixed → absolute, h-full → h-screen */}
+        <div className="absolute inset-0 w-full h-screen z-0 hidden sm:block"> 
           <Spline 
             scene="https://prod.spline.design/d1ABYikBmZ80miSz/scene.splinecode"
             className="w-full h-full"
@@ -293,39 +293,41 @@ export default function Home() {
               position: 'absolute',
               top: 0,
               left: 0,
-              pointerEvents: 'none', // Prevents interaction interference
+              pointerEvents: 'none',
               opacity: 0.8,
-        filter: 'none' //
-      }}
-    />
-  </div>
+              filter: 'none'
+            }}
+          />
+        </div>
+        {/* Mobile Background Gradient */}
+        <div className="absolute inset-0 w-full h-screen z-0 sm:hidden bg-gradient-to-br from-blue-50 via-white to-orange-50"></div>
        
   {/* Header*/}
-  <header className="absolute top-0 w-full z-50  bg-white/2">
-    <div className="max-w-7xl mx-auto px-5 py-4"> 
-      <div className="flex items-center justify-between h-24 pt-6">
+  <header className="absolute top-0 w-full z-50 bg-white/2">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4"> 
+      <div className="flex items-center justify-between h-16 sm:h-20 md:h-24 pt-2 sm:pt-4 md:pt-6">
         {/* Logo */}
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           <div className="relative group">
-            <FluentiLogo className="w-12 h-12 lg:w-14 lg:h-14 text-[#ff6b1d] transition-transform duration-300 group-hover:scale-110" />
+            <FluentiLogo className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 text-[#ff6b1d] transition-transform duration-300 group-hover:scale-110" />
             <div className="absolute inset-0 bg-[#ff6b1d]/20 rounded-full blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
           </div>
-          <span className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight">fluenti</span>
+          <span className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 tracking-tight">fluenti</span>
         </div>
         
         {/* Actions */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2 sm:space-x-3">
           <Link href="/login">
             <Button 
               variant="ghost"
-              className="text-base font-medium text-gray-700 hover:text-gray-900 h-11 px-6 rounded-xl hover:bg-gray-50 transition-all duration-200"
+              className="text-sm sm:text-base font-medium text-gray-700 hover:text-gray-900 h-9 sm:h-11 px-3 sm:px-6 rounded-xl hover:bg-gray-50 transition-all duration-200"
             >
               log in
             </Button>
           </Link>
           <Link href="/signup">
             <Button 
-              className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white text-base font-medium h-11 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
+              className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white text-sm sm:text-base font-medium h-9 sm:h-11 px-3 sm:px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
             >
               sign up
             </Button>
@@ -335,52 +337,49 @@ export default function Home() {
     </div>
   </header>
 
-  {/* Hero Section - NO CHANGES */}
-  <section className="pt-24 min-h-screen flex items-center relative z-10"> {/* ADDED: relative z-10 */}
-    <div className="max-w-7xl mx-auto px-6 w-full">
-      <div className="grid lg:grid-cols-2 gap-16 items-center">
+  {/* Hero Section */}
+  <section className="pt-20 sm:pt-24 min-h-screen flex items-center relative z-10">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full">
+      <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
         {/* Left Side - Text Content */}
-        <div className="space-y-8">
-          <div className="space-y-6">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 leading-tight tracking-tight">
+        <div className="space-y-6 sm:space-y-8 text-center lg:text-left">
+          <div className="space-y-4 sm:space-y-6">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 leading-tight tracking-tight">
               your complete
               <br />
               <span className="text-[#ff6b1d]">therapy companion.</span>
             </h1>
             
-            <p className="text-xl text-gray-600 leading-relaxed max-w-lg">
+            <p className="text-base sm:text-lg lg:text-xl text-gray-600 leading-relaxed max-w-lg mx-auto lg:mx-0">
               comprehensive ai-powered platform combining speech therapy 
               for children and emotional support for adults. personalized, 
               safe, and available 24/7.
             </p>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <Link href="/signup">
               <Button 
                 size="lg"
-                className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-8 py-3 text-lg rounded-lg font-medium shadow-lg hover:shadow-xl transition-all"
+                className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-6 sm:px-8 py-2.5 sm:py-3 text-base sm:text-lg rounded-lg font-medium shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
               >
                 start your free trial
               </Button>
             </Link>
             
-            <p className="text-sm text-gray-500">
+            <p className="text-xs sm:text-sm text-gray-500">
               trusted by 2,500+ families and individuals for speech & emotional wellness
             </p>
           </div>
         </div>
 
-        {/* Right Side - YOUR SPLINE 3D AVATAR (UNCHANGED) */}
-        <div className="flex justify-center lg:justify-end">
+        {/* Right Side - 3D Avatar */}
+        <div className="flex justify-center lg:justify-end mt-8 lg:mt-0">
           <div className="relative">
             
-            
-            {/* Enlarged 3D Model Container (No White Box) */}
+            {/* 3D Model Container - Mobile Responsive */}
             <div className="relative">
-              {/* ENLARGED SIZE: Increased from w-80 h-80 lg:w-96 lg:h-96 to w-96 h-96 lg:w-[28rem] lg:h-[28rem] */}
-              {/* POSITIONED LEFT: Added -ml-8 lg:-ml-12 */}
-              <div className="w-96 h-96 lg:w-[28rem] lg:h-[28rem] relative -ml-8 lg:-ml-12">
+              <div className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 lg:w-[28rem] lg:h-[28rem] relative -ml-4 sm:-ml-6 lg:-ml-12">
                 
                 {/* Spline 3D Model - Direct Integration */}
                 <div className="w-full h-full relative">
@@ -452,53 +451,53 @@ export default function Home() {
   </section>
 
   {/* 2. FEATURES SECTION - Show what Fluenti does */}
-  <section className="py-24 bg-gray-50 relative z-10">
-    <div className="max-w-6xl mx-auto px-6">
-      <div className="text-center mb-16">
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">
+  <section className="py-16 sm:py-20 lg:py-24 bg-gray-50 relative z-10">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="text-center mb-12 sm:mb-16">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">
           comprehensive therapy for every age
         </h2>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+        <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-4">
           from children's speech development to adult emotional wellness — one platform, personalized care
         </p>
       </div>
       
-      <div className="grid md:grid-cols-3 gap-12">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 lg:gap-12">
         {/* Children's Speech Therapy Card */}
-        <div className="text-center group cursor-pointer p-8 rounded-3xl transition-all duration-300 hover:bg-white hover:shadow-2xl hover:scale-105">
-          <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200">
-            <Mic className="w-8 h-8 text-[#ff6b1d]" />
+        <div className="text-center group cursor-pointer p-6 sm:p-8 rounded-3xl transition-all duration-300 hover:bg-white hover:shadow-2xl hover:scale-105">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-2xl shadow-lg mx-auto mb-4 sm:mb-6 flex items-center justify-center border border-gray-200">
+            <Mic className="w-7 h-7 sm:w-8 sm:h-8 text-[#ff6b1d]" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
             interactive speech games
           </h3>
-          <p className="text-gray-600 leading-relaxed">
+          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
             engaging story-based games that make speech practice fun for children while tracking progress
           </p>
         </div>
         
         {/* Adult Emotional Support Card */}
-        <div className="text-center group cursor-pointer p-8 rounded-3xl transition-all duration-300 hover:bg-white hover:shadow-2xl hover:scale-105">
-          <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200">
-            <Brain className="w-8 h-8 text-[#ff6b1d]" />
+        <div className="text-center group cursor-pointer p-6 sm:p-8 rounded-3xl transition-all duration-300 hover:bg-white hover:shadow-2xl hover:scale-105">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-2xl shadow-lg mx-auto mb-4 sm:mb-6 flex items-center justify-center border border-gray-200">
+            <Brain className="w-7 h-7 sm:w-8 sm:h-8 text-[#ff6b1d]" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
             ai emotional therapy
           </h3>
-          <p className="text-gray-600 leading-relaxed">
+          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
             professional-level emotional support with voice and chat modes, crisis detection, and psychological insights
           </p>
         </div>
         
         {/* Comprehensive Analytics Card */}
-        <div className="text-center group cursor-pointer p-8 rounded-3xl transition-all duration-300 hover:bg-white hover:shadow-2xl hover:scale-105">
-          <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200">
-            <BarChart3 className="w-8 h-8 text-[#ff6b1d]" />
+        <div className="text-center group cursor-pointer p-6 sm:p-8 rounded-3xl transition-all duration-300 hover:bg-white hover:shadow-2xl hover:scale-105 sm:col-span-2 lg:col-span-1">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-2xl shadow-lg mx-auto mb-4 sm:mb-6 flex items-center justify-center border border-gray-200">
+            <BarChart3 className="w-7 h-7 sm:w-8 sm:h-8 text-[#ff6b1d]" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
             advanced progress tracking
           </h3>
-          <p className="text-gray-600 leading-relaxed">
+          <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
             detailed analytics for speech development and emotional wellness with personalized recommendations
           </p>
         </div>
@@ -507,74 +506,74 @@ export default function Home() {
   </section>
 
   {/* User Types Section - Show who Fluenti serves */}
-  <section className="py-24 bg-white relative z-10">
-    <div className="max-w-6xl mx-auto px-6">
-      <div className="text-center mb-16">
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">
+  <section className="py-16 sm:py-20 lg:py-24 bg-white relative z-10">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="text-center mb-12 sm:mb-16">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">
           designed for every journey
         </h2>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+        <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-4">
           whether you're supporting a child's speech development or seeking emotional wellness as an adult
         </p>
       </div>
       
-      <div className="grid md:grid-cols-2 gap-12">
+      <div className="grid lg:grid-cols-2 gap-8 sm:gap-12">
         {/* Children's Path */}
-        <div className="bg-white rounded-3xl p-8 text-center shadow-lg border border-gray-100 hover:shadow-2xl hover:scale-105 transition-all duration-300 group">
-          <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200 group-hover:border-blue-200 group-hover:bg-blue-50 transition-all duration-300">
-            <Gamepad2 className="w-8 h-8 text-[#ff6b1d] group-hover:text-blue-600 transition-colors duration-300" />
+        <div className="bg-white rounded-3xl p-6 sm:p-8 text-center shadow-lg border border-gray-100 hover:shadow-2xl hover:scale-105 transition-all duration-300 group">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-2xl shadow-lg mx-auto mb-4 sm:mb-6 flex items-center justify-center border border-gray-200 group-hover:border-blue-200 group-hover:bg-blue-50 transition-all duration-300">
+            <Gamepad2 className="w-7 h-7 sm:w-8 sm:h-8 text-[#ff6b1d] group-hover:text-blue-600 transition-colors duration-300" />
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-4">for children</h3>
-          <p className="text-gray-600 mb-6 leading-relaxed">
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">for children</h3>
+          <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 leading-relaxed">
             fun, interactive speech therapy through storytelling games. 
             gamified progress tracking keeps kids engaged while parents monitor development.
           </p>
-          <div className="space-y-3 text-left">
-            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
-              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
-              <span className="text-sm text-gray-700 font-medium">interactive story-based games</span>
+          <div className="space-y-2 sm:space-y-3 text-left">
+            <div className="flex items-center p-1.5 sm:p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
+              <span className="text-xs sm:text-sm text-gray-700 font-medium">interactive story-based games</span>
             </div>
-            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
-              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
-              <span className="text-sm text-gray-700 font-medium">pronunciation practice & feedback</span>
+            <div className="flex items-center p-1.5 sm:p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
+              <span className="text-xs sm:text-sm text-gray-700 font-medium">pronunciation practice & feedback</span>
             </div>
-            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
-              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
-              <span className="text-sm text-gray-700 font-medium">achievement system & rewards</span>
+            <div className="flex items-center p-1.5 sm:p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
+              <span className="text-xs sm:text-sm text-gray-700 font-medium">achievement system & rewards</span>
             </div>
-            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
-              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
-              <span className="text-sm text-gray-700 font-medium">child-safe environment</span>
+            <div className="flex items-center p-1.5 sm:p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
+              <span className="text-xs sm:text-sm text-gray-700 font-medium">child-safe environment</span>
             </div>
           </div>
         </div>
         
         {/* Adults Path */}
-        <div className="bg-white rounded-3xl p-8 text-center shadow-lg border border-gray-100 hover:shadow-2xl hover:scale-105 transition-all duration-300 group">
-          <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200 group-hover:border-green-200 group-hover:bg-green-50 transition-all duration-300">
-            <Heart className="w-8 h-8 text-[#ff6b1d] group-hover:text-green-600 transition-colors duration-300" />
+        <div className="bg-white rounded-3xl p-6 sm:p-8 text-center shadow-lg border border-gray-100 hover:shadow-2xl hover:scale-105 transition-all duration-300 group">
+          <div className="w-14 h-14 sm:w-16 sm:h-16 bg-white rounded-2xl shadow-lg mx-auto mb-4 sm:mb-6 flex items-center justify-center border border-gray-200 group-hover:border-green-200 group-hover:bg-green-50 transition-all duration-300">
+            <Heart className="w-7 h-7 sm:w-8 sm:h-8 text-[#ff6b1d] group-hover:text-green-600 transition-colors duration-300" />
           </div>
-          <h3 className="text-2xl font-bold text-gray-900 mb-4">for adults</h3>
-          <p className="text-gray-600 mb-6 leading-relaxed">
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">for adults</h3>
+          <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6 leading-relaxed">
             professional-grade emotional support with ai therapy. 
             voice and chat modes provide flexible, private mental health care.
           </p>
-          <div className="space-y-3 text-left">
-            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
-              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
-              <span className="text-sm text-gray-700 font-medium">ai-powered emotional therapy</span>
+          <div className="space-y-2 sm:space-y-3 text-left">
+            <div className="flex items-center p-1.5 sm:p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
+              <span className="text-xs sm:text-sm text-gray-700 font-medium">ai-powered emotional therapy</span>
             </div>
-            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
-              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
-              <span className="text-sm text-gray-700 font-medium">voice & chat therapy modes</span>
+            <div className="flex items-center p-1.5 sm:p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
+              <span className="text-xs sm:text-sm text-gray-700 font-medium">voice & chat therapy modes</span>
             </div>
-            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
-              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
-              <span className="text-sm text-gray-700 font-medium">psychological insights & analytics</span>
+            <div className="flex items-center p-1.5 sm:p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
+              <span className="text-xs sm:text-sm text-gray-700 font-medium">psychological insights & analytics</span>
             </div>
-            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
-              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
-              <span className="text-sm text-gray-700 font-medium">crisis detection & intervention</span>
+            <div className="flex items-center p-1.5 sm:p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-2 sm:mr-3 flex-shrink-0"></div>
+              <span className="text-xs sm:text-sm text-gray-700 font-medium">crisis detection & intervention</span>
             </div>
           </div>
         </div>
@@ -582,77 +581,77 @@ export default function Home() {
     </div>
   </section>
 
-  {/* AI Therapists Section – Simple, Supportive, Minimal UI */}
-<section className="py-16 bg-white relative z-10">
-  <div className="max-w-4xl mx-auto px-6">
+  {/* Therapy Approaches Section */}
+<section className="py-16 sm:py-20 lg:py-24 bg-white relative z-10">
+  <div className="max-w-6xl mx-auto px-4 sm:px-6">
     
     {/* Section Header */}
-    <div className="text-center mb-10">
-      <h2 className="text-3xl font-extrabold text-gray-900 mb-3">
+    <div className="text-center mb-8 sm:mb-12">
+      <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">
         personalized therapy approaches
       </h2>
-      <p className="text-lg text-gray-600 max-w-xl mx-auto">
+      <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-4">
         our ai adapts to your unique needs, providing tailored support for speech development and emotional wellness.
       </p>
     </div>
     
     {/* Therapy Approaches */}
-    <div className="grid md:grid-cols-3 gap-8">
+    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
       {/* Interactive Learning */}
-      <div className="flex flex-col items-center text-center bg-gray-50 rounded-xl p-6 shadow-sm border border-gray-100">
-        <div className="w-full flex justify-center">
+      <div className="flex flex-col items-center text-center bg-gray-50 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300">
+        <div className="w-full flex justify-center mb-3 sm:mb-4">
           <ModelViewerAvatar
             avatarUrl={avatarUrls.therapist}
             size="small"
-            className="w-32 h-48 object-contain"
+            className="w-24 h-36 sm:w-32 sm:h-48 object-contain"
             autoRotate={true}
             cameraControls={false}
           />
         </div>
-        <div className="mt-4">
-          <h3 className="font-semibold text-gray-900 text-lg">Interactive Learning</h3>
-          <p className="text-sm text-gray-600 mt-1 mb-2">engaging & adaptive</p>
-          <p className="text-gray-500 text-sm">
+        <div>
+          <h3 className="font-semibold text-gray-900 text-base sm:text-lg mb-1 sm:mb-2">Interactive Learning</h3>
+          <p className="text-xs sm:text-sm text-gray-600 mb-2">engaging & adaptive</p>
+          <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">
             gamified therapy sessions that adapt to your learning style. interactive exercises make progress enjoyable and effective.
           </p>
         </div>
       </div>
       
       {/* Professional Support */}
-      <div className="flex flex-col items-center text-center bg-gray-50 rounded-xl p-6 shadow-sm border border-gray-100">
-        <div className="w-full flex justify-center">
+      <div className="flex flex-col items-center text-center bg-gray-50 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300">
+        <div className="w-full flex justify-center mb-3 sm:mb-4">
           <ModelViewerAvatar
             avatarUrl={avatarUrls.professional}
             size="small"
-            className="w-32 h-48 object-contain"
+            className="w-24 h-36 sm:w-32 sm:h-48 object-contain"
             autoRotate={true}
             cameraControls={false}
           />
         </div>
-        <div className="mt-4">
-          <h3 className="font-semibold text-gray-900 text-lg">Professional Support</h3>
-          <p className="text-sm text-gray-600 mt-1 mb-2">evidence-based care</p>
-          <p className="text-gray-500 text-sm">
+        <div>
+          <h3 className="font-semibold text-gray-900 text-base sm:text-lg mb-1 sm:mb-2">Professional Support</h3>
+          <p className="text-xs sm:text-sm text-gray-600 mb-2">evidence-based care</p>
+          <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">
             clinically-informed therapy methods with real-time assessment and crisis detection for comprehensive mental health support.
           </p>
         </div>
       </div>
       
       {/* Compassionate Care */}
-      <div className="flex flex-col items-center text-center bg-gray-50 rounded-xl p-6 shadow-sm border border-gray-100">
-        <div className="w-full flex justify-center">
+      <div className="flex flex-col items-center text-center bg-gray-50 rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow duration-300 sm:col-span-2 lg:col-span-1">
+        <div className="w-full flex justify-center mb-3 sm:mb-4">
           <ModelViewerAvatar
             avatarUrl={avatarUrls.casual}
             size="small"
-            className="w-32 h-48 object-contain"
+            className="w-24 h-36 sm:w-32 sm:h-48 object-contain"
             autoRotate={true}
             cameraControls={false}
           />
         </div>
-        <div className="mt-4">
-          <h3 className="font-semibold text-gray-900 text-lg">Compassionate Care</h3>
-          <p className="text-sm text-gray-600 mt-1 mb-2">empathetic & understanding</p>
-          <p className="text-gray-500 text-sm">
+        <div>
+          <h3 className="font-semibold text-gray-900 text-base sm:text-lg mb-1 sm:mb-2">Compassionate Care</h3>
+          <p className="text-xs sm:text-sm text-gray-600 mb-2">empathetic & understanding</p>
+          <p className="text-gray-500 text-xs sm:text-sm leading-relaxed">
             patient, supportive guidance that builds confidence. creates a safe space for emotional expression and growth.
           </p>
         </div>
@@ -665,51 +664,51 @@ export default function Home() {
 </section>
 
   {/* 4. STATS SECTION - Show credibility and results */}
-  <section className="py-24 bg-[#ff6b1d] text-white relative z-10">
-    <div className="max-w-6xl mx-auto px-6">
-      <div className="text-center mb-16">
-        <h2 className="text-3xl font-bold mb-4">
+  <section className="py-16 sm:py-20 lg:py-24 bg-[#ff6b1d] text-white relative z-10">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="text-center mb-12 sm:mb-16">
+        <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">
           trusted by families & individuals
         </h2>
-        <p className="text-xl opacity-90">
+        <p className="text-base sm:text-lg lg:text-xl opacity-90 px-4">
           comprehensive therapy platform serving children's speech development and adult emotional wellness
         </p>
       </div>
       
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-        <div>
-          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">2,500+</div>
-          <p className="opacity-90 text-sm md:text-base">users across all ages</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8 text-center">
+        <div className="p-4">
+          <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-2">2,500+</div>
+          <p className="opacity-90 text-xs sm:text-sm md:text-base">users across all ages</p>
         </div>
-        <div>
-          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">24/7</div>
-          <p className="opacity-90 text-sm md:text-base">ai therapy availability</p>
+        <div className="p-4">
+          <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-2">24/7</div>
+          <p className="opacity-90 text-xs sm:text-sm md:text-base">ai therapy availability</p>
         </div>
-        <div>
-          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">95%</div>
-          <p className="opacity-90 text-sm md:text-base">crisis detection accuracy</p>
+        <div className="p-4">
+          <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-2">95%</div>
+          <p className="opacity-90 text-xs sm:text-sm md:text-base">crisis detection accuracy</p>
         </div>
-        <div>
-          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">4.6★</div>
-          <p className="opacity-90 text-sm md:text-base">family satisfaction</p>
+        <div className="p-4">
+          <div className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold mb-2">4.6★</div>
+          <p className="opacity-90 text-xs sm:text-sm md:text-base">family satisfaction</p>
         </div>
       </div>
     </div>
   </section>
 
   {/* 5. TESTIMONIALS SECTION - Social proof after stats */}
-  <section className="py-24 bg-gray-50 relative z-10">
-    <div className="max-w-6xl mx-auto px-6">
-      <div className="text-center mb-16">
-        <h2 className="text-3xl font-bold text-gray-900 mb-4">
+  <section className="py-16 sm:py-20 lg:py-24 bg-gray-50 relative z-10">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      <div className="text-center mb-12 sm:mb-16">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4">
           success stories from our community
         </h2>
-        <p className="text-lg text-gray-600">
+        <p className="text-base sm:text-lg text-gray-600 px-4">
           discover how fluenti is helping people build confidence and improve communication
         </p>
       </div>
       
-      <div className="grid md:grid-cols-3 gap-8">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
         
         {/* Sarah's Testimonial - Child Speech Therapy */}
         <div className="bg-white rounded-2xl p-8 cursor-pointer transition-all duration-300 hover:shadow-2xl hover:scale-105">
@@ -776,18 +775,18 @@ export default function Home() {
   </section>
 
   {/* 6. FAQ SECTION - Address concerns before CTA */}
-  <section className="py-24 bg-white relative z-10">
-    <div className="max-w-4xl mx-auto px-6">
+  <section className="py-16 sm:py-20 lg:py-24 bg-white relative z-10">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6">
       
-      {/* Header with Increased Distance */}
-      <div className="text-center mb-32"> 
-        <h2 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-900 tracking-tight">
+      {/* Header */}
+      <div className="text-center mb-12 sm:mb-16 lg:mb-24"> 
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-900 tracking-tight">
           frequently asked questions
         </h2>
       </div>
       
       {/* FAQ Items */}
-      <div className="space-y-6"> 
+      <div className="space-y-4 sm:space-y-6"> 
         
         {/* FAQ Item 1 */}
         <div className="border-b border-gray-200 pb-6"> 
@@ -816,18 +815,18 @@ export default function Home() {
               }
             }}
           >
-            <h3 className="text-xl font-semibold text-gray-900 pr-8 transition-all duration-200 group-hover:underline group-hover:text-[#ff6b1d] underline-offset-4"> 
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-900 pr-6 sm:pr-8 transition-all duration-200 group-hover:underline group-hover:text-[#ff6b1d] underline-offset-4"> 
               how does fluenti's ai therapy platform work?
             </h3>
-            <div id="faq-icon-1" className="flex-shrink-0 w-6 h-6 text-gray-400 transform transition-transform duration-300 group-hover:text-gray-600">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div id="faq-icon-1" className="flex-shrink-0 w-5 h-5 sm:w-6 sm:h-6 text-gray-400 transform transition-transform duration-300 group-hover:text-gray-600">
+              <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 9l-7 7-7-7" />
               </svg>
             </div>
           </button>
           
-          <div id="faq-content-1" className="hidden mt-6 pl-0"> 
-            <p className="text-lg text-gray-700 leading-relaxed">
+          <div id="faq-content-1" className="hidden mt-4 sm:mt-6 pl-0"> 
+            <p className="text-sm sm:text-base lg:text-lg text-gray-700 leading-relaxed">
               fluenti offers two specialized ai therapy modes: interactive speech games for children with real-time pronunciation 
               feedback, and emotional support therapy for adults with voice and chat options. our ai adapts to each user's needs, 
               providing personalized exercises and professional-level therapeutic support.
@@ -1024,68 +1023,68 @@ export default function Home() {
   </section>
 
   {/* 7. CTA SECTION - Final call to action */}
-  <section className="py-24 bg-gray-50 relative z-10">
-    <div className="max-w-4xl mx-auto px-6 text-center">
-      <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
+  <section className="py-16 sm:py-20 lg:py-24 bg-gray-50 relative z-10">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+      <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-4 sm:mb-6">
         comprehensive therapy. one platform. endless possibilities.
       </h2>
-      <p className="text-lg md:text-xl text-gray-600 mb-10">
+      <p className="text-base sm:text-lg md:text-xl text-gray-600 mb-8 sm:mb-10 px-4">
         join families who trust fluenti for children's speech development and adults' emotional wellness
       </p>
       
       <Link href="/signup">
         <Button 
           size="lg"
-          className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-8 py-4 text-lg rounded-lg font-medium shadow-lg hover:shadow-xl transition-all"
+          className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-6 sm:px-8 py-3 sm:py-4 text-base sm:text-lg rounded-lg font-medium shadow-lg hover:shadow-xl transition-all w-full sm:w-auto"
         >
           start your therapy journey
         </Button>
       </Link>
       
-      <p className="text-sm text-gray-500 mt-4">
+      <p className="text-xs sm:text-sm text-gray-500 mt-3 sm:mt-4 px-4">
         free for families • professional-grade ai • available 24/7 • crisis support included
       </p>
     </div>
   </section>
 
   {/* Chat Helper Button - Fixed Bottom Right */}
-  <div className="fixed bottom-6 right-6 z-50">
+  <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50">
     <button
       onClick={() => setShowChatHelper(true)}
-      className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110"
+      className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white p-3 sm:p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-110"
       aria-label="Chat with helper"
     >
-      <MessageCircle className="w-6 h-6" />
+      <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6" />
     </button>
   </div>
 
   {/* Chat Helper Modal */}
   {showChatHelper && (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="w-[500px] max-w-[92vw] h-[600px] max-h-[90vh] rounded-2xl bg-white border border-gray-200 shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-0 sm:p-4">
+      <div className="w-full sm:w-[500px] sm:max-w-[92vw] h-[85vh] sm:h-[600px] sm:max-h-[90vh] rounded-t-2xl sm:rounded-2xl bg-white border-t sm:border border-gray-200 shadow-2xl flex flex-col">
         
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-[#ff6b1d] rounded-full flex items-center justify-center">
-              <MessageCircle className="w-5 h-5 text-white" />
+        <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-[#ff6b1d] rounded-full flex items-center justify-center">
+              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Therapist Finder</h3>
-              <p className="text-sm text-gray-600">connect with local professionals</p>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900">Therapist Finder</h3>
+              <p className="text-xs sm:text-sm text-gray-600">connect with local professionals</p>
             </div>
           </div>
           <button
             onClick={() => setShowChatHelper(false)}
-            className="text-gray-400 hover:text-gray-600 p-2"
+            className="text-gray-400 hover:text-gray-600 p-1 sm:p-2"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Chat Content Area */}
-        <div className="flex-1 p-6 overflow-y-auto">
-          <div className="space-y-4">
+        <div className="flex-1 p-4 sm:p-6 overflow-y-auto">
+          <div className="space-y-3 sm:space-y-4">
             
             {/* Chat Messages */}
             {chatMessages.map((msg, idx) => (

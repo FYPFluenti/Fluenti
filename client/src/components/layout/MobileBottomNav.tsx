@@ -73,16 +73,16 @@ export default function MobileBottomNav({ onFeedbackOpen, currentPage, userType 
     { 
       icon: LineChart, 
       label: "progress", 
-      id: "progress", 
-      path: "/progress-dashboard",
-      isActive: currentPage === "progress"
+      id: "history", 
+      path: "/adult-history",
+      isActive: currentPage === "history" || currentPage === "progress"
     },
     { 
       icon: User, 
-      label: "history", 
-      id: "history", 
-      path: "/adult-history",
-      isActive: currentPage === "history"
+      label: "insights", 
+      id: "insights", 
+      path: "/psychological-insights",
+      isActive: currentPage === "insights"
     },
     { 
       icon: Settings, 
