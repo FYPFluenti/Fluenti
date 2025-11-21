@@ -43,18 +43,23 @@ const setAuthCookies = async (res: Response, user: any) => {
   user.refreshTokenExpiry = new Date(Date.now() + TOKEN_EXPIRY.REFRESH_TOKEN_MS);
   await user.save();
   
+  // Use 'none' with secure in production for full cross-origin support
+  // Use 'lax' in development for local testing
+  const sameSiteValue = process.env.NODE_ENV === 'production' ? 'none' : 'lax';
+  const isSecure = process.env.NODE_ENV === 'production';
+  
   res.cookie('accessToken', accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
+    secure: isSecure,
+    sameSite: sameSiteValue,
     maxAge: TOKEN_EXPIRY.ACCESS_TOKEN_MS,
     path: '/'
   });
   
   res.cookie('refreshToken', refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax', // Changed from 'strict' to 'lax' for better compatibility
+    secure: isSecure,
+    sameSite: sameSiteValue,
     maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS,
     path: '/'
   });

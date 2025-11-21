@@ -61,22 +61,39 @@ app.use((req, res, next) => {
     'http://localhost:3000',
     'http://localhost:3001',
     'https://fluentiai.netlify.app',
+    'https://fluenti.netlify.app', // Alternative domain
     'https://fluentiai-backend.onrender.com',
-    process.env.FRONTEND_URL || 'https://your-site-name.vercel.app'
+    process.env.FRONTEND_URL || 'https://fluentiai.netlify.app'
   ];
   
   const origin = req.headers.origin;
+  
+  // Check if origin is in allowed list
   if (origin && allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (origin) {
-    // For deployment troubleshooting, temporarily allow any origin
-    res.setHeader('Access-Control-Allow-Origin', origin);
-    console.log(`Allowing access from origin: ${origin}`);
+    // For deployment troubleshooting, allow any origin in development
+    // In production, log but still allow for debugging (remove in final version)
+    if (process.env.NODE_ENV === 'development') {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    } else {
+      // In production, only allow if it matches a pattern
+      const isNetlifyApp = origin.includes('.netlify.app');
+      const isLocalhost = origin.includes('localhost');
+      if (isNetlifyApp || isLocalhost) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        console.log(`Allowing access from origin: ${origin}`);
+      } else {
+        console.warn(`Blocked CORS request from origin: ${origin}`);
+        return res.status(403).json({ message: 'CORS policy violation' });
+      }
+    }
   }
   
   res.setHeader('Access-Control-Allow-Credentials', 'true');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Expose-Headers', 'Set-Cookie');
   
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);

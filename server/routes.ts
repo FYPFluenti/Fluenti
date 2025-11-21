@@ -156,18 +156,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log('User logged in:', authResponse.user.id, authResponse.user.userType);
         
         // Set httpOnly cookies for tokens
+        // Use 'lax' for cross-origin compatibility (allows cookies on top-level navigation)
+        // Use 'none' with secure in production for full cross-origin support
+        const sameSiteValue = process.env.NODE_ENV === 'production' ? 'none' : 'lax';
+        const isSecure = process.env.NODE_ENV === 'production';
+        
         res.cookie('accessToken', authResponse.tokens.accessToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production', // HTTPS only in production
-          sameSite: 'strict',
+          secure: isSecure,
+          sameSite: sameSiteValue,
           maxAge: TOKEN_EXPIRY.ACCESS_TOKEN_MS,
+          path: '/',
         });
         
         res.cookie('refreshToken', authResponse.tokens.refreshToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
+          secure: isSecure,
+          sameSite: sameSiteValue,
           maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS,
+          path: '/',
         });
         
         // Return user data (tokens are in httpOnly cookies)
@@ -205,19 +212,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         console.log('User created successfully:', authResponse.user.id, authResponse.user.userType);
         
-        // Set httpOnly cookies for tokens
+        // Set httpOnly cookies for tokens with cross-origin support
+        const sameSiteValue = process.env.NODE_ENV === 'production' ? 'none' : 'lax';
+        const isSecure = process.env.NODE_ENV === 'production';
+        
         res.cookie('accessToken', authResponse.tokens.accessToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
+          secure: isSecure,
+          sameSite: sameSiteValue,
           maxAge: TOKEN_EXPIRY.ACCESS_TOKEN_MS,
+          path: '/',
         });
         
         res.cookie('refreshToken', authResponse.tokens.refreshToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
+          secure: isSecure,
+          sameSite: sameSiteValue,
           maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS,
+          path: '/',
         });
         
         console.log('Sending success response');
@@ -242,9 +254,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await AuthService.logout(userId);
         }
         
-        // Clear cookies
-        res.clearCookie('accessToken');
-        res.clearCookie('refreshToken');
+        // Clear cookies with same options as when they were set
+        const sameSiteValue = process.env.NODE_ENV === 'production' ? 'none' : 'lax';
+        const isSecure = process.env.NODE_ENV === 'production';
+        
+        res.clearCookie('accessToken', {
+          httpOnly: true,
+          secure: isSecure,
+          sameSite: sameSiteValue,
+          path: '/',
+        });
+        res.clearCookie('refreshToken', {
+          httpOnly: true,
+          secure: isSecure,
+          sameSite: sameSiteValue,
+          path: '/',
+        });
         
         res.json({ success: true, message: 'Logged out successfully' });
       } catch (error: any) {
@@ -268,27 +293,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get new token pair
         const tokens = await AuthService.refreshAccessToken(payload.userId, refreshToken);
         
-        // Set new cookies
+        // Set new cookies with cross-origin support
+        const sameSiteValue = process.env.NODE_ENV === 'production' ? 'none' : 'lax';
+        const isSecure = process.env.NODE_ENV === 'production';
+        
         res.cookie('accessToken', tokens.accessToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
+          secure: isSecure,
+          sameSite: sameSiteValue,
           maxAge: TOKEN_EXPIRY.ACCESS_TOKEN_MS,
+          path: '/',
         });
         
         res.cookie('refreshToken', tokens.refreshToken, {
           httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'strict',
+          secure: isSecure,
+          sameSite: sameSiteValue,
           maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS,
+          path: '/',
         });
         
         res.json({ success: true, message: 'Token refreshed successfully' });
       } catch (error: any) {
         console.error("Token refresh error:", error.message);
-        // Clear invalid cookies
-        res.clearCookie('accessToken');
-        res.clearCookie('refreshToken');
+        // Clear invalid cookies with same options as when they were set
+        const sameSiteValue = process.env.NODE_ENV === 'production' ? 'none' : 'lax';
+        const isSecure = process.env.NODE_ENV === 'production';
+        
+        res.clearCookie('accessToken', {
+          httpOnly: true,
+          secure: isSecure,
+          sameSite: sameSiteValue,
+          path: '/',
+        });
+        res.clearCookie('refreshToken', {
+          httpOnly: true,
+          secure: isSecure,
+          sameSite: sameSiteValue,
+          path: '/',
+        });
         res.status(401).json({ message: 'Token refresh failed' });
       }
     });
