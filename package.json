@@ -133,7 +133,8 @@
     "wouter": "^3.3.5",
     "ws": "^8.18.3",
     "zod": "^3.24.2",
-    "zod-validation-error": "^3.4.0"
+    "zod-validation-error": "^3.4.0",
+    "esbuild": "^0.25.0"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
@@ -152,7 +153,6 @@
     "@types/ws": "^8.18.1",
     "concurrently": "^9.2.1",
     "drizzle-kit": "^0.30.6",
-    "esbuild": "^0.25.0",
     "postcss": "^8.4.38",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.1",
