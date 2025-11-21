@@ -93,4 +93,31 @@ router.post('/submit', async (req: Request, res: Response) => {
   }
 });
 
+// Debug endpoint to test email configuration
+router.get('/debug-email-config', async (req: Request, res: Response) => {
+  try {
+    const emailConfig = {
+      EMAIL_HOST: process.env.EMAIL_HOST,
+      EMAIL_PORT: process.env.EMAIL_PORT,
+      EMAIL_USER: process.env.EMAIL_USER ? '***configured***' : 'NOT SET',
+      EMAIL_PASSWORD: process.env.EMAIL_PASSWORD ? '***configured***' : 'NOT SET',
+      EMAIL_FROM: process.env.EMAIL_FROM,
+      APP_URL: process.env.APP_URL,
+      NODE_ENV: process.env.NODE_ENV
+    };
+    
+    res.json({
+      success: true,
+      message: 'Email configuration status',
+      config: emailConfig
+    });
+  } catch (error) {
+    console.error('❌ Error checking email config:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check email configuration'
+    });
+  }
+});
+
 export default router;
