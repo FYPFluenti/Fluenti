@@ -192,7 +192,10 @@ const EmotionalSupportVoice = () => {
   useEffect(() => {
     const checkServiceStatus = async () => {
       try {
-        const res = await fetch('http://localhost:5001/health');
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
+          ? 'https://fluenti-app.onrender.com' 
+          : 'http://localhost:3000');
+        const res = await fetch(`${API_BASE_URL}/api/therapy/health`);
         if (res.ok) {
           const prevStatus = serviceStatus;
           setServiceStatus('online');
