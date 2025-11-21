@@ -74,10 +74,12 @@ export async function setupVite(app: Express, server: Server) {
 export function serveStatic(app: Express) {
   const distPath = path.resolve(__dirname, "..", "dist", "public");
 
+  // Only serve static files if the directory exists (frontend is built and present)
+  // In production deployments where frontend is on a separate service (e.g., Vercel),
+  // this directory won't exist, so we skip static file serving
   if (!fs.existsSync(distPath)) {
-    throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
-    );
+    log(`Frontend build directory not found: ${distPath}. Skipping static file serving (frontend likely deployed separately).`);
+    return;
   }
 
   app.use(express.static(distPath));

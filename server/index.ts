@@ -133,6 +133,8 @@ app.use((req, res, next) => {
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
+    // In production, only serve static files if frontend is built and present
+    // If frontend is deployed separately (e.g., Vercel), this will gracefully skip
     serveStatic(app);
   }
 
