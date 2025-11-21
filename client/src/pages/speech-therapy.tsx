@@ -67,7 +67,8 @@ export default function SpeechTherapyPage() {
 
         // Fetch child name
         // No need for Authorization header - cookies are sent automatically
-        const onboardingRes = await fetch('/api/onboarding', {
+        const { buildApiUrl } = await import('@/lib/apiUtils');
+        const onboardingRes = await fetch(buildApiUrl('/api/onboarding'), {
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json'

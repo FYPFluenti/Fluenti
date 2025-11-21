@@ -19,42 +19,7 @@ connectDB();
 // Add cookie parser middleware
 app.use(cookieParser());
 
-// Explicit UTF-8 support for Urdu text
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: false, limit: '10mb' }));
-
-// Add request logging middleware
-app.use((req, res, next) => {
-  if (req.url.includes('/api/settings/profile')) {
-    console.log(`🌐 Incoming ${req.method} request to: ${req.url}`);
-    console.log(`🌐 Content-Type: ${req.headers['content-type']}`);
-    console.log(`🌐 Has Cookie: ${!!req.headers.cookie}`);
-  }
-  next();
-});
-
-// Add JWT extraction middleware globally
-app.use(extractAndValidateJWT);
-
-// Register auth routes (after JSON parsing middleware)
-app.use("/api/auth", authRoutes);
-
-// Register feedback routes (after JSON parsing middleware)
-app.use("/api/feedback", feedbackRoutes);
-
-// Register settings routes (after JSON parsing middleware)
-app.use("/api/settings", settingsRoutes);
-
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
-
-// Ensure UTF-8 encoding
-app.use((req, res, next) => {
-  req.setEncoding = req.setEncoding || (() => {});
-  next();
-});
-
-// CORS configuration for production
+// CORS configuration MUST be before all routes to handle preflight requests
 app.use((req, res, next) => {
   const allowedOrigins = [
     'http://localhost:5173',
@@ -101,6 +66,41 @@ app.use((req, res, next) => {
     return;
   }
   
+  next();
+});
+
+// Explicit UTF-8 support for Urdu text
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// Add request logging middleware
+app.use((req, res, next) => {
+  if (req.url.includes('/api/settings/profile')) {
+    console.log(`🌐 Incoming ${req.method} request to: ${req.url}`);
+    console.log(`🌐 Content-Type: ${req.headers['content-type']}`);
+    console.log(`🌐 Has Cookie: ${!!req.headers.cookie}`);
+  }
+  next();
+});
+
+// Add JWT extraction middleware globally
+app.use(extractAndValidateJWT);
+
+// Register auth routes (after JSON parsing middleware)
+app.use("/api/auth", authRoutes);
+
+// Register feedback routes (after JSON parsing middleware)
+app.use("/api/feedback", feedbackRoutes);
+
+// Register settings routes (after JSON parsing middleware)
+app.use("/api/settings", settingsRoutes);
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+// Ensure UTF-8 encoding
+app.use((req, res, next) => {
+  req.setEncoding = req.setEncoding || (() => {});
   next();
 });
 

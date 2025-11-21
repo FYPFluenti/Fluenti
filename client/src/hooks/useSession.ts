@@ -43,7 +43,8 @@ export function useSession(sessionId: string | null) {
     setError(null);
 
     try {
-      const response = await fetch(`/api/therapy/session/${id}`, {
+      const { buildApiUrl } = await import('@/lib/apiUtils');
+      const response = await fetch(buildApiUrl(`/api/therapy/session/${id}`), {
         method: 'GET',
         credentials: 'include',
         headers: {

@@ -61,7 +61,8 @@ export function useTherapyHistory(options: UseTherapyHistoryOptions = {}) {
         ...(type !== 'all' && { type })
       });
 
-      const response = await fetch(`/api/therapy/history?${queryParams}`, {
+      const { buildApiUrl } = await import('@/lib/apiUtils');
+      const response = await fetch(buildApiUrl(`/api/therapy/history?${queryParams}`), {
         method: 'GET',
         credentials: 'include',
         headers: {

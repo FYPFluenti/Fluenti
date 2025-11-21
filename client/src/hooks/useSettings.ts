@@ -36,7 +36,8 @@ export function useSettings() {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/settings', {
+      const { buildApiUrl } = await import('@/lib/apiUtils');
+      const response = await fetch(buildApiUrl('/api/settings'), {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -73,7 +74,8 @@ export function useSettings() {
     try {
       setError(null);
 
-      const response = await fetch('/api/settings', {
+      const { buildApiUrl } = await import('@/lib/apiUtils');
+      const response = await fetch(buildApiUrl('/api/settings'), {
         method: 'PUT',
         credentials: 'include',
         headers: {
@@ -108,7 +110,8 @@ export function useSettings() {
     try {
       setError(null);
 
-      const response = await fetch(`/api/settings/${key}`, {
+      const { buildApiUrl } = await import('@/lib/apiUtils');
+      const response = await fetch(buildApiUrl(`/api/settings/${key}`), {
         method: 'PATCH',
         credentials: 'include',
         headers: {
@@ -139,8 +142,8 @@ export function useSettings() {
 
     try {
       setError(null);
-
-      const response = await fetch('/api/settings/account', {
+      const { buildApiUrl } = await import('@/lib/apiUtils');
+      const response = await fetch(buildApiUrl('/api/settings/account'), {
         method: 'DELETE',
         credentials: 'include',
         headers: {

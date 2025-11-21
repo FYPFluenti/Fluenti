@@ -367,7 +367,8 @@ const EmotionalSupportVoice = () => {
         userId: sessionData.userId,
         sessionKey: sessionData.sessionKey
       });
-      const res = await fetch('/api/emotional-support', { method: 'POST', body: formData });
+      const { buildApiUrl } = await import('@/lib/apiUtils');
+      const res = await fetch(buildApiUrl('/api/emotional-support'), { method: 'POST', body: formData });
       const data = await res.json();
       
       console.log('📥 Therapy service response:', data);
