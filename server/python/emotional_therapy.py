@@ -3675,7 +3675,7 @@ class TherapyBot:
         else:
             print("⚠️ Using pattern-based crisis detection only")
 
-        # Initialize knowledge base immediately during startup (no lazy loading)
+        # Lazy knowledge base initialization - only load when first needed (prevents OOM during startup)
         self._knowledge_base_loaded = False
         self._knowledge_base_loading = False
         
@@ -3684,16 +3684,9 @@ class TherapyBot:
         self.crisis_retriever = None
         self.vector_store = None
         
-        # Load knowledge base immediately during initialization
-        print("📚 Loading knowledge base during startup...")
-        try:
-            if self._initialize_enhanced_knowledge_base():
-                self._knowledge_base_loaded = True
-                print("✅ Knowledge base loaded successfully during startup")
-            else:
-                print("⚠️ Knowledge base loading failed during startup")
-        except Exception as e:
-            print(f"❌ Knowledge base loading error during startup: {e}")
+        # Defer knowledge base loading to prevent OOM during deployment
+        # Knowledge base will load automatically on first therapy request via _initialize_enhanced_knowledge_base_lazy()
+        print("📚 Knowledge base loading deferred (will load on first use to prevent OOM)")
         
         # Setup dynamic conversation prompts
         self._setup_dynamic_prompts()
