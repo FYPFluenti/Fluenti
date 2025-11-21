@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import { Resend } from 'resend';
 
 // Email configuration
 const EMAIL_HOST = process.env.EMAIL_HOST || 'smtp.gmail.com';
@@ -7,7 +8,13 @@ const EMAIL_PORT = parseInt(process.env.EMAIL_PORT || '587');
 const EMAIL_USER = process.env.EMAIL_USER;
 const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
 const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@fluenti.ai';
+// For Resend, use their domain until custom domain is verified
+const RESEND_FROM = process.env.RESEND_FROM || 'Fluenti <onboarding@resend.dev>';
 const APP_URL = process.env.APP_URL || 'http://localhost:5000';
+
+// Resend configuration (HTTP API - bypasses SMTP blocks)
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 
 // Fallback SMTP configurations for production environments (based on known working solutions)
 const SMTP_CONFIGS = [
@@ -160,7 +167,7 @@ export interface EmailOptions {
 }
 
 /**
- * Send an email
+ * Send email using Resend HTTP API (primary) or nodemailer SMTP (fallback)
  */
 export async function sendEmail(options: EmailOptions): Promise<void> {
   console.log('📧 [EMAIL DEBUG] sendEmail called with:', {
@@ -168,9 +175,38 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     subject: options.subject,
     from: EMAIL_FROM,
     hasHtml: !!options.html,
-    hasText: !!options.text
+    hasText: !!options.text,
+    resendAvailable: !!resend
   });
   
+  // Try Resend HTTP API first (works with Render)
+  if (resend) {
+    try {
+      console.log('📧 [EMAIL DEBUG] Attempting to send via Resend HTTP API...');
+      
+      const result = await resend.emails.send({
+        from: RESEND_FROM,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+        text: options.text,
+      });
+      
+      if (result.error) {
+        throw new Error(`Resend API error: ${result.error.message}`);
+      }
+      
+      console.log('✅ Email sent successfully via Resend HTTP API to:', options.to, 'ID:', result.data?.id);
+      return;
+    } catch (error) {
+      console.error('❌ Resend HTTP API failed:', (error as any)?.message);
+      console.log('📧 [EMAIL DEBUG] Falling back to SMTP...');
+    }
+  } else {
+    console.log('📧 [EMAIL DEBUG] Resend not configured, using SMTP fallback...');
+  }
+  
+  // Fallback to SMTP (for local development or if Resend fails)
   try {
     const transporter = getTransporter();
     
@@ -178,7 +214,7 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       throw new Error('Failed to initialize email transporter');
     }
     
-    console.log('📧 [EMAIL DEBUG] Attempting to send email with fallback mechanism...');
+    console.log('📧 [EMAIL DEBUG] Attempting to send email with SMTP fallback mechanism...');
     
     const result = await transporter.sendMail({
       from: EMAIL_FROM,
@@ -188,16 +224,16 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       text: options.text,
     });
     
-    console.log('✅ Email sent successfully to:', options.to, 'MessageId:', result.messageId);
+    console.log('✅ Email sent successfully via SMTP to:', options.to, 'MessageId:', result.messageId);
   } catch (error) {
-    console.error('❌ Failed to send email after trying all configurations:', error);
+    console.error('❌ Failed to send email after trying all methods:', error);
     console.error('❌ [EMAIL DEBUG] Final error details:', {
       name: (error as any)?.name,
       message: (error as any)?.message,
       code: (error as any)?.code,
       command: (error as any)?.command
     });
-    throw new Error('Failed to send email');
+    throw new Error('Failed to send email via both Resend API and SMTP');
   }
 }
 

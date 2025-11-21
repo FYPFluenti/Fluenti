@@ -122,6 +122,7 @@
     "react-resizable-panels": "^2.1.7",
     "react-speech-recognition": "^4.0.1",
     "recharts": "^2.15.2",
+    "resend": "^6.5.2",
     "speakeasy": "^2.0.0",
     "string-similarity": "^4.0.4",
     "tailwind-merge": "^2.6.0",
