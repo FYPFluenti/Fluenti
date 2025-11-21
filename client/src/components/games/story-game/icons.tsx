@@ -109,3 +109,38 @@ export const DldIcon: React.FC<{ className?: string }> = ({ className }) => (
       <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2z"/>
     </svg>
 );
+
+// Action icons for choice cards
+export const FootstepsIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 18L4 16l2-2m4-4l2-2-2-2M18 18l-2-2 2-2m-4 0l-2 2 2 2" />
+    <path d="M12 10l-2-2 2-2" />
+  </svg>
+);
+
+export const EyeIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+export const MagnifyingGlassIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" />
+    <path d="m21 21-4.35-4.35" />
+  </svg>
+);
+
+export const SmellTrailIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M8 10c0-1.5.5-3 2-4m0 0c2 1 2 2.5 2 4" />
+    <circle cx="6" cy="8" r="1.5" fill="currentColor" />
+    <path d="M14 10c0-1.5.5-3 2-4m0 0c2 1 2 2.5 2 4" />
+    <circle cx="12" cy="8" r="1.5" fill="currentColor" />
+    <path d="M18 12c0-1.5.5-3 2-4m0 0c2 1 2 2.5 2 4" />
+    <circle cx="16" cy="10" r="1.5" fill="currentColor" />
+    <path d="M4 14c0-1.5.5-3 2-4m0 0c2 1 2 2.5 2 4" />
+    <circle cx="2" cy="12" r="1.5" fill="currentColor" />
+  </svg>
+);

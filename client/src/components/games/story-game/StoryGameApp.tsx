@@ -514,6 +514,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.phase === 'characterSelection') {
         return { ...state, phase: 'therapySelection' };
       }
+      if (state.phase === 'assessment' || state.phase === 'socialAssessment') {
+        return { ...state, phase: 'therapySelection' };
+      }
       // For other phases, just return current state (no back navigation)
       return state;
     case 'START_COOLDOWN':
@@ -1048,9 +1051,18 @@ const StoryGameApp: React.FC = () => {
                   currentLevels={storyGameProgress?.currentLevels || {}}
                 />;
       case 'assessment':
-        return <AssessmentScreen therapyType={state.therapyType} onComplete={handleAssessmentComplete} isLoading={state.isLoading} />;
+        return <AssessmentScreen 
+                  therapyType={state.therapyType} 
+                  onComplete={handleAssessmentComplete} 
+                  isLoading={state.isLoading}
+                  onBack={() => dispatch({ type: 'GO_BACK' })}
+                />;
       case 'socialAssessment':
-        return <SocialAssessmentScreen onComplete={handleSocialAssessmentComplete} isLoading={state.isLoading} />;
+        return <SocialAssessmentScreen 
+                  onComplete={handleSocialAssessmentComplete} 
+                  isLoading={state.isLoading}
+                  onBack={() => dispatch({ type: 'GO_BACK' })}
+                />;
       case 'analysisResult':
         return <AnalysisResultScreen 
                   title={state.assessmentTitle || ''}
