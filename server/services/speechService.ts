@@ -3,6 +3,7 @@ import { generateSpeechFeedback } from "./openai";
 import { spawn } from 'child_process';
 import fs from 'fs';
 import path from 'path';
+import { getPythonExecutablePath } from '../utils/pythonPath';
 
 // Main transcription function using local Whisper
 export async function transcribeAudio(audioBuffer: Buffer, language: 'en' | 'ur' = 'en'): Promise<string> {
@@ -83,13 +84,16 @@ except Exception as e:
     raise Exception(f"Model processing error: {error_msg}")
       `;
 
-      // Use virtual environment Python
-      const venvPython = path.join(process.cwd(), '.venv', 'Scripts', 'python.exe');
+      // Use cross-platform Python path
+      const venvPython = getPythonExecutablePath();
       
       // Set environment for spawned process with proper Unicode support
+      const isWindows = process.platform === 'win32';
       const env = { 
         ...process.env,
-        PYTHONPATH: path.join(process.cwd(), '.venv', 'Lib', 'site-packages'),
+        PYTHONPATH: isWindows 
+          ? path.join(process.cwd(), '.venv', 'Lib', 'site-packages')
+          : path.join(process.cwd(), '.venv', 'lib', 'python3.11', 'site-packages'),
         PYTORCH_CUDA_ALLOC_CONF: 'max_split_size_mb:128',
         OMP_NUM_THREADS: '2',
         CUDA_VISIBLE_DEVICES: '0',

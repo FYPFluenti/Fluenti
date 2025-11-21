@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { getPythonExecutablePath } from '../utils/pythonPath';
 
 /**
  * Fast STT service using Whisper Tiny for actual transcription
@@ -8,6 +9,13 @@ import fs from 'fs';
  */
 export async function fastTranscribeAudio(audioBuffer: Buffer, language: 'en' | 'ur' = 'en'): Promise<string> {
   return new Promise(async (resolve, reject) => {
+    // Check if Python is available before proceeding
+    const pythonPath = getPythonExecutablePath();
+    if (pythonPath === 'python3' && !fs.existsSync(path.join(process.cwd(), '.venv'))) {
+      console.error('❌ FastSTT: Virtual environment not found and system Python may not have required packages');
+      reject(new Error('Python environment not properly configured for STT'));
+      return;
+    }
     try {
       // Create temporary WAV file
       const tempPath = path.join(process.cwd(), `temp_audio_${Date.now()}.wav`);
@@ -67,15 +75,18 @@ except Exception as e:
         print(f"Voice input received at {timestamp}")
       `;
 
-      // Use virtual environment Python
-      const venvPython = path.join(process.cwd(), '.venv', 'Scripts', 'python.exe');
+      // Use cross-platform Python path
+      const venvPython = getPythonExecutablePath();
       
-      // Set environment
+      // Set environment (cross-platform)
+      const isWindows = process.platform === 'win32';
       const env = {
         ...process.env,
-        PYTHONPATH: path.join(process.cwd(), '.venv', 'Lib', 'site-packages'),
+        PYTHONPATH: isWindows 
+          ? path.join(process.cwd(), '.venv', 'Lib', 'site-packages')
+          : path.join(process.cwd(), '.venv', 'lib', 'python3.11', 'site-packages'),
         PYTHONIOENCODING: 'utf-8',
-        PYTHONLEGACYWINDOWSSTDIO: '1'
+        ...(isWindows && { PYTHONLEGACYWINDOWSSTDIO: '1' })
       };
 
       // Spawn Python process

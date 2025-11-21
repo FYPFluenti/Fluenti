@@ -1,5 +1,6 @@
 import { spawn } from 'child_process';
 import path from 'path';
+import { getPythonExecutablePath } from '../utils/pythonPath';
 
 export interface TTSResult {
   audioBase64?: string;
@@ -18,14 +19,17 @@ export async function generateTTSAudio(text: string, language: 'en' | 'ur' = 'en
     try {
       console.log(`[TTS] Converting text to speech: "${text}" (${text.length} chars, ${language})`);
       
-      // Use virtual environment Python
-      const venvPython = path.join(process.cwd(), '.venv', 'Scripts', 'python.exe');
+      // Use cross-platform Python path
+      const venvPython = getPythonExecutablePath();
       const ttsScript = path.join(process.cwd(), 'server', 'python', 'tts_generator.py');
       
       // Set environment for proper Unicode support
+      const isWindows = process.platform === 'win32';
       const env = {
         ...process.env,
-        PYTHONPATH: path.join(process.cwd(), '.venv', 'Lib', 'site-packages'),
+        PYTHONPATH: isWindows 
+          ? path.join(process.cwd(), '.venv', 'Lib', 'site-packages')
+          : path.join(process.cwd(), '.venv', 'lib', 'python3.11', 'site-packages'),
         PYTHONIOENCODING: 'utf-8',
         PYTHONLEGACYWINDOWSSTDIO: '1'
       };
