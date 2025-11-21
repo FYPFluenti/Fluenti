@@ -103,7 +103,7 @@ export default function App() {
             </Route>
             
             <Route path="/progress-dashboard">
-              <ProtectedRoute>
+              <ProtectedRoute allowedUserTypes={['child']}>
                 <ProgressDashboard />
               </ProtectedRoute>
             </Route>

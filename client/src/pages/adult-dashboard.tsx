@@ -71,44 +71,45 @@ export default function AdultDashboard() {
       <main className="lg:ml-20 px-4 lg:px-6 w-full min-h-screen lg:h-screen lg:overflow-hidden flex flex-col pb-20 lg:pb-0">
         <PageHeader />
 
-        <section className="text-center py-4 md:py-8 flex-1 flex items-center justify-center overflow-y-auto">
+        <section className="text-center py-6 sm:py-10 flex-1 flex items-center justify-center">
           <motion.div 
             initial={{ opacity: 0, y: 40 }} 
             animate={{ opacity: 1, y: 0 }} 
             transition={{ duration: 0.5 }} 
-            className="max-w-md mx-auto"
+            className="max-w-lg mx-auto w-full px-4"
           >
-            <div className="mx-auto mb-6">
-              <ModelViewerAvatar
-                avatarUrl={avatarUrls.professional}
-                size="medium"
-                className="mx-auto mb-4"
-              />
+            <div className="mx-auto mb-6 sm:mb-8 flex justify-center">
+              <div className="w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 adult-dashboard-avatar">
+                <ModelViewerAvatar
+                  avatarUrl={avatarUrls.professional}
+                  size="large"
+                  className="w-full h-full"
+                />
+              </div>
             </div>
+            <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6">Ready for a calming session?</h2>
             
-            <h2 className="text-xl font-bold mb-6">Ready for a calming session?</h2>
-            
-            <div className="space-y-3">
+            <div className="w-full space-y-4">
               <button 
                 onClick={() => setLocation('/emotional-support-voice')} 
-                className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[280px] mx-auto flex items-center justify-between hover:bg-muted transition-all"
+                className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-full max-w-sm mx-auto flex items-center justify-between hover:bg-muted transition-all duration-200"
               >
                 <div>
-                  <h3 className="text-sm font-semibold">Voice Mode</h3>
-                  <p className="text-xs text-muted-foreground">Say Hi to Your Avatar</p>
+                  <h3 className="text-base font-semibold">Voice Mode</h3>
+                  <p className="text-sm text-muted-foreground">Say Hi to Your Avatar</p>
                 </div>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-5 h-5 flex-shrink-0" />
               </button>
               
               <button 
                 onClick={() => setLocation('/emotional-support')} 
-                className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-[280px] mx-auto flex items-center justify-between hover:bg-muted transition-all"
+                className="border rounded-xl px-4 py-3 text-left shadow bg-card text-foreground border-border w-full max-w-sm mx-auto flex items-center justify-between hover:bg-muted transition-all duration-200"
               >
                 <div>
-                  <h3 className="text-sm font-semibold">Chat Mode</h3>
-                  <p className="text-xs text-muted-foreground">Type to Your Avatar</p>
+                  <h3 className="text-base font-semibold">Chat Mode</h3>
+                  <p className="text-sm text-muted-foreground">Type to Your Avatar</p>
                 </div>
-                <ArrowRight className="w-4 h-4" />
+                <ArrowRight className="w-5 h-5 flex-shrink-0" />
               </button>
             </div>
           </motion.div>
@@ -120,13 +121,6 @@ export default function AdultDashboard() {
           onClose={() => setShowFeedback(false)} 
         />
 
-        {/* Adult Settings Modal */}
-        <AdultSettings
-          isOpen={showAdultSettings}
-          onClose={() => setShowAdultSettings(false)}
-          language={language}
-          onLanguageChange={setLanguage}
-        />
       </main>
 
       {/* Mobile Bottom Navigation */}
@@ -135,6 +129,16 @@ export default function AdultDashboard() {
         currentPage="dashboard"
         userType="adult"
       />
+
+      {/* Adult Settings Modal */}
+      {showAdultSettings && (
+        <AdultSettings
+          isOpen={showAdultSettings}
+          onClose={() => setShowAdultSettings(false)}
+          language={language}
+          onLanguageChange={setLanguage}
+        />
+      )}
     </div>
   );
 }
