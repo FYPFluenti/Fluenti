@@ -14,6 +14,10 @@ import path from "path";
 
 const app = express();
 
+// Trust proxy for Render.com and other reverse proxies
+// This is required for rate limiting and correct IP detection
+app.set('trust proxy', 1);
+
 connectDB();
   
 // Add cookie parser middleware

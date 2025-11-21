@@ -192,21 +192,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sameSiteValue = process.env.NODE_ENV === 'production' ? 'none' : 'lax';
         const isSecure = process.env.NODE_ENV === 'production';
         
-        res.cookie('accessToken', authResponse.tokens.accessToken, {
+        const cookieOptions = {
           httpOnly: true,
           secure: isSecure,
-          sameSite: sameSiteValue,
+          sameSite: sameSiteValue as 'none' | 'lax' | 'strict',
           maxAge: TOKEN_EXPIRY.ACCESS_TOKEN_MS,
           path: '/',
+          // Don't set domain - let browser handle it for cross-origin
+        };
+        
+        console.log('🍪 Setting cookies with options:', {
+          sameSite: sameSiteValue,
+          secure: isSecure,
+          path: '/',
+          httpOnly: true,
+          origin: req.headers.origin,
         });
         
+        res.cookie('accessToken', authResponse.tokens.accessToken, cookieOptions);
         res.cookie('refreshToken', authResponse.tokens.refreshToken, {
-          httpOnly: true,
-          secure: isSecure,
-          sameSite: sameSiteValue,
+          ...cookieOptions,
           maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS,
-          path: '/',
         });
+        
+        console.log('✅ Cookies set successfully');
         
         // Return user data (tokens are in httpOnly cookies)
         res.json({ 
@@ -247,21 +256,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sameSiteValue = process.env.NODE_ENV === 'production' ? 'none' : 'lax';
         const isSecure = process.env.NODE_ENV === 'production';
         
-        res.cookie('accessToken', authResponse.tokens.accessToken, {
+        const cookieOptions = {
           httpOnly: true,
           secure: isSecure,
-          sameSite: sameSiteValue,
+          sameSite: sameSiteValue as 'none' | 'lax' | 'strict',
           maxAge: TOKEN_EXPIRY.ACCESS_TOKEN_MS,
           path: '/',
+          // Don't set domain - let browser handle it for cross-origin
+        };
+        
+        console.log('🍪 Setting cookies for signup with options:', {
+          sameSite: sameSiteValue,
+          secure: isSecure,
+          path: '/',
+          httpOnly: true,
+          origin: req.headers.origin,
         });
         
+        res.cookie('accessToken', authResponse.tokens.accessToken, cookieOptions);
         res.cookie('refreshToken', authResponse.tokens.refreshToken, {
-          httpOnly: true,
-          secure: isSecure,
-          sameSite: sameSiteValue,
+          ...cookieOptions,
           maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS,
-          path: '/',
         });
+        
+        console.log('✅ Signup cookies set successfully');
         
         console.log('Sending success response');
         // Return user data (tokens are in httpOnly cookies)
@@ -344,23 +362,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const sameSiteValue = process.env.NODE_ENV === 'production' ? 'none' : 'lax';
         const isSecure = process.env.NODE_ENV === 'production';
         
-        res.cookie('accessToken', tokens.accessToken, {
+        const cookieOptions = {
           httpOnly: true,
           secure: isSecure,
-          sameSite: sameSiteValue,
+          sameSite: sameSiteValue as 'none' | 'lax' | 'strict',
           maxAge: TOKEN_EXPIRY.ACCESS_TOKEN_MS,
           path: '/',
-        });
+          // Don't set domain - let browser handle it for cross-origin
+        };
         
-        res.cookie('refreshToken', tokens.refreshToken, {
-          httpOnly: true,
-          secure: isSecure,
+        console.log('🍪 Setting refresh cookies with options:', {
           sameSite: sameSiteValue,
-          maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS,
+          secure: isSecure,
           path: '/',
+          httpOnly: true,
+          origin: req.headers.origin,
         });
         
-        console.log('✅ Cookies set with options:', { sameSite: sameSiteValue, secure: isSecure });
+        res.cookie('accessToken', tokens.accessToken, cookieOptions);
+        res.cookie('refreshToken', tokens.refreshToken, {
+          ...cookieOptions,
+          maxAge: TOKEN_EXPIRY.REFRESH_TOKEN_MS,
+        });
+        
+        console.log('✅ Refresh cookies set successfully');
         res.json({ success: true, message: 'Token refreshed successfully' });
       } catch (error: any) {
         console.error("❌ Token refresh error:", error.message);
@@ -3132,3 +3157,6 @@ Your wellbeing is important. Please don't hesitate to reach out for professional
 
   return httpServer;
 }
+
+
+

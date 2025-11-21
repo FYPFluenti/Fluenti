@@ -40,6 +40,14 @@ function getTransporter() {
           user: EMAIL_USER,
           pass: EMAIL_PASSWORD,
         },
+        // Add connection timeout settings
+        connectionTimeout: 10000, // 10 seconds
+        socketTimeout: 10000, // 10 seconds
+        greetingTimeout: 10000, // 10 seconds
+        // Add TLS options for better connection handling
+        tls: {
+          rejectUnauthorized: false, // Allow self-signed certificates (for development)
+        },
       });
     } else {
       console.warn('⚠️ Email service not configured. Set EMAIL_USER and EMAIL_PASSWORD in environment variables.');
