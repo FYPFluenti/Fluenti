@@ -15,7 +15,6 @@ import MobileBottomNav from "@/components/layout/MobileBottomNav";
 import { UserTypeCard } from "@/components/UserTypeCard";
 import FeatureCard from "@/components/FeatureCard";
 import Spline from '@splinetool/react-spline';
-import { buildApiUrl } from "@/lib/apiUtils";
 
 
 import { 
@@ -168,7 +167,11 @@ export default function Home() {
       setUserLocation(location);
 
       // Call API to find therapists
-      const response = await fetch(buildApiUrl('/api/therapists/find'), {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
+        ? 'https://fluentiai-backend.onrender.com' 
+        : 'http://localhost:3000');
+
+      const response = await fetch(`${API_BASE_URL}/api/therapists/find`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

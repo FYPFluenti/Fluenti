@@ -1,6 +1,5 @@
 import { GoogleGenAI, Type, Modality, FunctionDeclaration } from "@google/genai";
 import { StoryChunk, Theme, Emotion, CustomStoryInputs, CustomStoryStep, EndingType, SpeechFeedback, ThematicFeedback, TherapyType, CHALLENGES_PER_LEVEL, LanguageFeedback, RewardContent, Character, AssessmentResult, MAX_SCORE, MAX_FOCUS_STARS, SocialAssessmentResult } from '@/types/games/story-game';
-import { buildApiUrl } from '@/lib/apiUtils';
 
 // Initialize GoogleGenAI - using API_KEY from environment
 // Vite uses import.meta.env instead of process.env
@@ -96,7 +95,11 @@ export async function fetchOnboardingData(): Promise<OnboardingData | null> {
     try {
         // Use the same pattern as getQueryFn - rely on httpOnly cookies for auth
         // No need for Authorization header - cookies are sent automatically with credentials: 'include'
-        const response = await fetch(buildApiUrl('/api/onboarding'), {
+        const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
+            ? 'https://fluentiai-backend.onrender.com' 
+            : 'http://localhost:3000');
+        
+        const response = await fetch(`${API_BASE_URL}/api/onboarding`, {
             headers: {
                 'Content-Type': 'application/json'
             },

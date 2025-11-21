@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { getApiBaseUrl } from '@/lib/apiUtils';
 
 // Get API base from environment or default to localhost:3000
-const API_BASE_URL = getApiBaseUrl();
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
+  ? 'https://fluentiai-backend.onrender.com' 
+  : 'http://localhost:3000');
 
 // Convert HTTP URL to WebSocket URL with proper validation
 const getWebSocketUrl = (url: string) => {

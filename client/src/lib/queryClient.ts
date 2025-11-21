@@ -20,10 +20,10 @@ console.error = function(...args) {
   originalConsoleError.apply(console, args);
 };
 
-import { getApiBaseUrl, buildApiUrl } from './apiUtils';
-
 // Configure API base URL based on environment
-const API_BASE_URL = getApiBaseUrl();
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
+  ? 'https://fluentiai-backend.onrender.com' 
+  : 'http://localhost:3000');
 
 // WebSocket configuration - moved to a function to get token when needed
 const getWebSocketUrl = () => {
@@ -55,7 +55,7 @@ export const getQueryFn: <T>(options: {
   async ({ queryKey }) => {
     const url = queryKey.join("/") as string;
     // Ensure URL is absolute by prepending API_BASE_URL if it's relative
-    const fullUrl = url.startsWith('http') ? url : buildApiUrl(url);
+    const fullUrl = url.startsWith('http') ? url : `${API_BASE_URL}${url}`;
     
     // No need to add Authorization header - cookies are sent automatically
     const headers: Record<string, string> = {
@@ -73,7 +73,7 @@ export const getQueryFn: <T>(options: {
         // Try to refresh token automatically
         if (res.status === 401) {
           try {
-            const refreshRes = await fetch(buildApiUrl('/api/auth/refresh'), {
+            const refreshRes = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
               method: 'POST',
               credentials: 'include',
             });
@@ -123,8 +123,7 @@ export const apiRequest = async (method: 'GET' | 'POST' | 'PUT' | 'DELETE', url:
   }
 
   try {
-    const fullUrl = url.startsWith('http') ? url : buildApiUrl(url);
-    const response = await fetch(fullUrl, config);
+    const response = await fetch(`${API_BASE_URL}${url}`, config);
     
     // Don't throw on HTTP errors - let the caller handle response status
     // This allows us to read error messages from the response body
