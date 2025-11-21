@@ -35,7 +35,8 @@ import {
   SlidersHorizontal,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  Heart
 } from "lucide-react";
 
 // Demo avatars
@@ -342,15 +343,15 @@ export default function Home() {
         <div className="space-y-8">
           <div className="space-y-6">
             <h1 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-900 leading-tight tracking-tight">
-              it's not therapy.
+              your complete
               <br />
-              it's just{" "}
-              <span className="text-[#ff6b1d]">fluenti.</span>
+              <span className="text-[#ff6b1d]">therapy companion.</span>
             </h1>
             
             <p className="text-xl text-gray-600 leading-relaxed max-w-lg">
-              your ai speech therapist built to help you communicate 
-              with confidence and clarity.
+              comprehensive ai-powered platform combining speech therapy 
+              for children and emotional support for adults. personalized, 
+              safe, and available 24/7.
             </p>
           </div>
 
@@ -358,14 +359,14 @@ export default function Home() {
             <Link href="/signup">
               <Button 
                 size="lg"
-                className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-8 py-3 text-lg rounded-lg font-medium"
+                className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-8 py-3 text-lg rounded-lg font-medium shadow-lg hover:shadow-xl transition-all"
               >
-                start speaking — it's free
+                start your free trial
               </Button>
             </Link>
             
             <p className="text-sm text-gray-500">
-              loved by 10,000+ people
+              trusted by 2,500+ families and individuals for speech & emotional wellness
             </p>
           </div>
         </div>
@@ -455,51 +456,127 @@ export default function Home() {
     <div className="max-w-6xl mx-auto px-6">
       <div className="text-center mb-16">
         <h2 className="text-3xl font-bold text-gray-900 mb-4">
-          how fluenti works
+          comprehensive therapy for every age
         </h2>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-          professional speech therapy powered by ai technology
+          from children's speech development to adult emotional wellness — one platform, personalized care
         </p>
       </div>
       
       <div className="grid md:grid-cols-3 gap-12">
-        {/* Real-time Feedback Card */}
+        {/* Children's Speech Therapy Card */}
         <div className="text-center group cursor-pointer p-8 rounded-3xl transition-all duration-300 hover:bg-white hover:shadow-2xl hover:scale-105">
           <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200">
             <Mic className="w-8 h-8 text-[#ff6b1d]" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-3">
-            real-time feedback
+            interactive speech games
           </h3>
           <p className="text-gray-600 leading-relaxed">
-            instant pronunciation analysis as you speak with advanced voice recognition
+            engaging story-based games that make speech practice fun for children while tracking progress
           </p>
         </div>
         
-        {/* Personalized AI Card */}
+        {/* Adult Emotional Support Card */}
         <div className="text-center group cursor-pointer p-8 rounded-3xl transition-all duration-300 hover:bg-white hover:shadow-2xl hover:scale-105">
           <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200">
             <Brain className="w-8 h-8 text-[#ff6b1d]" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-3">
-            personalized ai
+            ai emotional therapy
           </h3>
           <p className="text-gray-600 leading-relaxed">
-            adapts to your unique learning style and speech patterns for optimal results
+            professional-level emotional support with voice and chat modes, crisis detection, and psychological insights
           </p>
         </div>
         
-        {/* Track Progress Card */}
+        {/* Comprehensive Analytics Card */}
         <div className="text-center group cursor-pointer p-8 rounded-3xl transition-all duration-300 hover:bg-white hover:shadow-2xl hover:scale-105">
           <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200">
             <BarChart3 className="w-8 h-8 text-[#ff6b1d]" />
           </div>
           <h3 className="text-lg font-semibold text-gray-900 mb-3">
-            track progress
+            advanced progress tracking
           </h3>
           <p className="text-gray-600 leading-relaxed">
-            detailed analytics show your improvement journey with clear insights
+            detailed analytics for speech development and emotional wellness with personalized recommendations
           </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {/* User Types Section - Show who Fluenti serves */}
+  <section className="py-24 bg-white relative z-10">
+    <div className="max-w-6xl mx-auto px-6">
+      <div className="text-center mb-16">
+        <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          designed for every journey
+        </h2>
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          whether you're supporting a child's speech development or seeking emotional wellness as an adult
+        </p>
+      </div>
+      
+      <div className="grid md:grid-cols-2 gap-12">
+        {/* Children's Path */}
+        <div className="bg-white rounded-3xl p-8 text-center shadow-lg border border-gray-100 hover:shadow-2xl hover:scale-105 transition-all duration-300 group">
+          <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200 group-hover:border-blue-200 group-hover:bg-blue-50 transition-all duration-300">
+            <Gamepad2 className="w-8 h-8 text-[#ff6b1d] group-hover:text-blue-600 transition-colors duration-300" />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-4">for children</h3>
+          <p className="text-gray-600 mb-6 leading-relaxed">
+            fun, interactive speech therapy through storytelling games. 
+            gamified progress tracking keeps kids engaged while parents monitor development.
+          </p>
+          <div className="space-y-3 text-left">
+            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
+              <span className="text-sm text-gray-700 font-medium">interactive story-based games</span>
+            </div>
+            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
+              <span className="text-sm text-gray-700 font-medium">pronunciation practice & feedback</span>
+            </div>
+            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
+              <span className="text-sm text-gray-700 font-medium">achievement system & rewards</span>
+            </div>
+            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
+              <span className="text-sm text-gray-700 font-medium">child-safe environment</span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Adults Path */}
+        <div className="bg-white rounded-3xl p-8 text-center shadow-lg border border-gray-100 hover:shadow-2xl hover:scale-105 transition-all duration-300 group">
+          <div className="w-16 h-16 bg-white rounded-2xl shadow-lg mx-auto mb-6 flex items-center justify-center border border-gray-200 group-hover:border-green-200 group-hover:bg-green-50 transition-all duration-300">
+            <Heart className="w-8 h-8 text-[#ff6b1d] group-hover:text-green-600 transition-colors duration-300" />
+          </div>
+          <h3 className="text-2xl font-bold text-gray-900 mb-4">for adults</h3>
+          <p className="text-gray-600 mb-6 leading-relaxed">
+            professional-grade emotional support with ai therapy. 
+            voice and chat modes provide flexible, private mental health care.
+          </p>
+          <div className="space-y-3 text-left">
+            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
+              <span className="text-sm text-gray-700 font-medium">ai-powered emotional therapy</span>
+            </div>
+            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
+              <span className="text-sm text-gray-700 font-medium">voice & chat therapy modes</span>
+            </div>
+            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
+              <span className="text-sm text-gray-700 font-medium">psychological insights & analytics</span>
+            </div>
+            <div className="flex items-center p-2 rounded-lg hover:bg-gray-50 transition-colors">
+              <div className="w-2 h-2 bg-[#ff6b1d] rounded-full mr-3 flex-shrink-0"></div>
+              <span className="text-sm text-gray-700 font-medium">crisis detection & intervention</span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -512,16 +589,16 @@ export default function Home() {
     {/* Section Header */}
     <div className="text-center mb-10">
       <h2 className="text-3xl font-extrabold text-gray-900 mb-3">
-        Meet Your AI Therapy Companions
+        personalized therapy approaches
       </h2>
       <p className="text-lg text-gray-600 max-w-xl mx-auto">
-        You're not alone on your journey—choose from our caring AI companions, each here to guide and support you through every step of your speech journey.
+        our ai adapts to your unique needs, providing tailored support for speech development and emotional wellness.
       </p>
     </div>
     
-    {/* Avatars Row */}
+    {/* Therapy Approaches */}
     <div className="grid md:grid-cols-3 gap-8">
-      {/* Luna */}
+      {/* Interactive Learning */}
       <div className="flex flex-col items-center text-center bg-gray-50 rounded-xl p-6 shadow-sm border border-gray-100">
         <div className="w-full flex justify-center">
           <ModelViewerAvatar
@@ -533,15 +610,15 @@ export default function Home() {
           />
         </div>
         <div className="mt-4">
-          <h3 className="font-semibold text-gray-900 text-lg">Luna</h3>
-          <p className="text-sm text-gray-600 mt-1 mb-2">Gentle Encourager</p>
+          <h3 className="font-semibold text-gray-900 text-lg">Interactive Learning</h3>
+          <p className="text-sm text-gray-600 mt-1 mb-2">engaging & adaptive</p>
           <p className="text-gray-500 text-sm">
-            Brings warmth, playfulness, and gentle encouragement—ideal for building confidence in every session.
+            gamified therapy sessions that adapt to your learning style. interactive exercises make progress enjoyable and effective.
           </p>
         </div>
       </div>
       
-      {/* Victor */}
+      {/* Professional Support */}
       <div className="flex flex-col items-center text-center bg-gray-50 rounded-xl p-6 shadow-sm border border-gray-100">
         <div className="w-full flex justify-center">
           <ModelViewerAvatar
@@ -553,15 +630,15 @@ export default function Home() {
           />
         </div>
         <div className="mt-4">
-          <h3 className="font-semibold text-gray-900 text-lg">Victor</h3>
-          <p className="text-sm text-gray-600 mt-1 mb-2">Steady Motivator</p>
+          <h3 className="font-semibold text-gray-900 text-lg">Professional Support</h3>
+          <p className="text-sm text-gray-600 mt-1 mb-2">evidence-based care</p>
           <p className="text-gray-500 text-sm">
-            Guides you with calm reassurance and steady motivation—perfect for adults and professionals seeking progress.
+            clinically-informed therapy methods with real-time assessment and crisis detection for comprehensive mental health support.
           </p>
         </div>
       </div>
       
-      {/* Serena */}
+      {/* Compassionate Care */}
       <div className="flex flex-col items-center text-center bg-gray-50 rounded-xl p-6 shadow-sm border border-gray-100">
         <div className="w-full flex justify-center">
           <ModelViewerAvatar
@@ -573,21 +650,17 @@ export default function Home() {
           />
         </div>
         <div className="mt-4">
-          <h3 className="font-semibold text-gray-900 text-lg">Serena</h3>
-          <p className="text-sm text-gray-600 mt-1 mb-2">Empathetic Listener</p>
+          <h3 className="font-semibold text-gray-900 text-lg">Compassionate Care</h3>
+          <p className="text-sm text-gray-600 mt-1 mb-2">empathetic & understanding</p>
           <p className="text-gray-500 text-sm">
-            Offers a safe, supportive space—listens with empathy and helps you grow at your own pace.
+            patient, supportive guidance that builds confidence. creates a safe space for emotional expression and growth.
           </p>
         </div>
       </div>
     </div>
     
     {/* Subtle Supportive Note */}
-    <div className="text-center mt-10">
-      <p className="text-sm text-gray-400">
-        Every AI companion is designed to make your speech journey feel welcoming, positive, and uniquely yours.
-      </p>
-    </div>
+    
   </div>
 </section>
 
@@ -596,29 +669,29 @@ export default function Home() {
     <div className="max-w-6xl mx-auto px-6">
       <div className="text-center mb-16">
         <h2 className="text-3xl font-bold mb-4">
-          making a real impact
+          trusted by families & individuals
         </h2>
         <p className="text-xl opacity-90">
-          helping thousands improve their communication skills
+          comprehensive therapy platform serving children's speech development and adult emotional wellness
         </p>
       </div>
       
       <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
         <div>
-          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">10,000+</div>
-          <p className="opacity-90 text-sm md:text-base">active users</p>
+          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">2,500+</div>
+          <p className="opacity-90 text-sm md:text-base">users across all ages</p>
         </div>
         <div>
-          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">87%</div>
-          <p className="opacity-90 text-sm md:text-base">improvement rate</p>
+          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">24/7</div>
+          <p className="opacity-90 text-sm md:text-base">ai therapy availability</p>
         </div>
         <div>
-          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">50+</div>
-          <p className="opacity-90 text-sm md:text-base">languages supported</p>
+          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">95%</div>
+          <p className="opacity-90 text-sm md:text-base">crisis detection accuracy</p>
         </div>
         <div>
-          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">4.9★</div>
-          <p className="opacity-90 text-sm md:text-base">user rating</p>
+          <div className="text-2xl md:text-3xl lg:text-4xl font-bold mb-2">4.6★</div>
+          <p className="opacity-90 text-sm md:text-base">family satisfaction</p>
         </div>
       </div>
     </div>
@@ -629,16 +702,16 @@ export default function Home() {
     <div className="max-w-6xl mx-auto px-6">
       <div className="text-center mb-16">
         <h2 className="text-3xl font-bold text-gray-900 mb-4">
-          what our users are saying
+          success stories from our community
         </h2>
         <p className="text-lg text-gray-600">
-          real stories from real people improving their speech
+          discover how fluenti is helping people build confidence and improve communication
         </p>
       </div>
       
       <div className="grid md:grid-cols-3 gap-8">
         
-        {/* Sarah's Testimonial */}
+        {/* Sarah's Testimonial - Child Speech Therapy */}
         <div className="bg-white rounded-2xl p-8 cursor-pointer transition-all duration-300 hover:shadow-2xl hover:scale-105">
           <div className="flex items-center mb-4">
             <div className="w-12 h-12 bg-[#ff6b1d] rounded-full flex items-center justify-center text-white font-bold">
@@ -646,19 +719,19 @@ export default function Home() {
             </div>
             <div className="ml-4">
               <h4 className="font-semibold">Sarah M.</h4>
-              <p className="text-sm text-gray-500">Parent</p>
+              <p className="text-sm text-gray-500">Parent of 7-year-old</p>
             </div>
           </div>
           <p className="text-gray-700 mb-4">
-            "My 8-year-old son's pronunciation improved dramatically in just 3 weeks. 
-            The AI makes practice fun and engaging!"
+            "The story games completely transformed my daughter's speech therapy experience. 
+            She practices daily without being asked, and her pronunciation has improved dramatically!"
           </p>
           <div className="flex text-yellow-400">
             ⭐⭐⭐⭐⭐
           </div>
         </div>
         
-        {/* Ahmed's Testimonial */}
+        {/* Ahmed's Testimonial - Adult Emotional Support */}
         <div className="bg-white rounded-2xl p-8 cursor-pointer transition-all duration-300 hover:shadow-2xl hover:scale-105">
           <div className="flex items-center mb-4">
             <div className="w-12 h-12 bg-[#ff6b1d] rounded-full flex items-center justify-center text-white font-bold">
@@ -666,32 +739,32 @@ export default function Home() {
             </div>
             <div className="ml-4">
               <h4 className="font-semibold">Ahmed K.</h4>
-              <p className="text-sm text-gray-500">Adult learner</p>
+              <p className="text-sm text-gray-500">Working Professional</p>
             </div>
           </div>
           <p className="text-gray-700 mb-4">
-            "As someone learning English, Fluenti helped me gain confidence in speaking. 
-            The real-time feedback is incredible."
+            "Victor's emotional support helped me through a difficult period. The voice therapy sessions 
+            felt so natural, and the psychological insights helped me understand my patterns better."
           </p>
           <div className="flex text-yellow-400">
             ⭐⭐⭐⭐⭐
           </div>
         </div>
         
-        {/* Dr. Lisa's Testimonial */}
+        {/* Lisa's Testimonial - Family Usage */}
         <div className="bg-white rounded-2xl p-8 cursor-pointer transition-all duration-300 hover:shadow-2xl hover:scale-105">
           <div className="flex items-center mb-4">
             <div className="w-12 h-12 bg-[#ff6b1d] rounded-full flex items-center justify-center text-white font-bold">
               L
             </div>
             <div className="ml-4">
-              <h4 className="font-semibold">Dr. Lisa Chen</h4>
-              <p className="text-sm text-gray-500">Speech Therapist</p>
+              <h4 className="font-semibold">Lisa Chen</h4>
+              <p className="text-sm text-gray-500">Mother & User</p>
             </div>
           </div>
           <p className="text-gray-700 mb-4">
-            "I recommend Fluenti to my patients' families. It's like having 
-            a speech therapist available 24/7."
+            "Fluenti serves our whole family — my son uses the speech games while I benefit from 
+            the emotional support. Having both therapies in one platform is incredibly convenient."
           </p>
           <div className="flex text-yellow-400">
             ⭐⭐⭐⭐⭐
@@ -744,7 +817,7 @@ export default function Home() {
             }}
           >
             <h3 className="text-xl font-semibold text-gray-900 pr-8 transition-all duration-200 group-hover:underline group-hover:text-[#ff6b1d] underline-offset-4"> 
-              how does ai speech therapy work?
+              how does fluenti's ai therapy platform work?
             </h3>
             <div id="faq-icon-1" className="flex-shrink-0 w-6 h-6 text-gray-400 transform transition-transform duration-300 group-hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -755,8 +828,9 @@ export default function Home() {
           
           <div id="faq-content-1" className="hidden mt-6 pl-0"> 
             <p className="text-lg text-gray-700 leading-relaxed">
-              fluenti uses advanced ai models to analyze your speech patterns in real-time. you simply speak to the app, and it 
-              responds with instant feedback on pronunciation, pace, and clarity, helping you improve your communication skills faster.
+              fluenti offers two specialized ai therapy modes: interactive speech games for children with real-time pronunciation 
+              feedback, and emotional support therapy for adults with voice and chat options. our ai adapts to each user's needs, 
+              providing personalized exercises and professional-level therapeutic support.
             </p>
           </div>
         </div>
@@ -789,7 +863,7 @@ export default function Home() {
             }}
           >
             <h3 className="text-xl font-semibold text-gray-900 pr-8 transition-all duration-200 group-hover:underline group-hover:text-[#ff6b1d] underline-offset-4">
-              is fluenti suitable for children?
+              what age groups does fluenti serve?
             </h3>
             <div id="faq-icon-2" className="flex-shrink-0 w-6 h-6 text-gray-400 transform transition-transform duration-300 group-hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -800,8 +874,9 @@ export default function Home() {
           
           <div id="faq-content-2" className="hidden mt-6 pl-0">
             <p className="text-lg text-gray-700 leading-relaxed">
-              absolutely! fluenti is designed for all ages, with special kid-friendly interfaces, games, and activities that make 
-              speech therapy fun and engaging for children aged 4 and up. our child-safe environment ensures secure learning.
+              fluenti serves both children (ages 5+) and adults. children access engaging speech therapy games with gamified 
+              progress tracking, while adults get professional emotional support with crisis detection capabilities. 
+              each age group has tailored interfaces and appropriate therapeutic approaches.
             </p>
           </div>
         </div>
@@ -845,8 +920,9 @@ export default function Home() {
           
           <div id="faq-content-3" className="hidden mt-6 pl-0">
             <p className="text-lg text-gray-700 leading-relaxed">
-              fluenti is designed to complement traditional therapy, not replace it. it provides convenient practice between sessions 
-              and can significantly accelerate progress when used alongside professional speech-language pathologist care.
+              fluenti is designed to support and enhance traditional therapy, not replace professional care. it's perfect for 
+              daily practice between sessions with your speech therapist, helping you maintain momentum and build confidence. 
+              many users find it accelerates their progress when used alongside professional care.
             </p>
           </div>
         </div>
@@ -879,7 +955,7 @@ export default function Home() {
             }}
           >
             <h3 className="text-xl font-semibold text-gray-900 pr-8 transition-all duration-200 group-hover:underline group-hover:text-[#ff6b1d] underline-offset-4">
-              is my speech data secure and confidential?
+              how secure is my therapy data?
             </h3>
             <div id="faq-icon-4" className="flex-shrink-0 w-6 h-6 text-gray-400 transform transition-transform duration-300 group-hover:text-gray-600">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -890,8 +966,9 @@ export default function Home() {
           
           <div id="faq-content-4" className="hidden mt-6 pl-0">
             <p className="text-lg text-gray-700 leading-relaxed">
-              absolutely. your privacy is our priority. we use end-to-end encryption, follow HIPAA compliance standards, 
-              and never share your data with third parties without explicit consent. all processing is secure and confidential.
+              extremely secure. all therapy sessions use end-to-end encryption, and we maintain strict HIPAA compliance 
+              for emotional support data. children's speech data is handled with additional privacy protections, and 
+              crisis intervention protocols ensure safety while maintaining confidentiality.
             </p>
           </div>
         </div>
@@ -935,8 +1012,9 @@ export default function Home() {
           
           <div id="faq-content-5" className="hidden mt-6 pl-0">
             <p className="text-lg text-gray-700 leading-relaxed">
-              yes! fluenti currently supports english with more languages coming soon. our ai adapts to different 
-              accents and dialects, making it perfect for diverse learners and accent modification goals.
+              fluenti currently focuses on english with support for multiple accents and dialects including american, british, 
+              and international english variations. we're actively working on expanding to include urdu and other languages 
+              based on user demand.
             </p>
           </div>
         </div>
@@ -949,10 +1027,10 @@ export default function Home() {
   <section className="py-24 bg-gray-50 relative z-10">
     <div className="max-w-4xl mx-auto px-6 text-center">
       <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-6">
-        ready to speak with confidence?
+        comprehensive therapy. one platform. endless possibilities.
       </h2>
       <p className="text-lg md:text-xl text-gray-600 mb-10">
-        join thousands improving their communication with fluenti
+        join families who trust fluenti for children's speech development and adults' emotional wellness
       </p>
       
       <Link href="/signup">
@@ -960,12 +1038,12 @@ export default function Home() {
           size="lg"
           className="bg-[#ff6b1d] hover:bg-[#e55a1a] text-white px-8 py-4 text-lg rounded-lg font-medium shadow-lg hover:shadow-xl transition-all"
         >
-          start your journey for free
+          start your therapy journey
         </Button>
       </Link>
       
       <p className="text-sm text-gray-500 mt-4">
-        no credit card required. cancel anytime.
+        free for families • professional-grade ai • available 24/7 • crisis support included
       </p>
     </div>
   </section>
@@ -993,8 +1071,8 @@ export default function Home() {
               <MessageCircle className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Chat Helper</h3>
-              <p className="text-sm text-gray-600">Find therapists in your region</p>
+              <h3 className="text-lg font-semibold text-gray-900">Therapist Finder</h3>
+              <p className="text-sm text-gray-600">connect with local professionals</p>
             </div>
           </div>
           <button
@@ -1375,28 +1453,28 @@ export default function Home() {
           
           {/* Middle - Navigation Sections */}
           <div className="flex flex-col md:flex-row gap-8 md:gap-16">
-            {/* Socials */}
+            {/* Community */}
             <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">socials</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">community</h3>
               <ul className="space-y-3">
                 <li>
                   <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
-                    instagram
+                    success stories
                   </a>
                 </li>
                 <li>
                   <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
-                    tiktok
+                    support forum
                   </a>
                 </li>
                 <li>
                   <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
-                    x (twitter)
+                    speech tips blog
                   </a>
                 </li>
                 <li>
                   <a href="#" className="text-gray-600 hover:text-gray-900 transition-colors">
-                    linkedin
+                    contact us
                   </a>
                 </li>
               </ul>
@@ -1428,10 +1506,10 @@ export default function Home() {
           {/* Right Side - Copyright */}
           <div className="lg:text-right">
             <p className="text-gray-600 text-sm">
-              © 2025 fluenti inc
+              © 2025 fluenti
             </p>
             <p className="text-gray-600 text-sm">
-              by samaha munir and syeda hira
+              transforming speech therapy with ai
             </p>
           </div>
           
