@@ -26,11 +26,13 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
     setIsSubmitting(true);
     
     try {
-      const response = await fetch('/api/feedback/submit', {
+      const { buildApiUrl } = await import('@/lib/apiUtils');
+      const response = await fetch(buildApiUrl('/api/feedback/submit'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include cookies for authentication
         body: JSON.stringify({
           feedback: feedback.trim(),
           rating: rating || undefined,
