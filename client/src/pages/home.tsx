@@ -168,7 +168,7 @@ export default function Home() {
 
       // Call API to find therapists
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
-        ? 'https://fluentiai-backend.onrender.com' 
+        ? 'https://fluenti-app.onrender.com' 
         : 'http://localhost:3000');
 
       const response = await fetch(`${API_BASE_URL}/api/therapists/find`, {

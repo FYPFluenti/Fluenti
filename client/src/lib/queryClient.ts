@@ -22,7 +22,7 @@ console.error = function(...args) {
 
 // Configure API base URL based on environment
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
-  ? 'https://fluentiai-backend.onrender.com' 
+  ? 'https://fluenti-app.onrender.com' 
   : 'http://localhost:3000');
 
 // WebSocket configuration - moved to a function to get token when needed

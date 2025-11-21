@@ -248,7 +248,7 @@ const EmotionalSupport = () => {
   const checkServiceHealth = async () => {
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
-        ? 'https://fluentiai-backend.onrender.com' 
+        ? 'https://fluenti-app.onrender.com' 
         : 'http://localhost:3000');
       const res = await fetch(`${API_BASE_URL}/api/therapy/health`, {
         credentials: 'include' // Include cookies for authentication
@@ -296,7 +296,7 @@ const EmotionalSupport = () => {
     
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
-        ? 'https://fluentiai-backend.onrender.com' 
+        ? 'https://fluenti-app.onrender.com' 
         : 'http://localhost:3000');
       const res = await fetch(`${API_BASE_URL}/api/emotional-support-chat`, { 
         method: 'POST', 

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 
 // Get API base from environment or default to localhost:3000
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD 
-  ? 'https://fluentiai-backend.onrender.com' 
+  ? 'https://fluenti-app.onrender.com' 
   : 'http://localhost:3000');
 
 // Convert HTTP URL to WebSocket URL with proper validation
