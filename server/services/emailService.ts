@@ -9,58 +9,121 @@ const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
 const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@fluenti.ai';
 const APP_URL = process.env.APP_URL || 'http://localhost:5000';
 
+// Fallback SMTP configurations for production environments (based on known working solutions)
+const SMTP_CONFIGS = [
+  // Primary: Gmail service method (most reliable according to StackOverflow)
+  {
+    service: 'Gmail',
+    port: null, // service handles port automatically
+    secure: null, // service handles security automatically  
+    name: 'Gmail Service'
+  },
+  // Fallback 1: Gmail SMTP with requireTLS (proven solution for Render/server environments)
+  {
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    requireTLS: true,
+    name: 'Gmail SMTP (TLS 587 with requireTLS)'
+  },
+  // Fallback 2: Gmail SMTP with SSL
+  {
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    name: 'Gmail SMTP (SSL 465)'
+  }
+];
+
 // Create transporter
 let transporter: nodemailer.Transporter | null = null;
 
-function getTransporter() {
-  if (!transporter) {
-    // Debug environment variables
-    console.log('📧 [EMAIL DEBUG] Configuration check:', {
-      EMAIL_HOST: EMAIL_HOST || 'NOT SET',
-      EMAIL_PORT: EMAIL_PORT || 'NOT SET',
-      EMAIL_USER: EMAIL_USER ? '***@' + EMAIL_USER.split('@')[1] : 'NOT SET',
-      EMAIL_PASSWORD: EMAIL_PASSWORD ? '***' + EMAIL_PASSWORD.slice(-4) : 'NOT SET'
-    });
-    
-    // Only create transporter if email credentials are provided
-    if (EMAIL_USER && EMAIL_PASSWORD) {
-      transporter = nodemailer.createTransport({
-        host: EMAIL_HOST,
-        port: EMAIL_PORT,
-        secure: EMAIL_PORT === 465, // true for 465, false for other ports
+async function createTransporterWithFallback() {
+  console.log('📧 [EMAIL DEBUG] Configuration check:', {
+    EMAIL_HOST: EMAIL_HOST || 'NOT SET',
+    EMAIL_PORT: EMAIL_PORT || 'NOT SET',
+    EMAIL_USER: EMAIL_USER ? '***@' + EMAIL_USER.split('@')[1] : 'NOT SET',
+    EMAIL_PASSWORD: EMAIL_PASSWORD ? '***' + EMAIL_PASSWORD.slice(-4) : 'NOT SET'
+  });
+  
+  if (!EMAIL_USER || !EMAIL_PASSWORD) {
+    console.warn('⚠️ Email service not configured. Set EMAIL_USER and EMAIL_PASSWORD in environment variables.');
+    return {
+      sendMail: async (mailOptions: any) => {
+        console.log('📧 [MOCK EMAIL] Would send email:', {
+          to: mailOptions.to,
+          subject: mailOptions.subject,
+          preview: mailOptions.html?.substring(0, 100) + '...',
+        });
+        return { messageId: 'mock-' + Date.now() };
+      },
+    } as any;
+  }
+
+  // Try each SMTP configuration until one works
+  for (const config of SMTP_CONFIGS) {
+    try {
+      console.log(`📧 [EMAIL DEBUG] Trying ${config.name}...`);
+      
+      // Create transport configuration based on whether it's service-based or host-based
+      let transportConfig: any = {
         auth: {
           user: EMAIL_USER,
           pass: EMAIL_PASSWORD,
         },
-        // Add connection timeout and other options for better error handling
-        connectionTimeout: 10000, // 10 seconds
-        greetingTimeout: 5000, // 5 seconds
-        socketTimeout: 10000, // 10 seconds
-      });
-      
-      // Verify SMTP connection (optional, for debugging)
-      console.log('📧 [EMAIL DEBUG] Verifying SMTP connection...');
-      transporter.verify((error, success) => {
-        if (error) {
-          console.error('❌ [EMAIL DEBUG] SMTP verification failed:', error);
-        } else {
-          console.log('✅ [EMAIL DEBUG] SMTP connection verified successfully');
+        connectionTimeout: 5000, // 5 seconds timeout for faster fallback
+        greetingTimeout: 3000,
+        socketTimeout: 5000,
+      };
+
+      if ((config as any).service) {
+        // Service-based configuration (e.g., Gmail service)
+        transportConfig.service = (config as any).service;
+      } else {
+        // Host-based configuration
+        transportConfig.host = (config as any).host;
+        transportConfig.port = (config as any).port;
+        transportConfig.secure = (config as any).secure;
+        if ((config as any).requireTLS) {
+          transportConfig.requireTLS = (config as any).requireTLS;
         }
+      }
+      
+      const testTransporter = nodemailer.createTransport(transportConfig);
+
+      // Test the connection with a quick timeout
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Connection test timeout')), 8000);
+        testTransporter.verify((error, success) => {
+          clearTimeout(timeout);
+          if (error) {
+            reject(error);
+          } else {
+            resolve(success);
+          }
+        });
       });
-    } else {
-      console.warn('⚠️ Email service not configured. Set EMAIL_USER and EMAIL_PASSWORD in environment variables.');
-      // Return a mock transporter for development
-      transporter = {
-        sendMail: async (mailOptions: any) => {
-          console.log('📧 [MOCK EMAIL] Would send email:', {
-            to: mailOptions.to,
-            subject: mailOptions.subject,
-            preview: mailOptions.html?.substring(0, 100) + '...',
-          });
-          return { messageId: 'mock-' + Date.now() };
-        },
-      } as any;
+
+      console.log(`✅ [EMAIL DEBUG] Successfully connected using ${config.name}`);
+      return testTransporter;
+    } catch (error) {
+      console.log(`❌ [EMAIL DEBUG] ${config.name} failed:`, (error as any)?.message);
+      continue;
     }
+  }
+
+  throw new Error('All SMTP configurations failed');
+}
+
+function getTransporter() {
+  if (!transporter) {
+    // Create a promise-based transporter that will be resolved when needed
+    transporter = {
+      sendMail: async (mailOptions: any) => {
+        const workingTransporter = await createTransporterWithFallback();
+        return workingTransporter.sendMail(mailOptions);
+      }
+    } as any;
   }
   return transporter;
 }
@@ -88,14 +151,12 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     const transporter = getTransporter();
     
     if (!transporter) {
-      console.error('❌ [EMAIL DEBUG] No transporter available');
-      throw new Error('Email service not configured');
+      throw new Error('Failed to initialize email transporter');
     }
     
-    console.log('📧 [EMAIL DEBUG] Attempting to send email...');
+    console.log('📧 [EMAIL DEBUG] Attempting to send email with fallback mechanism...');
     
-    // Add timeout wrapper to detect hanging operations
-    const emailPromise = transporter.sendMail({
+    const result = await transporter.sendMail({
       from: EMAIL_FROM,
       to: options.to,
       subject: options.subject,
@@ -103,18 +164,10 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       text: options.text,
     });
     
-    // Set a 30-second timeout
-    const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Email sending timeout after 30 seconds')), 30000);
-    });
-    
-    console.log('📧 [EMAIL DEBUG] Waiting for email send operation...');
-    const result = await Promise.race([emailPromise, timeoutPromise]);
-    
     console.log('✅ Email sent successfully to:', options.to, 'MessageId:', result.messageId);
   } catch (error) {
-    console.error('❌ Failed to send email:', error);
-    console.error('❌ [EMAIL DEBUG] Error details:', {
+    console.error('❌ Failed to send email after trying all configurations:', error);
+    console.error('❌ [EMAIL DEBUG] Final error details:', {
       name: (error as any)?.name,
       message: (error as any)?.message,
       code: (error as any)?.code,
