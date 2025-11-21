@@ -62,7 +62,7 @@ app.use((req, res, next) => {
     'http://localhost:3001',
     'https://fluentiai.netlify.app',
     'https://fluentiai-backend.onrender.com',
-    process.env.FRONTEND_URL || 'https://your-site-name.netlify.app'
+    process.env.FRONTEND_URL || 'https://your-site-name.vercel.app'
   ];
   
   const origin = req.headers.origin;
