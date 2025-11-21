@@ -32,6 +32,20 @@ function getTransporter() {
           user: EMAIL_USER,
           pass: EMAIL_PASSWORD,
         },
+        // Add connection timeout and other options for better error handling
+        connectionTimeout: 10000, // 10 seconds
+        greetingTimeout: 5000, // 5 seconds
+        socketTimeout: 10000, // 10 seconds
+      });
+      
+      // Verify SMTP connection (optional, for debugging)
+      console.log('📧 [EMAIL DEBUG] Verifying SMTP connection...');
+      transporter.verify((error, success) => {
+        if (error) {
+          console.error('❌ [EMAIL DEBUG] SMTP verification failed:', error);
+        } else {
+          console.log('✅ [EMAIL DEBUG] SMTP connection verified successfully');
+        }
       });
     } else {
       console.warn('⚠️ Email service not configured. Set EMAIL_USER and EMAIL_PASSWORD in environment variables.');
@@ -79,13 +93,23 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     }
     
     console.log('📧 [EMAIL DEBUG] Attempting to send email...');
-    const result = await transporter.sendMail({
+    
+    // Add timeout wrapper to detect hanging operations
+    const emailPromise = transporter.sendMail({
       from: EMAIL_FROM,
       to: options.to,
       subject: options.subject,
       html: options.html,
       text: options.text,
     });
+    
+    // Set a 30-second timeout
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error('Email sending timeout after 30 seconds')), 30000);
+    });
+    
+    console.log('📧 [EMAIL DEBUG] Waiting for email send operation...');
+    const result = await Promise.race([emailPromise, timeoutPromise]);
     
     console.log('✅ Email sent successfully to:', options.to, 'MessageId:', result.messageId);
   } catch (error) {
