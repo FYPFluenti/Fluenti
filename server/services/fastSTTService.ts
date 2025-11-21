@@ -2,12 +2,65 @@ import { spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { getPythonExecutablePath } from '../utils/pythonPath';
+import fetch from 'node-fetch';
+import FormData from 'form-data';
+
+/**
+ * Try cloud-based STT services (more reliable for production)
+ */
+async function tryCloudSTT(audioBuffer: Buffer, language: 'en' | 'ur' = 'en'): Promise<string> {
+  // Try OpenAI Whisper API (most reliable)
+  if (process.env.OPENAI_API_KEY) {
+    try {
+
+      
+      const formData = new FormData();
+      formData.append('file', audioBuffer, {
+        filename: 'audio.wav',
+        contentType: 'audio/wav'
+      });
+      formData.append('model', 'whisper-1');
+      formData.append('language', language === 'ur' ? 'ur' : 'en');
+      
+      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          ...formData.getHeaders()
+        },
+        body: formData
+      });
+      
+      if (response.ok) {
+        const result = await response.json() as { text?: string };
+        return result.text || '';
+      }
+    } catch (error) {
+      console.warn('OpenAI STT failed:', error);
+    }
+  }
+  
+  throw new Error('No cloud STT available');
+}
 
 /**
  * Fast STT service using Whisper Tiny for actual transcription
  * Optimized for speed and accuracy with proper audio handling
  */
 export async function fastTranscribeAudio(audioBuffer: Buffer, language: 'en' | 'ur' = 'en'): Promise<string> {
+  // First try cloud STT (more reliable for production)
+  if (process.env.NODE_ENV === 'production') {
+    try {
+      const cloudResult = await tryCloudSTT(audioBuffer, language);
+      if (cloudResult && cloudResult.trim() && !cloudResult.includes('Audio message received')) {
+        console.log('✅ Cloud STT success:', cloudResult);
+        return cloudResult;
+      }
+    } catch (cloudError) {
+      console.warn('⚠️ Cloud STT failed, trying local:', cloudError instanceof Error ? cloudError.message : String(cloudError));
+    }
+  }
+
   return new Promise(async (resolve, reject) => {
     // Check if Python is available before proceeding
     const pythonPath = getPythonExecutablePath();

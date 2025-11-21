@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx server/index.ts",
     "dev:frontend": "vite --port 3000",
-    "build": "npm run build:frontend && npm run build:backend",
+    "build": "chmod +x build.sh && ./build.sh",
+    "build:original": "npm run build:frontend && npm run build:backend",
     "build:frontend": "vite build",
     "build:netlify": "node netlify-debug.js && npm run build:frontend",
     "build:safe": "node build-safe.mjs",
