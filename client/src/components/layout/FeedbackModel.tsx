@@ -41,6 +41,25 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         }),
       });
 
+      // Check if response is ok before parsing JSON
+      if (!response.ok) {
+        // Try to parse error message, but handle HTML responses
+        let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch {
+          // If response is not JSON (e.g., HTML error page), use status text
+          const text = await response.text();
+          if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+            errorMessage = 'Server returned an error page. Please check backend logs.';
+          } else {
+            errorMessage = text || errorMessage;
+          }
+        }
+        throw new Error(errorMessage);
+      }
+
       const data = await response.json();
 
       if (data.success) {
@@ -56,11 +75,12 @@ export default function FeedbackModal({ isOpen, onClose }: FeedbackModalProps) {
         }, 2000);
       } else {
         console.error('Failed to submit feedback:', data.message);
-        alert('Failed to submit feedback. Please try again.');
+        alert(`Failed to submit feedback: ${data.message || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('❌ Error submitting feedback:', error);
-      alert('Failed to submit feedback. Please check your connection and try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      alert(`Failed to submit feedback: ${errorMessage}. Please check your connection and try again.`);
     } finally {
       setIsSubmitting(false);
     }
