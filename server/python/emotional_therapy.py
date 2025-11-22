@@ -1732,28 +1732,6 @@ class DataLoader:
                 text = f"Question: {item['input']}\nAnswer: {item['output']}"
                 source_type = "counsel_chat"
         
-        elif 'emotion' in dataset_name:
-            # Emotion dataset: text + label
-            if 'text' in item:
-                text = item['text']
-                if 'label' in item:
-                    # Preserve emotion label in text
-                    emotion_labels = ['sadness', 'joy', 'love', 'anger', 'fear', 'surprise']
-                    if isinstance(item['label'], int) and item['label'] < len(emotion_labels):
-                        label = emotion_labels[item['label']]
-                        text = f"Emotion: {label}\nText: {text}"
-                source_type = "emotion_classification"
-        
-        elif 'squad' in dataset_name:
-            # SQuAD: question + context + answers
-            if 'question' in item and 'context' in item:
-                question = item['question']
-                context = item['context']
-                answers = item.get('answers', {}).get('text', [])
-                answer_text = answers[0] if answers else ""
-                text = f"Question: {question}\nContext: {context}\nAnswer: {answer_text}"
-                source_type = "qa_pair"
-        
         elif 'HelpSteer' in dataset_name or 'nvidia' in dataset_name:
             # HelpSteer: May have helpfulness scores
             if 'prompt' in item and 'response' in item:
@@ -1766,20 +1744,6 @@ class DataLoader:
                 else:
                     text = f"Prompt: {prompt}\nResponse: {response}"
                 source_type = "helpful_conversation"
-        
-        elif 'ultrachat' in dataset_name or 'HuggingFaceH4' in dataset_name:
-            # UltraChat: May have messages array
-            if 'messages' in item:
-                messages = item['messages']
-                if isinstance(messages, list):
-                    text_parts = []
-                    for msg in messages:
-                        if isinstance(msg, dict) and 'content' in msg:
-                            role = msg.get('role', 'user')
-                            content = msg['content']
-                            text_parts.append(f"{role.title()}: {content}")
-                    text = "\n".join(text_parts)
-                    source_type = "chat_conversation"
         
         # Fallback: Generic field extraction
         if not text:
@@ -1905,71 +1869,22 @@ class DataLoader:
             except Exception as e:
                 print(f"⚠️ Could not load counsel chat dataset: {e}")
 
-            # REMOVED: Dataset 4 was duplicate of dataset1 (Amod/mental_health_counseling_conversations)
+            # Only keeping the top 4 best mental health datasets
 
-
-
-            # Dataset 6: Mental health support - LIMITED SIZE (WILL BE FILTERED FOR MENTAL HEALTH RELEVANCE)
+            # Dataset 4: nvidia/HelpSteer - High-quality therapeutic conversations with helpfulness ratings
             try:
-                print("Loading limited support conversations (will filter for mental health relevance)...")
-                dataset6 = DataLoader.load_dataset_with_streaming(
-                    "HuggingFaceH4/ultrachat_200k", 
-                    split='train_sft',
-                    limit=5000,  # Limited size
-                    progress_interval=1000
-                )
-                datasets.append((dataset6, "HuggingFaceH4/ultrachat_200k"))
-                dataset6_size = safe_dataset_len(dataset6)
-                print(f"✅ Loaded {dataset6_size} support conversations (will filter for mental health)")
-            except Exception as e:
-                print(f"⚠️ Could not load support dataset: {e}")
-
-            # Dataset 7: Therapeutic conversations - LIMITED SIZE (WILL BE FILTERED FOR MENTAL HEALTH RELEVANCE)
-            try:
-                print("Loading limited therapeutic conversations (will filter for mental health relevance)...")
-                dataset7 = DataLoader.load_dataset_with_streaming(
+                print("Loading nvidia/HelpSteer therapeutic conversations...")
+                dataset4 = DataLoader.load_dataset_with_streaming(
                     "nvidia/HelpSteer", 
                     split='train',
-                    limit=3000,  # Limited size
+                    limit=None,  # Load all for quality
                     progress_interval=500
                 )
-                datasets.append((dataset7, "nvidia/HelpSteer"))
-                dataset7_size = safe_dataset_len(dataset7)
-                print(f"✅ Loaded {dataset7_size} therapeutic conversations (will filter for mental health)")
+                datasets.append((dataset4, "nvidia/HelpSteer"))
+                dataset4_size = safe_dataset_len(dataset4)
+                print(f"✅ Loaded {dataset4_size} nvidia/HelpSteer conversations")
             except Exception as e:
-                print(f"⚠️ Could not load therapeutic dataset: {e}")
-
-            # Dataset 8: Mental health Q&A dataset (WILL BE FILTERED FOR MENTAL HEALTH RELEVANCE)
-            try:
-                print("Loading mental health Q&A dataset (will filter for mental health relevance)...")
-                dataset8 = DataLoader.load_dataset_with_streaming(
-                    "squad", 
-                    split='train',
-                    limit=2000,  # Limited size
-                    progress_interval=500
-                )
-                datasets.append((dataset8, "squad"))
-                dataset8_size = safe_dataset_len(dataset8)
-                print(f"✅ Loaded {dataset8_size} Q&A examples (will filter for mental health)")
-            except Exception as e:
-                print(f"⚠️ Could not load Q&A dataset: {e}")
-
-
-
-            # Dataset 10: Mental health classification dataset
-            try:
-                print("Loading mental health classification dataset...")
-                dataset10 = DataLoader.load_dataset_with_streaming(
-                    "emotion", 
-                    split='train',
-                    limit=2000,  # Limited size
-                    progress_interval=500
-                )
-                datasets.append((dataset10, "emotion"))
-                dataset10_size = safe_dataset_len(dataset10)
-                print(f"✅ Loaded {dataset10_size} emotion classification examples")
-            except Exception as e:
-                print(f"⚠️ Could not load emotion dataset: {e}")
+                print(f"⚠️ Could not load nvidia/HelpSteer dataset: {e}")
 
             if datasets:
                 # Safely calculate total entries (handle tuple format)
@@ -1995,38 +1910,14 @@ class DataLoader:
             raise
 
     
-# Lazy dataset loading - only load when actually needed (prevents OOM during startup)
-_datasets_cache = None
-_datasets_loading = False
-
-def get_datasets():
-    """Lazy loader for datasets - only loads on first use to prevent OOM during startup"""
-    global _datasets_cache, _datasets_loading
-    
-    if _datasets_cache is not None:
-        return _datasets_cache
-    
-    if _datasets_loading:
-        # If already loading, wait a bit and return empty list to prevent deadlock
-        import time
-        time.sleep(0.1)
-        return []
-    
-    _datasets_loading = True
-    try:
-        print("📚 Loading datasets on first use (lazy loading to save memory)...")
-        _datasets_cache = DataLoader.load_mental_health_datasets()
-        print("✅ Datasets loaded successfully!")
-        return _datasets_cache
-    except Exception as e:
-        print(f"⚠️ Error loading datasets: {e}")
-        return []
-    finally:
-        _datasets_loading = False
-
-# Load datasets immediately
-datasets = get_datasets()
-print("📚 Datasets loaded successfully!")
+# Load datasets immediately - no lazy loading
+print("📚 Loading top 4 mental health datasets...")
+try:
+    datasets = DataLoader.load_mental_health_datasets()
+    print(f"✅ Successfully loaded {len(datasets)} high-quality mental health datasets!")
+except Exception as e:
+    print(f"❌ Error loading datasets: {e}")
+    datasets = []
 
 import re
 from typing import Dict, List, Set, Tuple, Any
@@ -3675,9 +3566,8 @@ class TherapyBot:
         else:
             print("⚠️ Using pattern-based crisis detection only")
 
-        # Lazy knowledge base initialization - only load when first needed (prevents OOM during startup)
+        # Initialize knowledge base immediately - no lazy loading
         self._knowledge_base_loaded = False
-        self._knowledge_base_loading = False
         
         # Initialize retriever attributes to None (will be set during knowledge base loading)
         self.general_retriever = None
@@ -3686,9 +3576,10 @@ class TherapyBot:
         
         # Initialize knowledge base immediately
         try:
-            success = self._initialize_enhanced_knowledge_base_lazy()
+            success = self._initialize_enhanced_knowledge_base()
             if success:
                 print("📚 Knowledge base loaded successfully!")
+                self._knowledge_base_loaded = True
             else:
                 print("⚠️ Knowledge base loading failed, but continuing with fallback")
                 self._knowledge_base_loaded = True  # Force enable to avoid "not available" messages
@@ -3841,28 +3732,7 @@ Complexity Analysis:"""
             'confidence': confidence
         }
 
-    def _initialize_enhanced_knowledge_base_lazy(self):
-        """Lazy initialization of knowledge base - only loads when first needed"""
-        if self._knowledge_base_loaded or self._knowledge_base_loading:
-            return True
-            
-        print("📚 Lazy loading knowledge base on first therapeutic interaction...")
-        self._knowledge_base_loading = True
-        
-        try:
-            success = self._initialize_enhanced_knowledge_base()
-            if success:
-                self._knowledge_base_loaded = True
-                print("✅ Knowledge base lazy loading completed successfully")
-            else:
-                print("⚠️ Knowledge base lazy loading failed")
-            return success
-        except Exception as e:
-            print(f"❌ Knowledge base lazy loading error: {e}")
-            self._knowledge_base_loading = False
-            return False
-        finally:
-            self._knowledge_base_loading = False
+
     
     def _initialize_enhanced_knowledge_base(self):
         """Initialize enhanced vector store with mental health knowledge"""
@@ -3879,8 +3749,8 @@ Complexity Analysis:"""
 
             print("🔍 Starting dataset preprocessing with quality filtering...")
 
-            # Load datasets lazily if not already loaded
-            datasets_to_process = get_datasets()
+            # Use the already loaded datasets
+            datasets_to_process = datasets
             
             for dataset_idx, dataset_item in enumerate(datasets_to_process):
                 if isinstance(dataset_item, list):
@@ -3913,11 +3783,9 @@ Complexity Analysis:"""
                         quality_filtered += 1
                         continue
                     
-                    # Mental health relevance filtering for general datasets
-                    general_datasets = ['ultrachat', 'squad', 'HelpSteer', 'HuggingFaceH4']
-                    is_general_dataset = any(gen_ds in dataset_name for gen_ds in general_datasets)
-                    
-                    if is_general_dataset:
+                    # Mental health relevance filtering for HelpSteer dataset only
+                    # (Other 3 datasets are already 100% mental health focused)
+                    if 'HelpSteer' in dataset_name or 'nvidia' in dataset_name:
                         if not DataLoader.is_mental_health_relevant(text):
                             filtered_count += 1
                             continue
