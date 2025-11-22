@@ -1379,41 +1379,6 @@ Respond with JSON only:"""
                 'coping_mechanisms': {}
             }
 
-    def get_user_analytics(self, user_login: Optional[str] = None) -> Dict:
-        """Get user analytics and insights"""
-        if not user_login:
-            user_login = self.current_user['login']
-
-        try:
-            if hasattr(self, 'conversations'):
-                # Get analytics from MongoDB
-                pipeline = [
-                    {"$match": {"user_login": user_login}},
-                    {"$group": {
-                        "_id": None,
-                        "total_conversations": {"$sum": 1},
-                        "avg_mood_score": {"$avg": "$mood_score"},
-                        "crisis_events": {"$sum": {"$cond": [{"$ne": ["$crisis_level", "none"]}, 1, 0]}},
-                        "last_conversation": {"$max": "$timestamp"},
-                        "crisis_levels": {"$addToSet": "$crisis_level"}
-                    }}
-                ]
-
-                result = list(self.conversations.aggregate(pipeline))
-                if result:
-                    analytics = result[0]
-                    analytics["user_login"] = user_login
-                    analytics["last_conversation"] = analytics["last_conversation"].isoformat() if analytics.get("last_conversation") else None
-                    return analytics
-
-            return {"user_login": user_login, "total_conversations": 0}
-
-        except Exception as e:
-            print(f"❌ Error getting user analytics: {e}")
-            return {"error": str(e)}
-
-
-
     def close_connection(self):
         """Close MongoDB connection"""
         try:
@@ -5755,40 +5720,6 @@ Personalized Recommendations:"""
             print(f"⚠️ AI recommendation generation error: {e}")
         
         return "• 🤝 Continue our therapeutic conversations\n• 🧠 Practice self-awareness and mindfulness\n• 💪 Build on the strengths you've shown"
-        try:
-            crisis_count = sum(1 for conv in history if conv.get('crisis_level') in ['high', 'critical'])
-            mood_scores = [conv.get('mood_score', 5.0) for conv in history if conv.get('mood_score')]
-            avg_mood = sum(mood_scores) / len(mood_scores) if mood_scores else 5.0
-
-            recommendations = []
-
-            # Crisis-based recommendations
-            if crisis_count > 0:
-                recommendations.append("• 🆘 Consider scheduling an appointment with a mental health professional")
-
-            # Issue-specific recommendations based on memory
-            if memory.primary_issue:
-                if 'work' in memory.primary_issue or 'stress' in memory.primary_issue:
-                    recommendations.append("• 💼 Practice workplace stress management techniques")
-                elif 'anxiety' in memory.primary_issue:
-                    recommendations.append("• 🌬️ Practice breathing exercises daily")
-                elif 'depression' in memory.primary_issue:
-                    recommendations.append("• 🌅 Maintain daily routines and gentle activities")
-
-            # Mood-based recommendations
-            if avg_mood < 4.0:
-                recommendations.append("• 🌱 Focus on daily mood-supporting activities")
-            elif avg_mood < 6.0:
-                recommendations.append("• � Practice regular mindfulness or meditation")
-
-            # General recommendations
-            recommendations.append("• 🔄 Continue building on our therapeutic relationship")
-
-            return "\n".join(recommendations[:4])
-
-        except:
-            return "• 🤝 Continue building on our conversation\n• 🌱 Practice the coping strategies we discussed"
-
     def _get_psychological_insights(self, profile: PsychologicalProfile) -> str:
         """Generate psychological insights from user profile"""
         try:
@@ -5920,67 +5851,14 @@ Personalized Recommendations:"""
                     print(f"🎯 Generated personalized recommendations: {self.therapy_bot._count_words(ai_recommendations)}w")
                     return ai_recommendations.strip()
                 else:
-                    print(f"⚠️ AI personalized recommendation generation failed, using enhanced fallback")
-                    return self._enhanced_fallback_recommendations(history, memory, profile)
+                    print(f"⚠️ AI personalized recommendation generation failed, using fallback")
             else:
                 print(f"⚠️ LLM unavailable for personalized recommendations")
-                return self._enhanced_fallback_recommendations(history, memory, profile)
                 
         except Exception as e:
             print(f"⚠️ Personalized recommendation generation error: {e}")
-            return self._enhanced_fallback_recommendations(history, memory, profile)
-
-    def _enhanced_fallback_recommendations(self, history: List[Dict], memory: SessionMemory, 
-                                         profile: PsychologicalProfile) -> str:
-        """Enhanced fallback recommendations using profile data"""
-        try:
-            recommendations = []
-            
-            # Profile-based recommendations
-            if profile.coping_mechanisms:
-                effective_coping = [name for name, data in profile.coping_mechanisms.items() 
-                                  if isinstance(data, dict) and data.get('confidence', 0) > 0.6]
-                if effective_coping:
-                    recommendations.append(f"• 💪 Continue using your effective coping strategies: {', '.join(effective_coping[:2])}")
-            
-            
-            
-            # Crisis-informed recommendations
-            crisis_count = sum(1 for conv in history if conv.get('crisis_level') in ['high', 'critical'])
-            if crisis_count > 0:
-                recommendations.append("• 🆘 Continue building your crisis management skills with professional support")
-            
-            # Progress-based recommendations
-            if profile.long_term_progress:
-                momentum = profile.long_term_progress.get('therapeutic_momentum', 0)
-                if momentum > 0.6:
-                    recommendations.append("• 📈 Maintain your positive therapeutic momentum")
-                else:
-                    recommendations.append("• 🌱 Focus on small, consistent steps for progress")
-            
-            # Issue-specific recommendations
-            if memory.primary_issue:
-                if 'work' in memory.primary_issue:
-                    recommendations.append("• 💼 Develop workplace-specific stress management techniques")
-                elif 'anxiety' in memory.primary_issue:
-                    recommendations.append("• 🌬️ Practice daily anxiety management techniques")
-                elif 'relationship' in memory.primary_issue:
-                    recommendations.append("• 💕 Focus on communication and boundary-setting skills")
-            
-            # Default recommendations if none generated
-            if not recommendations:
-                recommendations = [
-                    "• 🤝 Continue our therapeutic conversations",
-                    "• 🧠 Practice self-awareness and mindfulness",
-                    "• 💪 Build on the strengths you've shown",
-                    "• 🌱 Take things one step at a time"
-                ]
-            
-            return "\n".join(recommendations[:5])  # Limit to 5 recommendations
-            
-        except Exception as e:
-            print(f"⚠️ Enhanced fallback recommendations error: {e}")
-            return "• 🤝 Continue building on our therapeutic relationship\n• 🌱 Practice the insights we've discovered together"
+        
+        return "• 🤝 Continue our therapeutic conversations\n• 🧠 Practice self-awareness and mindfulness\n• 💪 Build on the strengths you've shown"
 
     def _create_profile_context_summary(self, profile: PsychologicalProfile) -> str:
         """Create a concise summary of psychological profile for context (enhanced version)"""
