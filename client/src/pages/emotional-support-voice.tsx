@@ -562,24 +562,24 @@ const EmotionalSupportVoice = () => {
             </div>
 
             {/* Response Section - Centered Content Area */}
-            <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto min-h-0">
+            <div className="flex-1 flex flex-col items-center justify-center overflow-y-auto min-h-0 px-4 sm:px-0">
               {(response || displayedResponse) ? (
                 <div className="w-full max-w-2xl">
-                  <div className="bg-card/60 backdrop-blur-md border border-border/50 rounded-2xl p-6 shadow-xl">
-                    <div className="flex items-start space-x-4">
+                  <div className="bg-card/60 backdrop-blur-md border border-border/50 rounded-2xl p-4 sm:p-6 shadow-xl">
+                    <div className="flex items-start space-x-3 sm:space-x-4">
                       <div className="flex-shrink-0">
-                        <div className="w-10 h-10 bg-cyan-500/20 rounded-xl flex items-center justify-center">
-                          <Brain className="h-5 w-5 text-cyan-400" />
+                        <div className="w-8 h-8 sm:w-10 sm:h-10 bg-cyan-500/20 rounded-xl flex items-center justify-center">
+                          <Brain className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-400" />
                         </div>
                       </div>
-                      <div className="flex-1 space-y-3">
+                      <div className="flex-1 space-y-2 sm:space-y-3">
                         <div className="flex items-center space-x-2">
-                          <h3 className="text-cyan-600 font-semibold text-sm">AI Therapist</h3>
+                          <h3 className="text-cyan-600 font-semibold text-xs sm:text-sm">AI Therapist</h3>
                           {isTyping && (
-                            <div className="w-1 h-4 bg-cyan-400 animate-pulse rounded-sm"></div>
+                            <div className="w-1 h-3 sm:h-4 bg-cyan-400 animate-pulse rounded-sm"></div>
                           )}
                         </div>
-                        <p className="text-foreground leading-relaxed">
+                        <p className="text-foreground leading-relaxed text-sm sm:text-base">
                           {displayedResponse}
                           {isTyping && <span className="animate-pulse">|</span>}
                         </p>
@@ -664,10 +664,11 @@ const EmotionalSupportVoice = () => {
                 <Button 
                   onClick={startNewSession}
                   variant="outline"
-                  className="px-4 py-2 rounded-xl border-gray-500/30 text-gray-300 hover:bg-gray-700/50 hover:text-white hover:border-gray-400/50 transition-all duration-200"
+                  className="px-3 sm:px-4 py-2 rounded-xl border-gray-500/30 text-gray-300 hover:bg-gray-700/50 hover:text-white hover:border-gray-400/50 transition-all duration-200 text-xs sm:text-sm"
                 >
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Session
+                  <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">New Session</span>
+                  <span className="sm:hidden">New</span>
                 </Button>
               )}
             </div>

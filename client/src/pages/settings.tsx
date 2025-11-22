@@ -359,9 +359,9 @@ export default function Settings() {
           </section>
 
           {/* Security Settings */}
-          <section className="mb-12">
-            <h2 className="text-2xl font-bold mb-1">security</h2>
-            <p className="text-muted-foreground mb-6">
+          <section className="mb-8 lg:mb-12">
+            <h2 className="text-xl sm:text-2xl font-bold mb-1">security</h2>
+            <p className="text-muted-foreground mb-4 sm:mb-6 text-sm sm:text-base">
               manage your account security and authentication
             </p>
 
@@ -387,9 +387,9 @@ export default function Settings() {
 
           {/* Password Settings */}
           {user?.signupMethod === 'email' && (
-            <section className="mb-12">
-              <h2 className="text-2xl font-bold mb-1">password</h2>
-              <p className="text-muted-foreground mb-6">
+            <section className="mb-8 lg:mb-12">
+              <h2 className="text-xl sm:text-2xl font-bold mb-1">password</h2>
+              <p className="text-muted-foreground mb-4 sm:mb-6 text-sm sm:text-base">
                 change your account password
               </p>
 
@@ -708,13 +708,16 @@ export default function Settings() {
             </div>
           </section>
         </div>
+        <div className="h-20 lg:hidden"></div>
       </main>
       {/* Mobile Bottom Navigation */}
-      <MobileBottomNav 
-        onFeedbackOpen={() => setShowFeedback(true)}
-        currentPage="settings"
-        userType="child"
-      />
+      <div className="lg:hidden">
+        <MobileBottomNav 
+          onFeedbackOpen={() => setShowFeedback(true)}
+          currentPage="settings"
+          userType="child"
+        />
+      </div>
 
       {/* Feedback Modal */}
       {showFeedback && (

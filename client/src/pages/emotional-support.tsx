@@ -481,26 +481,28 @@ Your wellbeing is important.`,
       />
 
       {/* Main Content */}
-      <div className="ml-20 flex-1 flex flex-col h-screen overflow-hidden relative">
-        <PageHeader />
+      <div className="lg:ml-20 flex-1 flex flex-col h-screen overflow-hidden relative">
+        <div className="hidden lg:block">
+          <PageHeader />
+        </div>
         
-        <div className="absolute top-20 right-4 z-10 flex items-center space-x-3">
+        <div className="absolute top-4 lg:top-20 right-4 z-10 flex items-center space-x-2 lg:space-x-3">
           {/* New Session Button - only show if there's an active session */}
           {(sessionData.sessionId && messages.length > 0) && (
             <button
               onClick={startNewSession}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-fluenti-primary/20 hover:bg-fluenti-primary/30 border border-fluenti-primary/30 text-fluenti-primary transition-all duration-200"
+              className="flex items-center gap-1 lg:gap-2 px-2 lg:px-3 py-1 lg:py-1.5 rounded-lg text-xs font-medium bg-fluenti-primary/20 hover:bg-fluenti-primary/30 border border-fluenti-primary/30 text-fluenti-primary transition-all duration-200"
               title="Start a new session"
             >
               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              New Session
+              <span className="hidden sm:inline">New Session</span>
             </button>
           )}
           
           {/* Service Status */}
-          <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
+          <div className={`flex items-center gap-1 px-1.5 lg:px-2 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
             serviceStatus === 'healthy' 
               ? 'bg-emerald-500/20 border border-emerald-400/30 text-emerald-600' 
               : serviceStatus === 'unhealthy' 
@@ -512,13 +514,13 @@ Your wellbeing is important.`,
               serviceStatus === 'unhealthy' ? 'bg-red-500' :
               'bg-amber-500 animate-pulse'
             }`}></div>
-            <span>
+            <span className="hidden sm:inline">
               {serviceStatus === 'unknown' ? 'Checking...' : serviceStatus === 'healthy' ? 'online' : 'offline'}
             </span>
           </div>
         </div>
         
-        <div className="flex-1 flex flex-col px-8 py-4 overflow-hidden">
+        <div className="flex-1 flex flex-col px-4 sm:px-6 lg:px-8 py-4 overflow-hidden">
         {/* Authentication Alert */}
         {!isAuthenticated && (
           <div className="mb-4">
@@ -608,10 +610,10 @@ Your wellbeing is important.`,
                         </div>
                         
                         {/* User message content */}
-                        <div className="flex justify-center">
+                        <div className="flex justify-center px-2 sm:px-0">
                           <div className="w-full max-w-3xl flex justify-end">
-                            <div className="max-w-[70%]">
-                              <p className="whitespace-pre-wrap text-large leading-relaxed text-foreground/90">{message.user}</p>
+                            <div className="max-w-[85%] sm:max-w-[70%]">
+                              <p className="whitespace-pre-wrap text-sm sm:text-large leading-relaxed text-foreground/90">{message.user}</p>
                             </div>
                           </div>
                         </div>
@@ -635,9 +637,9 @@ Your wellbeing is important.`,
                         </div>
                         
                         {/* AI message content */}
-                        <div className="flex justify-center">
+                        <div className="flex justify-center px-2 sm:px-0">
                           <div className="w-full max-w-3xl flex justify-start">
-                            <div className="max-w-[70%]">
+                            <div className="max-w-[85%] sm:max-w-[70%]">
                               {/* Crisis alert */}
                               {message.isCrisis && (
                                 <div className="relative mb-3 p-3 bg-red-50/50 border-l-4 border-red-400 rounded-r-lg">
@@ -720,8 +722,8 @@ Your wellbeing is important.`,
         </div>
 
           {/* Input */}
-          <div className="flex-shrink-0 flex justify-center">
-            <div className="flex gap-3 w-full max-w-2xl">
+          <div className="flex-shrink-0 flex justify-center px-4 sm:px-6 lg:px-8">
+            <div className="flex gap-2 sm:gap-3 w-full max-w-2xl">
               <Input 
                 ref={inputRef}
                 value={input} 
@@ -729,12 +731,12 @@ Your wellbeing is important.`,
                 onKeyDown={handleKeyPress} 
                 placeholder={language === 'ur' ? 'اپنا پیغام یہاں لکھیں...' : isAuthenticated ? 'Share what\'s on your mind...' : 'Please log in to chat...'}
                 disabled={isLoading || serviceStatus === 'unhealthy' || !isAuthenticated}
-                className="flex-1 transition-all duration-200 focus:scale-[1.01] focus:shadow-lg rounded-full px-4 py-3"
+                className="flex-1 transition-all duration-200 focus:scale-[1.01] focus:shadow-lg rounded-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base"
               />
               <Button 
                 onClick={handleSend} 
                 disabled={!input.trim() || isLoading || serviceStatus === 'unhealthy' || !isAuthenticated}
-                className="transition-all duration-200 hover:scale-105 active:scale-95 disabled:scale-100 rounded-full px-6"
+                className="transition-all duration-200 hover:scale-105 active:scale-95 disabled:scale-100 rounded-full px-4 sm:px-6 text-sm sm:text-base"
               >
                 {isLoading ? (
                   <div className="flex items-center gap-2">

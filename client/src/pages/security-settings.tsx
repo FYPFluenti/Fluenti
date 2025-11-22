@@ -212,7 +212,7 @@ If you lose access to your authenticator app, you can use these codes to login.
   }
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
+    <div className="min-h-screen bg-background py-4 sm:py-6 lg:py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -223,11 +223,11 @@ If you lose access to your authenticator app, you can use these codes to login.
             <ArrowLeft className="h-4 w-4" />
             Back to Settings
           </button>
-          <h1 className="text-3xl font-bold text-foreground mb-2 flex items-center gap-3">
-            <Shield className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2 flex items-center gap-2 sm:gap-3">
+            <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-blue-600 dark:text-blue-400" />
             Security Settings
           </h1>
-          <p className="text-muted-foreground">Manage your account security and authentication methods</p>
+          <p className="text-muted-foreground text-sm sm:text-base">Manage your account security and authentication methods</p>
         </div>
 
         {/* Global Messages */}

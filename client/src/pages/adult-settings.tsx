@@ -464,12 +464,12 @@ export default function AdultSettings() {
           </section>
 
           {/* Security Settings */}
-          <section className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <Shield className="w-6 h-6 text-[#ff6b1d]" />
-              <h2 className="text-2xl font-bold">Security</h2>
+          <section className="mb-6 lg:mb-8">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-[#ff6b1d]" />
+              <h2 className="text-xl sm:text-2xl font-bold">Security</h2>
             </div>
-            <p className="text-muted-foreground mb-6">
+            <p className="text-muted-foreground mb-4 sm:mb-6 text-sm sm:text-base">
               Manage your account security and authentication
             </p>
 
@@ -494,10 +494,10 @@ export default function AdultSettings() {
           </section>
 
           {/* Advanced Security */}
-          <section className="mb-8">
-            <div className="flex items-center gap-3 mb-4">
-              <Shield className="w-6 h-6 text-[#ff6b1d]" />
-              <h2 className="text-2xl font-bold">Advanced Security</h2>
+          <section className="mb-6 lg:mb-8">
+            <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-[#ff6b1d]" />
+              <h2 className="text-xl sm:text-2xl font-bold">Advanced Security</h2>
             </div>
             <p className="text-muted-foreground mb-6">
               Manage email verification, password settings, and other security options
@@ -804,14 +804,17 @@ export default function AdultSettings() {
             </div>
           </section>
         </div>
+        <div className="h-20 lg:hidden"></div>
       </main>
 
       {/* Mobile Bottom Navigation */}
-      <MobileBottomNav
-        onFeedbackOpen={() => setShowFeedback(true)}
-        currentPage="settings"
-        userType="adult"
-      />
+      <div className="lg:hidden">
+        <MobileBottomNav
+          onFeedbackOpen={() => setShowFeedback(true)}
+          currentPage="settings"
+          userType="adult"
+        />
+      </div>
 
       {/* Feedback Modal */}
       <FeedbackModal

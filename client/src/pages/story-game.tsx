@@ -42,9 +42,11 @@ export default function StoryGamePage() {
         />
       </div>
 
-      {/* Main Content - Full screen for game */}
+      {/* Main Content - Full screen for game with mobile padding */}
       <main className="lg:ml-20 w-full min-h-screen max-w-full overflow-x-hidden">
-        <StoryGameApp />
+        <div className="pb-20 lg:pb-0">
+          <StoryGameApp />
+        </div>
       </main>
 
       {/* Mobile Bottom Navigation */}
