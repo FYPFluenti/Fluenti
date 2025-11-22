@@ -2,21 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
   Brain,
-  TrendingUp,
-  Users,
   Shield,
-  Heart,
   Activity,
   AlertTriangle,
   CheckCircle,
   Clock,
   Lightbulb,
   Target,
-  BarChart3,
-  LineChart,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  TrendingUp
 } from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from 'recharts';
 import SharedSidebarEmotional from '@/components/layout/SharedSidebarEmotional';
 import PageHeader from '@/components/layout/PageHeader';
 import FeedbackModal from '@/components/layout/FeedbackModel';
@@ -79,76 +86,155 @@ const StatCard: React.FC<StatCardProps> = ({
   </motion.div>
 );
 
-interface ProgressChartProps {
+interface MoodTrendChartProps {
   data: LongTermProgress;
 }
 
-const ProgressChart: React.FC<ProgressChartProps> = ({ data }) => {
-  const getScoreColor = (score: number) => {
-    if (score >= 7) return 'bg-green-500';
-    if (score >= 5) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
+const MoodTrendChart: React.FC<MoodTrendChartProps> = ({ data }) => {
+  const chartData = (data?.entries || [])
+    .map(entry => ({
+      date: new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      mood: entry.moodScore || null,
+      fullDate: entry.date
+    }))
+    .filter(item => item.mood !== null)
+    .slice(-30); // Last 30 data points
+
+  if (chartData.length === 0) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-foreground flex items-center">
+            <Activity className="w-5 h-5 mr-2 text-fluenti-primary" />
+            Mood Trend
+          </h3>
+        </div>
+        <div className="text-center py-12 text-muted-foreground">
+          <Activity className="w-8 h-8 mx-auto mb-3 opacity-50" />
+          <p>No mood data available yet</p>
+          <p className="text-sm">Start therapy sessions to track your mood</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-card border border-border rounded-lg p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-semibold text-foreground flex items-center">
-          <LineChart className="w-5 h-5 mr-2 text-fluenti-primary" />
-          Progress Trend
+          <Activity className="w-5 h-5 mr-2 text-fluenti-primary" />
+          Mood Trend Over Time
         </h3>
         <span className="text-sm text-muted-foreground">
-          Last {data?.entries?.length || 0} sessions
+          {chartData.length} data points
         </span>
       </div>
-      
-      <div className="space-y-4">
-        <div className="flex justify-between items-center text-sm text-muted-foreground">
-          <span>Date</span>
-          <span>Mood Score</span>
-          <span>Crisis Level</span>
-          <span>Patterns</span>
+      <div className="w-full overflow-x-auto">
+        <div style={{ minWidth: '800px', height: '300px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <XAxis 
+                dataKey="date" 
+                className="text-xs"
+                angle={-45}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis 
+                domain={[0, 10]}
+                label={{ value: 'Mood Score', angle: -90, position: 'insideLeft' }}
+              />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px'
+                }}
+                formatter={(value: number) => [`${value}/10`, 'Mood Score']}
+              />
+              <Line 
+                type="monotone" 
+                dataKey="mood" 
+                stroke="#f97316" 
+                strokeWidth={2}
+                dot={{ r: 4, fill: '#f97316' }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </div>
-        
-        {(data?.entries || []).length > 0 ? (
-          (data.entries || []).slice(0, 10).map((entry, index) => (
-            <motion.div
-              key={index}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="flex justify-between items-center py-3 px-4 bg-muted/50 rounded-lg"
-            >
-              <span className="text-sm font-medium text-foreground">
-                {new Date(entry.date).toLocaleDateString()}
-              </span>
-              <div className="flex items-center space-x-2">
-                <div className={`w-3 h-3 rounded-full ${
-                  entry.moodScore ? getScoreColor(entry.moodScore) : 'bg-gray-400'
-                }`} />
-                <span className="text-sm text-foreground">
-                  {entry.moodScore || 'N/A'}
-                </span>
-              </div>
-              <span className={`text-sm px-2 py-1 rounded-full ${
-                entry.crisisLevel === 'low' ? 'bg-green-100 text-green-800' :
-                entry.crisisLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-red-100 text-red-800'
-              }`}>
-                {entry.crisisLevel}
-              </span>
-              <span className="text-sm text-foreground font-medium">
-                {entry.patternsIdentified || 0}
-              </span>
-            </motion.div>
-          ))
-        ) : (
-          <div className="text-center py-8 text-muted-foreground">
-            <Activity className="w-8 h-8 mx-auto mb-3 opacity-50" />
-            <p>No progress data available yet</p>
-            <p className="text-sm">Start a therapy session to track your progress</p>
-          </div>
-        )}
+      </div>
+    </div>
+  );
+};
+
+interface CrisisEventsChartProps {
+  data: LongTermProgress;
+}
+
+const CrisisEventsChart: React.FC<CrisisEventsChartProps> = ({ data }) => {
+  const chartData = (data?.entries || [])
+    .map(entry => ({
+      date: new Date(entry.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      events: entry.crisisEvents || 0,
+      fullDate: entry.date
+    }))
+    .slice(-30); // Last 30 data points
+
+  if (chartData.length === 0 || chartData.every(item => item.events === 0)) {
+    return (
+      <div className="bg-card border border-border rounded-lg p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-foreground flex items-center">
+            <AlertTriangle className="w-5 h-5 mr-2 text-fluenti-primary" />
+            Crisis Events
+          </h3>
+        </div>
+        <div className="text-center py-12 text-muted-foreground">
+          <CheckCircle className="w-8 h-8 mx-auto mb-3 text-green-500 opacity-50" />
+          <p>No crisis events recorded</p>
+          <p className="text-sm">Keep up the great work!</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-card border border-border rounded-lg p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-semibold text-foreground flex items-center">
+          <AlertTriangle className="w-5 h-5 mr-2 text-fluenti-primary" />
+          Crisis Events Over Time
+        </h3>
+        <span className="text-sm text-muted-foreground">
+          Total: {chartData.reduce((sum, item) => sum + item.events, 0)} events
+        </span>
+      </div>
+      <div className="w-full overflow-x-auto">
+        <div style={{ minWidth: '800px', height: '300px' }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+              <XAxis 
+                dataKey="date" 
+                className="text-xs"
+                angle={-45}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis label={{ value: 'Events', angle: -90, position: 'insideLeft' }} />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px'
+                }}
+              />
+              <Bar dataKey="events" fill="#ef4444" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );
@@ -158,88 +244,64 @@ interface InsightsSectionProps {
   profile: PsychologicalProfile;
 }
 
-const InsightsSection: React.FC<InsightsSectionProps> = ({ profile }) => (
-  <div className="bg-card border border-border rounded-lg p-6">
-    <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center">
-      <Lightbulb className="w-5 h-5 mr-2 text-fluenti-primary" />
-      Psychological Insights
-    </h3>
-    
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {/* Core Patterns */}
-      <div className="space-y-3">
-        <h4 className="font-medium text-foreground flex items-center">
-          <Target className="w-4 h-4 mr-2 text-fluenti-primary" />
-          Core Patterns ({profile?.insights?.corePatterns?.count || 0})
-        </h4>
-        <div className="space-y-2">
-          {(profile?.insights?.corePatterns?.patterns || []).slice(0, 3).map((pattern, index) => (
-            <div key={index} className="flex items-start space-x-2">
-              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-              <span className="text-sm text-muted-foreground">{pattern}</span>
+const InsightsSection: React.FC<InsightsSectionProps> = ({ profile }) => {
+  const corePatterns = profile?.insights?.corePatterns?.patterns || [];
+  const copingMechanisms = profile?.insights?.copingMechanisms?.effective || [];
+  
+  return (
+    <div className="bg-card border border-border rounded-lg p-6">
+      <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center">
+        <Lightbulb className="w-5 h-5 mr-2 text-fluenti-primary" />
+        Key Insights
+      </h3>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Core Patterns */}
+        {corePatterns.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="font-medium text-foreground flex items-center">
+              <Target className="w-4 h-4 mr-2 text-fluenti-primary" />
+              Behavioral Patterns
+            </h4>
+            <div className="space-y-2">
+              {corePatterns.slice(0, 5).map((pattern, index) => (
+                <div key={index} className="flex items-start space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm text-foreground capitalize">{pattern.replace(/_/g, ' ')}</span>
+                </div>
+              ))}
             </div>
-          ))}
-          {(!profile?.insights?.corePatterns?.patterns || profile.insights.corePatterns.patterns.length === 0) && (
-            <div className="flex items-start space-x-2">
-              <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-              <span className="text-sm text-muted-foreground">No patterns identified yet</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Coping Mechanisms */}
-      <div className="space-y-3">
-        <h4 className="font-medium text-foreground flex items-center">
-          <Shield className="w-4 h-4 mr-2 text-fluenti-primary" />
-          Effective Coping ({profile?.insights?.copingMechanisms?.count || 0})
-        </h4>
-        <div className="space-y-2">
-          {(profile?.insights?.copingMechanisms?.effective || []).slice(0, 3).map((mechanism, index) => (
-            <div key={index} className="flex items-start space-x-2">
-              <Heart className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-              <span className="text-sm text-muted-foreground">{mechanism}</span>
-            </div>
-          ))}
-          {(!profile?.insights?.copingMechanisms?.effective || profile.insights.copingMechanisms.effective.length === 0) && (
-            <div className="flex items-start space-x-2">
-              <AlertTriangle className="w-4 h-4 text-yellow-500 mt-0.5 flex-shrink-0" />
-              <span className="text-sm text-muted-foreground">No effective coping mechanisms identified yet</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Cultural Context section removed as requested */}
-
-      {/* Trauma-Informed Indicators */}
-      <div className="space-y-3">
-        <h4 className="font-medium text-foreground flex items-center">
-          <Shield className="w-4 h-4 mr-2 text-fluenti-primary" />
-          Trauma-Informed Care
-        </h4>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Indicators Found</span>
-            <span className="text-sm font-medium text-foreground">
-              {profile?.insights?.traumaInformed?.indicators || 0}
-            </span>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Approach Needed</span>
-            <span className={`text-sm font-medium ${
-              profile?.insights?.traumaInformed?.approach_needed 
-                ? 'text-orange-500' 
-                : 'text-green-500'
-            }`}>
-              {profile?.insights?.traumaInformed?.approach_needed ? 'Yes' : 'No'}
-            </span>
+        )}
+
+        {/* Coping Mechanisms */}
+        {copingMechanisms.length > 0 && (
+          <div className="space-y-3">
+            <h4 className="font-medium text-foreground flex items-center">
+              <Shield className="w-4 h-4 mr-2 text-fluenti-primary" />
+              Effective Coping Strategies
+            </h4>
+            <div className="space-y-2">
+              {copingMechanisms.slice(0, 5).map((mechanism, index) => (
+                <div key={index} className="flex items-start space-x-2">
+                  <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                  <span className="text-sm text-foreground capitalize">{mechanism.replace(/_/g, ' ')}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
+      
+      {corePatterns.length === 0 && copingMechanisms.length === 0 && (
+        <div className="text-center py-8 text-muted-foreground">
+          <Lightbulb className="w-8 h-8 mx-auto mb-3 opacity-50" />
+          <p>Continue your therapy sessions to generate insights</p>
+        </div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 export default function PsychologicalInsights() {
   const { user, isAuthenticated } = useAuth() as {
@@ -386,48 +448,18 @@ export default function PsychologicalInsights() {
             </button>
           </div>
 
-          {/* Overview Stats */}
+          {/* Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard
-              title="Core Patterns"
-              value={profile?.insights?.corePatterns?.count || 0}
-              icon={Target}
-              description="Identified behavioral patterns"
-              colorClass="text-blue-500"
-            />
-            <StatCard
-              title="Progress Trend"
-              value={profile?.insights?.progressTracking?.trend || 'Unknown'}
-              icon={TrendingUp}
-              description={`Momentum: ${profile?.insights?.progressTracking?.momentum || 0}%`}
-              trend={
-                profile?.insights?.progressTracking?.trend === 'improving' ? 'up' :
-                profile?.insights?.progressTracking?.trend === 'declining' ? 'down' : 'stable'
-              }
-              colorClass="text-green-500"
-            />
-            {/* Cultural Context StatCard removed as requested */}
-            <StatCard
-              title="Resilience Factors"
-              value={profile?.insights?.progressTracking?.resilience_factors || 0}
-              icon={Shield}
-              description="Protective elements"
-              colorClass="text-teal-500"
-            />
-          </div>
-
-          {/* Progress Overview */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <StatCard
               title="Total Sessions"
               value={progress?.summary?.totalSessions || 0}
               icon={Calendar}
-              description="Therapy sessions completed"
+              description="All conversations tracked"
               colorClass="text-fluenti-primary"
             />
             <StatCard
               title="Average Mood"
-              value={`${progress?.summary?.averageMood || 'N/A'}/10`}
+              value={`${progress?.summary?.averageMood?.toFixed(1) || 'N/A'}/10`}
               icon={Activity}
               description="Overall emotional state"
               trend={progress?.insights?.improvement ? 'up' : progress?.insights?.stable ? 'stable' : 'down'}
@@ -437,47 +469,30 @@ export default function PsychologicalInsights() {
               title="Crisis Events"
               value={progress?.summary?.crisisEvents || 0}
               icon={AlertTriangle}
-              description={progress?.summary?.timespan || 'No data'}
+              description={`Last ${progress?.summary?.timespan || '30 days'}`}
               colorClass="text-red-500"
+            />
+            <StatCard
+              title="Core Patterns"
+              value={profile?.insights?.corePatterns?.count || 0}
+              icon={Target}
+              description="Behavioral patterns identified"
+              colorClass="text-blue-500"
             />
           </div>
 
-          {/* Main Content Grid */}
+          {/* Charts Section */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Progress Chart */}
-            {progress && <ProgressChart data={progress} />}
+            {/* Mood Trend Chart */}
+            {progress && <MoodTrendChart data={progress} />}
             
-            {/* Insights Section */}
-            {profile && <InsightsSection profile={profile} />}
+            {/* Crisis Events Chart */}
+            {progress && <CrisisEventsChart data={progress} />}
           </div>
+          
+          {/* Insights Section */}
+          {profile && <InsightsSection profile={profile} />}
 
-          {/* Recommendations */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-card border border-border rounded-lg p-6"
-          >
-            <h3 className="text-lg font-semibold text-foreground mb-6 flex items-center">
-              <Lightbulb className="w-5 h-5 mr-2 text-fluenti-primary" />
-              Care Recommendations
-            </h3>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Culturally Informed Care indicator removed as requested */}
-              <div className="flex items-center space-x-3">
-                <div className={`w-3 h-3 rounded-full ${
-                  profile?.recommendations?.trauma_informed ? 'bg-green-500' : 'bg-gray-400'
-                }`} />
-                <span className="text-sm text-foreground">Trauma-Informed Approach</span>
-              </div>
-              <div className="flex items-center space-x-3">
-                <div className={`w-3 h-3 rounded-full ${
-                  profile?.recommendations?.strengths_based ? 'bg-green-500' : 'bg-gray-400'
-                }`} />
-                <span className="text-sm text-foreground">Strengths-Based Therapy</span>
-              </div>
-            </div>
-          </motion.div>
 
           {/* Last Updated */}
           {profile?.lastUpdated && (

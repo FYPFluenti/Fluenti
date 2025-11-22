@@ -663,7 +663,7 @@ def get_psychological_profile():
         
         latest_progress = recent_progress[0] if recent_progress else {}
         
-        # Format profile data for API response with actual data
+        # Format profile data for API response - simplified to only essential insights
         profile_data = {
             'userId': user_id,
             'profileExists': bool(profile.core_patterns or total_sessions > 0),
@@ -671,45 +671,19 @@ def get_psychological_profile():
             'insights': {
                 'corePatterns': {
                     'count': len(profile.core_patterns),
-                    'patterns': list(profile.core_patterns.keys())[:5] if profile.core_patterns else []
-                },
-                'cognitivePatterns': {
-                    'count': len(profile.cognitive_patterns),
-                    'patterns': list(profile.cognitive_patterns.keys())[:3] if profile.cognitive_patterns else []
+                    'patterns': list(profile.core_patterns.keys())[:10] if profile.core_patterns else []
                 },
                 'copingMechanisms': {
                     'count': len(profile.coping_mechanisms),
                     'effective': [name for name, data in profile.coping_mechanisms.items() 
-                                if isinstance(data, dict) and data.get('confidence', 0) > 0.6][:3] if profile.coping_mechanisms else []
-                },
-                'traumaInformed': {
-                    'indicators': len([t for t in profile.trauma_indicators.values() 
-                                     if isinstance(t, dict) and t.get('present')]) if profile.trauma_indicators else 0,
-                    'approach_needed': bool(profile.trauma_indicators)
-                },
-                'progressTracking': {
-                    'trend': latest_progress.get('risk_level_trend', profile.long_term_progress.get('current_risk_trend', 'unknown')),
-                    'momentum': latest_progress.get('session_quality_indicators', {}).get('progress_momentum', 
-                                profile.long_term_progress.get('therapeutic_momentum', 0)),
-                    'resilience_factors': len(latest_progress.get('resilience_indicators', profile.resilience_factors or []))
+                                if isinstance(data, dict) and data.get('confidence', 0) > 0.6][:10] if profile.coping_mechanisms else []
                 }
-            },
-            'recommendations': {
-                'trauma_informed': bool(profile.trauma_indicators),
-                'strengths_based': bool(profile.resilience_factors or latest_progress.get('resilience_indicators'))
-            },
-            'sessionCount': total_sessions  # Add actual session count
+            }
         }
         
         return jsonify({
             'success': True,
-            'profile': profile_data,
-            'capabilities': {
-                'deep_understanding': True,
-                'trauma_informed': True,
-                'progress_tracking': True,
-                'personalized_recommendations': True
-            }
+            'profile': profile_data
         })
         
     except Exception as e:
@@ -752,127 +726,150 @@ def get_long_term_progress():
         cutoff_date = datetime.now() - timedelta(days=days)
         user_hash = therapy_bot.storage.security_manager.hash_pii(user_id)
         
-        # Get actual session count from conversations - try multiple formats
-        print(f"🔍 Looking for sessions with user_id: {user_id}")
+        # Get ALL conversations for user (both chat and voice) and aggregate by session
+        print(f"🔍 Aggregating all sessions for user_id: {user_id}")
         print(f"🔍 Hashed user_id: {user_hash}")
         
-        # Try different user ID formats
-        session_queries = [
+        # Try different user ID formats to find all conversations
+        conversation_queries = [
             {"user_id": user_hash},
             {"user_id": user_id}, 
             {"user_context.login": user_id},
             {"userId": user_id}
         ]
         
-        total_sessions = 0
-        session_query_used = None
-        for query in session_queries:
-            count = therapy_bot.storage.conversations.count_documents(query)
-            print(f"🔍 Query {query} found {count} sessions")
-            if count > 0:
-                total_sessions = count
-                session_query_used = query
+        all_conversations = []
+        query_used = None
+        for query in conversation_queries:
+            conversations = list(therapy_bot.storage.conversations.find({
+                **query,
+                'timestamp': {'$gte': cutoff_date}
+            }).sort('timestamp', 1))
+            if conversations:
+                all_conversations = conversations
+                query_used = query
+                print(f"🔍 Found {len(conversations)} conversations with query {query}")
                 break
         
-        # Get progress entries using the same query format that worked for sessions
-        if session_query_used:
-            progress_entries = list(therapy_bot.storage.long_term_progress.find({
-                'user_id': user_hash,
-                'timestamp': {'$gte': cutoff_date}
-            }).sort('timestamp', 1))
-        else:
-            progress_entries = []
+        # Also check EmotionalSession collection for chat sessions
+        emotional_sessions = []
+        if hasattr(therapy_bot.storage, 'emotional_sessions'):
+            emotional_sessions = list(therapy_bot.storage.emotional_sessions.find({
+                "userId": user_hash,
+                "createdAt": {'$gte': cutoff_date}
+            }).sort("createdAt", 1))
+            print(f"🔍 Found {len(emotional_sessions)} emotional sessions")
         
-        # If no progress entries but we have sessions, create summary from sessions
-        if not progress_entries and total_sessions > 0:
-            # Get recent conversations to create progress data
-            recent_conversations = list(therapy_bot.storage.conversations.find({
-                'user_id': user_hash,
-                'timestamp': {'$gte': cutoff_date}
-            }).sort('timestamp', 1))
-            
-            # Calculate basic stats from conversations
-            crisis_events = sum(1 for conv in recent_conversations 
-                              if conv.get('crisis_level') not in ['none', None, 'stable'])
-            avg_mood = 5.0  # Default neutral mood if no specific data
-            
-            return jsonify({
-                'success': True,
-                'progress': {
-                    'entries': [],
-                    'summary': {
-                        'totalSessions': total_sessions,
-                        'averageMood': avg_mood,
-                        'crisisEvents': crisis_events,
-                        'currentTrend': 'stable',
-                        'timespan': f'{days} days'
-                    },
-                    'insights': {
-                        'improvement': False,
-                        'stable': True,
-                        'needsAttention': crisis_events > 0
+        # Get distinct session IDs from conversations
+        distinct_sessions = {}
+        for conv in all_conversations:
+            session_id = conv.get('session_id')
+            if session_id:
+                if session_id not in distinct_sessions:
+                    distinct_sessions[session_id] = {
+                        'date': conv.get('timestamp', datetime.now()),
+                        'crisis_level': conv.get('crisis_level', 'none'),
+                        'mood_scores': [],
+                        'patterns_identified': 0,
+                        'crisis_events': 0
                     }
-                }
-            })
+                # Aggregate data per session
+                if conv.get('mood_score'):
+                    distinct_sessions[session_id]['mood_scores'].append(conv.get('mood_score'))
+                if conv.get('crisis_level') not in ['none', None, 'stable']:
+                    distinct_sessions[session_id]['crisis_events'] += 1
+                distinct_sessions[session_id]['patterns_identified'] = max(
+                    distinct_sessions[session_id]['patterns_identified'],
+                    conv.get('patterns_identified', 0)
+                )
         
-        # If no progress entries and no sessions
-        if not progress_entries and total_sessions == 0:
-            return jsonify({
-                'success': True,
-                'progress': {
-                    'entries': [],
-                    'summary': {
-                        'totalSessions': 0,
-                        'averageMood': 0,
-                        'crisisEvents': 0,
-                        'currentTrend': 'unknown',
-                        'timespan': f'{days} days'
-                    },
-                    'insights': {
-                        'improvement': False,
-                        'stable': False,
-                        'needsAttention': False
-                    }
-                }
-            })
+        # Get progress entries from long_term_progress collection
+        progress_entries = list(therapy_bot.storage.long_term_progress.find({
+            'user_id': user_hash,
+            'timestamp': {'$gte': cutoff_date}
+        }).sort('timestamp', 1))
         
-        # Process progress data
-        progress_data = []
+        # Combine progress entries with session data
+        session_progress_map = {}
         for entry in progress_entries:
-            progress_data.append({
-                'date': entry['timestamp'].strftime('%Y-%m-%d'),
-                'crisisLevel': entry.get('crisis_level', 'none'),
-                'moodScore': entry.get('mood_score'),
-                'patternsIdentified': entry.get('patterns_identified', 0),
-                'qualityIndicators': entry.get('session_quality_indicators', {}),
-                'riskTrend': entry.get('risk_level_trend', 'unknown'),
-                'resilienceIndicators': entry.get('resilience_indicators', [])
-            })
+            date_str = entry['timestamp'].strftime('%Y-%m-%d')
+            if date_str not in session_progress_map:
+                session_progress_map[date_str] = {
+                    'date': date_str,
+                    'crisisLevel': entry.get('crisis_level', 'none'),
+                    'moodScore': entry.get('mood_score'),
+                    'patternsIdentified': entry.get('patterns_identified', 0),
+                    'crisisEvents': 0
+                }
+            if entry.get('crisis_level') not in ['none', None]:
+                session_progress_map[date_str]['crisisEvents'] += 1
         
-        # Generate summary insights with actual session count
-        mood_scores = [entry.get('mood_score') for entry in progress_entries if entry.get('mood_score')]
+        # Add sessions from conversations to progress map
+        for session_id, session_data in distinct_sessions.items():
+            date_str = session_data['date'].strftime('%Y-%m-%d') if hasattr(session_data['date'], 'strftime') else datetime.now().strftime('%Y-%m-%d')
+            if date_str not in session_progress_map:
+                avg_mood = sum(session_data['mood_scores']) / len(session_data['mood_scores']) if session_data['mood_scores'] else None
+                session_progress_map[date_str] = {
+                    'date': date_str,
+                    'crisisLevel': session_data['crisis_level'],
+                    'moodScore': avg_mood,
+                    'patternsIdentified': session_data['patterns_identified'],
+                    'crisisEvents': session_data['crisis_events']
+                }
+            else:
+                # Merge data
+                if session_data['mood_scores']:
+                    existing_mood = session_progress_map[date_str]['moodScore']
+                    new_avg = sum(session_data['mood_scores']) / len(session_data['mood_scores'])
+                    session_progress_map[date_str]['moodScore'] = (existing_mood + new_avg) / 2 if existing_mood else new_avg
+                session_progress_map[date_str]['crisisEvents'] += session_data['crisis_events']
+                session_progress_map[date_str]['patternsIdentified'] = max(
+                    session_progress_map[date_str]['patternsIdentified'],
+                    session_data['patterns_identified']
+                )
+        
+        # Convert to list and sort by date
+        progress_data = sorted(session_progress_map.values(), key=lambda x: x['date'])
+        
+        # Calculate total distinct sessions (including emotional sessions)
+        total_sessions = len(distinct_sessions)
+        if hasattr(therapy_bot.storage, 'emotional_sessions') and emotional_sessions:
+            total_sessions += len(emotional_sessions)
+        
+        # Calculate summary statistics
+        mood_scores = [p['moodScore'] for p in progress_data if p.get('moodScore') is not None]
         avg_mood = sum(mood_scores) / len(mood_scores) if mood_scores else 5.0
         
-        crisis_events = sum(1 for entry in progress_entries 
-                           if entry.get('crisis_level') not in ['none', None])
+        crisis_events = sum(p.get('crisisEvents', 0) for p in progress_data)
         
-        latest_trend = progress_entries[-1].get('risk_level_trend', 'unknown') if progress_entries else 'unknown'
+        # Determine trend from mood scores
+        if len(mood_scores) >= 2:
+            recent_avg = sum(mood_scores[-7:]) / len(mood_scores[-7:]) if len(mood_scores) >= 7 else mood_scores[-1]
+            earlier_avg = sum(mood_scores[:7]) / len(mood_scores[:7]) if len(mood_scores) >= 7 else mood_scores[0]
+            if recent_avg > earlier_avg + 0.5:
+                latest_trend = 'improving'
+            elif recent_avg < earlier_avg - 0.5:
+                latest_trend = 'declining'
+            else:
+                latest_trend = 'stable'
+        else:
+            latest_trend = 'stable'
         
         return jsonify({
             'success': True,
             'progress': {
                 'entries': progress_data,
                 'summary': {
-                    'totalSessions': total_sessions,  # Use actual session count from conversations
+                    'totalSessions': max(total_sessions, len(progress_data)),  # Total distinct sessions
                     'averageMood': round(avg_mood, 1),
                     'crisisEvents': crisis_events,
                     'currentTrend': latest_trend,
                     'timespan': f'{days} days'
                 },
                 'insights': {
-                    'improvement': latest_trend == 'decreasing',
+                    'improvement': latest_trend == 'improving',
                     'stable': latest_trend == 'stable',
-                    'needsAttention': latest_trend == 'increasing'
+                    'needsAttention': latest_trend == 'declining' or crisis_events > 0
                 }
             }
         })

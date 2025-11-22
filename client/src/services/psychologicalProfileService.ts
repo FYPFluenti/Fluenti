@@ -9,29 +9,10 @@ export interface PsychologicalProfile {
       count: number;
       patterns: string[];
     };
-    cognitivePatterns: {
-      count: number;
-      patterns: string[];
-    };
     copingMechanisms: {
       count: number;
       effective: string[];
     };
-    // culturalContext removed as requested
-    traumaInformed: {
-      indicators: number;
-      approach_needed: boolean;
-    };
-    progressTracking: {
-      trend: string;
-      momentum: number;
-      resilience_factors: number;
-    };
-  };
-  recommendations: {
-    // culturally_informed removed as requested
-    trauma_informed: boolean;
-    strengths_based: boolean;
   };
 }
 
@@ -55,10 +36,8 @@ export interface ProgressEntry {
   date: string;
   crisisLevel: string;
   moodScore?: number;
-  patternsIdentified: number;
-  qualityIndicators: Record<string, any>;
-  riskTrend: string;
-  resilienceIndicators: string[];
+  patternsIdentified?: number;
+  crisisEvents?: number;
 }
 
 export class PsychologicalProfileService {
@@ -98,29 +77,10 @@ export class PsychologicalProfileService {
             count: data.profile?.insights?.corePatterns?.count || 0,
             patterns: data.profile?.insights?.corePatterns?.patterns || []
           },
-          cognitivePatterns: {
-            count: data.profile?.insights?.cognitivePatterns?.count || 0,
-            patterns: data.profile?.insights?.cognitivePatterns?.patterns || []
-          },
           copingMechanisms: {
             count: data.profile?.insights?.copingMechanisms?.count || 0,
             effective: data.profile?.insights?.copingMechanisms?.effective || []
-          },
-          // culturalContext removed as requested
-          traumaInformed: {
-            indicators: data.profile?.insights?.traumaInformed?.indicators || 0,
-            approach_needed: data.profile?.insights?.traumaInformed?.approach_needed || false
-          },
-          progressTracking: {
-            trend: data.profile?.insights?.progressTracking?.trend || 'unknown',
-            momentum: data.profile?.insights?.progressTracking?.momentum || 0,
-            resilience_factors: data.profile?.insights?.progressTracking?.resilience_factors || 0
           }
-        },
-        recommendations: {
-          // culturally_informed removed as requested
-          trauma_informed: data.profile?.recommendations?.trauma_informed || false,
-          strengths_based: data.profile?.recommendations?.strengths_based || false
         }
       };
     } catch (error) {
