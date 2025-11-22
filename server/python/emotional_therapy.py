@@ -94,13 +94,9 @@ class PsychologicalProfile:
     trauma_indicators: Dict[str, Any] = field(default_factory=dict)
     long_term_progress: Dict[str, Any] = field(default_factory=dict)
     therapeutic_preferences: Dict[str, Any] = field(default_factory=dict)
-    risk_factors: Dict[str, Any] = field(default_factory=dict)
-    resilience_factors: Dict[str, Any] = field(default_factory=dict)
     cognitive_patterns: Dict[str, Any] = field(default_factory=dict)
     emotional_regulation_patterns: Dict[str, Any] = field(default_factory=dict)
-    relationship_patterns: Dict[str, Any] = field(default_factory=dict)
     coping_mechanisms: Dict[str, Any] = field(default_factory=dict)
-    trigger_patterns: Dict[str, Any] = field(default_factory=dict)
     created_at: str = ""
     last_updated: str = ""
 
@@ -975,13 +971,9 @@ class MongoDBStorage:
                     trauma_indicators=existing_profile.get('trauma_indicators', {}),
                     long_term_progress=existing_profile.get('long_term_progress', {}),
                     therapeutic_preferences=existing_profile.get('therapeutic_preferences', {}),
-                    risk_factors=existing_profile.get('risk_factors', {}),
-                    resilience_factors=existing_profile.get('resilience_factors', {}),
                     cognitive_patterns=existing_profile.get('cognitive_patterns', {}),
                     emotional_regulation_patterns=existing_profile.get('emotional_regulation_patterns', {}),
-                    relationship_patterns=existing_profile.get('relationship_patterns', {}),
                     coping_mechanisms=existing_profile.get('coping_mechanisms', {}),
-                    trigger_patterns=existing_profile.get('trigger_patterns', {}),
                     created_at=existing_profile.get('created_at', ''),
                     last_updated=existing_profile.get('last_updated', '')
                 )
@@ -999,13 +991,9 @@ class MongoDBStorage:
 
                     "long_term_progress": profile.long_term_progress,
                     "therapeutic_preferences": profile.therapeutic_preferences,
-                    "risk_factors": profile.risk_factors,
-                    "resilience_factors": profile.resilience_factors,
                     "cognitive_patterns": profile.cognitive_patterns,
                     "emotional_regulation_patterns": profile.emotional_regulation_patterns,
-                    "relationship_patterns": profile.relationship_patterns,
                     "coping_mechanisms": profile.coping_mechanisms,
-                    "trigger_patterns": profile.trigger_patterns,
                     "created_at": profile.created_at,
                     "last_updated": profile.last_updated
                 }
@@ -1034,7 +1022,6 @@ class MongoDBStorage:
                 profile.cognitive_patterns.update(pattern_analysis.get('cognitive_patterns', {}))
                 profile.emotional_regulation_patterns.update(pattern_analysis.get('emotional_patterns', {}))
                 profile.coping_mechanisms.update(pattern_analysis.get('coping_mechanisms', {}))
-                profile.trigger_patterns.update(pattern_analysis.get('trigger_patterns', {}))
                 
                 # Detect potential trauma indicators
                 trauma_indicators = self._detect_trauma_indicators(conversation_text, profile, llm)
@@ -1101,8 +1088,7 @@ JSON format required:
   "core_patterns": {{"pattern_name": {{"evidence": "text_evidence", "confidence": 0.8, "implications": "therapeutic_notes"}}}},
   "cognitive_patterns": {{}},
   "emotional_patterns": {{}},
-  "coping_mechanisms": {{}},
-  "trigger_patterns": {{}}
+  "coping_mechanisms": {{}}
 }}
 
 Respond with JSON only:"""
@@ -1227,16 +1213,10 @@ Respond with JSON only:"""
                 "crisis_level": crisis_level,
                 "mood_score": mood_score,
                 "patterns_identified": len([p for patterns in pattern_analysis.values() for p in patterns]),
-                "pattern_categories": list(pattern_analysis.keys()),
                 "session_quality_indicators": {
-                    "emotional_awareness": self._assess_emotional_awareness(pattern_analysis),
-                    "coping_effectiveness": self._assess_coping_effectiveness(pattern_analysis),
-                    "insight_development": self._assess_insight_development(pattern_analysis),
                     "progress_momentum": self._assess_progress_momentum(crisis_level, mood_score)
                 },
-                "therapeutic_goals_progress": self._assess_therapeutic_goals(pattern_analysis),
-                "risk_level_trend": self._assess_risk_trend(crisis_level, user_hash),
-                "resilience_indicators": self._identify_resilience_indicators(pattern_analysis)
+                "risk_level_trend": self._assess_risk_trend(crisis_level, user_hash)
             }
             
             # Save progress entry
@@ -1259,13 +1239,9 @@ Respond with JSON only:"""
                 "trauma_indicators": profile.trauma_indicators,
                 "long_term_progress": profile.long_term_progress,
                 "therapeutic_preferences": profile.therapeutic_preferences,
-                "risk_factors": profile.risk_factors,
-                "resilience_factors": profile.resilience_factors,
                 "cognitive_patterns": profile.cognitive_patterns,
                 "emotional_regulation_patterns": profile.emotional_regulation_patterns,
-                "relationship_patterns": profile.relationship_patterns,
                 "coping_mechanisms": profile.coping_mechanisms,
-                "trigger_patterns": profile.trigger_patterns,
                 "last_updated": profile.last_updated
             }
             
@@ -1295,66 +1271,6 @@ Respond with JSON only:"""
             print(f"⚠️ Error extracting content from LLM response: {e}")
             return str(response).strip() if response else ""
 
-    def _assess_emotional_awareness(self, pattern_analysis: Dict[str, Any]) -> float:
-        """Assess level of emotional awareness from pattern analysis"""
-        try:
-            awareness_score = 0.0
-            
-            # Check emotional patterns
-            emotional_patterns = pattern_analysis.get('emotional_patterns', {})
-            if emotional_patterns:
-                awareness_score += 0.3
-                
-            # Check for emotional vocabulary and insight
-            core_patterns = pattern_analysis.get('core_patterns', {})
-            for pattern_name, data in core_patterns.items():
-                if isinstance(data, dict) and 'emotion' in pattern_name.lower():
-                    confidence = data.get('confidence', 0)
-                    awareness_score += confidence * 0.2
-                    
-            return min(awareness_score, 1.0)
-        except:
-            return 0.5  # Default neutral score
-
-    def _assess_coping_effectiveness(self, pattern_analysis: Dict[str, Any]) -> float:
-        """Assess effectiveness of coping mechanisms"""
-        try:
-            coping_score = 0.0
-            coping_mechanisms = pattern_analysis.get('coping_mechanisms', {})
-            
-            for mechanism, data in coping_mechanisms.items():
-                if isinstance(data, dict):
-                    confidence = data.get('confidence', 0)
-                    # Positive coping mechanisms get higher scores
-                    if any(positive in mechanism.lower() for positive in 
-                          ['support', 'exercise', 'mindfulness', 'problem-solving', 'communication']):
-                        coping_score += confidence * 0.4
-                    else:
-                        coping_score += confidence * 0.2
-                        
-            return min(coping_score, 1.0)
-        except:
-            return 0.5
-
-    def _assess_insight_development(self, pattern_analysis: Dict[str, Any]) -> float:
-        """Assess level of psychological insight development"""
-        try:
-            insight_score = 0.0
-            
-            # Check cognitive patterns for insight indicators
-            cognitive_patterns = pattern_analysis.get('cognitive_patterns', {})
-            for pattern_name, data in cognitive_patterns.items():
-                if isinstance(data, dict):
-                    confidence = data.get('confidence', 0)
-                    # Self-awareness and reflection patterns indicate insight
-                    if any(insight_word in pattern_name.lower() for insight_word in 
-                          ['awareness', 'reflection', 'understanding', 'realize', 'recognize']):
-                        insight_score += confidence * 0.3
-                        
-            return min(insight_score, 1.0)
-        except:
-            return 0.5
-
     def _assess_progress_momentum(self, crisis_level: str, mood_score: Optional[float]) -> float:
         """Assess overall progress momentum"""
         try:
@@ -1378,44 +1294,6 @@ Respond with JSON only:"""
             return min(momentum_score, 1.0)
         except:
             return 0.5
-
-    def _assess_therapeutic_goals(self, pattern_analysis: Dict[str, Any]) -> Dict[str, float]:
-        """Assess progress toward common therapeutic goals"""
-        try:
-            goals_progress = {
-                'emotional_regulation': 0.0,
-                'stress_management': 0.0,
-                'relationship_skills': 0.0,
-                'self_awareness': 0.0,
-                'coping_skills': 0.0
-            }
-            
-            # Emotional regulation
-            emotional_patterns = pattern_analysis.get('emotional_patterns', {})
-            if emotional_patterns:
-                avg_confidence = sum(data.get('confidence', 0) for data in emotional_patterns.values() 
-                                   if isinstance(data, dict)) / len(emotional_patterns)
-                goals_progress['emotional_regulation'] = avg_confidence
-            
-            # Coping skills
-            coping_mechanisms = pattern_analysis.get('coping_mechanisms', {})
-            if coping_mechanisms:
-                avg_confidence = sum(data.get('confidence', 0) for data in coping_mechanisms.values() 
-                                   if isinstance(data, dict)) / len(coping_mechanisms)
-                goals_progress['coping_skills'] = avg_confidence
-            
-            # Self-awareness
-            core_patterns = pattern_analysis.get('core_patterns', {})
-            awareness_patterns = [data for name, data in core_patterns.items() 
-                                if isinstance(data, dict) and 'aware' in name.lower()]
-            if awareness_patterns:
-                avg_confidence = sum(data.get('confidence', 0) for data in awareness_patterns) / len(awareness_patterns)
-                goals_progress['self_awareness'] = avg_confidence
-                
-            return goals_progress
-        except:
-            return {goal: 0.5 for goal in ['emotional_regulation', 'stress_management', 
-                                         'relationship_skills', 'self_awareness', 'coping_skills']}
 
     def _assess_risk_trend(self, current_crisis_level: str, user_hash: str) -> str:
         """Assess risk level trend over time"""
@@ -1444,30 +1322,6 @@ Respond with JSON only:"""
         except:
             return "unknown"
 
-    def _identify_resilience_indicators(self, pattern_analysis: Dict[str, Any]) -> List[str]:
-        """Identify resilience indicators from pattern analysis"""
-        try:
-            resilience_indicators = []
-            
-            # Check coping mechanisms for positive indicators
-            coping_mechanisms = pattern_analysis.get('coping_mechanisms', {})
-            for mechanism, data in coping_mechanisms.items():
-                if isinstance(data, dict) and data.get('confidence', 0) > 0.6:
-                    if any(resilient in mechanism.lower() for resilient in 
-                          ['support', 'exercise', 'mindfulness', 'problem-solving', 'help-seeking']):
-                        resilience_indicators.append(mechanism)
-            
-            # Check core patterns for resilience
-            core_patterns = pattern_analysis.get('core_patterns', {})
-            for pattern, data in core_patterns.items():
-                if isinstance(data, dict) and data.get('confidence', 0) > 0.6:
-                    if any(resilient in pattern.lower() for resilient in 
-                          ['optimism', 'hope', 'strength', 'perseverance', 'adaptability']):
-                        resilience_indicators.append(pattern)
-                        
-            return resilience_indicators[:5]  # Limit to top 5
-        except:
-            return []
 
     def _update_profile_progress_summary(self, user_hash: str, progress_entry: Dict[str, Any]):
         """Update psychological profile with progress summary"""
@@ -1475,8 +1329,7 @@ Respond with JSON only:"""
             progress_summary = {
                 'last_assessment': progress_entry['timestamp'].isoformat(),
                 'current_risk_trend': progress_entry.get('risk_level_trend', 'unknown'),
-                'therapeutic_momentum': progress_entry.get('session_quality_indicators', {}).get('progress_momentum', 0.5),
-                'resilience_indicators': progress_entry.get('resilience_indicators', [])
+                'therapeutic_momentum': progress_entry.get('session_quality_indicators', {}).get('progress_momentum', 0.5)
             }
             
             self.psychological_profiles.update_one(
@@ -1495,8 +1348,7 @@ Respond with JSON only:"""
                 'core_patterns': {},
                 'cognitive_patterns': {},
                 'emotional_patterns': {},
-                'coping_mechanisms': {},
-                'trigger_patterns': {}
+                'coping_mechanisms': {}
             }
             
             lines = ai_text.split('\n')
@@ -1524,8 +1376,7 @@ Respond with JSON only:"""
                 'core_patterns': {},
                 'cognitive_patterns': {},
                 'emotional_patterns': {},
-                'coping_mechanisms': {},
-                'trigger_patterns': {}
+                'coping_mechanisms': {}
             }
 
     def get_user_analytics(self, user_login: Optional[str] = None) -> Dict:
@@ -6155,11 +6006,6 @@ Personalized Recommendations:"""
                 indicators.append("• ✅ No crisis events in this session")
             else:
                 indicators.append(f"• ⚠️ {crisis_events} crisis event(s) addressed")
-            
-            # Resilience indicators
-            if profile.resilience_factors:
-                resilience_count = len(profile.resilience_factors)
-                indicators.append(f"• 💎 {resilience_count} resilience factors identified")
             
             return "\n".join(indicators) if indicators else "• 📊 Progress tracking initialized"
             
