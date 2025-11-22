@@ -23,54 +23,15 @@ Fernet = None
 PBKDF2HMAC = None
 hashes = None
 
-# First check if cryptography module exists at all
 try:
-    import cryptography  # type: ignore
-    _crypto_available = True
-except ImportError:
-    _crypto_available = False
-
-if _crypto_available:
-    try:
-        from cryptography.fernet import Fernet  # type: ignore
-        from cryptography.hazmat.primitives import hashes  # type: ignore
-        from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC  # type: ignore
-        import base64
-        # Verify the imports actually work
-        _ = Fernet
-        _ = hashes
-        _ = PBKDF2HMAC
-        CRYPTO_AVAILABLE = True
-    except ImportError as e:
-        # Specific import error (e.g., missing submodule)
-        error_msg = str(e)
-        if "No module named" in error_msg and "cryptography" in error_msg:
-            # Only warn if cryptography package itself is missing
-            print("⚠️ WARNING: cryptography package not found. Security features will be limited.")
-            print(f"   Error: {e}")
-            print("   Install with: pip install cryptography")
-        # Otherwise, it's a submodule issue - don't warn, just disable
-        CRYPTO_AVAILABLE = False
-    except Exception as e:
-        # Other errors (like missing dependencies)
-        print(f"⚠️ WARNING: Error loading cryptography: {e}")
-        print("   Security features will be limited.")
-        CRYPTO_AVAILABLE = False
-else:
-    # Cryptography package not installed - check if we're in venv
-    import sys
-    in_venv = (
-        hasattr(sys, 'real_prefix') or 
-        (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix)
-    )
-    if not in_venv:
-        print("⚠️ WARNING: cryptography package not found. Security features will be limited.")
-        print(f"   Current Python: {sys.executable}")
-        print("   You may be using system Python instead of virtual environment.")
-        print("   Make sure to activate venv: & venv\\Scripts\\Activate.ps1")
-    else:
-        print("⚠️ WARNING: cryptography package not found. Security features will be limited.")
-        print("   Install with: pip install cryptography")
+    from cryptography.fernet import Fernet  # type: ignore
+    from cryptography.hazmat.primitives import hashes  # type: ignore
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC  # type: ignore
+    CRYPTO_AVAILABLE = True
+except (ImportError, Exception):
+    CRYPTO_AVAILABLE = False
+    print("⚠️ WARNING: cryptography not available. Security features will be limited.")
+    print("   Install with: pip install cryptography")
 
 import base64
 
@@ -447,7 +408,7 @@ def safe_dataset_len(dataset) -> str:
             return str(dataset.num_rows)
         else:
             return 'unknown'
-    except:
+    except Exception:
         return 'unknown'
 
 class MongoDBStorage:
@@ -508,29 +469,17 @@ class MongoDBStorage:
     def _get_default_user_context(self) -> Dict:
         """Get default user context as fallback when no user context provided"""
         current_time = datetime.now(timezone.utc)
-
-        # Use environment variable as fallback only - should be replaced by actual user context
-        fallback_login = os.getenv('USER_LOGIN', 'anonymous_user')
-        print(f"⚠️ WARNING: Using fallback user context for {fallback_login}. This should be replaced with authenticated user data.")
-
-        # Add time_of_day classification for compatibility
-        def classify_time_of_day(hour: int) -> str:
-            if 5 <= hour < 12:
-                return 'morning'
-            elif 12 <= hour < 17:
-                return 'afternoon'
-            elif 17 <= hour < 21:
-                return 'evening'
-            else:
-                return 'night'
-
+        hour = current_time.hour
+        
+        time_of_day = 'morning' if 5 <= hour < 12 else 'afternoon' if 12 <= hour < 17 else 'evening' if 17 <= hour < 21 else 'night'
+        
         return {
-            'login': fallback_login,
+            'login': os.getenv('USER_LOGIN', 'anonymous_user'),
             'timestamp': current_time,
             'session_start': current_time.isoformat(),
             'user_agent': os.getenv('HTTP_USER_AGENT', 'API-Request'),
             'environment': 'Production-API',
-            'time_of_day': classify_time_of_day(current_time.hour),
+            'time_of_day': time_of_day,
             'date': current_time.strftime('%Y-%m-%d')
         }
     
@@ -1292,7 +1241,7 @@ Respond with JSON only:"""
                 momentum_score += normalized_mood * 0.5
                 
             return min(momentum_score, 1.0)
-        except:
+        except Exception:
             return 0.5
 
     def _assess_risk_trend(self, current_crisis_level: str, user_hash: str) -> str:
@@ -1319,7 +1268,7 @@ Respond with JSON only:"""
             else:
                 return "stable"
                 
-        except:
+        except Exception:
             return "unknown"
 
 
@@ -1371,7 +1320,7 @@ Respond with JSON only:"""
                         }
             
             return patterns
-        except:
+        except Exception:
             return {
                 'core_patterns': {},
                 'cognitive_patterns': {},
@@ -1412,7 +1361,7 @@ try:
     nltk.download('punkt', quiet=True)
     from nltk.sentiment import SentimentIntensityAnalyzer
     print("✅ NLTK sentiment analyzer ready")
-except:
+except Exception:
     print("⚠️ NLTK not available, using basic sentiment analysis")
 
 # Configure logging
@@ -1717,7 +1666,7 @@ class DataLoader:
                     if dataset_size != 'unknown':
                         try:
                             total_entries += int(dataset_size)
-                        except:
+                        except Exception:
                             pass
                     dataset_count += 1
                 print(f"✅ Successfully loaded {dataset_count} datasets with ~{total_entries} total entries")
@@ -1824,7 +1773,7 @@ class CrisisDetector:
             else:
                 self.sentiment_analyzer = None
                 self.sentiment_available = False
-        except:
+        except Exception:
             self.sentiment_analyzer = None
             self.sentiment_available = False
 
@@ -1839,27 +1788,16 @@ class CrisisDetector:
     def _get_default_user_context(self) -> Dict[str, Any]:
         """Extract default user context as fallback"""
         current_time = datetime.utcnow()
-        fallback_login = os.getenv('USER_LOGIN', 'anonymous_user')
-        print(f"⚠️ WARNING: Crisis detector using fallback user context for {fallback_login}")
+        hour = current_time.hour
+        time_of_day = 'morning' if 5 <= hour < 12 else 'afternoon' if 12 <= hour < 17 else 'evening' if 17 <= hour < 21 else 'night'
 
         return {
-            'login': fallback_login,
+            'login': os.getenv('USER_LOGIN', 'anonymous_user'),
             'timestamp': current_time,
             'session_id': f"session_{int(current_time.timestamp())}",
-            'time_of_day': self._classify_time_of_day(current_time.hour),
+            'time_of_day': time_of_day,
             'date': current_time.strftime('%Y-%m-%d')
         }
-
-    def _classify_time_of_day(self, hour: int) -> str:
-        """Dynamically classify time periods"""
-        if 5 <= hour < 12:
-            return 'morning'
-        elif 12 <= hour < 17:
-            return 'afternoon'
-        elif 17 <= hour < 21:
-            return 'evening'
-        else:
-            return 'night'
 
     def _extract_linguistic_features(self, text: str) -> Dict[str, Any]:
         """Dynamically extract linguistic features from text"""
@@ -1946,21 +1884,18 @@ class CrisisDetector:
 
     def _categorize_context(self, context: str, full_text: str) -> str:
         """Dynamically categorize contexts based on surrounding language"""
-        # Analyze surrounding words to determine category
         context_pos = full_text.find(context)
         if context_pos == -1:
             return 'general'
 
-        # Get surrounding context (50 characters before and after)
         start = max(0, context_pos - 50)
         end = min(len(full_text), context_pos + len(context) + 50)
-        surrounding = full_text[start:end]
+        surrounding = full_text[start:end].lower()
 
-        # AI-powered context categorization
+        # Try AI categorization
         if self.llm:
             try:
-                context_prompt = f"""
-Analyze this text snippet and categorize the main life domain or context being discussed.
+                context_prompt = f"""Analyze this text snippet and categorize the main life domain or context being discussed.
 
 Text: "{surrounding}"
 
@@ -1980,37 +1915,21 @@ Return ONLY the category name:"""
                 ai_response = self.llm.invoke(context_prompt)
                 ai_category = self._extract_llm_content(ai_response).strip().lower()
                 
-                # Validate AI response
                 valid_categories = ['academic', 'professional', 'personal', 'health', 'financial', 
                                   'emotional', 'social', 'recreational', 'general']
-                
                 if ai_category in valid_categories:
                     return ai_category
-                else:
-                    print(f"⚠️ AI returned invalid category: {ai_category}")
-                    return 'general'
-                    
             except Exception as e:
                 print(f"⚠️ AI context categorization failed: {e}")
-                # Simple fallback
-                if 'work' in surrounding or 'job' in surrounding:
-                    return 'professional'
-                elif 'family' in surrounding or 'relationship' in surrounding:
-                    return 'personal'
-                elif 'school' in surrounding or 'study' in surrounding:
-                    return 'academic'
-                else:
-                    return 'general'
-        else:
-            # Simple fallback categorization
-            if any(word in surrounding for word in ['work', 'job', 'office', 'boss']):
-                return 'professional'
-            elif any(word in surrounding for word in ['family', 'friend', 'relationship']):
-                return 'personal' 
-            elif any(word in surrounding for word in ['school', 'study', 'exam']):
-                return 'academic'
-            else:
-                return 'general'
+
+        # Pattern-based fallback
+        if any(word in surrounding for word in ['work', 'job', 'office', 'boss']):
+            return 'professional'
+        elif any(word in surrounding for word in ['family', 'friend', 'relationship']):
+            return 'personal' 
+        elif any(word in surrounding for word in ['school', 'study', 'exam']):
+            return 'academic'
+        return 'general'
 
     def _extract_phrases_around_context(self, text: str, context: str) -> List[str]:
         """Extract meaningful phrases around a context"""
@@ -2069,8 +1988,7 @@ Return ONLY the category name:"""
         
         if self.llm:
             try:
-                help_seeking_prompt = f"""
-Analyze this text for help-seeking behavior and intent.
+                help_seeking_prompt = f"""Analyze this text for help-seeking behavior and intent.
 
 Text: "{text}"
 
@@ -2090,23 +2008,18 @@ Score:"""
                 
                 ai_response = self.llm.invoke(help_seeking_prompt)
                 ai_help_text = self._extract_llm_content(ai_response).strip()
-                
-                # Use robust score parsing
                 ai_help_score = self._extract_numeric_score_from_ai_response(ai_help_text, "help_seeking")
                 help_score += ai_help_score
                 
                 if ai_help_score > 1.0:
                     print(f"🤖 AI detected help-seeking behavior: {ai_help_score}/3")
-                    
             except Exception as e:
                 print(f"⚠️ AI help-seeking analysis failed: {e}")
-                # Basic fallback
-                if any(word in text_lower for word in ['help', 'advice', 'how to', 'can you']):
-                    help_score += 1.0
-        else:
-            # Simple fallback when no AI
-            if any(word in text_lower for word in ['help', 'advice', 'how to', 'can you', 'support']):
-                help_score += 1.0
+
+        # Pattern-based fallback
+        help_words = ['help', 'advice', 'how to', 'can you', 'support']
+        if any(word in text_lower for word in help_words):
+            help_score += 1.0
 
         # Normalize score
         return min(help_score / 5.0, 1.0)
@@ -2263,19 +2176,13 @@ Score:"""
                     
             except Exception as e:
                 print(f"⚠️ AI general crisis detection failed: {e}")
-                # Minimal fallback - only basic emotional indicators
-                basic_distress_words = ['hopeless', 'worthless', 'unbearable', 'overwhelming']
-                for word in basic_distress_words:
-                    if word in text_lower:
-                        crisis_score += 0.5
-                        detected_indicators.append(f"{word} (fallback)")
-        else:
-            # Minimal fallback when no AI available
-            critical_distress_words = ['hopeless', 'worthless', 'suicidal', 'unbearable']
-            for word in critical_distress_words:
-                if word in text_lower:
-                    crisis_score += 1.0
-                    detected_indicators.append(f"{word} (no-ai-fallback)")
+
+        # Pattern-based fallback for distress indicators
+        distress_words = ['hopeless', 'worthless', 'unbearable', 'overwhelming']
+        for word in distress_words:
+            if word in text_lower:
+                crisis_score += 0.5 if self.llm else 1.0
+                detected_indicators.append(f"{word} (fallback)")
 
         # Sentiment analysis contribution
         if self.sentiment_available and self.sentiment_analyzer is not None:
@@ -2292,8 +2199,7 @@ Score:"""
         # AI-powered negation and context analysis
         if self.llm and contexts:
             try:
-                negation_prompt = f"""
-Analyze this text for negation patterns that might reduce crisis severity.
+                negation_prompt = f"""Analyze this text for negation patterns that might reduce crisis severity.
 
 Text: "{text}"
 Contexts: {list(contexts)}
@@ -2313,17 +2219,13 @@ Analysis:"""
                 ai_response = self.llm.invoke(negation_prompt)
                 ai_negation = self._extract_llm_content(ai_response).upper().strip()
                 
-                has_negation = 'YES' in ai_negation
-                
-                if has_negation:
+                if 'YES' in ai_negation:
                     print(f"🤖 AI detected negation/protective context")
-                    
-                return has_negation
-                
+                    return True
             except Exception as e:
                 print(f"⚠️ AI negation analysis failed: {e}")
         
-        # Simple fallback negation detection
+        # Pattern-based fallback
         basic_negations = ['not', "don't", "won't", "can't", "isn't"]
         return any(neg in text_lower for neg in basic_negations)
 
@@ -2427,7 +2329,6 @@ Safety Assessment:"""
                     return CrisisLevel.NONE, HarmType.NONE
 
         if self.detection_mode == "ai":
-            # AI-only mode
             try:
                 return self._ai_powered_crisis_detection(text)
             except Exception as e:
@@ -3386,9 +3287,8 @@ class TherapyBot:
         except Exception as e:
             print(f"Failed to initialize ChatGroq: {e}")
             try:
-                # Fallback initialization
                 self.llm = ChatGroq(model="llama-3.1-70b-versatile")
-            except:
+            except Exception:
                 self.llm = None
 
         # Pass LLM to crisis detector for AI-powered detection
@@ -3398,27 +3298,22 @@ class TherapyBot:
         else:
             print("⚠️ Using pattern-based crisis detection only")
 
-        # Initialize knowledge base immediately - no lazy loading
+        # Initialize knowledge base
         self._knowledge_base_loaded = False
-        
-        # Initialize retriever attributes to None (will be set during knowledge base loading)
         self.general_retriever = None
         self.crisis_retriever = None
         self.vector_store = None
         
-        # Initialize knowledge base immediately
         try:
             success = self._initialize_enhanced_knowledge_base()
             if success:
                 print("📚 Knowledge base loaded successfully!")
-                self._knowledge_base_loaded = True
             else:
-                print("⚠️ Knowledge base loading failed, but continuing with fallback")
-                self._knowledge_base_loaded = True  # Force enable to avoid "not available" messages
+                print("⚠️ Knowledge base loading failed, continuing with fallback")
+            self._knowledge_base_loaded = True  # Enable to allow fallback usage
         except Exception as e:
             print(f"❌ Knowledge base loading error: {e}")
-            print("⚠️ Continuing with fallback knowledge base")
-            self._knowledge_base_loaded = True  # Force enable to avoid "not available" messages
+            self._knowledge_base_loaded = True  # Enable to allow fallback usage
         
         # Setup dynamic conversation prompts
         self._setup_dynamic_prompts()
@@ -4349,12 +4244,9 @@ Enhanced Query (max 100 characters):"""
             # Convert word limit to approximate character limit (avg 5 chars/word + spaces)
             context_limit = context_limit_words * 6  # Conservative estimate for truncation
 
-            # Check if knowledge base is available (should be loaded during startup)
+            # Check if knowledge base is available
             if not self._knowledge_base_loaded or not retriever:
-                if not retriever:
-                    print("⚠️ Vector embeddings not available (sentence-transformers issue), using fallback context")
-                else:
-                    print("⚠️ Knowledge base not available, using fallback context")
+                print("⚠️ Knowledge base not available, using fallback context")
                 return "General therapeutic principles: active listening, empathy, validation, and supportive presence."
             
             if retriever and self._knowledge_base_loaded:
@@ -4384,7 +4276,6 @@ Return the most relevant context pieces combined into a coherent therapeutic kno
                     try:
                         context_response = self.llm.invoke(context_selection_prompt)
                         ai_selected_context = self._extract_llm_content(context_response)
-                        # Truncate to word limit (standard: 200-300 words)
                         words = ai_selected_context.split()
                         final_context = ' '.join(words[:context_limit_words])
                         print(f"🧠 AI-selected context: {self._count_words(final_context)}w (limit: {context_limit_words}w)")
@@ -4392,36 +4283,32 @@ Return the most relevant context pieces combined into a coherent therapeutic kno
                     except Exception as e:
                         print(f"⚠️ AI context selection failed, using direct retrieval: {e}")
                 
-                # Fallback: use direct document content (truncate to word limit)
+                # Fallback: use direct document content
                 context = "\n\n".join([doc.page_content for doc in docs[:docs_to_retrieve]])
                 words = context.split()
-                truncated_context = ' '.join(words[:context_limit_words])
-                return truncated_context
-            else:
-                print(f"⚠️ No retriever available or knowledge base not loaded")
-                # Provide AI-generated contextual guidance as fallback
-                if self.llm:
-                    try:
-                        fallback_prompt = f"""
-As a mental health professional, provide brief therapeutic guidance for this situation:
+                return ' '.join(words[:context_limit_words])
+            
+            # Fallback: AI-generated context or default
+            if self.llm:
+                try:
+                    fallback_prompt = f"""As a mental health professional, provide brief therapeutic guidance for this situation:
 
 User Query: "{query}"
 Crisis Level: {crisis_level.value}
 Response Type: {response_type}
 
 Provide 2-3 sentences of relevant therapeutic approach or supportive guidance:"""
-                        
-                        fallback_response = self.llm.invoke(fallback_prompt)
-                        fallback_context = self._extract_llm_content(fallback_response)
-                        # Limit fallback to standard word count (200 words max)
-                        words = fallback_context.split()
-                        truncated_fallback = ' '.join(words[:200])
-                        print(f"🤖 Generated fallback context: {self._count_words(truncated_fallback)}w")
-                        return truncated_fallback
-                    except Exception as e:
-                        print(f"⚠️ Fallback context generation failed: {e}")
-                
-                return "General therapeutic principles: active listening, empathy, validation, and supportive presence."
+                    
+                    fallback_response = self.llm.invoke(fallback_prompt)
+                    fallback_context = self._extract_llm_content(fallback_response)
+                    words = fallback_context.split()
+                    truncated_fallback = ' '.join(words[:200])
+                    print(f"🤖 Generated fallback context: {self._count_words(truncated_fallback)}w")
+                    return truncated_fallback
+                except Exception as e:
+                    print(f"⚠️ Fallback context generation failed: {e}")
+            
+            return "General therapeutic principles: active listening, empathy, validation, and supportive presence."
 
         except Exception as e:
             print(f"⚠️ Context retrieval error: {e}")
@@ -4798,10 +4685,9 @@ Personalized Therapeutic Guidance:"""
 
     def _add_crisis_resources(self, response: str, crisis_level: CrisisLevel) -> str:
         """AI-generated crisis resources based on severity and context"""
-        try:
-            if self.llm:
-                crisis_resources_prompt = f"""
-You are a mental health professional providing crisis support resources.
+        if self.llm:
+            try:
+                crisis_resources_prompt = f"""You are a mental health professional providing crisis support resources.
 
 Context:
 - Crisis Level: {crisis_level.value}
@@ -4829,16 +4715,11 @@ Crisis Support Resources:"""
                 if ai_resources and len(ai_resources.strip()) > 10:
                     print(f"🤖 Generated AI crisis resources: {self._count_words(ai_resources)}w")
                     return response + "\n\n" + ai_resources.strip()
-                else:
-                    print(f"⚠️ AI crisis resources generation failed, using fallback")
-                    return response + self._fallback_crisis_resources(crisis_level)
-            else:
-                print(f"⚠️ LLM unavailable for crisis resources")
-                return response + self._fallback_crisis_resources(crisis_level)
-                
-        except Exception as e:
-            print(f"⚠️ AI crisis resources error: {e}")
-            return response + self._fallback_crisis_resources(crisis_level)
+            except Exception as e:
+                print(f"⚠️ AI crisis resources error: {e}")
+        
+        # Fallback to hardcoded resources
+        return response + self._fallback_crisis_resources(crisis_level)
 
     def _fallback_crisis_resources(self, crisis_level: CrisisLevel) -> str:
         """Fallback crisis resources when AI is unavailable"""
@@ -4853,16 +4734,13 @@ Crisis Support Resources:"""
 
     def _generate_with_retry(self, prompt: str, max_retries: int = 3) -> str:
         """Generate response with retry logic"""
+        if self.llm is None:
+            return "I apologize, but I'm currently unable to generate a response. Please try again later."
+        
         for attempt in range(max_retries):
             try:
-                if self.llm is None:
-                    return "I apologize, but I'm currently unable to generate a response. Please try again later."
-                
                 response = self.llm.invoke(prompt)
-                if hasattr(response, 'content'):
-                    response_text = response.content
-                else:
-                    response_text = str(response)
+                response_text = response.content if hasattr(response, 'content') else str(response)
                 
                 if response_text and isinstance(response_text, str) and len(response_text.strip()) > 10:
                     return response_text.strip()
@@ -4879,11 +4757,10 @@ Crisis Support Resources:"""
             try:
                 sentiment = self.crisis_detector.sentiment_analyzer.polarity_scores(user_input)
                 return round(((sentiment['compound'] + 1) * 4.5) + 1, 1)
-            except:
+            except Exception:
                 pass
-
-        # If sentiment analyzer unavailable, return neutral mood
-        return 5.0
+        
+        return 5.0  # Neutral fallback
 
 
 
@@ -5050,12 +4927,11 @@ Welcome back message:"""
             if ai_continuation and len(ai_continuation.strip()) > 10:
                 print(f"🤖 Generated AI continuation message: {self.therapy_bot._count_words(ai_continuation)}w")
                 return ai_continuation.strip()
-            else:
-                return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked? What's on your mind today?"
-                
         except Exception as e:
             print(f"⚠️ AI continuation message generation failed: {e}")
-            return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked? What's on your mind today?"
+        
+        # Fallback continuation message
+        return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked? What's on your mind today?"
 
     def start_session(self, user_id: Optional[str] = None) -> str:
         """Start a secure therapy session with comprehensive security controls"""
@@ -5608,13 +5484,10 @@ Main Themes:"""
                     return ai_themes.strip()
                 else:
                     print(f"⚠️ AI theme extraction failed, using fallback")
-            else:
-                print(f"⚠️ LLM unavailable for theme extraction")
-                
         except Exception as e:
             print(f"⚠️ AI theme extraction error: {e}")
         
-        # Default theme extraction from memory
+        # Fallback theme extraction from memory
         found_themes = []
         if memory.key_themes:
             for theme in memory.key_themes[:2]:
@@ -5660,12 +5533,10 @@ Identified Strengths:"""
                     return ai_strengths.strip()
                 else:
                     print(f"⚠️ AI strength identification failed, using fallback")
-            else:
-                print(f"⚠️ LLM unavailable for strength identification")
-                
         except Exception as e:
             print(f"⚠️ AI strength identification error: {e}")
         
+        # Fallback strengths
         return "• 🤝 Courage in seeking support\n• 💪 Willingness to share experiences"
 
     def _generate_recommendations(self, history: List[Dict], memory: SessionMemory) -> str:
@@ -5713,12 +5584,10 @@ Personalized Recommendations:"""
                     return ai_recommendations.strip()
                 else:
                     print(f"⚠️ AI recommendation generation failed, using fallback")
-            else:
-                print(f"⚠️ LLM unavailable for recommendation generation")
-                
         except Exception as e:
             print(f"⚠️ AI recommendation generation error: {e}")
         
+        # Fallback recommendations
         return "• 🤝 Continue our therapeutic conversations\n• 🧠 Practice self-awareness and mindfulness\n• 💪 Build on the strengths you've shown"
     def _get_psychological_insights(self, profile: PsychologicalProfile) -> str:
         """Generate psychological insights from user profile"""
@@ -5852,12 +5721,10 @@ Personalized Recommendations:"""
                     return ai_recommendations.strip()
                 else:
                     print(f"⚠️ AI personalized recommendation generation failed, using fallback")
-            else:
-                print(f"⚠️ LLM unavailable for personalized recommendations")
-                
         except Exception as e:
             print(f"⚠️ Personalized recommendation generation error: {e}")
         
+        # Fallback personalized recommendations
         return "• 🤝 Continue our therapeutic conversations\n• 🧠 Practice self-awareness and mindfulness\n• 💪 Build on the strengths you've shown"
 
     def _create_profile_context_summary(self, profile: PsychologicalProfile) -> str:
