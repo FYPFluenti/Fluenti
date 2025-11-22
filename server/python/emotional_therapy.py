@@ -1719,13 +1719,13 @@ class DataLoader:
 IS_DEPLOYMENT = os.getenv('RAILWAY_ENVIRONMENT') is not None or os.getenv('VERCEL') is not None or os.getenv('RENDER') is not None
 
 if IS_DEPLOYMENT:
-    print("🚀 Deployment mode detected - using memory-optimized settings")
-    # Reduce dataset sizes for deployment
+    print("🚀 Deployment mode detected - using full dataset settings")
+    # Use full dataset sizes to match local development
     DEPLOYMENT_DATASET_LIMITS = {
-        "Amod/mental_health_counseling_conversations": 2000,
-        "heliosbrahma/mental_health_chatbot_dataset": 150,
-        "nbertagnolli/counsel-chat": 1500,
-        "nvidia/HelpSteer": 1500
+        "Amod/mental_health_counseling_conversations": None,  # Load all available (same as local)
+        "heliosbrahma/mental_health_chatbot_dataset": None,  # Load all available (same as local)
+        "nbertagnolli/counsel-chat": None,  # Load all available (same as local)
+        "nvidia/HelpSteer": 4000  # Keep limit at 3000 for memory optimization (matches local default)
     }
 else:
     print("💻 Local development mode - using full settings")
