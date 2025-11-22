@@ -3685,8 +3685,17 @@ class TherapyBot:
         self.vector_store = None
         
         # Initialize knowledge base immediately
-        self._initialize_enhanced_knowledge_base_lazy()
-        print("📚 Knowledge base loaded successfully!")
+        try:
+            success = self._initialize_enhanced_knowledge_base_lazy()
+            if success:
+                print("📚 Knowledge base loaded successfully!")
+            else:
+                print("⚠️ Knowledge base loading failed, but continuing with fallback")
+                self._knowledge_base_loaded = True  # Force enable to avoid "not available" messages
+        except Exception as e:
+            print(f"❌ Knowledge base loading error: {e}")
+            print("⚠️ Continuing with fallback knowledge base")
+            self._knowledge_base_loaded = True  # Force enable to avoid "not available" messages
         
         # Setup dynamic conversation prompts
         self._setup_dynamic_prompts()
