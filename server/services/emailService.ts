@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
 import { Resend } from 'resend';
+import * as brevo from '@getbrevo/brevo';
 
 // Email configuration
 const EMAIL_HOST = process.env.EMAIL_HOST || 'smtp.gmail.com';
@@ -10,11 +11,21 @@ const EMAIL_PASSWORD = process.env.EMAIL_PASSWORD;
 const EMAIL_FROM = process.env.EMAIL_FROM || 'noreply@fluenti.ai';
 // For Resend, use their domain until custom domain is verified
 const RESEND_FROM = process.env.RESEND_FROM || 'Fluenti <onboarding@resend.dev>';
+// Brevo configuration
+const BREVO_FROM = process.env.BREVO_FROM || 'Fluenti <fluenitai@gmail.com>';
 const APP_URL = process.env.APP_URL || 'http://localhost:5000';
 
 // Resend configuration (HTTP API - bypasses SMTP blocks)
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+
+// Brevo configuration (HTTP API - 300 emails/day free, no domain verification required)
+const BREVO_API_KEY = process.env.BREVO_API_KEY;
+let bretvoApi: brevo.TransactionalEmailsApi | null = null;
+if (BREVO_API_KEY) {
+  bretvoApi = new brevo.TransactionalEmailsApi();
+  bretvoApi.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, BREVO_API_KEY);
+}
 
 // Fallback SMTP configurations for production environments (based on known working solutions)
 const SMTP_CONFIGS = [
@@ -176,10 +187,35 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     from: EMAIL_FROM,
     hasHtml: !!options.html,
     hasText: !!options.text,
-    resendAvailable: !!resend
+    resendAvailable: !!resend,
+    brevoAvailable: !!bretvoApi
   });
   
-  // Try Resend HTTP API first (works with Render)
+  // Try Brevo HTTP API first (300 emails/day free, no domain verification required)
+  if (bretvoApi) {
+    try {
+      console.log('📧 [EMAIL DEBUG] Attempting to send via Brevo HTTP API...');
+      
+      const sendSmtpEmail = new brevo.SendSmtpEmail();
+      sendSmtpEmail.to = [{ email: options.to }];
+      sendSmtpEmail.sender = { email: 'fluenitai@gmail.com', name: 'Fluenti' };
+      sendSmtpEmail.subject = options.subject;
+      sendSmtpEmail.htmlContent = options.html;
+      sendSmtpEmail.textContent = options.text;
+      
+      const result = await bretvoApi.sendTransacEmail(sendSmtpEmail);
+      
+      console.log('✅ Email sent successfully via Brevo HTTP API to:', options.to, 'MessageId:', result.body.messageId);
+      return;
+    } catch (error) {
+      console.error('❌ Brevo HTTP API failed:', (error as any)?.message);
+      console.log('📧 [EMAIL DEBUG] Falling back to Resend...');
+    }
+  } else {
+    console.log('📧 [EMAIL DEBUG] Brevo not configured, trying Resend...');
+  }
+  
+  // Try Resend HTTP API as second option (works with Render but has domain restrictions)
   if (resend) {
     try {
       console.log('📧 [EMAIL DEBUG] Attempting to send via Resend HTTP API...');
@@ -233,7 +269,7 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       code: (error as any)?.code,
       command: (error as any)?.command
     });
-    throw new Error('Failed to send email via both Resend API and SMTP');
+    throw new Error('Failed to send email via Brevo, Resend, and SMTP');
   }
 }
 
