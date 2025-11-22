@@ -1519,21 +1519,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log(`🚨 EMERGENCY NOTIFICATION - User: ${user_id}, Crisis: ${crisis_level}, Harm: ${harm_type}`);
 
-      // Import nodemailer dynamically
-      const nodemailer = await import('nodemailer');
-
-      // Configure email transporter (you'll need to set these environment variables)
-      const transporter = nodemailer.default.createTransport({
-        service: 'gmail', // or your email service
-        auth: {
-          user: process.env.EMERGENCY_EMAIL_USER,
-          pass: process.env.EMERGENCY_EMAIL_PASS
-        }
-      });
+      // Import email service to use Brevo instead of SMTP
+      const { sendEmail } = await import('./services/emailService.js');
 
       // Create email content
-      const emailSubject = `🚨 URGENT: Crisis Detection - ${harm_type} (${crisis_level})`;
-      const emailBody = `
+      const emailSubject = `URGENT: Crisis Detection - ${harm_type} (${crisis_level})`;
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .emergency { background: #dc3545; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+            .details { background: #f8f9fa; padding: 15px; border-radius: 5px; margin: 10px 0; }
+            .conversation { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 10px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="emergency">
+            <h1>🚨 EMERGENCY ALERT: Crisis Detection System</h1>
+          </div>
+          
+          <div class="details">
+            <h3>Crisis Details:</h3>
+            <p><strong>User ID:</strong> ${user_id}</p>
+            <p><strong>Session ID:</strong> ${session_id}</p>
+            <p><strong>Crisis Level:</strong> ${crisis_level}</p>
+            <p><strong>Harm Type:</strong> ${harm_type}</p>
+            <p><strong>Timestamp:</strong> ${timestamp}</p>
+          </div>
+
+          <div class="conversation">
+            <h3>Trigger Message:</h3>
+            <p>"${trigger_message}"</p>
+            
+            <h3>Bot Response:</h3>
+            <p>"${bot_response}"</p>
+            
+            <h3>Conversation History:</h3>
+            <pre>${conversation_history}</pre>
+          </div>
+
+          <p><strong>Please review this case immediately and take appropriate action.</strong></p>
+          <p><em>This is an automated alert from the Fluenti Crisis Detection System.</em></p>
+        </body>
+        </html>
+      `;
+
+      const emailText = `
 EMERGENCY ALERT: Crisis Detection System
 
 User ID: ${user_id}
@@ -1556,15 +1589,13 @@ Please review this case immediately and take appropriate action.
 This is an automated alert from the Fluenti Crisis Detection System.
       `;
 
-      // Send email notification
-      const mailOptions = {
-        from: process.env.EMERGENCY_EMAIL_USER,
-        to: process.env.EMERGENCY_NOTIFICATION_EMAIL || 'admin@fluenti.com',
+      // Send email notification using Brevo
+      await sendEmail({
+        to: process.env.EMERGENCY_NOTIFICATION_EMAIL || 'fluenitai@gmail.com',
         subject: emailSubject,
-        text: emailBody
-      };
-
-      await transporter.sendMail(mailOptions);
+        html: emailHtml,
+        text: emailText
+      });
 
       console.log('✅ Emergency notification email sent successfully');
 
