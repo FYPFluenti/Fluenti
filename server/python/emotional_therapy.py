@@ -79,6 +79,13 @@ from dotenv import load_dotenv
 from dataclasses import field
 load_dotenv()  # Load variables from .env file
 
+# Suppress warnings for deployment
+import warnings
+if os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('VERCEL') or os.getenv('RENDER'):
+    warnings.filterwarnings('ignore', category=UserWarning)
+    warnings.filterwarnings('ignore', message='Repo card metadata block was not found')
+    warnings.filterwarnings('ignore', message='Unknown option: family')
+
 @dataclass
 class PsychologicalProfile:
     """Comprehensive psychological profile for deep understanding"""
@@ -1827,10 +1834,11 @@ class DataLoader:
             # Dataset 1: Mental health counseling conversations (KEEP - working well)
             try:
                 print("Loading counseling conversations dataset...")
+                limit1 = DEPLOYMENT_DATASET_LIMITS.get("Amod/mental_health_counseling_conversations") if IS_DEPLOYMENT else None
                 dataset1 = DataLoader.load_dataset_with_streaming(
                     "Amod/mental_health_counseling_conversations", 
                     split='train',
-                    limit=None,  # Load all
+                    limit=limit1,
                     progress_interval=1000
                 )
                 datasets.append((dataset1, "Amod/mental_health_counseling_conversations"))
@@ -1842,10 +1850,11 @@ class DataLoader:
             # Dataset 2: Mental health chatbot dataset (KEEP - working well)
             try:
                 print("Loading mental health chatbot dataset...")
+                limit2 = DEPLOYMENT_DATASET_LIMITS.get("heliosbrahma/mental_health_chatbot_dataset") if IS_DEPLOYMENT else None
                 dataset2 = DataLoader.load_dataset_with_streaming(
                     "heliosbrahma/mental_health_chatbot_dataset", 
                     split='train',
-                    limit=None,  # Load all
+                    limit=limit2,
                     progress_interval=100
                 )
                 datasets.append((dataset2, "heliosbrahma/mental_health_chatbot_dataset"))
@@ -1857,10 +1866,11 @@ class DataLoader:
             # Dataset 3: Counsel Chat - Therapy conversations (KEEP - working well)
             try:
                 print("Loading counsel chat therapy dataset...")
+                limit3 = DEPLOYMENT_DATASET_LIMITS.get("nbertagnolli/counsel-chat") if IS_DEPLOYMENT else None
                 dataset3 = DataLoader.load_dataset_with_streaming(
                     "nbertagnolli/counsel-chat", 
                     split='train',
-                    limit=None,  # Load all
+                    limit=limit3,
                     progress_interval=1000
                 )
                 datasets.append((dataset3, "nbertagnolli/counsel-chat"))
@@ -1874,10 +1884,11 @@ class DataLoader:
             # Dataset 4: nvidia/HelpSteer - High-quality therapeutic conversations with helpfulness ratings
             try:
                 print("Loading nvidia/HelpSteer therapeutic conversations...")
+                limit4 = DEPLOYMENT_DATASET_LIMITS.get("nvidia/HelpSteer") if IS_DEPLOYMENT else 3000
                 dataset4 = DataLoader.load_dataset_with_streaming(
                     "nvidia/HelpSteer", 
                     split='train',
-                    limit=3000,  # Limited to 3000 for memory efficiency
+                    limit=limit4,
                     progress_interval=500
                 )
                 datasets.append((dataset4, "nvidia/HelpSteer"))
@@ -1910,6 +1921,22 @@ class DataLoader:
             raise
 
     
+# Detect deployment environment
+IS_DEPLOYMENT = os.getenv('RAILWAY_ENVIRONMENT') is not None or os.getenv('VERCEL') is not None or os.getenv('RENDER') is not None
+
+if IS_DEPLOYMENT:
+    print("🚀 Deployment mode detected - using memory-optimized settings")
+    # Reduce dataset sizes for deployment
+    DEPLOYMENT_DATASET_LIMITS = {
+        "Amod/mental_health_counseling_conversations": 2000,
+        "heliosbrahma/mental_health_chatbot_dataset": 150,
+        "nbertagnolli/counsel-chat": 1500,
+        "nvidia/HelpSteer": 1500
+    }
+else:
+    print("💻 Local development mode - using full settings")
+    DEPLOYMENT_DATASET_LIMITS = {}
+
 # Load datasets immediately - no lazy loading
 print("📚 Loading top 4 mental health datasets...")
 try:
@@ -3835,10 +3862,9 @@ Complexity Analysis:"""
             chunk_metadata = []
 
             # Configurable processing limit via environment variable
-            # Default: 5000 (optimized for deployment memory limits)
-            # Set KB_PROCESS_LIMIT=-1 to process all documents
-            # Set KB_PROCESS_LIMIT=<number> for specific limit
-            process_limit_env = os.getenv('KB_PROCESS_LIMIT', '5000')
+            # Deployment-optimized defaults
+            default_limit = '2000' if IS_DEPLOYMENT else '5000'
+            process_limit_env = os.getenv('KB_PROCESS_LIMIT', default_limit)
             if process_limit_env == '-1' or process_limit_env.lower() == 'all':
                 process_limit = len(all_texts)
                 print(f"📊 Processing ALL {len(all_texts)} texts (no limit)")
@@ -3914,11 +3940,18 @@ Complexity Analysis:"""
             )
 
             print(f"✅ Enhanced knowledge base ready with {len(chunks)} chunks!")
+            
+            # Memory cleanup for deployment
+            if IS_DEPLOYMENT:
+                import gc
+                gc.collect()
+                print("🧹 Memory cleanup completed")
+            
             return True
 
         except Exception as e:
             print(f"⚠️ Error creating enhanced knowledge base: {e}")
-            # Don't raise exception in lazy loading - allow fallback
+            # Don't raise exception - allow fallback
             return False
 
 
