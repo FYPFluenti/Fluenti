@@ -198,10 +198,16 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
       
       const sendSmtpEmail = new brevo.SendSmtpEmail();
       sendSmtpEmail.to = [{ email: options.to }];
-      sendSmtpEmail.sender = { email: 'fluenitai@gmail.com', name: 'Fluenti' };
+      // Use verified sender email and proper formatting to avoid spam
+      sendSmtpEmail.sender = { 
+        email: 'fluenitai@gmail.com', 
+        name: 'Fluenti Support Team' 
+      };
       sendSmtpEmail.subject = options.subject;
       sendSmtpEmail.htmlContent = options.html;
       sendSmtpEmail.textContent = options.text;
+      // Add reply-to to improve deliverability
+      sendSmtpEmail.replyTo = { email: 'fluenitai@gmail.com', name: 'Fluenti Support' };
       
       const result = await bretvoApi.sendTransacEmail(sendSmtpEmail);
       
@@ -428,28 +434,29 @@ export async function sendPasswordResetEmail(
     </html>
   `;
   
-  const text = `
-    Password Reset Request
-    
-    Hi ${firstName},
-    
-    We received a request to reset your password for your Fluenti account.
-    
-    To create a new password, visit this link:
-    ${resetUrl}
-    
-    This link will expire in 1 hour.
-    
-    If you didn't request this reset, please ignore this email.
-    Your password will remain unchanged until you create a new one.
-    
-    Best regards,
-    The Fluenti Team
-  `;
+  const text = `Password Reset Request
+
+Hello ${firstName},
+
+You have requested to reset your password for your Fluenti account. This is a security measure to protect your account.
+
+To create a new password, please visit this link:
+${resetUrl}
+
+This secure link will expire in 1 hour for your protection.
+
+If you did not request this password reset, please ignore this email. Your password will remain unchanged until you create a new one.
+
+Best regards,
+Fluenti Support Team
+
+---
+This is an automated security email from Fluenti.
+Please do not reply to this email.`;
   
   await sendEmail({
     to: email,
-    subject: '🔒 Reset your Fluenti password',
+    subject: 'Password Reset - Fluenti Account',
     html,
     text,
   });
