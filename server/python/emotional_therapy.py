@@ -1725,7 +1725,7 @@ if IS_DEPLOYMENT:
         "Amod/mental_health_counseling_conversations": None,  # Load all available (same as local)
         "heliosbrahma/mental_health_chatbot_dataset": None,  # Load all available (same as local)
         "nbertagnolli/counsel-chat": None,  # Load all available (same as local)
-        "nvidia/HelpSteer": 4000  # Keep limit at 3000 for memory optimization (matches local default)
+        "nvidia/HelpSteer": 3000  # Keep limit at 3000 for memory optimization (matches local default)
     }
 else:
     print("💻 Local development mode - using full settings")
