@@ -3574,8 +3574,8 @@ Complexity Analysis:"""
             chunk_metadata = []
 
             # Configurable processing limit via environment variable
-            # Deployment-optimized defaults
-            default_limit = '2000' if IS_DEPLOYMENT else '5000'
+            # Process all texts by default (matches local development - no limits)
+            default_limit = 'all'  # Process all texts in both local and deployment
             process_limit_env = os.getenv('KB_PROCESS_LIMIT', default_limit)
             if process_limit_env == '-1' or process_limit_env.lower() == 'all':
                 process_limit = len(all_texts)
