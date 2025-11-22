@@ -643,7 +643,8 @@ def get_psychological_profile():
         
         session_queries = [
             {"user_id": user_hash},
-            {"user_id": user_id}, 
+            {"user_id": user_id},
+            {"user_id_raw": user_id},  # New format with raw user_id
             {"user_context.login": user_id},
             {"userId": user_id}
         ]
@@ -656,9 +657,13 @@ def get_psychological_profile():
                 total_sessions = count
                 break
         
-        # Get recent progress data
+        # Get recent progress data - check both formats
         recent_progress = list(therapy_bot.storage.long_term_progress.find({
-            "user_id": user_hash
+            "$or": [
+                {"user_id": user_hash},
+                {"user_id_raw": user_id},
+                {"user_id": user_id}
+            ]
         }).sort("timestamp", -1).limit(1))
         
         latest_progress = recent_progress[0] if recent_progress else {}
@@ -733,7 +738,8 @@ def get_long_term_progress():
         # Try different user ID formats to find all conversations
         conversation_queries = [
             {"user_id": user_hash},
-            {"user_id": user_id}, 
+            {"user_id": user_id},
+            {"user_id_raw": user_id},  # New format with raw user_id
             {"user_context.login": user_id},
             {"userId": user_id}
         ]
@@ -783,11 +789,19 @@ def get_long_term_progress():
                     conv.get('patterns_identified', 0)
                 )
         
-        # Get progress entries from long_term_progress collection
-        progress_entries = list(therapy_bot.storage.long_term_progress.find({
-            'user_id': user_hash,
-            'timestamp': {'$gte': cutoff_date}
-        }).sort('timestamp', 1))
+        # Get progress entries from long_term_progress collection - try both formats
+        progress_queries = [
+            {'user_id': user_hash, 'timestamp': {'$gte': cutoff_date}},
+            {'user_id_raw': user_id, 'timestamp': {'$gte': cutoff_date}},
+            {'user_id': user_id, 'timestamp': {'$gte': cutoff_date}}
+        ]
+        
+        progress_entries = []
+        for query in progress_queries:
+            entries = list(therapy_bot.storage.long_term_progress.find(query).sort('timestamp', 1))
+            if entries:
+                progress_entries = entries
+                break
         
         # Combine progress entries with session data
         session_progress_map = {}

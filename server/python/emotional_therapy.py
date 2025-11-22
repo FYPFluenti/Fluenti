@@ -557,8 +557,10 @@ class MongoDBStorage:
         encrypted_input = self.security_manager.encrypt_sensitive_data(sanitized_input)
         encrypted_response = self.security_manager.encrypt_sensitive_data(sanitized_response)
         
+        user_hash = self.security_manager.hash_pii(user_id)
         conversation_doc = {
-            "user_id": self.security_manager.hash_pii(user_id),  # Hash user ID for privacy
+            "user_id": user_hash,  # Hash user ID for privacy
+            "user_id_raw": user_id,  # Also store raw for compatibility with queries
             "session_id": self.security_manager.hash_pii(session_id),  # Hash session ID
             "user_login": self.security_manager.hash_pii(self.current_user['login']),
             "timestamp": datetime.now(timezone.utc),
@@ -571,10 +573,6 @@ class MongoDBStorage:
             "data_version": "2.0_encrypted",  # Track encryption version
             "user_input": user_input,
             "bot_response": bot_response,
-            "crisis_level": crisis_level,
-            "mood_score": mood_score,
-            "input_length": len(user_input),
-            "response_length": len(bot_response),
             "user_context": {
                 "environment": self.current_user['environment'],
                 "session_start": self.current_user['session_start']
@@ -961,34 +959,37 @@ class MongoDBStorage:
         """Update psychological profile based on conversation analysis"""
         try:
             profile = self.get_or_create_psychological_profile(user_id)
+            pattern_analysis = {}
             
             # AI-powered psychological pattern analysis
             if llm:
                 pattern_analysis = self._analyze_psychological_patterns(conversation_text, profile, llm)
                 
                 # Update profile with new insights
-                profile.core_patterns.update(pattern_analysis.get('core_patterns', {}))
-                profile.cognitive_patterns.update(pattern_analysis.get('cognitive_patterns', {}))
-                profile.emotional_regulation_patterns.update(pattern_analysis.get('emotional_patterns', {}))
-                profile.coping_mechanisms.update(pattern_analysis.get('coping_mechanisms', {}))
-                
-                # Detect potential trauma indicators
-                trauma_indicators = self._detect_trauma_indicators(conversation_text, profile, llm)
-                if trauma_indicators:
-                    profile.trauma_indicators.update(trauma_indicators)
-                
-
-                
-                # Update progress tracking
-                self._update_long_term_progress(user_id, crisis_level, mood_score, pattern_analysis)
+                if pattern_analysis:
+                    profile.core_patterns.update(pattern_analysis.get('core_patterns', {}))
+                    profile.cognitive_patterns.update(pattern_analysis.get('cognitive_patterns', {}))
+                    profile.emotional_regulation_patterns.update(pattern_analysis.get('emotional_patterns', {}))
+                    profile.coping_mechanisms.update(pattern_analysis.get('coping_mechanisms', {}))
+                    
+                    # Detect potential trauma indicators
+                    trauma_indicators = self._detect_trauma_indicators(conversation_text, profile, llm)
+                    if trauma_indicators:
+                        profile.trauma_indicators.update(trauma_indicators)
                 
                 # Save updated profile
                 profile.last_updated = datetime.now().isoformat()
                 self._save_psychological_profile(profile)
-                
                 print(f"✅ Updated psychological profile with AI insights")
             else:
                 print(f"⚠️ LLM unavailable for psychological pattern analysis")
+                pattern_analysis = {}
+                # Save profile anyway to ensure it exists
+                profile.last_updated = datetime.now().isoformat()
+                self._save_psychological_profile(profile)
+            
+            # Always create progress entries, even if LLM is unavailable
+            self._update_long_term_progress(user_id, crisis_level, mood_score, pattern_analysis)
                 
         except Exception as e:
             print(f"❌ Error updating psychological profile: {e}")
@@ -1156,25 +1157,58 @@ Respond with JSON only:"""
         try:
             user_hash = self.security_manager.hash_pii(user_id)
             
+            # Calculate patterns identified count safely
+            patterns_count = 0
+            if pattern_analysis:
+                for patterns in pattern_analysis.values():
+                    if isinstance(patterns, list):
+                        patterns_count += len(patterns)
+                    elif isinstance(patterns, dict):
+                        patterns_count += len(patterns)
+            
             progress_entry = {
-                "user_id": user_hash,
+                "user_id": user_hash,  # Store hashed for security
+                "user_id_raw": user_id,  # Also store raw for compatibility with queries
                 "timestamp": datetime.now(),
                 "crisis_level": crisis_level,
                 "mood_score": mood_score,
-                "patterns_identified": len([p for patterns in pattern_analysis.values() for p in patterns]),
+                "patterns_identified": patterns_count,
                 "session_quality_indicators": {
                     "progress_momentum": self._assess_progress_momentum(crisis_level, mood_score)
                 },
                 "risk_level_trend": self._assess_risk_trend(crisis_level, user_hash)
             }
             
-            # Save progress entry
-            self.long_term_progress.insert_one(progress_entry)
+            # Save progress entry (avoid duplicates by checking recent entries for same day)
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            existing_today = self.long_term_progress.find_one({
+                "$or": [
+                    {"user_id": user_hash, "timestamp": {"$gte": today_start}},
+                    {"user_id_raw": user_id, "timestamp": {"$gte": today_start}}
+                ]
+            })
+            
+            if not existing_today:
+                self.long_term_progress.insert_one(progress_entry)
+                print(f"✅ Created new progress entry for {user_id}")
+            else:
+                # Update existing entry for today with latest data
+                self.long_term_progress.update_one(
+                    {"_id": existing_today["_id"]},
+                    {"$set": {
+                        "crisis_level": crisis_level,
+                        "mood_score": mood_score if mood_score else existing_today.get("mood_score"),
+                        "patterns_identified": patterns_count,
+                        "session_quality_indicators.progress_momentum": self._assess_progress_momentum(crisis_level, mood_score),
+                        "risk_level_trend": self._assess_risk_trend(crisis_level, user_hash),
+                        "timestamp": datetime.now()  # Update timestamp to latest
+                    }},
+                    upsert=False
+                )
+                print(f"✅ Updated existing progress entry for {user_id}")
             
             # Update profile with progress summary
             self._update_profile_progress_summary(user_hash, progress_entry)
-            
-            print(f"✅ Updated long-term progress tracking")
             
         except Exception as e:
             print(f"❌ Error updating long-term progress: {e}")
@@ -1183,7 +1217,7 @@ Respond with JSON only:"""
         """Save psychological profile to database"""
         try:
             profile_doc = {
-                "user_id": profile.user_id,
+                "user_id": profile.user_id,  # This is already hashed from get_or_create
                 "core_patterns": profile.core_patterns,
                 "trauma_indicators": profile.trauma_indicators,
                 "long_term_progress": profile.long_term_progress,
@@ -1191,6 +1225,7 @@ Respond with JSON only:"""
                 "cognitive_patterns": profile.cognitive_patterns,
                 "emotional_regulation_patterns": profile.emotional_regulation_patterns,
                 "coping_mechanisms": profile.coping_mechanisms,
+                "created_at": profile.created_at,
                 "last_updated": profile.last_updated
             }
             
