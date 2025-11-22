@@ -1477,8 +1477,6 @@ class UserSession:
     crisis_level: CrisisLevel
     conversation_history: List[Dict]
 
-print("✅ Core classes and imports ready!")
-
 class DataLoader:
     """Enhanced mental health data loader with focused, efficient datasets"""
     
@@ -1785,7 +1783,6 @@ else:
     DEPLOYMENT_DATASET_LIMITS = {}
 
 # Load datasets immediately - no lazy loading
-print("📚 Loading top 4 mental health datasets...")
 try:
     datasets = DataLoader.load_mental_health_datasets()
     print(f"✅ Successfully loaded {len(datasets)} high-quality mental health datasets!")
@@ -3372,10 +3369,6 @@ Respond with ONLY a single number (e.g., "2.5" or "3"):"""
 
 # Initialize AI-powered crisis detector with hybrid mode (will be updated with user context per request)
 crisis_detector = CrisisDetector(detection_mode="hybrid")  # Initialize with default, will be updated per request
-print("✅ Enhanced AI crisis detection initialized (Hybrid mode: AI-Primary + Safety-Patterns)!")
-print(f"🕐 Session started at: {crisis_detector.current_user['timestamp']}")
-time_of_day = crisis_detector.current_user.get('time_of_day', 'unknown')
-print(f"👤 User context: {crisis_detector.current_user['login']} ({time_of_day})")
 
 @dataclass
 class SessionMemory:
@@ -4998,11 +4991,6 @@ Crisis Support Resources:"""
 
 
 
-# Replace the old method - disabled to avoid type errors
-# TherapyBot.generate_response = TherapyBot.generate_enhanced_response
-
-print("✅ Enhanced therapy bot with strict session isolation ready!")
-
 # Load API keys from environment variables
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
@@ -6175,182 +6163,8 @@ Personalized Recommendations:"""
 # Initialize interface
 if therapy_bot:
     interface = TherapyInterface(therapy_bot)
-    print("✅ Enhanced therapy interface ready!")
 else:
     interface = None
-    print("❌ Therapy bot not available")
 
-# Simple Console Interface (instead of Gradio)
-
-def run_console_therapy_session():
-    """Run a simple console-based therapy session"""
-
-    if not interface:
-        print("❌ Therapy bot not properly initialized. Please check your setup.")
-        return
-
-    print("=" * 60)
-    print("🤝 Mental Health Support Chat - Console Version")
-    print("=" * 60)
-    print("Type 'quit', 'exit', or 'bye' to end the session")
-    print("Type 'summary' to get a session summary")
-    print("Type 'new' to start a new session")
-    print("=" * 60)
-
-    # Start initial session
-    welcome_msg = interface.start_session()
-    print(f"\n🤖 Bot: {welcome_msg}\n")
-
-    # Main conversation loop
-    while True:
-        try:
-            # Get user input
-            user_input = input("👤 You: ").strip()
-
-            # Handle special commands
-            if user_input.lower() in ['quit', 'exit', 'bye']:
-                print("\n🤖 Bot: Thank you for sharing with me today. Take care, and remember that support is always available when you need it.")
-                print("\n Remember: If you're in crisis, contact 1019 (Mental Health Crisis Line) or 1166 (Emergency)")
-                break
-
-            elif user_input.lower() == 'summary':
-                summary = interface.get_session_summary()
-                print(f"\n📋 {summary}\n")
-                continue
-
-            elif user_input.lower() == 'new':
-                welcome_msg = interface.start_session()
-                print(f"\n🤖 Bot: {welcome_msg}\n")
-                continue
-
-            elif not user_input:
-                print("Please enter a message or type 'quit' to exit.")
-                continue
-
-            # Get bot response
-            print("\n🤖 Thinking...")
-            response = interface.send_message(user_input)
-            print(f"\n🤖 Bot: {response}\n")
-
-        except KeyboardInterrupt:
-            print("\n\n🤖 Bot: Session interrupted. Take care!")
-            # Secure cleanup
-            if interface and interface.current_session_id:
-                security_manager.audit_log(
-                    'SESSION_INTERRUPTED',
-                    interface.current_user_id or 'unknown',
-                    interface.current_session_id,
-                    {'reason': 'keyboard_interrupt'}
-                )
-            break
-        except Exception as e:
-            # Log error securely without exposing sensitive data
-            if interface and interface.current_session_id:
-                security_manager.audit_log(
-                    'SESSION_ERROR',
-                    interface.current_user_id or 'unknown',
-                    interface.current_session_id,
-                    {'error_type': type(e).__name__},
-                    'ERROR'
-                )
-            print(f"\n❌ Error: A security or system error occurred. Please try again or type 'quit' to exit.")
-    
-    # Final cleanup on exit
-    if interface and interface.current_session_id:
-        security_manager.audit_log(
-            'CONSOLE_SESSION_ENDED',
-            interface.current_user_id or 'console_user',
-            interface.current_session_id,
-            {'total_conversations': interface.conversation_count}
-        )
-        print("\n🔒 Session ended securely. All data protected.")
-
-def test_therapy_bot():
-    """Test the therapy bot with sample conversations"""
-
-    if not interface:
-        print("❌ Therapy bot not available for testing")
-        return
-
-    print("🧪 Testing Therapy Bot...")
-
-    # Start session
-    welcome = interface.start_session()
-    print(f"Welcome: {welcome[:100]}...")
-
-    # Test messages
-    test_messages = [
-        "Hi, I'm having a rough day at work",
-        "My boss scolded me in front of everyone and I feel so embarrassed",
-        "I just want to forget about it",
-        "Thanks for listening"
-    ]
-
-    for msg in test_messages:
-        print(f"\n📤 Test input: {msg}")
-        response = interface.send_message(msg)
-        print(f"📥 Response: {response[:150]}...")
-
-    # Get summary
-    summary = interface.get_session_summary()
-    print(f"\n📋 Summary: {summary[:200]}...")
-
-    # Secure cleanup after testing
-    if interface and interface.current_session_id:
-        security_manager.audit_log(
-            'TEST_SESSION_COMPLETED',
-            interface.current_user_id or 'test_user',
-            interface.current_session_id,
-            {'test_messages': len(test_messages)}
-        )
-
-    print("\n✅ Bot test completed with secure cleanup!")
-
-# Security maintenance functions
-def cleanup_expired_data():
-    """Clean up expired data across all storage systems"""
-    try:
-        if 'interface' in globals() and interface and interface.therapy_bot and interface.therapy_bot.storage:
-            interface.therapy_bot.storage.cleanup_expired_data()
-        print("✅ Data cleanup completed")
-    except Exception as e:
-        print(f"❌ Data cleanup failed: {e}")
-
-def anonymize_user_data(user_id: str):
-    """Anonymize user data for privacy compliance"""
-    try:
-        if 'interface' in globals() and interface and interface.therapy_bot and interface.therapy_bot.storage:
-            interface.therapy_bot.storage.anonymize_user_data(user_id)
-        print(f"✅ User data anonymized for {security_manager.hash_pii(user_id)}")
-    except Exception as e:
-        print(f"❌ User data anonymization failed: {e}")
-
-def get_security_status() -> Dict[str, Any]:
-    """Get current security configuration status"""
-    return {
-        'encryption_enabled': SECURITY_CONFIG['ENCRYPTION_ENABLED'],
-        'audit_logging': SECURITY_CONFIG['AUDIT_LOGGING'],
-        'data_retention_days': SECURITY_CONFIG['DATA_RETENTION_DAYS'],
-        'rate_limiting': True,
-        'session_validation': SECURITY_CONFIG['VALIDATE_SESSION_TOKENS'],
-        'input_sanitization': SECURITY_CONFIG['SANITIZE_INPUTS'],
-        'active_sessions': len(security_manager.session_tokens),
-        'security_version': '2.0'
-    }
-
-# API Mode - Don't run console interface automatically
+# API Mode - Ready for integration
 print("🔒 Secure Therapy Bot ready for API integration!")
-print("🛡️ Security Features Enabled:")
-print(f"  - Encryption: {SECURITY_CONFIG['ENCRYPTION_ENABLED']}")
-print(f"  - Audit Logging: {SECURITY_CONFIG['AUDIT_LOGGING']}")
-print(f"  - Rate Limiting: Enabled")
-print(f"  - Input Sanitization: {SECURITY_CONFIG['SANITIZE_INPUTS']}")
-print(f"  - Session Validation: {SECURITY_CONFIG['VALIDATE_SESSION_TOKENS']}")
-print("🔗 Available functions for external calls:")
-print("- interface.start_session() to start (with secure token)")
-print("- interface.send_message('your message') to chat (with validation)") 
-print("- interface.get_session_summary() to get summary (with access control)")
-print("- cleanup_expired_data() for data maintenance")
-print("- anonymize_user_data(user_id) for privacy compliance")
-print("- get_security_status() for security monitoring")
-print("🌟 Ready to be imported by therapy_service.py with comprehensive security controls")
