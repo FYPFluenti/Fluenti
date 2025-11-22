@@ -3548,45 +3548,22 @@ Complexity Analysis:"""
                     return complexity_data
                 except (json.JSONDecodeError, ValueError):
                     print(f"⚠️ Could not parse AI complexity analysis: {ai_analysis}")
-                    return self._fallback_complexity_analysis(user_input, conversation_count)
             else:
-                return self._fallback_complexity_analysis(user_input, conversation_count)
+                pass
                 
         except Exception as e:
             print(f"⚠️ AI complexity analysis failed: {e}")
-            return self._fallback_complexity_analysis(user_input, conversation_count)
-    
-    def _fallback_complexity_analysis(self, user_input: str, conversation_count: int) -> Dict[str, Any]:
-        """Fallback complexity analysis when AI is unavailable"""
+        
+        # Default complexity values when AI is unavailable
         word_count = len(user_input.split())
-        char_count = len(user_input.strip())
-        
-        # Simple heuristic-based complexity scoring
-        emotional = min(5, max(0, word_count // 3))  # More words = potentially more emotional content
-        therapeutic = min(5, max(0, word_count // 4))  # Longer messages may need more therapeutic response
-        context = min(5, max(0, conversation_count // 3))  # More conversation = more context needed
-        response = min(5, max(0, (word_count + conversation_count) // 5))  # Combined complexity for response
+        emotional = min(5, max(0, word_count // 3))
+        therapeutic = min(5, max(0, word_count // 4))
+        context = min(5, max(0, conversation_count // 3))
+        response = min(5, max(0, (word_count + conversation_count) // 5))
         overall = min(5, max(0, (emotional + therapeutic + context + response) // 4))
-        
-        # Add derived fields for backward compatibility
         requires_ai_context = therapeutic >= 3 or overall >= 3
-        
-        if overall <= 2:
-            complexity_level = 'simple'
-        elif overall <= 3:
-            complexity_level = 'moderate'
-        else:
-            complexity_level = 'complex'
-        
-        # Calculate confidence based on analysis certainty
-        if overall <= 1:
-            confidence = 0.9  # Very confident about simple cases
-        elif overall <= 2:
-            confidence = 0.8  # Good confidence for straightforward cases
-        elif overall <= 3:
-            confidence = 0.7  # Moderate confidence for moderate complexity
-        else:
-            confidence = 0.6  # Lower confidence for complex cases
+        complexity_level = 'simple' if overall <= 2 else 'moderate' if overall <= 3 else 'complex'
+        confidence = 0.9 if overall <= 1 else 0.8 if overall <= 2 else 0.7 if overall <= 3 else 0.6
         
         return {
             'emotional': emotional,
@@ -4120,10 +4097,10 @@ Return ONLY the category name that best matches the primary concern:"""
                         print(f"🎯 AI-identified primary issue: {ai_issue}")
                 else:
                     print(f"⚠️ LLM unavailable for issue identification")
-                    memory.primary_issue = self._fallback_issue_classification(user_input)
+                    memory.primary_issue = "General support"
             except Exception as e:
                 print(f"⚠️ AI issue identification failed: {e}")
-                memory.primary_issue = self._fallback_issue_classification(user_input)
+                memory.primary_issue = "General support"
 
         # Update progress notes for THIS session only
         if memory.progress_notes is not None:
@@ -4139,52 +4116,6 @@ Return ONLY the category name that best matches the primary concern:"""
             if len(memory.progress_notes) > 20:
                 memory.progress_notes = memory.progress_notes[-20:]
 
-    def _fallback_issue_classification(self, user_input: str) -> str:
-        """AI-assisted issue classification with minimal hardcoded fallback"""
-        # Try AI-powered classification even as "fallback"
-        if self.llm:
-            try:
-                issue_prompt = f"""
-Quickly classify the primary therapeutic concern in this text:
-
-Text: "{user_input}"
-
-Choose the most appropriate category:
-- work_stress
-- relationship_issues  
-- anxiety_symptoms
-- depression_symptoms
-- family_dynamics
-- general_support
-- life_transitions
-- self_esteem_issues
-
-Return ONLY the category name:"""
-                
-                response = self.llm.invoke(issue_prompt)
-                ai_classification = self._extract_llm_content(response).strip().lower()
-                
-                # Validate classification
-                valid_issues = ['work_stress', 'relationship_issues', 'anxiety_symptoms', 
-                              'depression_symptoms', 'family_dynamics', 'general_support',
-                              'life_transitions', 'self_esteem_issues']
-                
-                if ai_classification in valid_issues:
-                    return ai_classification
-                    
-            except Exception as e:
-                print(f"⚠️ AI fallback classification failed: {e}")
-        
-        # Minimal hardcoded fallback only for critical cases
-        text_lower = user_input.lower()
-        if 'work' in text_lower or 'job' in text_lower:
-            return "work_stress"
-        elif 'anxiety' in text_lower or 'anxious' in text_lower:
-            return "anxiety_symptoms"
-        elif 'depression' in text_lower or 'depressed' in text_lower:
-            return "depression_symptoms"
-        else:
-            return "general_support"
 
     def _extract_themes_from_text(self, text: str) -> List[str]:
         """AI-powered theme extraction from user input - eliminates hardcoded keywords"""
@@ -5112,11 +5043,11 @@ Decision:"""
         """Generate AI-powered continuation message for resumed sessions"""
         try:
             if not self.therapy_bot.llm:
-                return self._fallback_continuation_message()
+                return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked? What's on your mind today?"
             
             # Get session context for continuation with type safety
             if not self.current_user_id or not self.current_session_id:
-                return self._fallback_continuation_message()
+                return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked? What's on your mind today?"
                 
             session_memory = self.therapy_bot._get_or_create_session_memory(self.current_user_id, self.current_session_id)
             
@@ -5155,15 +5086,11 @@ Welcome back message:"""
                 print(f"🤖 Generated AI continuation message: {self.therapy_bot._count_words(ai_continuation)}w")
                 return ai_continuation.strip()
             else:
-                return self._fallback_continuation_message()
+                return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked? What's on your mind today?"
                 
         except Exception as e:
             print(f"⚠️ AI continuation message generation failed: {e}")
-            return self._fallback_continuation_message()
-    
-    def _fallback_continuation_message(self) -> str:
-        """Fallback continuation message when AI is not available"""
-        return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked? What's on your mind today?"
+            return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked? What's on your mind today?"
 
     def start_session(self, user_id: Optional[str] = None) -> str:
         """Start a secure therapy session with comprehensive security controls"""
@@ -5301,20 +5228,14 @@ Welcome message:"""
                     return ai_welcome.strip()
                 else:
                     print(f"⚠️ AI welcome generation failed, using fallback")
-                    return self._fallback_welcome_message()
             else:
                 print(f"⚠️ LLM unavailable for welcome generation")
-                return self._fallback_welcome_message()
                 
         except Exception as e:
             print(f"⚠️ AI welcome generation error: {e}")
-            return self._fallback_welcome_message()
-
-    def _fallback_welcome_message(self) -> str:
-        """Fallback welcome message when AI is unavailable"""
-        current_hour = datetime.now().hour
         
-        # Simple time-based greeting without hardcoded templates
+        # Default welcome message
+        current_hour = datetime.now().hour
         if 5 <= current_hour < 12:
             time_context = "morning"
         elif 12 <= current_hour < 17:
@@ -5406,23 +5327,21 @@ Error Message:"""
                 if ai_error and len(ai_error.strip()) > 10:
                     return ai_error.strip()
                 else:
-                    return self._fallback_error_message(error_type)
+                    pass
             else:
-                return self._fallback_error_message(error_type)
+                pass
                 
         except Exception as e:
             print(f"⚠️ AI error message generation failed: {e}")
-            return self._fallback_error_message(error_type)
-
-    def _fallback_error_message(self, error_type: str) -> str:
-        """Fallback error messages when AI is unavailable"""
-        fallback_messages = {
+        
+        # Default error messages
+        error_messages = {
             "service_unavailable": "I'm currently unavailable. If you're in crisis, please contact 1019 (Mental Health Crisis Line) or 1166 (Emergency).",
             "session_required": "Please start a new session first. If this is an emergency, call 1019 or 1166.",
             "empty_message": "Please enter a message to continue our conversation.",
             "technical_issue": "I encountered a technical issue. Please try again. If you're in crisis, contact 1019 or 1166 immediately."
         }
-        return fallback_messages.get(error_type, "An error occurred. Please try again or contact support if needed.")
+        return error_messages.get(error_type, "An error occurred. Please try again or contact support if needed.")
 
     def _generate_ai_emergency_message(self, response: str, crisis_level: CrisisLevel, harm_type: HarmType) -> str:
         """AI-generated emergency message formatting for harm to others scenarios"""
@@ -5724,45 +5643,19 @@ Main Themes:"""
                     return ai_themes.strip()
                 else:
                     print(f"⚠️ AI theme extraction failed, using fallback")
-                    return self._fallback_theme_extraction(history, memory)
             else:
                 print(f"⚠️ LLM unavailable for theme extraction")
-                return self._fallback_theme_extraction(history, memory)
                 
         except Exception as e:
             print(f"⚠️ AI theme extraction error: {e}")
-            return self._fallback_theme_extraction(history, memory)
-
-    def _fallback_theme_extraction(self, history: List[Dict], memory: SessionMemory) -> str:
-        """Fallback theme extraction when AI is unavailable"""
+        
+        # Default theme extraction from memory
         found_themes = []
-
-        # Get themes from memory first
         if memory.key_themes:
             for theme in memory.key_themes[:2]:
                 found_themes.append(f"• 🧠 {theme.replace('_', ' ').title()}")
-
-        # Simple keyword-based theme detection as fallback
-        try:
-            all_text = " ".join([conv['user_input'] for conv in history]).lower()
-
-            # Minimal hardcoded themes for fallback only
-            basic_themes = {
-                '• 😰 Anxiety/Stress': ['anxious', 'worried', 'panic', 'stressed', 'overwhelmed'],
-                '• 😢 Emotional Difficulties': ['sad', 'depressed', 'hopeless', 'empty', 'down'],
-                '• 💔 Relationship Concerns': ['relationship', 'partner', 'family', 'friends', 'lonely'],
-                '• 💼 Work/Career Issues': ['work', 'job', 'career', 'boss', 'workplace']
-            }
-
-            for theme, keywords in basic_themes.items():
-                if sum(1 for word in keywords if word in all_text) >= 1:
-                    if theme not in found_themes:
-                        found_themes.append(theme)
-
-            return "\n".join(found_themes[:3]) if found_themes else "• 💙 General life concerns and wellbeing"
-
-        except:
-            return "• 🤝 Conversation themes being analyzed"
+        
+        return "\n".join(found_themes[:3]) if found_themes else "• 💙 General life concerns and wellbeing"
 
     def _extract_strengths(self, history: List[Dict]) -> str:
         """AI-powered strength identification from conversation"""
@@ -5802,37 +5695,13 @@ Identified Strengths:"""
                     return ai_strengths.strip()
                 else:
                     print(f"⚠️ AI strength identification failed, using fallback")
-                    return self._fallback_strength_extraction(history)
             else:
                 print(f"⚠️ LLM unavailable for strength identification")
-                return self._fallback_strength_extraction(history)
                 
         except Exception as e:
             print(f"⚠️ AI strength identification error: {e}")
-            return self._fallback_strength_extraction(history)
-
-    def _fallback_strength_extraction(self, history: List[Dict]) -> str:
-        """Fallback strength identification when AI is unavailable"""
-        try:
-            all_text = " ".join([conv['user_input'] for conv in history]).lower()
-
-            # Basic strength indicators for fallback
-            basic_strengths = {
-                '• 🧘 Self-awareness': ['realize', 'understand', 'aware', 'recognize', 'notice'],
-                '• 🤝 Seeking support': ['help', 'support', 'therapy', 'talking', 'reaching out'],
-                '• 💪 Persistence': ['trying', 'working', 'effort', 'keep going', 'not giving up'],
-                '• 🎯 Problem-solving': ['fix', 'handle', 'solve', 'figure out', 'work through']
-            }
-
-            found_strengths = []
-            for strength, indicators in basic_strengths.items():
-                if sum(1 for word in indicators if word in all_text) >= 1:
-                    found_strengths.append(strength)
-
-            return "\n".join(found_strengths[:3]) if found_strengths else "• 🤝 Courage in seeking support\n• 💪 Willingness to share experiences"
-
-        except:
-            return "• 🌟 Reaching out for support shows strength"
+        
+        return "• 🤝 Courage in seeking support\n• 💪 Willingness to share experiences"
 
     def _generate_recommendations(self, history: List[Dict], memory: SessionMemory) -> str:
         """AI-powered personalized recommendations based on conversation"""
@@ -5879,17 +5748,13 @@ Personalized Recommendations:"""
                     return ai_recommendations.strip()
                 else:
                     print(f"⚠️ AI recommendation generation failed, using fallback")
-                    return self._fallback_recommendations(history, memory)
             else:
                 print(f"⚠️ LLM unavailable for recommendation generation")
-                return self._fallback_recommendations(history, memory)
                 
         except Exception as e:
             print(f"⚠️ AI recommendation generation error: {e}")
-            return self._fallback_recommendations(history, memory)
-
-    def _fallback_recommendations(self, history: List[Dict], memory: SessionMemory) -> str:
-        """Fallback recommendations when AI is unavailable"""
+        
+        return "• 🤝 Continue our therapeutic conversations\n• 🧠 Practice self-awareness and mindfulness\n• 💪 Build on the strengths you've shown"
         try:
             crisis_count = sum(1 for conv in history if conv.get('crisis_level') in ['high', 'critical'])
             mood_scores = [conv.get('mood_score', 5.0) for conv in history if conv.get('mood_score')]
