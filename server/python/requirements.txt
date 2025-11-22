@@ -25,7 +25,7 @@ chromadb>=1.2.1  # Vector database for embeddings storage
 # Or update Railway build command to include: pip install --extra-index-url https://download.pytorch.org/whl/cpu torch torchvision
 torch>=2.0.0,<3.0.0
 torchvision>=0.15.0,<1.0.0
-sentence-transformers==2.2.2
+sentence-transformers>=2.7.0,<3.0.0  # Updated for compatibility with transformers 4.40+
 transformers>=4.40.0,<5.0.0  # Updated to support newer tokenizers (>=0.19.1)
 huggingface-hub>=0.33.4,<1.0.0  # Updated to be compatible with langchain-huggingface
 

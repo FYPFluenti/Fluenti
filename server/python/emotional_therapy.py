@@ -3917,9 +3917,18 @@ Complexity Analysis:"""
                 if EMBEDDINGS_TYPE == 'legacy':
                     print("⚠️ Using deprecated embeddings class. Consider upgrading to langchain-huggingface.")
             except Exception as e:
-                print(f"⚠️ Error initializing embeddings: {e}")
-                # Fallback to basic embeddings if needed
-                raise
+                print(f"⚠️ Error creating enhanced knowledge base: {e}")
+                
+                # Check if it's a sentence-transformers import error
+                if "sentence_transformers" in str(e):
+                    print("💡 This appears to be a sentence-transformers installation issue.")
+                    print("   Try updating requirements.txt to use sentence-transformers>=2.7.0")
+                    print("   Knowledge base will be disabled, but therapy bot will continue with fallback.")
+                    
+                print("⚠️ Knowledge base loading failed, but continuing with fallback")
+                # Don't create vector store if embeddings fail
+                self.vector_store = None
+                return
 
             # Create enhanced vector store with metadata
             self.vector_store = Chroma.from_texts(
@@ -3931,13 +3940,17 @@ Complexity Analysis:"""
 
             # Create specialized retrievers with increased retrieval depth
             # Removed restrictive filter to allow access to all relevant crisis content
-            self.crisis_retriever = self.vector_store.as_retriever(
-                search_kwargs={"k": 6}  # Increased from 3 to 6 for better crisis coverage
-            )
+            if self.vector_store:
+                self.crisis_retriever = self.vector_store.as_retriever(
+                    search_kwargs={"k": 6}  # Increased from 3 to 6 for better crisis coverage
+                )
 
-            self.general_retriever = self.vector_store.as_retriever(
-                search_kwargs={"k": 6}  # Increased from 3 to 6 for better therapeutic coverage
-            )
+                self.general_retriever = self.vector_store.as_retriever(
+                    search_kwargs={"k": 6}  # Increased from 3 to 6 for better therapeutic coverage
+                )
+            else:
+                self.crisis_retriever = None
+                self.general_retriever = None
 
             print(f"✅ Enhanced knowledge base ready with {len(chunks)} chunks!")
             
@@ -4600,8 +4613,11 @@ Enhanced Query (max 100 characters):"""
             context_limit = context_limit_words * 6  # Conservative estimate for truncation
 
             # Check if knowledge base is available (should be loaded during startup)
-            if not self._knowledge_base_loaded:
-                print("⚠️ Knowledge base not available, using fallback context")
+            if not self._knowledge_base_loaded or not retriever:
+                if not retriever:
+                    print("⚠️ Vector embeddings not available (sentence-transformers issue), using fallback context")
+                else:
+                    print("⚠️ Knowledge base not available, using fallback context")
                 return "General therapeutic principles: active listening, empathy, validation, and supportive presence."
             
             if retriever and self._knowledge_base_loaded:

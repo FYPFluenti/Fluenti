@@ -28,6 +28,6 @@ CARGO_HOME=/tmp/cargo RUSTUP_HOME=/tmp/rustup CARGO_TARGET_DIR=/tmp/cargo-target
 
 # Ensure sentence-transformers is installed (fallback)
 echo "🔍 Verifying sentence-transformers installation..."
-pip show sentence-transformers || pip install --no-cache-dir sentence-transformers==2.2.2
+pip show sentence-transformers || pip install --no-cache-dir "sentence-transformers>=2.7.0,<3.0.0"
 
 echo "✅ Build completed successfully"
