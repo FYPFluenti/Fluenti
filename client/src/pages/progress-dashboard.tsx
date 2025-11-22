@@ -12,7 +12,6 @@ import {
   User,
   TrendingUp,
   Target,
-  Award,
   Calendar,
   Activity,
   Gamepad2,
@@ -20,6 +19,26 @@ import {
   Smile,
   SlidersHorizontal
 } from "lucide-react";
+import {
+  BarChart,
+  Bar,
+  AreaChart,
+  Area,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Legend,
+  RadarChart,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  Radar
+} from "recharts";
 import DarkModeToggle from "@/components/DarkModeToggle";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import FluentiLogo from "@/components/FluentiLogo";
@@ -27,7 +46,6 @@ import SharedSidebar from "@/components/layout/SharedSidebar";
 import FeedbackModal from "@/components/layout/FeedbackModel";
 import PageHeader from "@/components/layout/PageHeader";
 import { useStoryGameProgress, useStoryGameSessions, StoryGameSession } from "@/hooks/useStoryGameProgress";
-import BadgesModal from "@/components/BadgesModal";
 
 /* ---------- Types ---------- */
 interface UserProgress {
@@ -63,7 +81,6 @@ export default function ProgressDashboard() {
   const [, setLocation] = useLocation();
   const [showFeedback, setShowFeedback] = useState(false);
   const [selectedWeekOffset, setSelectedWeekOffset] = useState(0); // 0 = current week, -1 = last week, etc.
-  const [showBadgesModal, setShowBadgesModal] = useState(false);
   
   // Fetch story game progress and sessions
   const { progress: storyGameProgress, isLoading: storyGameLoading } = useStoryGameProgress();
@@ -112,8 +129,17 @@ export default function ProgressDashboard() {
     });
 
     // Calculate total practice time (in minutes)
+    // Use duration if available, otherwise calculate from startTime and endTime
     const totalPracticeTime = allSessions.reduce((total, session) => {
-      const duration = session.duration || 0; // duration is in seconds
+      let duration = 0;
+      if (session.duration) {
+        duration = session.duration; // duration is in seconds
+      } else if (session.startTime && session.endTime) {
+        // Calculate duration from start and end times
+        const start = new Date(session.startTime);
+        const end = new Date(session.endTime);
+        duration = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000)); // convert to seconds
+      }
       return total + Math.floor(duration / 60); // convert to minutes
     }, 0);
 
@@ -242,6 +268,104 @@ export default function ProgressDashboard() {
     weekRange: metricsData.weekRange
   };
   const error = null;
+
+  // Prepare chart data
+  const prepareChartData = () => {
+    // Therapy type distribution
+    const therapyTypeCounts = allSessions.reduce((acc, session) => {
+      const type = session.therapyType || 'pronunciation';
+      acc[type] = (acc[type] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const therapyTypeData = [
+      { name: 'Pronunciation', value: therapyTypeCounts.pronunciation || 0, color: '#F5B82E' },
+      { name: 'Fluency', value: therapyTypeCounts.fluency || 0, color: '#3B82F6' },
+      { name: 'Language Building', value: therapyTypeCounts.dld || 0, color: '#8B5CF6' },
+      { name: 'Social Communication', value: therapyTypeCounts.social || 0, color: '#10B981' }
+    ].filter(item => item.value > 0);
+
+    // Sessions over time (last 30 days)
+    const sessionsOverTime: Record<string, number> = {};
+    const today = new Date();
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateKey = date.toISOString().split('T')[0];
+      sessionsOverTime[dateKey] = 0;
+    }
+    
+    allSessions.forEach(session => {
+      const sessionDate = new Date(session.startTime || session.createdAt);
+      const dateKey = sessionDate.toISOString().split('T')[0];
+      if (sessionsOverTime.hasOwnProperty(dateKey)) {
+        sessionsOverTime[dateKey]++;
+      }
+    });
+
+    const sessionsOverTimeData = Object.entries(sessionsOverTime).map(([date, count]) => ({
+      date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      sessions: count,
+      fullDate: date
+    }));
+
+    // Level progress comparison
+    const levelProgressData = storyGameProgress ? [
+      {
+        therapy: 'Pronunciation',
+        initial: storyGameProgress.assessments?.pronunciation?.level || 1,
+        current: storyGameProgress.currentLevels?.pronunciation || 1
+      },
+      {
+        therapy: 'Fluency',
+        initial: storyGameProgress.assessments?.fluency?.level || 1,
+        current: storyGameProgress.currentLevels?.fluency || 1
+      },
+      {
+        therapy: 'Language',
+        initial: storyGameProgress.assessments?.dld?.level || 1,
+        current: storyGameProgress.currentLevels?.dld || 1
+      },
+      {
+        therapy: 'Social',
+        initial: storyGameProgress.assessments?.social?.level || 1,
+        current: storyGameProgress.currentLevels?.social || 1
+      }
+    ] : [];
+
+    // Performance metrics for radar chart
+    const performanceData = storyGameProgress ? [
+      {
+        metric: 'Sessions',
+        value: Math.min((allSessions.length / 50) * 100, 100)
+      },
+      {
+        metric: 'Accuracy',
+        value: progressData.progress.overallAccuracy
+      },
+      {
+        metric: 'Level',
+        value: Math.min(((storyGameProgress.currentLevels?.pronunciation || 1) / 10) * 100, 100)
+      },
+      {
+        metric: 'Streak',
+        value: Math.min((progressData.progress.currentStreak / 30) * 100, 100)
+      },
+      {
+        metric: 'Stories',
+        value: Math.min((storyGameProgress.totalStoriesCompleted / 20) * 100, 100)
+      }
+    ] : [];
+
+    return {
+      therapyTypeData,
+      sessionsOverTimeData,
+      levelProgressData,
+      performanceData
+    };
+  };
+
+  const chartData = prepareChartData();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) setLocation("/login");
@@ -376,65 +500,245 @@ export default function ProgressDashboard() {
               key metrics
             </h2>
 
-            <div className="grid grid-cols-1 gap-4 mb-8 max-w-xs">
+            {/* Metrics Grid with Visual Indicators */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
               {/* Current Streak */}
               <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Target className="w-4 h-4 text-orange-500" />
                   <span className="text-xs font-medium text-muted-foreground">STREAK</span>
                 </div>
-                <div className="text-2xl font-bold">
+                <div className="text-2xl font-bold mb-1">
                   {progress?.currentStreak || 0}
                 </div>
-                <div className="text-xs text-muted-foreground">
+                <div className="text-xs text-muted-foreground mb-3">
                   {progress?.currentStreak === 1 ? 'day' : 'days'}
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-orange-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min((progress?.currentStreak || 0) / 30 * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Overall Accuracy */}
+              <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="w-4 h-4 text-[#F5B82E]" />
+                  <span className="text-xs font-medium text-muted-foreground">ACCURACY</span>
+                </div>
+                <div className="text-2xl font-bold mb-1">
+                  {progress?.overallAccuracy || 0}%
+                </div>
+                <div className="text-xs text-muted-foreground mb-3">
+                  Average score
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-[#F5B82E] rounded-full transition-all duration-500"
+                    style={{ width: `${progress?.overallAccuracy || 0}%` }}
+                  />
+                </div>
+              </div>
+
+              {/* Sessions Completed */}
+              <div className="bg-card text-card-foreground border border-border rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Calendar className="w-4 h-4 text-blue-500" />
+                  <span className="text-xs font-medium text-muted-foreground">SESSIONS</span>
+                </div>
+                <div className="text-2xl font-bold mb-1">
+                  {progress?.sessionsCompleted || 0}
+                </div>
+                <div className="text-xs text-muted-foreground mb-3">
+                  Total completed
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min((progress?.sessionsCompleted || 0) / 100 * 100, 100)}%` }}
+                  />
                 </div>
               </div>
             </div>
 
-            {/* Weekly Activity Chart */}
+            {/* Weekly Activity Chart - Bar Chart */}
             <div className="bg-card border border-border rounded-xl p-6 mb-8">
               <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
                 <Activity className="w-4 h-4" />
                 daily activity
               </h3>
-              <div className="space-y-3">
-                {progressData?.weeklyData.map((day, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className="w-8 text-xs font-medium text-muted-foreground">
-                      {day.day}
-                    </div>
-                    <div className="w-12 text-xs text-muted-foreground">
-                      {day.date}
-                    </div>
-                    <div className="flex-1 bg-muted rounded-full h-2 relative overflow-hidden">
-                      <div 
-                        className="bg-[#F5B82E] h-2 rounded-full transition-all duration-500"
-                        style={{ width: `${day.sessions ? Math.min((day.sessions / 3) * 100, 100) : 0}%` }}
+              {progressData?.weeklyData && progressData.weeklyData.length > 0 ? (
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={progressData.weeklyData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis 
+                        dataKey="day" 
+                        className="text-xs"
+                        tick={{ fill: 'currentColor' }}
                       />
-                    </div>
-                    <div className="w-16 text-xs text-right">
-                      {day.sessions > 0 ? `${day.sessions} session${day.sessions > 1 ? 's' : ''}` : 'rest'}
-                    </div>
-                    {day.accuracy > 0 && (
-                      <div className="w-12 text-xs text-muted-foreground text-right">
-                        {day.accuracy}%
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
+                      <YAxis 
+                        className="text-xs"
+                        tick={{ fill: 'currentColor' }}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--background))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                        formatter={(value: number, name: string) => {
+                          if (name === 'sessions') return [`${value} session${value !== 1 ? 's' : ''}`, 'Sessions'];
+                          if (name === 'accuracy') return [`${value}%`, 'Accuracy'];
+                          return [value, name];
+                        }}
+                      />
+                      <Bar 
+                        dataKey="sessions" 
+                        fill="#F5B82E" 
+                        radius={[4, 4, 0, 0]}
+                        name="sessions"
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Activity className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                  <p>No activity data for this week</p>
+                </div>
+              )}
             </div>
 
-            {/* Recent Sessions */}
+            {/* Sessions Over Time - Area Chart */}
+            {chartData.sessionsOverTimeData.length > 0 && (
+              <div className="bg-card border border-border rounded-xl p-6 mb-8">
+                <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
+                  <Calendar className="w-4 h-4" />
+                  sessions over time (last 30 days)
+                </h3>
+                <div className="h-64">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={chartData.sessionsOverTimeData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#F5B82E" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#F5B82E" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                      <XAxis 
+                        dataKey="date" 
+                        className="text-xs"
+                        tick={{ fill: 'currentColor' }}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                      />
+                      <YAxis 
+                        className="text-xs"
+                        tick={{ fill: 'currentColor' }}
+                      />
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'hsl(var(--background))',
+                          border: '1px solid hsl(var(--border))',
+                          borderRadius: '8px'
+                        }}
+                        formatter={(value: number) => [`${value} session${value !== 1 ? 's' : ''}`, 'Sessions']}
+                      />
+                      <Area 
+                        type="monotone" 
+                        dataKey="sessions" 
+                        stroke="#F5B82E" 
+                        fillOpacity={1}
+                        fill="url(#colorSessions)"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* Therapy Type Distribution */}
+            {chartData.therapyTypeData.length > 0 && (
+              <div className="bg-card border border-border rounded-xl p-6 mb-8">
+                <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
+                  <Gamepad2 className="w-4 h-4" />
+                  therapy type distribution
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={chartData.therapyTypeData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {chartData.therapyTypeData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--background))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }}
+                          formatter={(value: number) => [`${value} session${value !== 1 ? 's' : ''}`, 'Sessions']}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="h-64">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData.therapyTypeData} layout="vertical" margin={{ top: 5, right: 20, left: 60, bottom: 5 }}>
+                        <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                        <XAxis type="number" className="text-xs" tick={{ fill: 'currentColor' }} />
+                        <YAxis 
+                          dataKey="name" 
+                          type="category" 
+                          className="text-xs"
+                          tick={{ fill: 'currentColor' }}
+                          width={50}
+                        />
+                        <Tooltip 
+                          contentStyle={{ 
+                            backgroundColor: 'hsl(var(--background))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px'
+                          }}
+                          formatter={(value: number) => [`${value} session${value !== 1 ? 's' : ''}`, 'Sessions']}
+                        />
+                        <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+                          {chartData.therapyTypeData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Recent Sessions with Visual Timeline */}
             <div className="bg-card border border-border rounded-xl p-6 mb-8">
               <h3 className="text-sm font-medium mb-4 flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 recent sessions
               </h3>
-              <div className="space-y-3">
-                {progressData?.recentSessions && progressData.recentSessions.length > 0 ? (
-                  progressData.recentSessions.map((session) => {
+              {progressData?.recentSessions && progressData.recentSessions.length > 0 ? (
+                <div className="space-y-3">
+                  {progressData.recentSessions.map((session, index) => {
                     const sessionDate = new Date(session.createdAt);
                     const therapyName = session.sessionType === 'dld' 
                       ? 'Language Building' 
@@ -444,32 +748,55 @@ export default function ProgressDashboard() {
                       ? 'Fluency & Stuttering'
                       : 'Pronunciation';
                     
+                    const therapyColors = {
+                      pronunciation: '#F5B82E',
+                      fluency: '#3B82F6',
+                      dld: '#8B5CF6',
+                      social: '#10B981'
+                    };
+                    
+                    const color = therapyColors[session.sessionType as keyof typeof therapyColors] || '#F5B82E';
+                    
                     return (
-                      <div key={session.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                        <div>
-                          <div className="text-sm font-medium capitalize">{therapyName}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {sessionDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {sessionDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      <div key={session.id} className="relative">
+                        {index < progressData.recentSessions.length - 1 && (
+                          <div className="absolute left-4 top-8 bottom-0 w-0.5 bg-border" />
+                        )}
+                        <div className="flex items-start gap-4 p-3 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
+                          <div className="relative z-10 w-8 h-8 rounded-full border-2 border-background flex items-center justify-center" style={{ backgroundColor: color }}>
+                            <div className="w-2 h-2 rounded-full bg-background" />
                           </div>
-                        </div>
-                        <div className="text-sm font-bold text-[#F5B82E]">
-                          {session.accuracyScore}%
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="text-sm font-medium capitalize">{therapyName}</div>
+                              <div className="text-sm font-bold" style={{ color }}>
+                                {session.accuracyScore}%
+                              </div>
+                            </div>
+                            <div className="text-xs text-muted-foreground mb-2">
+                              {sessionDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {sessionDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className="h-full rounded-full transition-all duration-500"
+                                style={{ 
+                                  width: `${session.accuracyScore}%`,
+                                  backgroundColor: color
+                                }}
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     );
-                  })
-                ) : (
-                  <div className="text-sm text-muted-foreground text-center py-4">
-                    No sessions yet. Start playing to see your progress!
-                  </div>
-                )}
-              </div>
-              
-              {progressData?.recentSessions.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <p className="text-sm">No sessions this week yet</p>
+                  })}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Calendar className="w-8 h-8 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm mb-2">No sessions yet. Start playing to see your progress!</p>
                   <button 
-                    onClick={() => setLocation('/speech-therapy')}
+                    onClick={() => setLocation('/story-game')}
                     className="text-[#F5B82E] text-sm hover:underline mt-2"
                   >
                     Start your first session →
@@ -501,64 +828,6 @@ export default function ProgressDashboard() {
                     </div>
                   </div>
                 )}
-
-                {/* Badges Section - Always visible */}
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="text-xs font-medium text-muted-foreground">BADGES EARNED</div>
-                    <button
-                      onClick={() => setShowBadgesModal(true)}
-                      className="text-xs text-[#F5B82E] hover:underline flex items-center gap-1"
-                    >
-                      <Award className="w-3 h-3" />
-                      View All
-                    </button>
-                  </div>
-                  {(() => {
-                    const allBadges: string[] = [];
-                    if (storyGameProgress.badgesEarned) {
-                      if (Array.isArray(storyGameProgress.badgesEarned)) {
-                        allBadges.push(...storyGameProgress.badgesEarned);
-                      } else {
-                        allBadges.push(
-                          ...(storyGameProgress.badgesEarned.pronunciation || []),
-                          ...(storyGameProgress.badgesEarned.fluency || []),
-                          ...(storyGameProgress.badgesEarned.dld || []),
-                          ...(storyGameProgress.badgesEarned.social || [])
-                        );
-                      }
-                    }
-                    
-                    if (allBadges.length > 0) {
-                      return (
-                        <div className="flex flex-wrap gap-2">
-                          {allBadges.slice(0, 5).map((badge, index) => (
-                            <span
-                              key={index}
-                              className="px-2 py-1 bg-[#F5B82E]/20 text-[#F5B82E] rounded-full text-xs"
-                            >
-                              {badge}
-                            </span>
-                          ))}
-                          {allBadges.length > 5 && (
-                            <button
-                              onClick={() => setShowBadgesModal(true)}
-                              className="px-2 py-1 text-xs text-muted-foreground hover:text-[#F5B82E] transition-colors"
-                            >
-                              +{allBadges.length - 5} more
-                            </button>
-                          )}
-                        </div>
-                      );
-                    } else {
-                      return (
-                        <div className="text-xs text-muted-foreground">
-                          No badges earned yet. Complete stories and level up to earn badges!
-                        </div>
-                      );
-                    }
-                  })()}
-                </div>
 
                 {/* Assessment Results for All Therapy Types */}
                 <div className="mb-6">
@@ -647,6 +916,83 @@ export default function ProgressDashboard() {
                   </div>
                 </div>
 
+                {/* Level Progress Comparison Chart */}
+                {chartData.levelProgressData.length > 0 && (
+                  <div className="mb-6">
+                    <div className="text-xs font-medium text-muted-foreground mb-3">LEVEL PROGRESS COMPARISON</div>
+                    <div className="bg-muted/30 rounded-lg p-4 mb-4">
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={chartData.levelProgressData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                            <XAxis 
+                              dataKey="therapy" 
+                              className="text-xs"
+                              tick={{ fill: 'currentColor' }}
+                            />
+                            <YAxis 
+                              className="text-xs"
+                              tick={{ fill: 'currentColor' }}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: 'hsl(var(--background))',
+                                border: '1px solid hsl(var(--border))',
+                                borderRadius: '8px'
+                              }}
+                            />
+                            <Legend />
+                            <Bar dataKey="initial" fill="#94a3b8" radius={[4, 4, 0, 0]} name="Initial Level" />
+                            <Bar dataKey="current" fill="#F5B82E" radius={[4, 4, 0, 0]} name="Current Level" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Performance Radar Chart */}
+                {chartData.performanceData.length > 0 && (
+                  <div className="mb-6">
+                    <div className="text-xs font-medium text-muted-foreground mb-3">PERFORMANCE OVERVIEW</div>
+                    <div className="bg-muted/30 rounded-lg p-4">
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <RadarChart data={chartData.performanceData}>
+                            <PolarGrid />
+                            <PolarAngleAxis 
+                              dataKey="metric" 
+                              className="text-xs"
+                              tick={{ fill: 'currentColor' }}
+                            />
+                            <PolarRadiusAxis 
+                              angle={90} 
+                              domain={[0, 100]}
+                              className="text-xs"
+                              tick={{ fill: 'currentColor' }}
+                            />
+                            <Radar 
+                              name="Performance" 
+                              dataKey="value" 
+                              stroke="#F5B82E" 
+                              fill="#F5B82E" 
+                              fillOpacity={0.6}
+                            />
+                            <Tooltip 
+                              contentStyle={{ 
+                                backgroundColor: 'hsl(var(--background))',
+                                border: '1px solid hsl(var(--border))',
+                                borderRadius: '8px'
+                              }}
+                              formatter={(value: number) => [`${value.toFixed(0)}%`, 'Score']}
+                            />
+                          </RadarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Current Progress by Therapy Type */}
                 <div className="mb-6">
                   <div className="text-xs font-medium text-muted-foreground mb-3">CURRENT PROGRESS BY THERAPY TYPE</div>
@@ -655,20 +1001,6 @@ export default function ProgressDashboard() {
                       const level = storyGameProgress.currentLevels?.[therapyType] || 1;
                       const assessment = storyGameProgress.assessments?.[therapyType];
                       const stats = storyGameProgress.therapyStats?.[therapyType];
-                      
-                      // Handle both new format (object) and legacy format (array)
-                      let badges: string[] = [];
-                      if (storyGameProgress.badgesEarned) {
-                        if (Array.isArray(storyGameProgress.badgesEarned)) {
-                          // Legacy format - show all badges for selected therapy type
-                          badges = storyGameProgress.selectedTherapyType === therapyType 
-                            ? storyGameProgress.badgesEarned 
-                            : [];
-                        } else {
-                          // New format - badges per therapy type
-                          badges = storyGameProgress.badgesEarned[therapyType] || [];
-                        }
-                      }
                       
                       const isSelected = storyGameProgress.selectedTherapyType === therapyType;
                       
@@ -680,6 +1012,9 @@ export default function ProgressDashboard() {
                         ? 'Fluency & Stuttering'
                         : 'Pronunciation';
                       
+                      const maxLevel = 10;
+                      const levelProgress = (level / maxLevel) * 100;
+                      
                       return (
                         <div 
                           key={therapyType}
@@ -690,10 +1025,10 @@ export default function ProgressDashboard() {
                           }`}
                         >
                           <div className="flex items-center justify-between mb-3">
-                            <div>
-                              <div className="text-sm font-bold capitalize">{therapyName}</div>
+                            <div className="flex-1">
+                              <div className="text-sm font-bold capitalize mb-1">{therapyName}</div>
                               {assessment && (
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-xs text-muted-foreground mb-2">
                                   {level === assessment.level ? (
                                     <span>Initial & Current: Level {level} <span className="text-muted-foreground/70">(No progress yet)</span></span>
                                   ) : (
@@ -702,44 +1037,22 @@ export default function ProgressDashboard() {
                                 </div>
                               )}
                               {!assessment && (
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-xs text-muted-foreground mb-2">
                                   Current: Level {level}
                                 </div>
                               )}
+                              {/* Level Progress Bar */}
+                              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-[#F5B82E] rounded-full transition-all duration-500"
+                                  style={{ width: `${levelProgress}%` }}
+                                />
+                              </div>
                             </div>
-                            <div className="text-2xl font-bold text-[#F5B82E]">
+                            <div className="text-2xl font-bold text-[#F5B82E] ml-4">
                               {level}
                             </div>
                           </div>
-                          
-                          
-                          {/* Badges for this therapy type - Clickable to view all */}
-                          {badges.length > 0 && (
-                            <div 
-                              className="mt-3 pt-3 border-t border-border cursor-pointer hover:opacity-80 transition-opacity"
-                              onClick={() => setShowBadgesModal(true)}
-                            >
-                              <div className="text-xs font-medium text-muted-foreground mb-2 flex items-center justify-between">
-                                <span>Badges ({badges.length})</span>
-                                <Award className="w-3 h-3 text-[#F5B82E]" />
-                              </div>
-                              <div className="flex flex-wrap gap-1">
-                                {badges.slice(0, 3).map((badge, index) => (
-                                  <span 
-                                    key={index}
-                                    className="px-2 py-1 bg-[#F5B82E]/20 text-[#F5B82E] rounded-full text-xs"
-                                  >
-                                    {badge}
-                                  </span>
-                                ))}
-                                {badges.length > 3 && (
-                                  <span className="px-2 py-1 text-xs text-muted-foreground">
-                                    +{badges.length - 3} more
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
                         </div>
                       );
                     })}
@@ -768,28 +1081,6 @@ export default function ProgressDashboard() {
           isOpen={showFeedback} 
           onClose={() => setShowFeedback(false)} 
         />
-
-        {/* Badges Modal */}
-        {storyGameProgress && (
-          <BadgesModal
-            isOpen={showBadgesModal}
-            onClose={() => setShowBadgesModal(false)}
-            badges={{
-              pronunciation: Array.isArray(storyGameProgress.badgesEarned)
-                ? (storyGameProgress.selectedTherapyType === 'pronunciation' ? storyGameProgress.badgesEarned : [])
-                : (storyGameProgress.badgesEarned?.pronunciation || []),
-              fluency: Array.isArray(storyGameProgress.badgesEarned)
-                ? (storyGameProgress.selectedTherapyType === 'fluency' ? storyGameProgress.badgesEarned : [])
-                : (storyGameProgress.badgesEarned?.fluency || []),
-              dld: Array.isArray(storyGameProgress.badgesEarned)
-                ? (storyGameProgress.selectedTherapyType === 'dld' ? storyGameProgress.badgesEarned : [])
-                : (storyGameProgress.badgesEarned?.dld || []),
-              social: Array.isArray(storyGameProgress.badgesEarned)
-                ? (storyGameProgress.selectedTherapyType === 'social' ? storyGameProgress.badgesEarned : [])
-                : (storyGameProgress.badgesEarned?.social || [])
-            }}
-          />
-        )}
       </main>
     </div>
   );
