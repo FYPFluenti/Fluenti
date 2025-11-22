@@ -598,18 +598,18 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
       {/* Footer - Controls and Interactions */}
       <footer className="sticky bottom-0 z-20 flex-shrink-0 bg-transparent">
         {endingType ? (
-          <div className="text-center py-8 px-4 pointer-events-none">
-            <div className="text-5xl mb-3">🎉</div>
-            <p className="text-3xl md:text-4xl font-bold text-[#ff6b1d]">The End</p>
-            <p className="text-gray-600 mt-2 text-lg">Great adventure!</p>
+          <div className="text-center py-6 px-4 pointer-events-none">
+            <div className="text-4xl mb-2">🎉</div>
+            <p className="text-2xl md:text-3xl font-bold text-[#ff6b1d]">The End</p>
+            <p className="text-gray-600 mt-2 text-base">Great adventure!</p>
           </div>
         ) : (
-          <div className="max-w-3xl mx-auto px-4 md:px-6 py-4 md:py-5 relative">
+          <div className="max-w-3xl mx-auto px-4 md:px-6 py-2 md:py-3 relative">
             {/* Challenge Prompt */}
             {lastChunk?.challenge && (
-              <div className="mb-4 md:mb-5">
-                <div className="bg-gradient-to-r from-orange-100 to-yellow-100 border-2 border-orange-200 rounded-2xl p-4 md:p-5 text-center shadow-md">
-                  <p className="text-lg md:text-xl font-bold text-[#ff6b1d] animate-pulse">
+              <div className="mb-2 md:mb-3">
+                <div className="bg-gradient-to-r from-orange-100 to-yellow-100 border-2 border-orange-200 rounded-xl p-2 md:p-3 text-center shadow-md">
+                  <p className="text-base md:text-lg font-bold text-[#ff6b1d] animate-pulse">
                     {getChallengePrompt()}
                   </p>
                 </div>
@@ -618,24 +618,24 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
             
             {/* Suggestions - Illustrated Choice Cards */}
             {areSuggestionsVisible && lastChunk?.suggestions && lastChunk.suggestions.length > 0 && !isLoading && !isListening && !lastChunk.challenge && (
-              <div className="mb-4 md:mb-5">
-                <p className="text-xs md:text-sm font-semibold text-gray-600 mb-3 text-center uppercase tracking-wide">Choose what happens next:</p>
-                <div className="flex flex-wrap justify-center gap-3 md:gap-4">
+              <div className="mb-2 md:mb-3">
+                <p className="text-[10px] md:text-xs font-semibold text-gray-600 mb-1.5 text-center uppercase tracking-wide">Choose what happens next:</p>
+                <div className="flex flex-wrap justify-center gap-2 md:gap-2.5">
                   {lastChunk.suggestions?.map((suggestion, index) => (
                     <div
                       key={index}
-                      className="group font-semibold py-3 px-4 md:px-5 rounded-xl border-2 border-yellow-300 bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-800 text-sm md:text-base pointer-events-none cursor-default transition-all duration-200 hover:shadow-lg hover:scale-105 animate-bounce-on-hover relative overflow-hidden"
+                      className="group font-semibold py-1.5 px-3 md:px-3.5 rounded-lg border-2 border-yellow-300 bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-800 text-xs md:text-sm pointer-events-none cursor-default transition-all duration-200 hover:shadow-lg hover:scale-105 animate-bounce-on-hover relative overflow-hidden"
                       onMouseEnter={playHoverSound}
                     >
                       {/* Sparkle trail effect on hover */}
                       <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                        <div className="absolute top-1 right-1 w-2 h-2 bg-yellow-400 rounded-full animate-sparkle" style={{ animationDelay: '0s' }}></div>
-                        <div className="absolute top-2 right-4 w-1.5 h-1.5 bg-yellow-300 rounded-full animate-sparkle" style={{ animationDelay: '0.2s' }}></div>
-                        <div className="absolute bottom-2 right-2 w-1.5 h-1.5 bg-yellow-400 rounded-full animate-sparkle" style={{ animationDelay: '0.4s' }}></div>
+                        <div className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-yellow-400 rounded-full animate-sparkle" style={{ animationDelay: '0s' }}></div>
+                        <div className="absolute top-1 right-3 w-1 h-1 bg-yellow-300 rounded-full animate-sparkle" style={{ animationDelay: '0.2s' }}></div>
+                        <div className="absolute bottom-1 right-1 w-1 h-1 bg-yellow-400 rounded-full animate-sparkle" style={{ animationDelay: '0.4s' }}></div>
                       </div>
                       
                       {/* Icon and Text */}
-                      <div className="flex items-center gap-2 md:gap-2.5 relative z-10">
+                      <div className="flex items-center gap-1.5 md:gap-2 relative z-10">
                         <div className="text-yellow-600 group-hover:text-yellow-700 transition-colors">
                           {getSuggestionIcon(suggestion)}
                         </div>
@@ -649,11 +649,11 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
             
             {/* Word Bank */}
             {isDldChallenge && wordBank.length > 0 && (
-              <div className="mb-4 md:mb-5">
-                <p className="text-xs md:text-sm font-bold text-gray-700 mb-2.5 text-center">✨ Your New Words! ✨</p>
-                <div className="flex flex-wrap justify-center gap-2 md:gap-2.5">
+              <div className="mb-2 md:mb-3">
+                <p className="text-[10px] md:text-xs font-bold text-gray-700 mb-1.5 text-center">✨ Your New Words! ✨</p>
+                <div className="flex flex-wrap justify-center gap-1.5 md:gap-2">
                   {wordBank.map((word, index) => (
-                    <div key={index} className="font-semibold py-1.5 px-4 rounded-lg bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-800 border-2 border-yellow-200 shadow-sm text-sm md:text-base">
+                    <div key={index} className="font-semibold py-1 px-2.5 md:px-3 rounded-md bg-gradient-to-r from-yellow-50 to-yellow-100 text-yellow-800 border-2 border-yellow-200 shadow-sm text-xs md:text-sm">
                       {word}
                     </div>
                   ))}
@@ -664,28 +664,28 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
             {/* Main Controls */}
             <div className="flex flex-col items-center">
               {isLoading ? (
-                <div className="text-center py-4">
+                <div className="text-center py-2">
                   <LoadingSpinner />
-                  <p className="mt-3 text-gray-600 font-medium">Our storyteller is thinking...</p>
+                  <p className="mt-2 text-sm text-gray-600 font-medium">Our storyteller is thinking...</p>
                 </div>
               ) : (
                 <>
-                  <div className="flex items-center justify-center gap-4 md:gap-6 mb-3">
+                  <div className="flex items-center justify-center gap-3 md:gap-4 mb-2">
                     {/* Repeat Button */}
                     <button 
                       onClick={() => speakFromQueue([{text: (lastSpokenText || '').replace(/\*\*/g, '')}])} 
-                      className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-white border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" 
+                      className="w-10 h-10 md:w-11 md:h-11 rounded-full bg-white border-2 border-gray-200 hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 shadow-md hover:shadow-lg flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed" 
                       aria-label="Repeat last sentence" 
                       disabled={isNarrating}
                     >
-                      <SpeakerIcon className="w-5 h-5 md:w-6 md:h-6 text-gray-700"/>
+                      <SpeakerIcon className="w-4 h-4 md:w-5 md:h-5 text-gray-700"/>
                     </button>
                     
                     {/* Magical Voice Circle */}
                     <button 
                       onClick={handleListen} 
                       disabled={isOnCooldown || isNarrating || isListening}
-                      className={`relative w-20 h-20 md:w-24 md:h-24 rounded-full transition-all duration-300 flex items-center justify-center ${
+                      className={`relative w-16 h-16 md:w-20 md:h-20 rounded-full transition-all duration-300 flex items-center justify-center ${
                         isOnCooldown || isNarrating 
                           ? 'opacity-50 cursor-not-allowed' 
                           : 'cursor-pointer hover:scale-105'
@@ -695,23 +695,23 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
                       {/* Pulsing Rings - Only when listening */}
                       {isListening && (
                         <>
-                          <div className="absolute inset-0 rounded-full border-4 border-orange-400/60 animate-pulse-ring-1"></div>
-                          <div className="absolute inset-0 rounded-full border-4 border-orange-300/50 animate-pulse-ring-2"></div>
-                          <div className="absolute inset-0 rounded-full border-4 border-orange-200/40 animate-pulse-ring-3"></div>
+                          <div className="absolute inset-0 rounded-full border-3 border-orange-400/60 animate-pulse-ring-1"></div>
+                          <div className="absolute inset-0 rounded-full border-3 border-orange-300/50 animate-pulse-ring-2"></div>
+                          <div className="absolute inset-0 rounded-full border-3 border-orange-200/40 animate-pulse-ring-3"></div>
                         </>
                       )}
                       
                       {/* Glowing Magical Circle */}
                       <div className={`absolute inset-0 rounded-full ${
                         isListening
-                          ? 'bg-gradient-to-br from-orange-500 via-orange-600 to-[#ff6b1d] shadow-[0_0_30px_rgba(249,115,22,0.8),0_0_60px_rgba(249,115,22,0.6),0_0_90px_rgba(255,107,29,0.4)] animate-pulse'
+                          ? 'bg-gradient-to-br from-orange-500 via-orange-600 to-[#ff6b1d] shadow-[0_0_20px_rgba(249,115,22,0.8),0_0_40px_rgba(249,115,22,0.6),0_0_60px_rgba(255,107,29,0.4)] animate-pulse'
                           : (isOnCooldown || isNarrating)
                             ? 'bg-gradient-to-br from-gray-400 to-gray-500'
-                            : 'bg-gradient-to-br from-orange-400 via-orange-500 to-[#ff6b1d] shadow-[0_0_20px_rgba(249,115,22,0.6),0_0_40px_rgba(255,107,29,0.4)] hover:shadow-[0_0_30px_rgba(249,115,22,0.8),0_0_60px_rgba(255,107,29,0.6)]'
+                            : 'bg-gradient-to-br from-orange-400 via-orange-500 to-[#ff6b1d] shadow-[0_0_15px_rgba(249,115,22,0.6),0_0_30px_rgba(255,107,29,0.4)] hover:shadow-[0_0_20px_rgba(249,115,22,0.8),0_0_40px_rgba(255,107,29,0.6)]'
                       } transition-all duration-300`}></div>
                       
                       {/* Inner Glow Circle */}
-                      <div className={`absolute inset-2 md:inset-3 rounded-full ${
+                      <div className={`absolute inset-1.5 md:inset-2 rounded-full ${
                         isListening
                           ? 'bg-gradient-to-br from-orange-300 via-orange-400 to-orange-500'
                           : (isOnCooldown || isNarrating)
@@ -722,41 +722,41 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
                       {/* Magical Symbol/Icon */}
                       <div className="relative z-10 flex items-center justify-center">
                         {isListening ? (
-                          <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-white/90 flex items-center justify-center animate-pulse">
-                            <div className="w-4 h-4 md:w-5 md:h-5 rounded-full bg-orange-500"></div>
+                          <div className="w-6 h-6 md:w-7 md:h-7 rounded-full bg-white/90 flex items-center justify-center animate-pulse">
+                            <div className="w-3 h-3 md:w-3.5 md:h-3.5 rounded-full bg-orange-500"></div>
                           </div>
                         ) : (
-                          <SparkleIcon className="w-8 h-8 md:w-10 md:h-10 text-white drop-shadow-lg" />
+                          <SparkleIcon className="w-6 h-6 md:w-7 md:h-7 text-white drop-shadow-lg" />
                         )}
                       </div>
                       
                       {/* Floating Particles - Stars and Sparkles */}
                       {!isOnCooldown && !isNarrating && (
                         <>
-                          <div className="absolute top-2 left-4 w-2 h-2 text-yellow-300 animate-float-particle-1">
+                          <div className="absolute top-1 left-3 w-1.5 h-1.5 text-yellow-300 animate-float-particle-1">
                             <StarIcon className="w-full h-full fill-current" />
                           </div>
-                          <div className="absolute top-6 right-2 w-1.5 h-1.5 text-pink-300 animate-float-particle-2">
+                          <div className="absolute top-4 right-1.5 w-1 h-1 text-pink-300 animate-float-particle-2">
                             <SparkleIcon className="w-full h-full" />
                           </div>
-                          <div className="absolute bottom-4 left-2 w-1.5 h-1.5 text-purple-300 animate-float-particle-3">
+                          <div className="absolute bottom-3 left-1.5 w-1 h-1 text-purple-300 animate-float-particle-3">
                             <SparkleIcon className="w-full h-full" />
                           </div>
-                          <div className="absolute bottom-2 right-6 w-2 h-2 text-orange-300 animate-float-particle-4">
+                          <div className="absolute bottom-1 right-4 w-1.5 h-1.5 text-orange-300 animate-float-particle-4">
                             <StarIcon className="w-full h-full fill-current" />
                           </div>
                           {isListening && (
                             <>
-                              <div className="absolute top-1/2 left-0 w-2 h-2 text-orange-300 animate-float-particle-5">
+                              <div className="absolute top-1/2 left-0 w-1.5 h-1.5 text-orange-300 animate-float-particle-5">
                                 <SparkleIcon className="w-full h-full" />
                               </div>
-                              <div className="absolute top-1/2 right-0 w-2 h-2 text-orange-400 animate-float-particle-6">
+                              <div className="absolute top-1/2 right-0 w-1.5 h-1.5 text-orange-400 animate-float-particle-6">
                                 <StarIcon className="w-full h-full fill-current" />
                               </div>
-                              <div className="absolute top-0 left-1/2 w-1.5 h-1.5 text-yellow-300 animate-float-particle-7">
+                              <div className="absolute top-0 left-1/2 w-1 h-1 text-yellow-300 animate-float-particle-7">
                                 <SparkleIcon className="w-full h-full" />
                               </div>
-                              <div className="absolute bottom-0 left-1/2 w-1.5 h-1.5 text-orange-300 animate-float-particle-8">
+                              <div className="absolute bottom-0 left-1/2 w-1 h-1 text-orange-300 animate-float-particle-8">
                                 <StarIcon className="w-full h-full fill-current" />
                               </div>
                             </>
@@ -766,11 +766,11 @@ const StoryScreen: React.FC<StoryScreenProps> = ({ gameState, onContinue, dispat
                     </button>
                     
                     {/* Spacer for symmetry */}
-                    <div className="w-12 h-12 md:w-14 md:h-14"></div>
+                    <div className="w-10 h-10 md:w-11 md:h-11"></div>
                   </div>
                   
                   {/* Status Text */}
-                  <p className="text-sm md:text-base text-gray-600 font-medium min-h-[24px] text-center">
+                  <p className="text-xs md:text-sm text-gray-600 font-medium min-h-[20px] text-center">
                     {getFooterText()}
                   </p>
                 </>
