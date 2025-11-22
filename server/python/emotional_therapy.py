@@ -2024,9 +2024,9 @@ def get_datasets():
     finally:
         _datasets_loading = False
 
-# Keep datasets variable for backward compatibility, but make it lazy
-datasets = None  # Will be loaded via get_datasets() when needed
-print("📚 Dataset loading deferred (will load on first use to prevent OOM)")
+# Load datasets immediately
+datasets = get_datasets()
+print("📚 Datasets loaded successfully!")
 
 import re
 from typing import Dict, List, Set, Tuple, Any
@@ -3684,9 +3684,9 @@ class TherapyBot:
         self.crisis_retriever = None
         self.vector_store = None
         
-        # Defer knowledge base loading to prevent OOM during deployment
-        # Knowledge base will load automatically on first therapy request via _initialize_enhanced_knowledge_base_lazy()
-        print("📚 Knowledge base loading deferred (will load on first use to prevent OOM)")
+        # Initialize knowledge base immediately
+        self._initialize_enhanced_knowledge_base_lazy()
+        print("📚 Knowledge base loaded successfully!")
         
         # Setup dynamic conversation prompts
         self._setup_dynamic_prompts()
