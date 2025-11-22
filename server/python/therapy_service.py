@@ -929,6 +929,8 @@ if __name__ == '__main__':
     print("  GET  /api/therapy/sessions             - List active sessions")
     print("  GET  /api/therapy/crisis-detection/config  - Get crisis detection config")
     print("  POST /api/therapy/crisis-detection/config - Set crisis detection mode")
+    print("  GET  /api/therapy/psychological-profile - Get psychological profile")
+    print("  GET  /api/therapy/long-term-progress   - Get long-term progress")
     print()
     
     if therapy_bot:
