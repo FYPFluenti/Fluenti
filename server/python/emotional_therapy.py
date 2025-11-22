@@ -1877,7 +1877,7 @@ class DataLoader:
                 dataset4 = DataLoader.load_dataset_with_streaming(
                     "nvidia/HelpSteer", 
                     split='train',
-                    limit=None,  # Load all for quality
+                    limit=3000,  # Limited to 3000 for memory efficiency
                     progress_interval=500
                 )
                 datasets.append((dataset4, "nvidia/HelpSteer"))
@@ -3835,10 +3835,10 @@ Complexity Analysis:"""
             chunk_metadata = []
 
             # Configurable processing limit via environment variable
-            # Default: 10000 (balanced performance vs coverage)
+            # Default: 5000 (optimized for deployment memory limits)
             # Set KB_PROCESS_LIMIT=-1 to process all documents
             # Set KB_PROCESS_LIMIT=<number> for specific limit
-            process_limit_env = os.getenv('KB_PROCESS_LIMIT', '10000')
+            process_limit_env = os.getenv('KB_PROCESS_LIMIT', '5000')
             if process_limit_env == '-1' or process_limit_env.lower() == 'all':
                 process_limit = len(all_texts)
                 print(f"📊 Processing ALL {len(all_texts)} texts (no limit)")
