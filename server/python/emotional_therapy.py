@@ -5116,10 +5116,12 @@ Personalized Therapeutic Guidance:"""
             # Send to backend for email notification
             import requests
             try:
+                backend_url = os.getenv('BACKEND_URL', 'http://localhost:3000')
+                notification_url = f"{backend_url}/api/emergency-notification"
                 response = requests.post(
-                    'http://localhost:3000/api/emergency-notification',
+                    notification_url,
                     json=notification_data,
-                    timeout=5
+                    timeout=10
                 )
                 if response.status_code == 200:
                     print(f"✅ Emergency notification sent successfully")
