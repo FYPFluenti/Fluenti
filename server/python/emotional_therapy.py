@@ -138,15 +138,11 @@ from datasets import load_dataset
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
 from langchain_community.vectorstores import Chroma
-try:
-    from langchain_huggingface import HuggingFaceEmbeddings
-    EMBEDDINGS_CLASS = HuggingFaceEmbeddings
-    EMBEDDINGS_TYPE = 'new'
-except ImportError:
-    from langchain_community.embeddings import HuggingFaceBgeEmbeddings
-    EMBEDDINGS_CLASS = HuggingFaceBgeEmbeddings
-    EMBEDDINGS_TYPE = 'legacy'
-    print("⚠️ Using deprecated HuggingFaceBgeEmbeddings. Install langchain-huggingface for updated version.")
+from langchain_openai import OpenAIEmbeddings
+
+# Use OpenAI embeddings for cost-effective, high-quality embeddings
+EMBEDDINGS_CLASS = OpenAIEmbeddings
+EMBEDDINGS_TYPE = 'openai'
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
@@ -3907,35 +3903,36 @@ Complexity Analysis:"""
 
             print(f"📚 Created {len(chunks)} enhanced knowledge chunks")
 
-            # Enhanced embeddings with better model -  Use global constants
+            # Cost-effective OpenAI embeddings with text-embedding-3-small model ($0.02/1M tokens)
             try:
                 embeddings = EMBEDDINGS_CLASS(
-                    model_name='BAAI/bge-small-en-v1.5',
-                    model_kwargs={'device': 'cpu'},
-                    encode_kwargs={'normalize_embeddings': True}
+                    model="text-embedding-3-small",  # Most cost-effective OpenAI model
+                    dimensions=1536,  # Standard dimensions for text-embedding-3-small
+                    show_progress_bar=True
                 )
-                if EMBEDDINGS_TYPE == 'legacy':
-                    print("⚠️ Using deprecated embeddings class. Consider upgrading to langchain-huggingface.")
+                print("✅ OpenAI embeddings initialized successfully!")
+                print("💰 Using text-embedding-3-small model ($0.02/1M tokens - extremely cost-effective)")
             except Exception as e:
-                print(f"⚠️ Error creating enhanced knowledge base: {e}")
+                print(f"⚠️ Error creating OpenAI embeddings: {e}")
                 
-                # Check if it's a sentence-transformers import error
-                if "sentence_transformers" in str(e):
-                    print("💡 This appears to be a sentence-transformers installation issue.")
-                    print("   Try updating requirements.txt to use sentence-transformers>=2.7.0")
-                    print("   Knowledge base will be disabled, but therapy bot will continue with fallback.")
+                # Check for API key issues
+                if "api_key" in str(e).lower() or "authentication" in str(e).lower():
+                    print("💡 This appears to be an OpenAI API key issue.")
+                    print("   Please check your OPENAI_API_KEY in your .env file")
+                    print("   Get your API key from: https://platform.openai.com/api-keys")
+                else:
+                    print("💡 OpenAI embedding initialization failed, but continuing with fallback.")
                     
                 print("⚠️ Knowledge base loading failed, but continuing with fallback")
-                # Don't create vector store if embeddings fail
                 self.vector_store = None
                 return
 
-            # Create enhanced vector store with metadata
+            # Create enhanced vector store with metadata (using new directory for OpenAI embeddings)
             self.vector_store = Chroma.from_texts(
                 texts=chunks,
                 embedding=embeddings,
                 metadatas=chunk_metadata,
-                persist_directory="/content/therapy_enhanced_chroma_db"
+                persist_directory="/content/therapy_openai_chroma_db"
             )
 
             # Create specialized retrievers with increased retrieval depth
@@ -5155,13 +5152,14 @@ Crisis Support Resources:"""
 
 print("✅ Enhanced therapy bot with strict session isolation ready!")
 
-# Load Groq API key from environment variables
+# Load API keys from environment variables
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 
 # Initialize the therapy bot
 therapy_bot = None
 
-# Validate API key
+# Validate API keys
 if not GROQ_API_KEY or GROQ_API_KEY.strip() == "":
     print("❌ GROQ API key not found!")
     print("💡 Get your free API key from: https://console.groq.com/")
@@ -5171,8 +5169,20 @@ elif GROQ_API_KEY == "gsk_YOUR_API_KEY_HERE":
     print("❌ Please set your actual GROQ API key!")
     print("💡 Update GROQ_API_KEY in your .env file")
     therapy_bot = None
+elif not OPENAI_API_KEY or OPENAI_API_KEY.strip() == "":
+    print("❌ OpenAI API key not found!")
+    print("💡 Get your API key from: https://platform.openai.com/api-keys")
+    print("📝 Set OPENAI_API_KEY in your .env file or environment variables")
+    therapy_bot = None
+elif OPENAI_API_KEY == "sk-YOUR_API_KEY_HERE":
+    print("❌ Please set your actual OpenAI API key!")
+    print("💡 Update OPENAI_API_KEY in your .env file")
+    therapy_bot = None
 else:
-    print("✅ API key configured!")
+    print("✅ API keys configured!")
+    
+    # Set OpenAI API key for embeddings
+    os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
 
     # Initialize the therapy bot
     try:

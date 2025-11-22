@@ -8,29 +8,24 @@ flask-cors==4.0.0
 # Production server (optional but recommended)
 waitress>=2.1.2
 
-# Updated embeddings support
-langchain-huggingface>=0.0.1
-langchain-text-splitters
+# OpenAI API for embeddings (cost-effective at $0.02/1M tokens)
+openai>=1.0.0
+langchain-openai>=0.1.0
+langchain-text-splitters>=1.0.0
 
 # Existing dependencies from emotional_therapy.py
 pymongo>=4.6.0
 nltk==3.8.1
 datasets>=2.20.0
-langchain-groq>=0.2.0
-langchain-core>=0.3.0
-langchain-community>=0.3.0
+langchain>=1.0.0
+langchain-groq>=1.0.0  # Still using Groq for LLM chat completions
+langchain-core>=1.0.0
+langchain-community>=0.4.0
 vaderSentiment==3.3.2
 chromadb>=1.2.1  # Vector database for embeddings storage
 
-# ML and NLP
-# Note: CPU-only PyTorch is installed separately in build.sh (saves ~2GB vs GPU version)
-# torch and torchvision are installed in build.sh before this file
-
-# Embedding models (must install before langchain-huggingface)
-sentence-transformers>=2.7.0,<3.0.0  # Updated for compatibility with transformers 4.40+
-transformers>=4.40.0,<5.0.0  # Updated to support newer tokenizers
-huggingface-hub>=0.33.4,<1.0.0  # Updated to be compatible with langchain-huggingface
-tokenizers>=0.19.1  # Required by sentence-transformers
+# Note: Completely removed PyTorch, transformers, sentence-transformers, and huggingface dependencies
+# Using OpenAI API for embeddings - much smaller build size, faster deployment, and extremely cost-effective
 
 # Utilities
 python-dotenv==1.0.0
