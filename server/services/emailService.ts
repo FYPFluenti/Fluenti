@@ -184,31 +184,11 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
     try {
       console.log('📧 [EMAIL DEBUG] Attempting to send via Resend HTTP API...');
       
-      // For testing mode, redirect non-owner emails to owner's email with note
-      let actualTo = options.to;
-      let actualSubject = options.subject;
-      let actualHtml = options.html;
-      
-      // Check if this might be a testing limitation (common Resend error pattern)
-      if (options.to !== 'fluenitai@gmail.com') {
-        console.log('📧 [EMAIL DEBUG] Non-owner email detected, testing mode handling...');
-        actualTo = 'fluenitai@gmail.com';
-        actualSubject = `[TEST] ${options.subject} (intended for: ${options.to})`;
-        actualHtml = `
-          <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
-            <strong>🧪 Testing Mode Notice:</strong><br>
-            This email was intended for: <strong>${options.to}</strong><br>
-            But redirected to you due to Resend testing limitations.
-          </div>
-          ${options.html}
-        `;
-      }
-      
       const result = await resend.emails.send({
         from: RESEND_FROM,
-        to: actualTo,
-        subject: actualSubject,
-        html: actualHtml,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
         text: options.text,
       });
       
@@ -216,10 +196,7 @@ export async function sendEmail(options: EmailOptions): Promise<void> {
         throw new Error(`Resend API error: ${result.error.message}`);
       }
       
-      console.log('✅ Email sent successfully via Resend HTTP API to:', actualTo, 'ID:', result.data?.id);
-      if (actualTo !== options.to) {
-        console.log('📧 [EMAIL DEBUG] Email redirected due to testing mode limitations');
-      }
+      console.log('✅ Email sent successfully via Resend HTTP API to:', options.to, 'ID:', result.data?.id);
       return;
     } catch (error) {
       console.error('❌ Resend HTTP API failed:', (error as any)?.message);
