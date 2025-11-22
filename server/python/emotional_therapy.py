@@ -23,54 +23,15 @@ Fernet = None
 PBKDF2HMAC = None
 hashes = None
 
-# First check if cryptography module exists at all
 try:
-    import cryptography  # type: ignore
-    _crypto_available = True
-except ImportError:
-    _crypto_available = False
-
-if _crypto_available:
-    try:
-        from cryptography.fernet import Fernet  # type: ignore
-        from cryptography.hazmat.primitives import hashes  # type: ignore
-        from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC  # type: ignore
-        import base64
-        # Verify the imports actually work
-        _ = Fernet
-        _ = hashes
-        _ = PBKDF2HMAC
-        CRYPTO_AVAILABLE = True
-    except ImportError as e:
-        # Specific import error (e.g., missing submodule)
-        error_msg = str(e)
-        if "No module named" in error_msg and "cryptography" in error_msg:
-            # Only warn if cryptography package itself is missing
-            print("⚠️ WARNING: cryptography package not found. Security features will be limited.")
-            print(f"   Error: {e}")
-            print("   Install with: pip install cryptography")
-        # Otherwise, it's a submodule issue - don't warn, just disable
-        CRYPTO_AVAILABLE = False
-    except Exception as e:
-        # Other errors (like missing dependencies)
-        print(f"⚠️ WARNING: Error loading cryptography: {e}")
-        print("   Security features will be limited.")
-        CRYPTO_AVAILABLE = False
-else:
-    # Cryptography package not installed - check if we're in venv
-    import sys
-    in_venv = (
-        hasattr(sys, 'real_prefix') or 
-        (hasattr(sys, 'base_prefix') and sys.base_prefix != sys.prefix)
-    )
-    if not in_venv:
-        print("⚠️ WARNING: cryptography package not found. Security features will be limited.")
-        print(f"   Current Python: {sys.executable}")
-        print("   You may be using system Python instead of virtual environment.")
-        print("   Make sure to activate venv: & venv\\Scripts\\Activate.ps1")
-    else:
-        print("⚠️ WARNING: cryptography package not found. Security features will be limited.")
-        print("   Install with: pip install cryptography")
+    from cryptography.fernet import Fernet  # type: ignore
+    from cryptography.hazmat.primitives import hashes  # type: ignore
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC  # type: ignore
+    CRYPTO_AVAILABLE = True
+except (ImportError, Exception):
+    CRYPTO_AVAILABLE = False
+    print("⚠️ WARNING: cryptography not available. Security features will be limited.")
+    print("   Install with: pip install cryptography")
 
 import base64
 
@@ -94,13 +55,9 @@ class PsychologicalProfile:
     trauma_indicators: Dict[str, Any] = field(default_factory=dict)
     long_term_progress: Dict[str, Any] = field(default_factory=dict)
     therapeutic_preferences: Dict[str, Any] = field(default_factory=dict)
-    risk_factors: Dict[str, Any] = field(default_factory=dict)
-    resilience_factors: Dict[str, Any] = field(default_factory=dict)
     cognitive_patterns: Dict[str, Any] = field(default_factory=dict)
     emotional_regulation_patterns: Dict[str, Any] = field(default_factory=dict)
-    relationship_patterns: Dict[str, Any] = field(default_factory=dict)
     coping_mechanisms: Dict[str, Any] = field(default_factory=dict)
-    trigger_patterns: Dict[str, Any] = field(default_factory=dict)
     created_at: str = ""
     last_updated: str = ""
 
@@ -451,7 +408,7 @@ def safe_dataset_len(dataset) -> str:
             return str(dataset.num_rows)
         else:
             return 'unknown'
-    except:
+    except Exception:
         return 'unknown'
 
 class MongoDBStorage:
@@ -512,29 +469,17 @@ class MongoDBStorage:
     def _get_default_user_context(self) -> Dict:
         """Get default user context as fallback when no user context provided"""
         current_time = datetime.now(timezone.utc)
-
-        # Use environment variable as fallback only - should be replaced by actual user context
-        fallback_login = os.getenv('USER_LOGIN', 'anonymous_user')
-        print(f"⚠️ WARNING: Using fallback user context for {fallback_login}. This should be replaced with authenticated user data.")
-
-        # Add time_of_day classification for compatibility
-        def classify_time_of_day(hour: int) -> str:
-            if 5 <= hour < 12:
-                return 'morning'
-            elif 12 <= hour < 17:
-                return 'afternoon'
-            elif 17 <= hour < 21:
-                return 'evening'
-            else:
-                return 'night'
-
+        hour = current_time.hour
+        
+        time_of_day = 'morning' if 5 <= hour < 12 else 'afternoon' if 12 <= hour < 17 else 'evening' if 17 <= hour < 21 else 'night'
+        
         return {
-            'login': fallback_login,
+            'login': os.getenv('USER_LOGIN', 'anonymous_user'),
             'timestamp': current_time,
             'session_start': current_time.isoformat(),
             'user_agent': os.getenv('HTTP_USER_AGENT', 'API-Request'),
             'environment': 'Production-API',
-            'time_of_day': classify_time_of_day(current_time.hour),
+            'time_of_day': time_of_day,
             'date': current_time.strftime('%Y-%m-%d')
         }
     
@@ -612,8 +557,10 @@ class MongoDBStorage:
         encrypted_input = self.security_manager.encrypt_sensitive_data(sanitized_input)
         encrypted_response = self.security_manager.encrypt_sensitive_data(sanitized_response)
         
+        user_hash = self.security_manager.hash_pii(user_id)
         conversation_doc = {
-            "user_id": self.security_manager.hash_pii(user_id),  # Hash user ID for privacy
+            "user_id": user_hash,  # Hash user ID for privacy
+            "user_id_raw": user_id,  # Also store raw for compatibility with queries
             "session_id": self.security_manager.hash_pii(session_id),  # Hash session ID
             "user_login": self.security_manager.hash_pii(self.current_user['login']),
             "timestamp": datetime.now(timezone.utc),
@@ -626,10 +573,6 @@ class MongoDBStorage:
             "data_version": "2.0_encrypted",  # Track encryption version
             "user_input": user_input,
             "bot_response": bot_response,
-            "crisis_level": crisis_level,
-            "mood_score": mood_score,
-            "input_length": len(user_input),
-            "response_length": len(bot_response),
             "user_context": {
                 "environment": self.current_user['environment'],
                 "session_start": self.current_user['session_start']
@@ -975,13 +918,9 @@ class MongoDBStorage:
                     trauma_indicators=existing_profile.get('trauma_indicators', {}),
                     long_term_progress=existing_profile.get('long_term_progress', {}),
                     therapeutic_preferences=existing_profile.get('therapeutic_preferences', {}),
-                    risk_factors=existing_profile.get('risk_factors', {}),
-                    resilience_factors=existing_profile.get('resilience_factors', {}),
                     cognitive_patterns=existing_profile.get('cognitive_patterns', {}),
                     emotional_regulation_patterns=existing_profile.get('emotional_regulation_patterns', {}),
-                    relationship_patterns=existing_profile.get('relationship_patterns', {}),
                     coping_mechanisms=existing_profile.get('coping_mechanisms', {}),
-                    trigger_patterns=existing_profile.get('trigger_patterns', {}),
                     created_at=existing_profile.get('created_at', ''),
                     last_updated=existing_profile.get('last_updated', '')
                 )
@@ -999,13 +938,9 @@ class MongoDBStorage:
 
                     "long_term_progress": profile.long_term_progress,
                     "therapeutic_preferences": profile.therapeutic_preferences,
-                    "risk_factors": profile.risk_factors,
-                    "resilience_factors": profile.resilience_factors,
                     "cognitive_patterns": profile.cognitive_patterns,
                     "emotional_regulation_patterns": profile.emotional_regulation_patterns,
-                    "relationship_patterns": profile.relationship_patterns,
                     "coping_mechanisms": profile.coping_mechanisms,
-                    "trigger_patterns": profile.trigger_patterns,
                     "created_at": profile.created_at,
                     "last_updated": profile.last_updated
                 }
@@ -1024,35 +959,37 @@ class MongoDBStorage:
         """Update psychological profile based on conversation analysis"""
         try:
             profile = self.get_or_create_psychological_profile(user_id)
+            pattern_analysis = {}
             
             # AI-powered psychological pattern analysis
             if llm:
                 pattern_analysis = self._analyze_psychological_patterns(conversation_text, profile, llm)
                 
                 # Update profile with new insights
-                profile.core_patterns.update(pattern_analysis.get('core_patterns', {}))
-                profile.cognitive_patterns.update(pattern_analysis.get('cognitive_patterns', {}))
-                profile.emotional_regulation_patterns.update(pattern_analysis.get('emotional_patterns', {}))
-                profile.coping_mechanisms.update(pattern_analysis.get('coping_mechanisms', {}))
-                profile.trigger_patterns.update(pattern_analysis.get('trigger_patterns', {}))
-                
-                # Detect potential trauma indicators
-                trauma_indicators = self._detect_trauma_indicators(conversation_text, profile, llm)
-                if trauma_indicators:
-                    profile.trauma_indicators.update(trauma_indicators)
-                
-
-                
-                # Update progress tracking
-                self._update_long_term_progress(user_id, crisis_level, mood_score, pattern_analysis)
+                if pattern_analysis:
+                    profile.core_patterns.update(pattern_analysis.get('core_patterns', {}))
+                    profile.cognitive_patterns.update(pattern_analysis.get('cognitive_patterns', {}))
+                    profile.emotional_regulation_patterns.update(pattern_analysis.get('emotional_patterns', {}))
+                    profile.coping_mechanisms.update(pattern_analysis.get('coping_mechanisms', {}))
+                    
+                    # Detect potential trauma indicators
+                    trauma_indicators = self._detect_trauma_indicators(conversation_text, profile, llm)
+                    if trauma_indicators:
+                        profile.trauma_indicators.update(trauma_indicators)
                 
                 # Save updated profile
                 profile.last_updated = datetime.now().isoformat()
                 self._save_psychological_profile(profile)
-                
                 print(f"✅ Updated psychological profile with AI insights")
             else:
                 print(f"⚠️ LLM unavailable for psychological pattern analysis")
+                pattern_analysis = {}
+                # Save profile anyway to ensure it exists
+                profile.last_updated = datetime.now().isoformat()
+                self._save_psychological_profile(profile)
+            
+            # Always create progress entries, even if LLM is unavailable
+            self._update_long_term_progress(user_id, crisis_level, mood_score, pattern_analysis)
                 
         except Exception as e:
             print(f"❌ Error updating psychological profile: {e}")
@@ -1101,8 +1038,7 @@ JSON format required:
   "core_patterns": {{"pattern_name": {{"evidence": "text_evidence", "confidence": 0.8, "implications": "therapeutic_notes"}}}},
   "cognitive_patterns": {{}},
   "emotional_patterns": {{}},
-  "coping_mechanisms": {{}},
-  "trigger_patterns": {{}}
+  "coping_mechanisms": {{}}
 }}
 
 Respond with JSON only:"""
@@ -1221,31 +1157,58 @@ Respond with JSON only:"""
         try:
             user_hash = self.security_manager.hash_pii(user_id)
             
+            # Calculate patterns identified count safely
+            patterns_count = 0
+            if pattern_analysis:
+                for patterns in pattern_analysis.values():
+                    if isinstance(patterns, list):
+                        patterns_count += len(patterns)
+                    elif isinstance(patterns, dict):
+                        patterns_count += len(patterns)
+            
             progress_entry = {
-                "user_id": user_hash,
+                "user_id": user_hash,  # Store hashed for security
+                "user_id_raw": user_id,  # Also store raw for compatibility with queries
                 "timestamp": datetime.now(),
                 "crisis_level": crisis_level,
                 "mood_score": mood_score,
-                "patterns_identified": len([p for patterns in pattern_analysis.values() for p in patterns]),
-                "pattern_categories": list(pattern_analysis.keys()),
+                "patterns_identified": patterns_count,
                 "session_quality_indicators": {
-                    "emotional_awareness": self._assess_emotional_awareness(pattern_analysis),
-                    "coping_effectiveness": self._assess_coping_effectiveness(pattern_analysis),
-                    "insight_development": self._assess_insight_development(pattern_analysis),
                     "progress_momentum": self._assess_progress_momentum(crisis_level, mood_score)
                 },
-                "therapeutic_goals_progress": self._assess_therapeutic_goals(pattern_analysis),
-                "risk_level_trend": self._assess_risk_trend(crisis_level, user_hash),
-                "resilience_indicators": self._identify_resilience_indicators(pattern_analysis)
+                "risk_level_trend": self._assess_risk_trend(crisis_level, user_hash)
             }
             
-            # Save progress entry
-            self.long_term_progress.insert_one(progress_entry)
+            # Save progress entry (avoid duplicates by checking recent entries for same day)
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            existing_today = self.long_term_progress.find_one({
+                "$or": [
+                    {"user_id": user_hash, "timestamp": {"$gte": today_start}},
+                    {"user_id_raw": user_id, "timestamp": {"$gte": today_start}}
+                ]
+            })
+            
+            if not existing_today:
+                self.long_term_progress.insert_one(progress_entry)
+                print(f"✅ Created new progress entry for {user_id}")
+            else:
+                # Update existing entry for today with latest data
+                self.long_term_progress.update_one(
+                    {"_id": existing_today["_id"]},
+                    {"$set": {
+                        "crisis_level": crisis_level,
+                        "mood_score": mood_score if mood_score else existing_today.get("mood_score"),
+                        "patterns_identified": patterns_count,
+                        "session_quality_indicators.progress_momentum": self._assess_progress_momentum(crisis_level, mood_score),
+                        "risk_level_trend": self._assess_risk_trend(crisis_level, user_hash),
+                        "timestamp": datetime.now()  # Update timestamp to latest
+                    }},
+                    upsert=False
+                )
+                print(f"✅ Updated existing progress entry for {user_id}")
             
             # Update profile with progress summary
             self._update_profile_progress_summary(user_hash, progress_entry)
-            
-            print(f"✅ Updated long-term progress tracking")
             
         except Exception as e:
             print(f"❌ Error updating long-term progress: {e}")
@@ -1254,18 +1217,15 @@ Respond with JSON only:"""
         """Save psychological profile to database"""
         try:
             profile_doc = {
-                "user_id": profile.user_id,
+                "user_id": profile.user_id,  # This is already hashed from get_or_create
                 "core_patterns": profile.core_patterns,
                 "trauma_indicators": profile.trauma_indicators,
                 "long_term_progress": profile.long_term_progress,
                 "therapeutic_preferences": profile.therapeutic_preferences,
-                "risk_factors": profile.risk_factors,
-                "resilience_factors": profile.resilience_factors,
                 "cognitive_patterns": profile.cognitive_patterns,
                 "emotional_regulation_patterns": profile.emotional_regulation_patterns,
-                "relationship_patterns": profile.relationship_patterns,
                 "coping_mechanisms": profile.coping_mechanisms,
-                "trigger_patterns": profile.trigger_patterns,
+                "created_at": profile.created_at,
                 "last_updated": profile.last_updated
             }
             
@@ -1295,66 +1255,6 @@ Respond with JSON only:"""
             print(f"⚠️ Error extracting content from LLM response: {e}")
             return str(response).strip() if response else ""
 
-    def _assess_emotional_awareness(self, pattern_analysis: Dict[str, Any]) -> float:
-        """Assess level of emotional awareness from pattern analysis"""
-        try:
-            awareness_score = 0.0
-            
-            # Check emotional patterns
-            emotional_patterns = pattern_analysis.get('emotional_patterns', {})
-            if emotional_patterns:
-                awareness_score += 0.3
-                
-            # Check for emotional vocabulary and insight
-            core_patterns = pattern_analysis.get('core_patterns', {})
-            for pattern_name, data in core_patterns.items():
-                if isinstance(data, dict) and 'emotion' in pattern_name.lower():
-                    confidence = data.get('confidence', 0)
-                    awareness_score += confidence * 0.2
-                    
-            return min(awareness_score, 1.0)
-        except:
-            return 0.5  # Default neutral score
-
-    def _assess_coping_effectiveness(self, pattern_analysis: Dict[str, Any]) -> float:
-        """Assess effectiveness of coping mechanisms"""
-        try:
-            coping_score = 0.0
-            coping_mechanisms = pattern_analysis.get('coping_mechanisms', {})
-            
-            for mechanism, data in coping_mechanisms.items():
-                if isinstance(data, dict):
-                    confidence = data.get('confidence', 0)
-                    # Positive coping mechanisms get higher scores
-                    if any(positive in mechanism.lower() for positive in 
-                          ['support', 'exercise', 'mindfulness', 'problem-solving', 'communication']):
-                        coping_score += confidence * 0.4
-                    else:
-                        coping_score += confidence * 0.2
-                        
-            return min(coping_score, 1.0)
-        except:
-            return 0.5
-
-    def _assess_insight_development(self, pattern_analysis: Dict[str, Any]) -> float:
-        """Assess level of psychological insight development"""
-        try:
-            insight_score = 0.0
-            
-            # Check cognitive patterns for insight indicators
-            cognitive_patterns = pattern_analysis.get('cognitive_patterns', {})
-            for pattern_name, data in cognitive_patterns.items():
-                if isinstance(data, dict):
-                    confidence = data.get('confidence', 0)
-                    # Self-awareness and reflection patterns indicate insight
-                    if any(insight_word in pattern_name.lower() for insight_word in 
-                          ['awareness', 'reflection', 'understanding', 'realize', 'recognize']):
-                        insight_score += confidence * 0.3
-                        
-            return min(insight_score, 1.0)
-        except:
-            return 0.5
-
     def _assess_progress_momentum(self, crisis_level: str, mood_score: Optional[float]) -> float:
         """Assess overall progress momentum"""
         try:
@@ -1376,46 +1276,8 @@ Respond with JSON only:"""
                 momentum_score += normalized_mood * 0.5
                 
             return min(momentum_score, 1.0)
-        except:
+        except Exception:
             return 0.5
-
-    def _assess_therapeutic_goals(self, pattern_analysis: Dict[str, Any]) -> Dict[str, float]:
-        """Assess progress toward common therapeutic goals"""
-        try:
-            goals_progress = {
-                'emotional_regulation': 0.0,
-                'stress_management': 0.0,
-                'relationship_skills': 0.0,
-                'self_awareness': 0.0,
-                'coping_skills': 0.0
-            }
-            
-            # Emotional regulation
-            emotional_patterns = pattern_analysis.get('emotional_patterns', {})
-            if emotional_patterns:
-                avg_confidence = sum(data.get('confidence', 0) for data in emotional_patterns.values() 
-                                   if isinstance(data, dict)) / len(emotional_patterns)
-                goals_progress['emotional_regulation'] = avg_confidence
-            
-            # Coping skills
-            coping_mechanisms = pattern_analysis.get('coping_mechanisms', {})
-            if coping_mechanisms:
-                avg_confidence = sum(data.get('confidence', 0) for data in coping_mechanisms.values() 
-                                   if isinstance(data, dict)) / len(coping_mechanisms)
-                goals_progress['coping_skills'] = avg_confidence
-            
-            # Self-awareness
-            core_patterns = pattern_analysis.get('core_patterns', {})
-            awareness_patterns = [data for name, data in core_patterns.items() 
-                                if isinstance(data, dict) and 'aware' in name.lower()]
-            if awareness_patterns:
-                avg_confidence = sum(data.get('confidence', 0) for data in awareness_patterns) / len(awareness_patterns)
-                goals_progress['self_awareness'] = avg_confidence
-                
-            return goals_progress
-        except:
-            return {goal: 0.5 for goal in ['emotional_regulation', 'stress_management', 
-                                         'relationship_skills', 'self_awareness', 'coping_skills']}
 
     def _assess_risk_trend(self, current_crisis_level: str, user_hash: str) -> str:
         """Assess risk level trend over time"""
@@ -1441,33 +1303,9 @@ Respond with JSON only:"""
             else:
                 return "stable"
                 
-        except:
+        except Exception:
             return "unknown"
 
-    def _identify_resilience_indicators(self, pattern_analysis: Dict[str, Any]) -> List[str]:
-        """Identify resilience indicators from pattern analysis"""
-        try:
-            resilience_indicators = []
-            
-            # Check coping mechanisms for positive indicators
-            coping_mechanisms = pattern_analysis.get('coping_mechanisms', {})
-            for mechanism, data in coping_mechanisms.items():
-                if isinstance(data, dict) and data.get('confidence', 0) > 0.6:
-                    if any(resilient in mechanism.lower() for resilient in 
-                          ['support', 'exercise', 'mindfulness', 'problem-solving', 'help-seeking']):
-                        resilience_indicators.append(mechanism)
-            
-            # Check core patterns for resilience
-            core_patterns = pattern_analysis.get('core_patterns', {})
-            for pattern, data in core_patterns.items():
-                if isinstance(data, dict) and data.get('confidence', 0) > 0.6:
-                    if any(resilient in pattern.lower() for resilient in 
-                          ['optimism', 'hope', 'strength', 'perseverance', 'adaptability']):
-                        resilience_indicators.append(pattern)
-                        
-            return resilience_indicators[:5]  # Limit to top 5
-        except:
-            return []
 
     def _update_profile_progress_summary(self, user_hash: str, progress_entry: Dict[str, Any]):
         """Update psychological profile with progress summary"""
@@ -1475,8 +1313,7 @@ Respond with JSON only:"""
             progress_summary = {
                 'last_assessment': progress_entry['timestamp'].isoformat(),
                 'current_risk_trend': progress_entry.get('risk_level_trend', 'unknown'),
-                'therapeutic_momentum': progress_entry.get('session_quality_indicators', {}).get('progress_momentum', 0.5),
-                'resilience_indicators': progress_entry.get('resilience_indicators', [])
+                'therapeutic_momentum': progress_entry.get('session_quality_indicators', {}).get('progress_momentum', 0.5)
             }
             
             self.psychological_profiles.update_one(
@@ -1495,8 +1332,7 @@ Respond with JSON only:"""
                 'core_patterns': {},
                 'cognitive_patterns': {},
                 'emotional_patterns': {},
-                'coping_mechanisms': {},
-                'trigger_patterns': {}
+                'coping_mechanisms': {}
             }
             
             lines = ai_text.split('\n')
@@ -1519,49 +1355,13 @@ Respond with JSON only:"""
                         }
             
             return patterns
-        except:
+        except Exception:
             return {
                 'core_patterns': {},
                 'cognitive_patterns': {},
                 'emotional_patterns': {},
-                'coping_mechanisms': {},
-                'trigger_patterns': {}
+                'coping_mechanisms': {}
             }
-
-    def get_user_analytics(self, user_login: Optional[str] = None) -> Dict:
-        """Get user analytics and insights"""
-        if not user_login:
-            user_login = self.current_user['login']
-
-        try:
-            if hasattr(self, 'conversations'):
-                # Get analytics from MongoDB
-                pipeline = [
-                    {"$match": {"user_login": user_login}},
-                    {"$group": {
-                        "_id": None,
-                        "total_conversations": {"$sum": 1},
-                        "avg_mood_score": {"$avg": "$mood_score"},
-                        "crisis_events": {"$sum": {"$cond": [{"$ne": ["$crisis_level", "none"]}, 1, 0]}},
-                        "last_conversation": {"$max": "$timestamp"},
-                        "crisis_levels": {"$addToSet": "$crisis_level"}
-                    }}
-                ]
-
-                result = list(self.conversations.aggregate(pipeline))
-                if result:
-                    analytics = result[0]
-                    analytics["user_login"] = user_login
-                    analytics["last_conversation"] = analytics["last_conversation"].isoformat() if analytics.get("last_conversation") else None
-                    return analytics
-
-            return {"user_login": user_login, "total_conversations": 0}
-
-        except Exception as e:
-            print(f"❌ Error getting user analytics: {e}")
-            return {"error": str(e)}
-
-
 
     def close_connection(self):
         """Close MongoDB connection"""
@@ -1596,7 +1396,7 @@ try:
     nltk.download('punkt', quiet=True)
     from nltk.sentiment import SentimentIntensityAnalyzer
     print("✅ NLTK sentiment analyzer ready")
-except:
+except Exception:
     print("⚠️ NLTK not available, using basic sentiment analysis")
 
 # Configure logging
@@ -1625,8 +1425,6 @@ class UserSession:
     topics_discussed: List[str]
     crisis_level: CrisisLevel
     conversation_history: List[Dict]
-
-print("✅ Core classes and imports ready!")
 
 class DataLoader:
     """Enhanced mental health data loader with focused, efficient datasets"""
@@ -1903,7 +1701,7 @@ class DataLoader:
                     if dataset_size != 'unknown':
                         try:
                             total_entries += int(dataset_size)
-                        except:
+                        except Exception:
                             pass
                     dataset_count += 1
                 print(f"✅ Successfully loaded {dataset_count} datasets with ~{total_entries} total entries")
@@ -1921,20 +1719,19 @@ class DataLoader:
 IS_DEPLOYMENT = os.getenv('RAILWAY_ENVIRONMENT') is not None or os.getenv('VERCEL') is not None or os.getenv('RENDER') is not None
 
 if IS_DEPLOYMENT:
-    print("🚀 Deployment mode detected - using memory-optimized settings")
-    # Reduce dataset sizes for deployment
+    print("🚀 Deployment mode detected - using full dataset settings")
+    # Use full dataset sizes to match local development
     DEPLOYMENT_DATASET_LIMITS = {
-        "Amod/mental_health_counseling_conversations": 2000,
-        "heliosbrahma/mental_health_chatbot_dataset": 150,
-        "nbertagnolli/counsel-chat": 1500,
-        "nvidia/HelpSteer": 1500
+        "Amod/mental_health_counseling_conversations": None,  # Load all available (same as local)
+        "heliosbrahma/mental_health_chatbot_dataset": None,  # Load all available (same as local)
+        "nbertagnolli/counsel-chat": None,  # Load all available (same as local)
+        "nvidia/HelpSteer": 4000  # Keep limit at 3000 for memory optimization (matches local default)
     }
 else:
     print("💻 Local development mode - using full settings")
     DEPLOYMENT_DATASET_LIMITS = {}
 
 # Load datasets immediately - no lazy loading
-print("📚 Loading top 4 mental health datasets...")
 try:
     datasets = DataLoader.load_mental_health_datasets()
     print(f"✅ Successfully loaded {len(datasets)} high-quality mental health datasets!")
@@ -2011,7 +1808,7 @@ class CrisisDetector:
             else:
                 self.sentiment_analyzer = None
                 self.sentiment_available = False
-        except:
+        except Exception:
             self.sentiment_analyzer = None
             self.sentiment_available = False
 
@@ -2026,27 +1823,16 @@ class CrisisDetector:
     def _get_default_user_context(self) -> Dict[str, Any]:
         """Extract default user context as fallback"""
         current_time = datetime.utcnow()
-        fallback_login = os.getenv('USER_LOGIN', 'anonymous_user')
-        print(f"⚠️ WARNING: Crisis detector using fallback user context for {fallback_login}")
+        hour = current_time.hour
+        time_of_day = 'morning' if 5 <= hour < 12 else 'afternoon' if 12 <= hour < 17 else 'evening' if 17 <= hour < 21 else 'night'
 
         return {
-            'login': fallback_login,
+            'login': os.getenv('USER_LOGIN', 'anonymous_user'),
             'timestamp': current_time,
             'session_id': f"session_{int(current_time.timestamp())}",
-            'time_of_day': self._classify_time_of_day(current_time.hour),
+            'time_of_day': time_of_day,
             'date': current_time.strftime('%Y-%m-%d')
         }
-
-    def _classify_time_of_day(self, hour: int) -> str:
-        """Dynamically classify time periods"""
-        if 5 <= hour < 12:
-            return 'morning'
-        elif 12 <= hour < 17:
-            return 'afternoon'
-        elif 17 <= hour < 21:
-            return 'evening'
-        else:
-            return 'night'
 
     def _extract_linguistic_features(self, text: str) -> Dict[str, Any]:
         """Dynamically extract linguistic features from text"""
@@ -2133,21 +1919,18 @@ class CrisisDetector:
 
     def _categorize_context(self, context: str, full_text: str) -> str:
         """Dynamically categorize contexts based on surrounding language"""
-        # Analyze surrounding words to determine category
         context_pos = full_text.find(context)
         if context_pos == -1:
             return 'general'
 
-        # Get surrounding context (50 characters before and after)
         start = max(0, context_pos - 50)
         end = min(len(full_text), context_pos + len(context) + 50)
-        surrounding = full_text[start:end]
+        surrounding = full_text[start:end].lower()
 
-        # AI-powered context categorization
+        # Try AI categorization
         if self.llm:
             try:
-                context_prompt = f"""
-Analyze this text snippet and categorize the main life domain or context being discussed.
+                context_prompt = f"""Analyze this text snippet and categorize the main life domain or context being discussed.
 
 Text: "{surrounding}"
 
@@ -2167,37 +1950,21 @@ Return ONLY the category name:"""
                 ai_response = self.llm.invoke(context_prompt)
                 ai_category = self._extract_llm_content(ai_response).strip().lower()
                 
-                # Validate AI response
                 valid_categories = ['academic', 'professional', 'personal', 'health', 'financial', 
                                   'emotional', 'social', 'recreational', 'general']
-                
                 if ai_category in valid_categories:
                     return ai_category
-                else:
-                    print(f"⚠️ AI returned invalid category: {ai_category}")
-                    return 'general'
-                    
             except Exception as e:
                 print(f"⚠️ AI context categorization failed: {e}")
-                # Simple fallback
-                if 'work' in surrounding or 'job' in surrounding:
-                    return 'professional'
-                elif 'family' in surrounding or 'relationship' in surrounding:
-                    return 'personal'
-                elif 'school' in surrounding or 'study' in surrounding:
-                    return 'academic'
-                else:
-                    return 'general'
-        else:
-            # Simple fallback categorization
-            if any(word in surrounding for word in ['work', 'job', 'office', 'boss']):
-                return 'professional'
-            elif any(word in surrounding for word in ['family', 'friend', 'relationship']):
-                return 'personal' 
-            elif any(word in surrounding for word in ['school', 'study', 'exam']):
-                return 'academic'
-            else:
-                return 'general'
+
+        # Pattern-based fallback
+        if any(word in surrounding for word in ['work', 'job', 'office', 'boss']):
+            return 'professional'
+        elif any(word in surrounding for word in ['family', 'friend', 'relationship']):
+            return 'personal' 
+        elif any(word in surrounding for word in ['school', 'study', 'exam']):
+            return 'academic'
+        return 'general'
 
     def _extract_phrases_around_context(self, text: str, context: str) -> List[str]:
         """Extract meaningful phrases around a context"""
@@ -2256,8 +2023,7 @@ Return ONLY the category name:"""
         
         if self.llm:
             try:
-                help_seeking_prompt = f"""
-Analyze this text for help-seeking behavior and intent.
+                help_seeking_prompt = f"""Analyze this text for help-seeking behavior and intent.
 
 Text: "{text}"
 
@@ -2277,23 +2043,18 @@ Score:"""
                 
                 ai_response = self.llm.invoke(help_seeking_prompt)
                 ai_help_text = self._extract_llm_content(ai_response).strip()
-                
-                # Use robust score parsing
                 ai_help_score = self._extract_numeric_score_from_ai_response(ai_help_text, "help_seeking")
                 help_score += ai_help_score
                 
                 if ai_help_score > 1.0:
                     print(f"🤖 AI detected help-seeking behavior: {ai_help_score}/3")
-                    
             except Exception as e:
                 print(f"⚠️ AI help-seeking analysis failed: {e}")
-                # Basic fallback
-                if any(word in text_lower for word in ['help', 'advice', 'how to', 'can you']):
-                    help_score += 1.0
-        else:
-            # Simple fallback when no AI
-            if any(word in text_lower for word in ['help', 'advice', 'how to', 'can you', 'support']):
-                help_score += 1.0
+
+        # Pattern-based fallback
+        help_words = ['help', 'advice', 'how to', 'can you', 'support']
+        if any(word in text_lower for word in help_words):
+            help_score += 1.0
 
         # Normalize score
         return min(help_score / 5.0, 1.0)
@@ -2450,19 +2211,13 @@ Score:"""
                     
             except Exception as e:
                 print(f"⚠️ AI general crisis detection failed: {e}")
-                # Minimal fallback - only basic emotional indicators
-                basic_distress_words = ['hopeless', 'worthless', 'unbearable', 'overwhelming']
-                for word in basic_distress_words:
-                    if word in text_lower:
-                        crisis_score += 0.5
-                        detected_indicators.append(f"{word} (fallback)")
-        else:
-            # Minimal fallback when no AI available
-            critical_distress_words = ['hopeless', 'worthless', 'suicidal', 'unbearable']
-            for word in critical_distress_words:
-                if word in text_lower:
-                    crisis_score += 1.0
-                    detected_indicators.append(f"{word} (no-ai-fallback)")
+
+        # Pattern-based fallback for distress indicators
+        distress_words = ['hopeless', 'worthless', 'unbearable', 'overwhelming']
+        for word in distress_words:
+            if word in text_lower:
+                crisis_score += 0.5 if self.llm else 1.0
+                detected_indicators.append(f"{word} (fallback)")
 
         # Sentiment analysis contribution
         if self.sentiment_available and self.sentiment_analyzer is not None:
@@ -2479,8 +2234,7 @@ Score:"""
         # AI-powered negation and context analysis
         if self.llm and contexts:
             try:
-                negation_prompt = f"""
-Analyze this text for negation patterns that might reduce crisis severity.
+                negation_prompt = f"""Analyze this text for negation patterns that might reduce crisis severity.
 
 Text: "{text}"
 Contexts: {list(contexts)}
@@ -2500,17 +2254,13 @@ Analysis:"""
                 ai_response = self.llm.invoke(negation_prompt)
                 ai_negation = self._extract_llm_content(ai_response).upper().strip()
                 
-                has_negation = 'YES' in ai_negation
-                
-                if has_negation:
+                if 'YES' in ai_negation:
                     print(f"🤖 AI detected negation/protective context")
-                    
-                return has_negation
-                
+                    return True
             except Exception as e:
                 print(f"⚠️ AI negation analysis failed: {e}")
         
-        # Simple fallback negation detection
+        # Pattern-based fallback
         basic_negations = ['not', "don't", "won't", "can't", "isn't"]
         return any(neg in text_lower for neg in basic_negations)
 
@@ -2614,7 +2364,6 @@ Safety Assessment:"""
                     return CrisisLevel.NONE, HarmType.NONE
 
         if self.detection_mode == "ai":
-            # AI-only mode
             try:
                 return self._ai_powered_crisis_detection(text)
             except Exception as e:
@@ -3521,10 +3270,6 @@ Respond with ONLY a single number (e.g., "2.5" or "3"):"""
 
 # Initialize AI-powered crisis detector with hybrid mode (will be updated with user context per request)
 crisis_detector = CrisisDetector(detection_mode="hybrid")  # Initialize with default, will be updated per request
-print("✅ Enhanced AI crisis detection initialized (Hybrid mode: AI-Primary + Safety-Patterns)!")
-print(f"🕐 Session started at: {crisis_detector.current_user['timestamp']}")
-time_of_day = crisis_detector.current_user.get('time_of_day', 'unknown')
-print(f"👤 User context: {crisis_detector.current_user['login']} ({time_of_day})")
 
 @dataclass
 class SessionMemory:
@@ -3577,9 +3322,8 @@ class TherapyBot:
         except Exception as e:
             print(f"Failed to initialize ChatGroq: {e}")
             try:
-                # Fallback initialization
                 self.llm = ChatGroq(model="llama-3.1-70b-versatile")
-            except:
+            except Exception:
                 self.llm = None
 
         # Pass LLM to crisis detector for AI-powered detection
@@ -3589,27 +3333,22 @@ class TherapyBot:
         else:
             print("⚠️ Using pattern-based crisis detection only")
 
-        # Initialize knowledge base immediately - no lazy loading
+        # Initialize knowledge base
         self._knowledge_base_loaded = False
-        
-        # Initialize retriever attributes to None (will be set during knowledge base loading)
         self.general_retriever = None
         self.crisis_retriever = None
         self.vector_store = None
         
-        # Initialize knowledge base immediately
         try:
             success = self._initialize_enhanced_knowledge_base()
             if success:
                 print("📚 Knowledge base loaded successfully!")
-                self._knowledge_base_loaded = True
             else:
-                print("⚠️ Knowledge base loading failed, but continuing with fallback")
-                self._knowledge_base_loaded = True  # Force enable to avoid "not available" messages
+                print("⚠️ Knowledge base loading failed, continuing with fallback")
+            self._knowledge_base_loaded = True  # Enable to allow fallback usage
         except Exception as e:
             print(f"❌ Knowledge base loading error: {e}")
-            print("⚠️ Continuing with fallback knowledge base")
-            self._knowledge_base_loaded = True  # Force enable to avoid "not available" messages
+            self._knowledge_base_loaded = True  # Enable to allow fallback usage
         
         # Setup dynamic conversation prompts
         self._setup_dynamic_prompts()
@@ -3704,45 +3443,22 @@ Complexity Analysis:"""
                     return complexity_data
                 except (json.JSONDecodeError, ValueError):
                     print(f"⚠️ Could not parse AI complexity analysis: {ai_analysis}")
-                    return self._fallback_complexity_analysis(user_input, conversation_count)
             else:
-                return self._fallback_complexity_analysis(user_input, conversation_count)
+                pass
                 
         except Exception as e:
             print(f"⚠️ AI complexity analysis failed: {e}")
-            return self._fallback_complexity_analysis(user_input, conversation_count)
-    
-    def _fallback_complexity_analysis(self, user_input: str, conversation_count: int) -> Dict[str, Any]:
-        """Fallback complexity analysis when AI is unavailable"""
+        
+        # Default complexity values when AI is unavailable
         word_count = len(user_input.split())
-        char_count = len(user_input.strip())
-        
-        # Simple heuristic-based complexity scoring
-        emotional = min(5, max(0, word_count // 3))  # More words = potentially more emotional content
-        therapeutic = min(5, max(0, word_count // 4))  # Longer messages may need more therapeutic response
-        context = min(5, max(0, conversation_count // 3))  # More conversation = more context needed
-        response = min(5, max(0, (word_count + conversation_count) // 5))  # Combined complexity for response
+        emotional = min(5, max(0, word_count // 3))
+        therapeutic = min(5, max(0, word_count // 4))
+        context = min(5, max(0, conversation_count // 3))
+        response = min(5, max(0, (word_count + conversation_count) // 5))
         overall = min(5, max(0, (emotional + therapeutic + context + response) // 4))
-        
-        # Add derived fields for backward compatibility
         requires_ai_context = therapeutic >= 3 or overall >= 3
-        
-        if overall <= 2:
-            complexity_level = 'simple'
-        elif overall <= 3:
-            complexity_level = 'moderate'
-        else:
-            complexity_level = 'complex'
-        
-        # Calculate confidence based on analysis certainty
-        if overall <= 1:
-            confidence = 0.9  # Very confident about simple cases
-        elif overall <= 2:
-            confidence = 0.8  # Good confidence for straightforward cases
-        elif overall <= 3:
-            confidence = 0.7  # Moderate confidence for moderate complexity
-        else:
-            confidence = 0.6  # Lower confidence for complex cases
+        complexity_level = 'simple' if overall <= 2 else 'moderate' if overall <= 3 else 'complex'
+        confidence = 0.9 if overall <= 1 else 0.8 if overall <= 2 else 0.7 if overall <= 3 else 0.6
         
         return {
             'emotional': emotional,
@@ -4276,10 +3992,10 @@ Return ONLY the category name that best matches the primary concern:"""
                         print(f"🎯 AI-identified primary issue: {ai_issue}")
                 else:
                     print(f"⚠️ LLM unavailable for issue identification")
-                    memory.primary_issue = self._fallback_issue_classification(user_input)
+                    memory.primary_issue = "General support"
             except Exception as e:
                 print(f"⚠️ AI issue identification failed: {e}")
-                memory.primary_issue = self._fallback_issue_classification(user_input)
+                memory.primary_issue = "General support"
 
         # Update progress notes for THIS session only
         if memory.progress_notes is not None:
@@ -4295,52 +4011,6 @@ Return ONLY the category name that best matches the primary concern:"""
             if len(memory.progress_notes) > 20:
                 memory.progress_notes = memory.progress_notes[-20:]
 
-    def _fallback_issue_classification(self, user_input: str) -> str:
-        """AI-assisted issue classification with minimal hardcoded fallback"""
-        # Try AI-powered classification even as "fallback"
-        if self.llm:
-            try:
-                issue_prompt = f"""
-Quickly classify the primary therapeutic concern in this text:
-
-Text: "{user_input}"
-
-Choose the most appropriate category:
-- work_stress
-- relationship_issues  
-- anxiety_symptoms
-- depression_symptoms
-- family_dynamics
-- general_support
-- life_transitions
-- self_esteem_issues
-
-Return ONLY the category name:"""
-                
-                response = self.llm.invoke(issue_prompt)
-                ai_classification = self._extract_llm_content(response).strip().lower()
-                
-                # Validate classification
-                valid_issues = ['work_stress', 'relationship_issues', 'anxiety_symptoms', 
-                              'depression_symptoms', 'family_dynamics', 'general_support',
-                              'life_transitions', 'self_esteem_issues']
-                
-                if ai_classification in valid_issues:
-                    return ai_classification
-                    
-            except Exception as e:
-                print(f"⚠️ AI fallback classification failed: {e}")
-        
-        # Minimal hardcoded fallback only for critical cases
-        text_lower = user_input.lower()
-        if 'work' in text_lower or 'job' in text_lower:
-            return "work_stress"
-        elif 'anxiety' in text_lower or 'anxious' in text_lower:
-            return "anxiety_symptoms"
-        elif 'depression' in text_lower or 'depressed' in text_lower:
-            return "depression_symptoms"
-        else:
-            return "general_support"
 
     def _extract_themes_from_text(self, text: str) -> List[str]:
         """AI-powered theme extraction from user input - eliminates hardcoded keywords"""
@@ -4609,12 +4279,9 @@ Enhanced Query (max 100 characters):"""
             # Convert word limit to approximate character limit (avg 5 chars/word + spaces)
             context_limit = context_limit_words * 6  # Conservative estimate for truncation
 
-            # Check if knowledge base is available (should be loaded during startup)
+            # Check if knowledge base is available
             if not self._knowledge_base_loaded or not retriever:
-                if not retriever:
-                    print("⚠️ Vector embeddings not available (sentence-transformers issue), using fallback context")
-                else:
-                    print("⚠️ Knowledge base not available, using fallback context")
+                print("⚠️ Knowledge base not available, using fallback context")
                 return "General therapeutic principles: active listening, empathy, validation, and supportive presence."
             
             if retriever and self._knowledge_base_loaded:
@@ -4644,7 +4311,6 @@ Return the most relevant context pieces combined into a coherent therapeutic kno
                     try:
                         context_response = self.llm.invoke(context_selection_prompt)
                         ai_selected_context = self._extract_llm_content(context_response)
-                        # Truncate to word limit (standard: 200-300 words)
                         words = ai_selected_context.split()
                         final_context = ' '.join(words[:context_limit_words])
                         print(f"🧠 AI-selected context: {self._count_words(final_context)}w (limit: {context_limit_words}w)")
@@ -4652,36 +4318,32 @@ Return the most relevant context pieces combined into a coherent therapeutic kno
                     except Exception as e:
                         print(f"⚠️ AI context selection failed, using direct retrieval: {e}")
                 
-                # Fallback: use direct document content (truncate to word limit)
+                # Fallback: use direct document content
                 context = "\n\n".join([doc.page_content for doc in docs[:docs_to_retrieve]])
                 words = context.split()
-                truncated_context = ' '.join(words[:context_limit_words])
-                return truncated_context
-            else:
-                print(f"⚠️ No retriever available or knowledge base not loaded")
-                # Provide AI-generated contextual guidance as fallback
-                if self.llm:
-                    try:
-                        fallback_prompt = f"""
-As a mental health professional, provide brief therapeutic guidance for this situation:
+                return ' '.join(words[:context_limit_words])
+            
+            # Fallback: AI-generated context or default
+            if self.llm:
+                try:
+                    fallback_prompt = f"""As a mental health professional, provide brief therapeutic guidance for this situation:
 
 User Query: "{query}"
 Crisis Level: {crisis_level.value}
 Response Type: {response_type}
 
 Provide 2-3 sentences of relevant therapeutic approach or supportive guidance:"""
-                        
-                        fallback_response = self.llm.invoke(fallback_prompt)
-                        fallback_context = self._extract_llm_content(fallback_response)
-                        # Limit fallback to standard word count (200 words max)
-                        words = fallback_context.split()
-                        truncated_fallback = ' '.join(words[:200])
-                        print(f"🤖 Generated fallback context: {self._count_words(truncated_fallback)}w")
-                        return truncated_fallback
-                    except Exception as e:
-                        print(f"⚠️ Fallback context generation failed: {e}")
-                
-                return "General therapeutic principles: active listening, empathy, validation, and supportive presence."
+                    
+                    fallback_response = self.llm.invoke(fallback_prompt)
+                    fallback_context = self._extract_llm_content(fallback_response)
+                    words = fallback_context.split()
+                    truncated_fallback = ' '.join(words[:200])
+                    print(f"🤖 Generated fallback context: {self._count_words(truncated_fallback)}w")
+                    return truncated_fallback
+                except Exception as e:
+                    print(f"⚠️ Fallback context generation failed: {e}")
+            
+            return "General therapeutic principles: active listening, empathy, validation, and supportive presence."
 
         except Exception as e:
             print(f"⚠️ Context retrieval error: {e}")
@@ -5058,10 +4720,9 @@ Personalized Therapeutic Guidance:"""
 
     def _add_crisis_resources(self, response: str, crisis_level: CrisisLevel) -> str:
         """AI-generated crisis resources based on severity and context"""
-        try:
-            if self.llm:
-                crisis_resources_prompt = f"""
-You are a mental health professional providing crisis support resources.
+        if self.llm:
+            try:
+                crisis_resources_prompt = f"""You are a mental health professional providing crisis support resources.
 
 Context:
 - Crisis Level: {crisis_level.value}
@@ -5089,16 +4750,11 @@ Crisis Support Resources:"""
                 if ai_resources and len(ai_resources.strip()) > 10:
                     print(f"🤖 Generated AI crisis resources: {self._count_words(ai_resources)}w")
                     return response + "\n\n" + ai_resources.strip()
-                else:
-                    print(f"⚠️ AI crisis resources generation failed, using fallback")
-                    return response + self._fallback_crisis_resources(crisis_level)
-            else:
-                print(f"⚠️ LLM unavailable for crisis resources")
-                return response + self._fallback_crisis_resources(crisis_level)
-                
-        except Exception as e:
-            print(f"⚠️ AI crisis resources error: {e}")
-            return response + self._fallback_crisis_resources(crisis_level)
+            except Exception as e:
+                print(f"⚠️ AI crisis resources error: {e}")
+        
+        # Fallback to hardcoded resources
+        return response + self._fallback_crisis_resources(crisis_level)
 
     def _fallback_crisis_resources(self, crisis_level: CrisisLevel) -> str:
         """Fallback crisis resources when AI is unavailable"""
@@ -5113,16 +4769,13 @@ Crisis Support Resources:"""
 
     def _generate_with_retry(self, prompt: str, max_retries: int = 3) -> str:
         """Generate response with retry logic"""
+        if self.llm is None:
+            return "I apologize, but I'm currently unable to generate a response. Please try again later."
+        
         for attempt in range(max_retries):
             try:
-                if self.llm is None:
-                    return "I apologize, but I'm currently unable to generate a response. Please try again later."
-                
                 response = self.llm.invoke(prompt)
-                if hasattr(response, 'content'):
-                    response_text = response.content
-                else:
-                    response_text = str(response)
+                response_text = response.content if hasattr(response, 'content') else str(response)
                 
                 if response_text and isinstance(response_text, str) and len(response_text.strip()) > 10:
                     return response_text.strip()
@@ -5139,18 +4792,12 @@ Crisis Support Resources:"""
             try:
                 sentiment = self.crisis_detector.sentiment_analyzer.polarity_scores(user_input)
                 return round(((sentiment['compound'] + 1) * 4.5) + 1, 1)
-            except:
+            except Exception:
                 pass
-
-        # If sentiment analyzer unavailable, return neutral mood
-        return 5.0
-
+        
+        return 5.0  # Neutral fallback
 
 
-# Replace the old method - disabled to avoid type errors
-# TherapyBot.generate_response = TherapyBot.generate_enhanced_response
-
-print("✅ Enhanced therapy bot with strict session isolation ready!")
 
 # Load API keys from environment variables
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
@@ -5273,11 +4920,11 @@ Decision:"""
         """Generate AI-powered continuation message for resumed sessions"""
         try:
             if not self.therapy_bot.llm:
-                return self._fallback_continuation_message()
+                return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked? What's on your mind today?"
             
             # Get session context for continuation with type safety
             if not self.current_user_id or not self.current_session_id:
-                return self._fallback_continuation_message()
+                return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked? What's on your mind today?"
                 
             session_memory = self.therapy_bot._get_or_create_session_memory(self.current_user_id, self.current_session_id)
             
@@ -5315,15 +4962,10 @@ Welcome back message:"""
             if ai_continuation and len(ai_continuation.strip()) > 10:
                 print(f"🤖 Generated AI continuation message: {self.therapy_bot._count_words(ai_continuation)}w")
                 return ai_continuation.strip()
-            else:
-                return self._fallback_continuation_message()
-                
         except Exception as e:
             print(f"⚠️ AI continuation message generation failed: {e}")
-            return self._fallback_continuation_message()
-    
-    def _fallback_continuation_message(self) -> str:
-        """Fallback continuation message when AI is not available"""
+        
+        # Fallback continuation message
         return "Welcome back! I'm glad you're continuing our conversation. How are you feeling since we last talked? What's on your mind today?"
 
     def start_session(self, user_id: Optional[str] = None) -> str:
@@ -5462,20 +5104,14 @@ Welcome message:"""
                     return ai_welcome.strip()
                 else:
                     print(f"⚠️ AI welcome generation failed, using fallback")
-                    return self._fallback_welcome_message()
             else:
                 print(f"⚠️ LLM unavailable for welcome generation")
-                return self._fallback_welcome_message()
                 
         except Exception as e:
             print(f"⚠️ AI welcome generation error: {e}")
-            return self._fallback_welcome_message()
-
-    def _fallback_welcome_message(self) -> str:
-        """Fallback welcome message when AI is unavailable"""
-        current_hour = datetime.now().hour
         
-        # Simple time-based greeting without hardcoded templates
+        # Default welcome message
+        current_hour = datetime.now().hour
         if 5 <= current_hour < 12:
             time_context = "morning"
         elif 12 <= current_hour < 17:
@@ -5567,23 +5203,21 @@ Error Message:"""
                 if ai_error and len(ai_error.strip()) > 10:
                     return ai_error.strip()
                 else:
-                    return self._fallback_error_message(error_type)
+                    pass
             else:
-                return self._fallback_error_message(error_type)
+                pass
                 
         except Exception as e:
             print(f"⚠️ AI error message generation failed: {e}")
-            return self._fallback_error_message(error_type)
-
-    def _fallback_error_message(self, error_type: str) -> str:
-        """Fallback error messages when AI is unavailable"""
-        fallback_messages = {
+        
+        # Default error messages
+        error_messages = {
             "service_unavailable": "I'm currently unavailable. If you're in crisis, please contact 1019 (Mental Health Crisis Line) or 1166 (Emergency).",
             "session_required": "Please start a new session first. If this is an emergency, call 1019 or 1166.",
             "empty_message": "Please enter a message to continue our conversation.",
             "technical_issue": "I encountered a technical issue. Please try again. If you're in crisis, contact 1019 or 1166 immediately."
         }
-        return fallback_messages.get(error_type, "An error occurred. Please try again or contact support if needed.")
+        return error_messages.get(error_type, "An error occurred. Please try again or contact support if needed.")
 
     def _generate_ai_emergency_message(self, response: str, crisis_level: CrisisLevel, harm_type: HarmType) -> str:
         """AI-generated emergency message formatting for harm to others scenarios"""
@@ -5885,45 +5519,16 @@ Main Themes:"""
                     return ai_themes.strip()
                 else:
                     print(f"⚠️ AI theme extraction failed, using fallback")
-                    return self._fallback_theme_extraction(history, memory)
-            else:
-                print(f"⚠️ LLM unavailable for theme extraction")
-                return self._fallback_theme_extraction(history, memory)
-                
         except Exception as e:
             print(f"⚠️ AI theme extraction error: {e}")
-            return self._fallback_theme_extraction(history, memory)
-
-    def _fallback_theme_extraction(self, history: List[Dict], memory: SessionMemory) -> str:
-        """Fallback theme extraction when AI is unavailable"""
+        
+        # Fallback theme extraction from memory
         found_themes = []
-
-        # Get themes from memory first
         if memory.key_themes:
             for theme in memory.key_themes[:2]:
                 found_themes.append(f"• 🧠 {theme.replace('_', ' ').title()}")
-
-        # Simple keyword-based theme detection as fallback
-        try:
-            all_text = " ".join([conv['user_input'] for conv in history]).lower()
-
-            # Minimal hardcoded themes for fallback only
-            basic_themes = {
-                '• 😰 Anxiety/Stress': ['anxious', 'worried', 'panic', 'stressed', 'overwhelmed'],
-                '• 😢 Emotional Difficulties': ['sad', 'depressed', 'hopeless', 'empty', 'down'],
-                '• 💔 Relationship Concerns': ['relationship', 'partner', 'family', 'friends', 'lonely'],
-                '• 💼 Work/Career Issues': ['work', 'job', 'career', 'boss', 'workplace']
-            }
-
-            for theme, keywords in basic_themes.items():
-                if sum(1 for word in keywords if word in all_text) >= 1:
-                    if theme not in found_themes:
-                        found_themes.append(theme)
-
-            return "\n".join(found_themes[:3]) if found_themes else "• 💙 General life concerns and wellbeing"
-
-        except:
-            return "• 🤝 Conversation themes being analyzed"
+        
+        return "\n".join(found_themes[:3]) if found_themes else "• 💙 General life concerns and wellbeing"
 
     def _extract_strengths(self, history: List[Dict]) -> str:
         """AI-powered strength identification from conversation"""
@@ -5963,37 +5568,11 @@ Identified Strengths:"""
                     return ai_strengths.strip()
                 else:
                     print(f"⚠️ AI strength identification failed, using fallback")
-                    return self._fallback_strength_extraction(history)
-            else:
-                print(f"⚠️ LLM unavailable for strength identification")
-                return self._fallback_strength_extraction(history)
-                
         except Exception as e:
             print(f"⚠️ AI strength identification error: {e}")
-            return self._fallback_strength_extraction(history)
-
-    def _fallback_strength_extraction(self, history: List[Dict]) -> str:
-        """Fallback strength identification when AI is unavailable"""
-        try:
-            all_text = " ".join([conv['user_input'] for conv in history]).lower()
-
-            # Basic strength indicators for fallback
-            basic_strengths = {
-                '• 🧘 Self-awareness': ['realize', 'understand', 'aware', 'recognize', 'notice'],
-                '• 🤝 Seeking support': ['help', 'support', 'therapy', 'talking', 'reaching out'],
-                '• 💪 Persistence': ['trying', 'working', 'effort', 'keep going', 'not giving up'],
-                '• 🎯 Problem-solving': ['fix', 'handle', 'solve', 'figure out', 'work through']
-            }
-
-            found_strengths = []
-            for strength, indicators in basic_strengths.items():
-                if sum(1 for word in indicators if word in all_text) >= 1:
-                    found_strengths.append(strength)
-
-            return "\n".join(found_strengths[:3]) if found_strengths else "• 🤝 Courage in seeking support\n• 💪 Willingness to share experiences"
-
-        except:
-            return "• 🌟 Reaching out for support shows strength"
+        
+        # Fallback strengths
+        return "• 🤝 Courage in seeking support\n• 💪 Willingness to share experiences"
 
     def _generate_recommendations(self, history: List[Dict], memory: SessionMemory) -> str:
         """AI-powered personalized recommendations based on conversation"""
@@ -6040,51 +5619,11 @@ Personalized Recommendations:"""
                     return ai_recommendations.strip()
                 else:
                     print(f"⚠️ AI recommendation generation failed, using fallback")
-                    return self._fallback_recommendations(history, memory)
-            else:
-                print(f"⚠️ LLM unavailable for recommendation generation")
-                return self._fallback_recommendations(history, memory)
-                
         except Exception as e:
             print(f"⚠️ AI recommendation generation error: {e}")
-            return self._fallback_recommendations(history, memory)
-
-    def _fallback_recommendations(self, history: List[Dict], memory: SessionMemory) -> str:
-        """Fallback recommendations when AI is unavailable"""
-        try:
-            crisis_count = sum(1 for conv in history if conv.get('crisis_level') in ['high', 'critical'])
-            mood_scores = [conv.get('mood_score', 5.0) for conv in history if conv.get('mood_score')]
-            avg_mood = sum(mood_scores) / len(mood_scores) if mood_scores else 5.0
-
-            recommendations = []
-
-            # Crisis-based recommendations
-            if crisis_count > 0:
-                recommendations.append("• 🆘 Consider scheduling an appointment with a mental health professional")
-
-            # Issue-specific recommendations based on memory
-            if memory.primary_issue:
-                if 'work' in memory.primary_issue or 'stress' in memory.primary_issue:
-                    recommendations.append("• 💼 Practice workplace stress management techniques")
-                elif 'anxiety' in memory.primary_issue:
-                    recommendations.append("• 🌬️ Practice breathing exercises daily")
-                elif 'depression' in memory.primary_issue:
-                    recommendations.append("• 🌅 Maintain daily routines and gentle activities")
-
-            # Mood-based recommendations
-            if avg_mood < 4.0:
-                recommendations.append("• 🌱 Focus on daily mood-supporting activities")
-            elif avg_mood < 6.0:
-                recommendations.append("• � Practice regular mindfulness or meditation")
-
-            # General recommendations
-            recommendations.append("• 🔄 Continue building on our therapeutic relationship")
-
-            return "\n".join(recommendations[:4])
-
-        except:
-            return "• 🤝 Continue building on our conversation\n• 🌱 Practice the coping strategies we discussed"
-
+        
+        # Fallback recommendations
+        return "• 🤝 Continue our therapeutic conversations\n• 🧠 Practice self-awareness and mindfulness\n• 💪 Build on the strengths you've shown"
     def _get_psychological_insights(self, profile: PsychologicalProfile) -> str:
         """Generate psychological insights from user profile"""
         try:
@@ -6156,11 +5695,6 @@ Personalized Recommendations:"""
             else:
                 indicators.append(f"• ⚠️ {crisis_events} crisis event(s) addressed")
             
-            # Resilience indicators
-            if profile.resilience_factors:
-                resilience_count = len(profile.resilience_factors)
-                indicators.append(f"• 💎 {resilience_count} resilience factors identified")
-            
             return "\n".join(indicators) if indicators else "• 📊 Progress tracking initialized"
             
         except Exception as e:
@@ -6221,67 +5755,12 @@ Personalized Recommendations:"""
                     print(f"🎯 Generated personalized recommendations: {self.therapy_bot._count_words(ai_recommendations)}w")
                     return ai_recommendations.strip()
                 else:
-                    print(f"⚠️ AI personalized recommendation generation failed, using enhanced fallback")
-                    return self._enhanced_fallback_recommendations(history, memory, profile)
-            else:
-                print(f"⚠️ LLM unavailable for personalized recommendations")
-                return self._enhanced_fallback_recommendations(history, memory, profile)
-                
+                    print(f"⚠️ AI personalized recommendation generation failed, using fallback")
         except Exception as e:
             print(f"⚠️ Personalized recommendation generation error: {e}")
-            return self._enhanced_fallback_recommendations(history, memory, profile)
-
-    def _enhanced_fallback_recommendations(self, history: List[Dict], memory: SessionMemory, 
-                                         profile: PsychologicalProfile) -> str:
-        """Enhanced fallback recommendations using profile data"""
-        try:
-            recommendations = []
-            
-            # Profile-based recommendations
-            if profile.coping_mechanisms:
-                effective_coping = [name for name, data in profile.coping_mechanisms.items() 
-                                  if isinstance(data, dict) and data.get('confidence', 0) > 0.6]
-                if effective_coping:
-                    recommendations.append(f"• 💪 Continue using your effective coping strategies: {', '.join(effective_coping[:2])}")
-            
-            
-            
-            # Crisis-informed recommendations
-            crisis_count = sum(1 for conv in history if conv.get('crisis_level') in ['high', 'critical'])
-            if crisis_count > 0:
-                recommendations.append("• 🆘 Continue building your crisis management skills with professional support")
-            
-            # Progress-based recommendations
-            if profile.long_term_progress:
-                momentum = profile.long_term_progress.get('therapeutic_momentum', 0)
-                if momentum > 0.6:
-                    recommendations.append("• 📈 Maintain your positive therapeutic momentum")
-                else:
-                    recommendations.append("• 🌱 Focus on small, consistent steps for progress")
-            
-            # Issue-specific recommendations
-            if memory.primary_issue:
-                if 'work' in memory.primary_issue:
-                    recommendations.append("• 💼 Develop workplace-specific stress management techniques")
-                elif 'anxiety' in memory.primary_issue:
-                    recommendations.append("• 🌬️ Practice daily anxiety management techniques")
-                elif 'relationship' in memory.primary_issue:
-                    recommendations.append("• 💕 Focus on communication and boundary-setting skills")
-            
-            # Default recommendations if none generated
-            if not recommendations:
-                recommendations = [
-                    "• 🤝 Continue our therapeutic conversations",
-                    "• 🧠 Practice self-awareness and mindfulness",
-                    "• 💪 Build on the strengths you've shown",
-                    "• 🌱 Take things one step at a time"
-                ]
-            
-            return "\n".join(recommendations[:5])  # Limit to 5 recommendations
-            
-        except Exception as e:
-            print(f"⚠️ Enhanced fallback recommendations error: {e}")
-            return "• 🤝 Continue building on our therapeutic relationship\n• 🌱 Practice the insights we've discovered together"
+        
+        # Fallback personalized recommendations
+        return "• 🤝 Continue our therapeutic conversations\n• 🧠 Practice self-awareness and mindfulness\n• 💪 Build on the strengths you've shown"
 
     def _create_profile_context_summary(self, profile: PsychologicalProfile) -> str:
         """Create a concise summary of psychological profile for context (enhanced version)"""
@@ -6329,182 +5808,8 @@ Personalized Recommendations:"""
 # Initialize interface
 if therapy_bot:
     interface = TherapyInterface(therapy_bot)
-    print("✅ Enhanced therapy interface ready!")
 else:
     interface = None
-    print("❌ Therapy bot not available")
 
-# Simple Console Interface (instead of Gradio)
-
-def run_console_therapy_session():
-    """Run a simple console-based therapy session"""
-
-    if not interface:
-        print("❌ Therapy bot not properly initialized. Please check your setup.")
-        return
-
-    print("=" * 60)
-    print("🤝 Mental Health Support Chat - Console Version")
-    print("=" * 60)
-    print("Type 'quit', 'exit', or 'bye' to end the session")
-    print("Type 'summary' to get a session summary")
-    print("Type 'new' to start a new session")
-    print("=" * 60)
-
-    # Start initial session
-    welcome_msg = interface.start_session()
-    print(f"\n🤖 Bot: {welcome_msg}\n")
-
-    # Main conversation loop
-    while True:
-        try:
-            # Get user input
-            user_input = input("👤 You: ").strip()
-
-            # Handle special commands
-            if user_input.lower() in ['quit', 'exit', 'bye']:
-                print("\n🤖 Bot: Thank you for sharing with me today. Take care, and remember that support is always available when you need it.")
-                print("\n Remember: If you're in crisis, contact 1019 (Mental Health Crisis Line) or 1166 (Emergency)")
-                break
-
-            elif user_input.lower() == 'summary':
-                summary = interface.get_session_summary()
-                print(f"\n📋 {summary}\n")
-                continue
-
-            elif user_input.lower() == 'new':
-                welcome_msg = interface.start_session()
-                print(f"\n🤖 Bot: {welcome_msg}\n")
-                continue
-
-            elif not user_input:
-                print("Please enter a message or type 'quit' to exit.")
-                continue
-
-            # Get bot response
-            print("\n🤖 Thinking...")
-            response = interface.send_message(user_input)
-            print(f"\n🤖 Bot: {response}\n")
-
-        except KeyboardInterrupt:
-            print("\n\n🤖 Bot: Session interrupted. Take care!")
-            # Secure cleanup
-            if interface and interface.current_session_id:
-                security_manager.audit_log(
-                    'SESSION_INTERRUPTED',
-                    interface.current_user_id or 'unknown',
-                    interface.current_session_id,
-                    {'reason': 'keyboard_interrupt'}
-                )
-            break
-        except Exception as e:
-            # Log error securely without exposing sensitive data
-            if interface and interface.current_session_id:
-                security_manager.audit_log(
-                    'SESSION_ERROR',
-                    interface.current_user_id or 'unknown',
-                    interface.current_session_id,
-                    {'error_type': type(e).__name__},
-                    'ERROR'
-                )
-            print(f"\n❌ Error: A security or system error occurred. Please try again or type 'quit' to exit.")
-    
-    # Final cleanup on exit
-    if interface and interface.current_session_id:
-        security_manager.audit_log(
-            'CONSOLE_SESSION_ENDED',
-            interface.current_user_id or 'console_user',
-            interface.current_session_id,
-            {'total_conversations': interface.conversation_count}
-        )
-        print("\n🔒 Session ended securely. All data protected.")
-
-def test_therapy_bot():
-    """Test the therapy bot with sample conversations"""
-
-    if not interface:
-        print("❌ Therapy bot not available for testing")
-        return
-
-    print("🧪 Testing Therapy Bot...")
-
-    # Start session
-    welcome = interface.start_session()
-    print(f"Welcome: {welcome[:100]}...")
-
-    # Test messages
-    test_messages = [
-        "Hi, I'm having a rough day at work",
-        "My boss scolded me in front of everyone and I feel so embarrassed",
-        "I just want to forget about it",
-        "Thanks for listening"
-    ]
-
-    for msg in test_messages:
-        print(f"\n📤 Test input: {msg}")
-        response = interface.send_message(msg)
-        print(f"📥 Response: {response[:150]}...")
-
-    # Get summary
-    summary = interface.get_session_summary()
-    print(f"\n📋 Summary: {summary[:200]}...")
-
-    # Secure cleanup after testing
-    if interface and interface.current_session_id:
-        security_manager.audit_log(
-            'TEST_SESSION_COMPLETED',
-            interface.current_user_id or 'test_user',
-            interface.current_session_id,
-            {'test_messages': len(test_messages)}
-        )
-
-    print("\n✅ Bot test completed with secure cleanup!")
-
-# Security maintenance functions
-def cleanup_expired_data():
-    """Clean up expired data across all storage systems"""
-    try:
-        if 'interface' in globals() and interface and interface.therapy_bot and interface.therapy_bot.storage:
-            interface.therapy_bot.storage.cleanup_expired_data()
-        print("✅ Data cleanup completed")
-    except Exception as e:
-        print(f"❌ Data cleanup failed: {e}")
-
-def anonymize_user_data(user_id: str):
-    """Anonymize user data for privacy compliance"""
-    try:
-        if 'interface' in globals() and interface and interface.therapy_bot and interface.therapy_bot.storage:
-            interface.therapy_bot.storage.anonymize_user_data(user_id)
-        print(f"✅ User data anonymized for {security_manager.hash_pii(user_id)}")
-    except Exception as e:
-        print(f"❌ User data anonymization failed: {e}")
-
-def get_security_status() -> Dict[str, Any]:
-    """Get current security configuration status"""
-    return {
-        'encryption_enabled': SECURITY_CONFIG['ENCRYPTION_ENABLED'],
-        'audit_logging': SECURITY_CONFIG['AUDIT_LOGGING'],
-        'data_retention_days': SECURITY_CONFIG['DATA_RETENTION_DAYS'],
-        'rate_limiting': True,
-        'session_validation': SECURITY_CONFIG['VALIDATE_SESSION_TOKENS'],
-        'input_sanitization': SECURITY_CONFIG['SANITIZE_INPUTS'],
-        'active_sessions': len(security_manager.session_tokens),
-        'security_version': '2.0'
-    }
-
-# API Mode - Don't run console interface automatically
+# API Mode - Ready for integration
 print("🔒 Secure Therapy Bot ready for API integration!")
-print("🛡️ Security Features Enabled:")
-print(f"  - Encryption: {SECURITY_CONFIG['ENCRYPTION_ENABLED']}")
-print(f"  - Audit Logging: {SECURITY_CONFIG['AUDIT_LOGGING']}")
-print(f"  - Rate Limiting: Enabled")
-print(f"  - Input Sanitization: {SECURITY_CONFIG['SANITIZE_INPUTS']}")
-print(f"  - Session Validation: {SECURITY_CONFIG['VALIDATE_SESSION_TOKENS']}")
-print("🔗 Available functions for external calls:")
-print("- interface.start_session() to start (with secure token)")
-print("- interface.send_message('your message') to chat (with validation)") 
-print("- interface.get_session_summary() to get summary (with access control)")
-print("- cleanup_expired_data() for data maintenance")
-print("- anonymize_user_data(user_id) for privacy compliance")
-print("- get_security_status() for security monitoring")
-print("🌟 Ready to be imported by therapy_service.py with comprehensive security controls")
