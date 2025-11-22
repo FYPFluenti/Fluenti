@@ -3780,7 +3780,7 @@ Your empathetic, professional, session-isolated therapeutic response:"""
 
         # Crisis intervention prompt (only for actual crises)
         self.crisis_prompt = PromptTemplate(
-            input_variables=["user_input", "crisis_level", "assessment_questions", "session_context"],
+            input_variables=["user_input", "crisis_level", "assessment_questions", "session_context", "context"],
             template=""" CRISIS INTERVENTION PROTOCOL ACTIVATED 
 
 CURRENT SESSION CONTEXT: {session_context}
@@ -3789,6 +3789,9 @@ USER MESSAGE: {user_input}
 CRISIS LEVEL: {crisis_level}
 
 You are a professional mental health crisis intervention specialist responding to someone who may be in immediate psychological distress or danger. Your response is CRITICAL and must be personalized to their specific situation while maintaining professional therapeutic communication.
+
+RELEVANT CRISIS INTERVENTION KNOWLEDGE (use for evidence-based guidance):
+{context}
 
 CRITICAL PROFESSIONAL VOICE REQUIREMENTS:
 - ALWAYS maintain professional, therapeutic tone regardless of how the user communicates
@@ -3806,7 +3809,7 @@ IMMEDIATE PRIORITIES:
 ASSESSMENT QUESTIONS TO CONSIDER: {assessment_questions}
 
 DO NOT include helpline numbers (they will be added automatically).
-Be personal, empathetic, and specific to what they shared while maintaining professional therapeutic voice. Keep response 4-6 lines with professional language.
+Be personal, empathetic, and specific to what they shared while maintaining professional therapeutic voice. Use evidence-based crisis intervention approaches from the knowledge base when appropriate. Keep response 4-6 lines with professional language.
 
 Your professional, personalized crisis intervention response:"""
         )
@@ -4596,7 +4599,8 @@ Personalized Therapeutic Guidance:"""
                     user_input=final_input,
                     crisis_level=crisis_level.value,
                     assessment_questions=assessment_questions[:2],
-                    session_context=session_context
+                    session_context=session_context,
+                    context=context  # Dataset knowledge for evidence-based crisis intervention
                 )
                 print(f" Crisis prompt preview: {formatted_prompt[:200]}...")
 
