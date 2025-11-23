@@ -3,12 +3,14 @@ import { CustomStoryInputs } from '@/types/games/story-game';
 import { SparkleIcon, MicrophoneIcon, SpeakerIcon } from './icons';
 import { getCustomStorySuggestions } from '@/services/geminiService';
 import { LoadingSpinner } from './LoadingSpinner';
+import { ArrowLeft } from 'lucide-react';
 
 interface CustomAdventureScreenProps {
   onCreateStory: (inputs: CustomStoryInputs) => void;
   onAnswer: (step: 'characterName' | 'setting' | 'interest', value: string) => void;
   isLoading: boolean;
   customStoryInputs: CustomStoryInputs;
+  onBack?: () => void;
 }
 
 const SpeechRecognitionAPI = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -27,7 +29,7 @@ const QUESTIONS: Record<'characterName' | 'setting' | 'interest', string> = {
     interest: "Awesome! What is their special power or hobby?",
 };
 
-const CustomAdventureScreen: React.FC<CustomAdventureScreenProps> = ({ onCreateStory, onAnswer, isLoading, customStoryInputs }) => {
+const CustomAdventureScreen: React.FC<CustomAdventureScreenProps> = ({ onCreateStory, onAnswer, isLoading, customStoryInputs, onBack }) => {
   const { currentStep } = customStoryInputs;
   const [isListening, setIsListening] = useState(false);
   const [spokenQuestion, setSpokenQuestion] = useState('');
@@ -235,7 +237,19 @@ const CustomAdventureScreen: React.FC<CustomAdventureScreenProps> = ({ onCreateS
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 flex flex-col justify-center items-center p-4">
-      <div className="w-full max-w-lg bg-white border border-orange-200 rounded-xl shadow-lg p-6 md:p-10">
+      <div className="w-full max-w-lg bg-white border border-orange-200 rounded-xl shadow-lg p-6 md:p-10 relative">
+        {/* Back Arrow Button */}
+        {onBack && (
+          <button
+            onClick={onBack}
+            className="absolute top-4 left-4 md:top-6 md:left-6 p-2 rounded-full hover:bg-orange-50 transition-colors duration-200 flex items-center justify-center group z-10"
+            aria-label="Go back to previous screen"
+            title="Go back"
+          >
+            <ArrowLeft className="w-5 h-5 md:w-6 md:h-6 text-gray-600 group-hover:text-[#ff6b1d] transition-colors" />
+          </button>
+        )}
+        
         <h1 className="text-3xl md:text-4xl font-bold text-gray-800 text-center mb-2">Create Your Own Adventure!</h1>
         <p className="text-gray-600 text-center mb-8 text-lg">Let's build a story together. Just answer my questions!</p>
         

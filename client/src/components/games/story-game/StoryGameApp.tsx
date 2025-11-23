@@ -514,6 +514,9 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.phase === 'characterSelection') {
         return { ...state, phase: 'therapySelection' };
       }
+      if (state.phase === 'customizing') {
+        return { ...state, phase: 'characterSelection', character: null };
+      }
       if (state.phase === 'assessment' || state.phase === 'socialAssessment') {
         return { ...state, phase: 'therapySelection' };
       }
@@ -1089,7 +1092,8 @@ const StoryGameApp: React.FC = () => {
                     onCreateStory={handleCreateCustomStory} 
                     onAnswer={handleCustomStoryAnswer}
                     isLoading={state.isLoading} 
-                    customStoryInputs={state.customStoryInputs} 
+                    customStoryInputs={state.customStoryInputs}
+                    onBack={() => dispatch({ type: 'GO_BACK' })}
                 />;
       case 'playing':
         return <StoryScreen gameState={state} onContinue={handleContinueStory} dispatch={dispatch} />;
