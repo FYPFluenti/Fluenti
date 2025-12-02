@@ -505,7 +505,7 @@ const EmotionalSupportVoice = () => {
             <div className="flex-shrink-0 flex items-center justify-center">
               <div className="relative">
                 <ModelViewerAvatar
-                  avatarUrl={avatarUrls.therapist}
+                  avatarUrl={avatarUrls.professional}
                   size="medium"
                   className="drop-shadow-lg transition-all duration-500"
                   isListening={avatarState === 'listening'}
