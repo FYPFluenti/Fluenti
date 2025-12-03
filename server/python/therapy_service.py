@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import hashlib
 from typing import Dict, Any, Optional
 import traceback
 from datetime import datetime
@@ -82,12 +83,17 @@ app.logger.setLevel(logging.INFO)
 
 @app.before_request
 def log_request():
-    """Log incoming requests with unique ID"""
+    """Log incoming requests with unique ID and perform periodic cleanup"""
     g.request_id = str(uuid.uuid4())[:8]
     
     # Only log non-health check requests to reduce noise
     if request.endpoint != 'health_check':
         app.logger.info(f"[{g.request_id}] {request.method} {request.path}")
+    
+    # Periodic session cleanup (every 50 requests approximately)
+    import random
+    if random.randint(1, 50) == 1:
+        cleanup_expired_sessions()
 
 @app.after_request 
 def log_response(response):
@@ -96,8 +102,65 @@ def log_response(response):
         app.logger.info(f"[{g.request_id}] Response: {response.status_code}")
     return response
 
-# Store active sessions
+# Store active sessions with metadata
 active_sessions: Dict[str, Any] = {}
+
+def cleanup_expired_sessions():
+    """Clean up expired sessions from memory"""
+    try:
+        current_time = datetime.now()
+        sessions_to_remove = []
+        
+        for session_key, session_data in active_sessions.items():
+            try:
+                # Check session age
+                created_at = session_data.get('created_at')
+                last_activity = session_data.get('last_activity', created_at)
+                
+                if created_at:
+                    creation_time = datetime.fromisoformat(created_at)
+                    age_hours = (current_time - creation_time).total_seconds() / 3600
+                    
+                    # Mark for removal if older than 24 hours
+                    if age_hours > 24:
+                        sessions_to_remove.append(session_key)
+                        continue
+                
+                if last_activity:
+                    activity_time = datetime.fromisoformat(last_activity)
+                    inactive_hours = (current_time - activity_time).total_seconds() / 3600
+                    
+                    # Mark for removal if inactive for more than 2 hours
+                    if inactive_hours > 2:
+                        sessions_to_remove.append(session_key)
+                        
+            except Exception as e:
+                print(f"⚠️ Error checking session {session_key}: {e}")
+                sessions_to_remove.append(session_key)
+        
+        # Remove expired sessions
+        removed_count = 0
+        for session_key in sessions_to_remove:
+            if session_key in active_sessions:
+                del active_sessions[session_key]
+                removed_count += 1
+        
+        if removed_count > 0:
+            print(f"🧹 Cleaned up {removed_count} expired sessions")
+            
+        return removed_count
+        
+    except Exception as e:
+        print(f"❌ Error during session cleanup: {e}")
+        return 0
+
+def get_secure_active_session_key(user_id: str, session_id: str) -> str:
+    """Generate secure session key for active sessions"""
+    if not user_id or not session_id:
+        return ""
+    user_hash = hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16]
+    session_hash = hashlib.sha256(session_id.encode('utf-8')).hexdigest()[:16]
+    return f"active_{user_hash}_{session_hash}"
 
 def create_user_context(user_id: str) -> Dict:
     """Create user context from API request data"""
@@ -170,8 +233,16 @@ def update_therapy_components_user_context(user_id: str):
         raise
 
 def restore_session_from_mongodb(user_id: str, session_id: str):
-    """Restore session context from MongoDB EmotionalSession collection"""
+    """Restore session context from MongoDB with enhanced user validation and security"""
     try:
+        # Validate input parameters
+        if not user_id or not user_id.strip():
+            print("❌ Cannot restore session: Invalid user_id")
+            return None
+        if not session_id or not session_id.strip():
+            print("❌ Cannot restore session: Invalid session_id")
+            return None
+            
         # Access therapy bot's storage
         if not therapy_bot or not hasattr(therapy_bot, 'storage'):
             print("❌ Cannot restore session: therapy bot or storage not available")
@@ -179,13 +250,32 @@ def restore_session_from_mongodb(user_id: str, session_id: str):
         
         storage = therapy_bot.storage
         
-        # Get conversation history for this session (skip token validation for restoration)
-        history = storage.get_conversation_history(user_id, session_id, limit=50, skip_token_validation=True)
+        print(f"🔍 Attempting to restore session for user: {hashlib.sha256(user_id.encode()).hexdigest()[:8]}..., session: {session_id[:8]}...")
         
-        print(f"🔍 Attempting to restore session for user: {user_id}, session: {session_id}")
+        # REMOVED: Shared current_user_context validation - this was causing memory leaks between users
+        # User validation is now done via user_id parameter and session memory user_context_hash
+        # The user_id parameter is validated at the API level before calling this function
+        
+        # Get conversation history for this session with enhanced validation
+        history = storage.get_conversation_history(user_id, session_id, limit=50, skip_token_validation=True)
         
         if not history:
             print(f"❌ No conversation history found for session {session_id}")
+            return None
+        
+        # Validate that the history actually belongs to the requesting user
+        # Check first few conversations to ensure they match the user context
+        user_hash = hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16]
+        
+        # Additional security: verify the restored history matches expected user patterns
+        history_validation_passed = False
+        for conv in history[:3]:  # Check first 3 conversations
+            if conv.get('user_id') == user_id:
+                history_validation_passed = True
+                break
+        
+        if not history_validation_passed:
+            print(f"🚨 SECURITY: History validation failed - conversations don't match requesting user")
             return None
         
         # Create new session interface
@@ -198,24 +288,43 @@ def restore_session_from_mongodb(user_id: str, session_id: str):
         session_interface.current_user_id = user_id
         session_interface.session_start_time = datetime.now()
         
-        # Create session token for restored session so it can be used normally
+        # Create session token for restored session with enhanced security
         if hasattr(therapy_bot, 'storage') and hasattr(therapy_bot.storage, 'security_manager'):
             try:
                 session_token = therapy_bot.storage.security_manager.create_session_token(user_id, session_id)
-                print(f"🔐 Created session token for restored session")
+                print(f"🔐 Created secure session token for restored session")
+                
+                # Log session restoration for security audit
+                therapy_bot.storage.security_manager.audit_log(
+                    'SESSION_RESTORATION',
+                    user_id, session_id,
+                    {'history_count': len(history), 'validation_passed': True},
+                    'INFO'
+                )
+                
             except Exception as e:
                 print(f"⚠️ Could not create session token for restored session: {e}")
         
-        # Pre-populate session memory by calling _get_or_create_session_memory
-        # This will load the history into memory
+        # Pre-populate session memory with validation
         if hasattr(therapy_bot, '_get_or_create_session_memory'):
             try:
-                therapy_bot._get_or_create_session_memory(user_id, session_id)
-                print(f"📚 Pre-populated session memory from {len(history)} conversations")
+                # Validate user context before populating memory
+                memory = therapy_bot._get_or_create_session_memory(user_id, session_id)
+                
+                # Additional validation: ensure memory belongs to correct user
+                if hasattr(memory, 'user_context_hash'):
+                    expected_hash = hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16]
+                    if memory.user_context_hash != expected_hash:
+                        print(f"🚨 Memory user validation failed during restoration!")
+                        return None
+                
+                print(f"📚 Securely restored session memory from {len(history)} conversations")
+                
             except Exception as e:
                 print(f"⚠️ Could not pre-populate session memory: {e}")
+                return None
         
-        print(f"✅ Restored session {session_id} with {len(history)} messages")
+        print(f"✅ Securely restored session {session_id} with {len(history)} validated messages")
         return session_interface
         
     except Exception as e:
@@ -239,17 +348,89 @@ def health_check():
             'hybrid_analysis': detector.detection_mode == 'hybrid' if hasattr(detector, 'detection_mode') else False
         }
     
+    # Run cleanup and get session info
+    cleanup_count = cleanup_expired_sessions()
+    
     return jsonify({
         'status': 'healthy',
         'therapy_bot_available': therapy_bot is not None,
         'interface_available': interface is not None,
         'crisis_detection': crisis_info,
+        'active_sessions': len(active_sessions),
+        'sessions_cleaned': cleanup_count,
         'emergency_contacts': {
             '1019': 'Mental Health Crisis Line (24/7)',
             '1166': 'National Emergency Helpline',
             '0800-00-100': 'Rozan Crisis Helpline'
         }
     })
+
+@app.route('/api/therapy/cleanup-sessions', methods=['POST'])
+def cleanup_sessions():
+    """Manual session cleanup endpoint"""
+    try:
+        before_count = len(active_sessions)
+        cleaned_count = cleanup_expired_sessions()
+        
+        return jsonify({
+            'success': True,
+            'sessions_before': before_count,
+            'sessions_cleaned': cleaned_count,
+            'sessions_remaining': len(active_sessions)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/therapy/session-isolation-test', methods=['POST'])
+def test_session_isolation():
+    """Test endpoint to verify session isolation is working correctly"""
+    try:
+        if not therapy_bot:
+            return jsonify({'error': 'Therapy bot not available'}), 503
+            
+        data = request.json or {}
+        test_user_1 = data.get('user1', 'test_user_1')
+        test_user_2 = data.get('user2', 'test_user_2')
+        test_session = data.get('session', 'test_session_123')
+        
+        # Test session key generation
+        key1 = get_secure_active_session_key(test_user_1, test_session)
+        key2 = get_secure_active_session_key(test_user_2, test_session)
+        
+        # Test memory isolation
+        isolation_results = {}
+        
+        if hasattr(therapy_bot, '_get_secure_session_key'):
+            memory_key1 = therapy_bot._get_secure_session_key(test_user_1, test_session)
+            memory_key2 = therapy_bot._get_secure_session_key(test_user_2, test_session)
+            
+            isolation_results = {
+                'active_session_keys_different': key1 != key2,
+                'memory_keys_different': memory_key1 != memory_key2,
+                'key1_format_valid': key1.startswith('active_') and len(key1.split('_')) == 3,
+                'key2_format_valid': key2.startswith('active_') and len(key2.split('_')) == 3,
+                'memory_key1_format_valid': memory_key1.startswith('therapy_') and len(memory_key1.split('_')) == 4,
+                'memory_key2_format_valid': memory_key2.startswith('therapy_') and len(memory_key2.split('_')) == 4
+            }
+        
+        return jsonify({
+            'success': True,
+            'isolation_test_results': isolation_results,
+            'test_keys': {
+                'user1_session_key': key1[:20] + '...',
+                'user2_session_key': key2[:20] + '...'
+            },
+            'isolation_working': all(isolation_results.values()) if isolation_results else False
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 @app.route('/api/therapy/start-session', methods=['POST'])
 def start_therapy_session():
@@ -352,18 +533,89 @@ def therapy_chat():
                 # Continue with session but log the error
                 print(f"⚠️ Continuing with session using fallback context")
 
-        # Try to get existing session
+        # Enhanced session management with security validation
         session_interface = None
+        validated_session_key = None
         
+        # Validate input parameters first
+        if not user_id or not user_id.strip():
+            return jsonify({
+                'error': 'Invalid user ID',
+                'details': 'User ID is required for session management'
+            }), 400
+            
+        # Generate secure session key for lookup
+        def get_secure_active_session_key(uid: str, sid: str) -> str:
+            if not uid or not sid:
+                return ""
+            user_hash = hashlib.sha256(uid.encode('utf-8')).hexdigest()[:16]
+            session_hash = hashlib.sha256(sid.encode('utf-8')).hexdigest()[:16]
+            return f"active_{user_hash}_{session_hash}"
+        
+        # Try to find existing session with security validation
         if session_key and session_key in active_sessions:
-            session_interface = active_sessions[session_key]['interface']
+            session_data = active_sessions[session_key]
+            
+            # Validate that the session actually belongs to the requesting user
+            if session_data.get('user_id') == user_id:
+                session_interface = session_data['interface']
+                validated_session_key = session_key
+                print(f"\u2705 Found valid session by key for user {hashlib.sha256(user_id.encode()).hexdigest()[:8]}...")
+            else:
+                print(f"\ud83d\udea8 SECURITY: Session key {session_key} does not belong to user {hashlib.sha256(user_id.encode()).hexdigest()[:8]}...")
+                # Remove the invalid session
+                del active_sessions[session_key]
+                
         elif user_id and session_id:
-            # Try to find session by user_id and session_id
-            for key, session in active_sessions.items():
-                if session['user_id'] == user_id and session['session_id'] == session_id:
-                    session_interface = session['interface']
-                    session_key = key
-                    break
+            # Generate expected secure key
+            expected_key = get_secure_active_session_key(user_id, session_id)
+            
+            # Try to find by secure key first
+            if expected_key in active_sessions:
+                session_data = active_sessions[expected_key]
+                if session_data.get('user_id') == user_id and session_data.get('session_id') == session_id:
+                    session_interface = session_data['interface']
+                    validated_session_key = expected_key
+                    print(f"\u2705 Found session by secure key")
+                else:
+                    print(f"\u26a0\ufe0f Session validation failed for secure key")
+                    del active_sessions[expected_key]
+            
+            # Fallback: search through existing sessions with validation
+            if not session_interface:
+                sessions_to_remove = []
+                for key, session in active_sessions.items():
+                    # Validate session integrity
+                    if (session.get('user_id') == user_id and 
+                        session.get('session_id') == session_id):
+                        
+                        # Additional validation: check session age
+                        created_at = session.get('created_at')
+                        if created_at:
+                            try:
+                                creation_time = datetime.fromisoformat(created_at)
+                                age_hours = (datetime.now() - creation_time).total_seconds() / 3600
+                                
+                                if age_hours > 24:  # Sessions expire after 24 hours
+                                    print(f"\u231b Session {key} expired ({age_hours:.1f} hours old)")
+                                    sessions_to_remove.append(key)
+                                    continue
+                            except Exception as e:
+                                print(f"\u26a0\ufe0f Error checking session age: {e}")
+                        
+                        session_interface = session['interface']
+                        validated_session_key = key
+                        print(f"\u2705 Found valid session by user/session ID match")
+                        break
+                    else:
+                        # Check for potential session contamination
+                        if session.get('session_id') == session_id and session.get('user_id') != user_id:
+                            print(f"\ud83d\udea8 CRITICAL: Session ID collision detected! Session {session_id} belongs to different user")
+                            sessions_to_remove.append(key)
+                
+                # Clean up invalid/expired sessions
+                for key in sessions_to_remove:
+                    del active_sessions[key]
             
             # If not found in active sessions, try to restore from MongoDB
             if not session_interface:
@@ -407,19 +659,27 @@ def therapy_chat():
             session_interface = TherapyInterface(therapy_bot)
             welcome_message = session_interface.start_session(user_id)
             
-            session_key = f"{user_id}_{session_interface.current_session_id}"
+            # Generate secure key for new session
+            if session_interface.current_session_id is None:
+                raise ValueError("Failed to create session - no session ID generated")
+            secure_key = get_secure_active_session_key(user_id, session_interface.current_session_id)
             
             # Safe handling of session_start_time
             created_at = datetime.now().isoformat()
             if session_interface.session_start_time is not None:
                 created_at = session_interface.session_start_time.isoformat()
-                
-            active_sessions[session_key] = {
+            
+            # Store with enhanced security metadata
+            active_sessions[secure_key] = {
                 'interface': session_interface,
                 'user_id': user_id,
                 'session_id': session_interface.current_session_id,
-                'created_at': created_at
+                'created_at': created_at,
+                'restored_from_db': False,
+                'last_activity': created_at,
+                'user_hash': hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16]
             }
+            validated_session_key = secure_key
             
             # Return both welcome and response to user message
             response = session_interface.send_message(message)
@@ -427,7 +687,7 @@ def therapy_chat():
                 'success': True,
                 'response': response,
                 'welcomeMessage': welcome_message,
-                'sessionKey': session_key,
+                'sessionKey': validated_session_key,
                 'sessionId': session_interface.current_session_id,
                 'userId': user_id,
                 'newSession': True
@@ -451,10 +711,20 @@ def therapy_chat():
                 'hybrid_analysis': detector.detection_mode == 'hybrid' if hasattr(detector, 'detection_mode') else False
             }
         
+        # Periodic cleanup of expired session memories (every 20 requests approximately)
+        import random
+        if random.randint(1, 20) == 1:
+            if therapy_bot and hasattr(therapy_bot, 'cleanup_expired_session_memories'):
+                therapy_bot.cleanup_expired_session_memories()
+        
+        # Update last activity time for session management
+        if validated_session_key and validated_session_key in active_sessions:
+            active_sessions[validated_session_key]['last_activity'] = datetime.now().isoformat()
+        
         return jsonify({
             'success': True,
             'response': response,
-            'sessionKey': session_key,
+            'sessionKey': validated_session_key,
             'sessionId': session_interface.current_session_id,
             'userId': user_id,
             'crisisLevel': crisis_level.value if crisis_level else 'none',
@@ -480,12 +750,24 @@ def get_session_summary():
         data = request.json or {}
         session_key = data.get('sessionKey')
         
+        # Validate session for ending
+        session_key = data.get('sessionKey')
         if not session_key or session_key not in active_sessions:
             return jsonify({
-                'error': 'Session not found'
+                'error': 'Session not found or already ended'
             }), 404
             
-        session_interface = active_sessions[session_key]['interface']
+        session_data = active_sessions[session_key]
+        session_interface = session_data['interface']
+        
+        print(f"\ud83d\udeaa Ending session {session_key[:20]}... for user {session_data.get('user_hash', 'unknown')[:8]}...")
+        
+        # Additional validation: ensure session belongs to requesting context
+        session_data = active_sessions[session_key]
+        session_interface = session_data['interface']
+        
+        # Update last activity
+        session_data['last_activity'] = datetime.now().isoformat()
         summary = session_interface.get_session_summary()
         
         return jsonify({

@@ -76,6 +76,11 @@ export default function Signup() {
         return;
       }
 
+      if (formData.password.length > 64) {
+        setError("Password must be no more than 64 characters long");
+        return;
+      }
+
       if (formData.password !== formData.confirmPassword) {
         setError("Passwords don't match");
         return;
@@ -342,11 +347,18 @@ export default function Signup() {
                   required
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
-                  className="block w-full pl-10 pr-10 py-3 border border-slate-300 rounded-lg 
+                  maxLength={128}
+                  className={`block w-full pl-10 pr-10 py-3 border rounded-lg 
                            placeholder-slate-400 text-slate-900
-                           focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
-                           transition duration-200 text-sm"
-                  placeholder="Create a password"
+                           focus:outline-none focus:ring-2 focus:border-orange-500
+                           transition duration-200 text-sm ${
+                             formData.password.length > 0 
+                               ? formData.password.length < 8 || formData.password.length > 128
+                                 ? 'border-red-300 focus:ring-red-500' 
+                                 : 'border-green-300 focus:ring-green-500'
+                               : 'border-slate-300 focus:ring-orange-500'
+                           }`}
+                  placeholder="Create a password (8-128 characters)"
                   disabled={isLoading}
                 />
                 <button
@@ -362,6 +374,21 @@ export default function Signup() {
                   )}
                 </button>
               </div>
+              {formData.password.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  <div className="flex justify-between text-xs">
+                    <span className={formData.password.length < 8 ? 'text-red-600' : 'text-green-600'}>
+                      {formData.password.length < 8 ? `Need ${8 - formData.password.length} more characters` : 'Length requirement met ✓'}
+                    </span>
+                    <span className={`${formData.password.length > 128 ? 'text-red-600' : 'text-slate-500'}`}>
+                      {formData.password.length}/128
+                    </span>
+                  </div>
+                  {formData.password.length > 128 && (
+                    <p className="text-xs text-red-600">Password too long</p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Confirm Password Field */}
@@ -379,10 +406,17 @@ export default function Signup() {
                   required
                   value={formData.confirmPassword}
                   onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
-                  className="block w-full pl-10 pr-10 py-3 border border-slate-300 rounded-lg 
+                  maxLength={128}
+                  className={`block w-full pl-10 pr-10 py-3 border rounded-lg 
                            placeholder-slate-400 text-slate-900
-                           focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500
-                           transition duration-200 text-sm"
+                           focus:outline-none focus:ring-2 focus:border-orange-500
+                           transition duration-200 text-sm ${
+                             formData.confirmPassword.length > 0 && formData.password.length > 0
+                               ? formData.password === formData.confirmPassword
+                                 ? 'border-green-300 focus:ring-green-500'
+                                 : 'border-red-300 focus:ring-red-500'
+                               : 'border-slate-300 focus:ring-orange-500'
+                           }`}
                   placeholder="Confirm your password"
                   disabled={isLoading}
                 />
@@ -399,6 +433,13 @@ export default function Signup() {
                   )}
                 </button>
               </div>
+              {formData.confirmPassword.length > 0 && formData.password.length > 0 && (
+                <div className="mt-2">
+                  <p className={`text-xs ${formData.password === formData.confirmPassword ? 'text-green-600' : 'text-red-600'}`}>
+                    {formData.password === formData.confirmPassword ? 'Passwords match ✓' : 'Passwords do not match'}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Terms */}

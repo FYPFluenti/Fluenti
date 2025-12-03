@@ -248,38 +248,92 @@ class SecurityManager:
         return sanitized.strip()
     
     def validate_session_token(self, user_id: str, session_id: str) -> bool:
-        """Validate session token for security"""
+        """Enhanced session token validation with user context verification"""
         if not SECURITY_CONFIG['VALIDATE_SESSION_TOKENS']:
             return True
-        
-        session_key = f"{user_id}_{session_id}"
-        
-        # Check if session exists and is valid
-        if session_key not in self.session_tokens:
+            
+        # Validate input parameters
+        if not user_id or not user_id.strip():
+            print("⚠️ Session validation failed: Invalid user_id")
+            return False
+        if not session_id or not session_id.strip():
+            print("⚠️ Session validation failed: Invalid session_id")
             return False
         
-        session_data = self.session_tokens[session_key]
+        # Generate expected session key components
+        user_hash = hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16]
+        session_hash = hashlib.sha256(session_id.encode('utf-8')).hexdigest()[:16]
+        
+        # Find matching session by user and session hashes
+        matching_session_key = None
+        for session_key in list(self.session_tokens.keys()):
+            session_data = self.session_tokens[session_key]
+            
+            # Validate user context match
+            if (session_data.get('user_id_hash') == user_hash and 
+                session_data.get('session_id_hash') == session_hash):
+                
+                # Additional validation using original hashes
+                expected_user_hash = hashlib.sha256(user_id.encode()).hexdigest()
+                expected_session_hash = hashlib.sha256(session_id.encode()).hexdigest()
+                
+                if (session_data.get('original_user_id') == expected_user_hash and
+                    session_data.get('original_session_id') == expected_session_hash):
+                    matching_session_key = session_key
+                    break
+                else:
+                    print(f"⚠️ Session validation failed: Hash mismatch for {session_key}")
+                    # Remove potentially corrupted session
+                    del self.session_tokens[session_key]
+                    return False
+        
+        if not matching_session_key:
+            print(f"⚠️ Session not found for user {user_hash[:8]}... session {session_hash[:8]}...")
+            return False
+        
+        session_data = self.session_tokens[matching_session_key]
         current_time = time.time()
         
         # Check session expiration
         if current_time - session_data['created'] > SECURITY_CONFIG['MAX_SESSION_DURATION']:
-            del self.session_tokens[session_key]
+            print(f"⚠️ Session expired for {matching_session_key}")
+            del self.session_tokens[matching_session_key]
             return False
         
         # Update last access time
         session_data['last_access'] = current_time
+        print(f"✅ Session validated for user {user_hash[:8]}... session {session_hash[:8]}...")
         return True
     
     def create_session_token(self, user_id: str, session_id: str) -> str:
-        """Create secure session token"""
-        session_token = secrets.token_urlsafe(32)
-        session_key = f"{user_id}_{session_id}"
+        """Create secure session token with enhanced collision prevention"""
+        # Validate input parameters
+        if not user_id or not user_id.strip():
+            raise ValueError("Invalid user_id: cannot be empty")
+        if not session_id or not session_id.strip():
+            raise ValueError("Invalid session_id: cannot be empty")
+            
+        # Create enhanced session key with user validation
+        user_hash = hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16]
+        session_hash = hashlib.sha256(session_id.encode('utf-8')).hexdigest()[:16]
+        timestamp_hash = hashlib.sha256(str(time.time()).encode()).hexdigest()[:8]
         
+        # Enhanced session key format: userId_hash_sessionId_hash_timestamp
+        session_key = f"{user_hash}_{session_hash}_{timestamp_hash}"
+        
+        # Generate secure token
+        session_token = secrets.token_urlsafe(32)
+        
+        # Store with additional validation fields
         self.session_tokens[session_key] = {
             'token': session_token,
             'created': time.time(),
             'last_access': time.time(),
-            'user_id_hash': hashlib.sha256(user_id.encode()).hexdigest()[:16]
+            'user_id_hash': user_hash,
+            'session_id_hash': session_hash,
+            'original_user_id': hashlib.sha256(user_id.encode()).hexdigest(),  # For validation
+            'original_session_id': hashlib.sha256(session_id.encode()).hexdigest(),  # For validation
+            'creation_timestamp': timestamp_hash
         }
         
         return session_token
@@ -1782,8 +1836,10 @@ class CrisisDetector:
             'escalation_patterns': defaultdict(list)
         }
 
-        # Conversation tracking for pattern learning
+        # Conversation tracking for pattern learning with user isolation
+        # Format: "user_hash_session_hash" -> List of conversations
         self.conversation_history: Dict[str, List] = defaultdict(list)
+        # Format: "user_hash" -> user patterns
         self.user_patterns: Dict[str, Dict] = defaultdict(lambda: {
             'typical_language': defaultdict(int),
             'crisis_history': [],
@@ -1814,6 +1870,78 @@ class CrisisDetector:
 
         print(f"✅ Fully dynamic crisis detection initialized for user: {self.current_user['login']}")
     
+    def _get_secure_conversation_key(self, user_id: str, session_id: str) -> str:
+        """Generate secure conversation key with user isolation"""
+        if not user_id or not session_id:
+            raise ValueError("Both user_id and session_id are required for conversation tracking")
+        
+        user_hash = hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16]
+        session_hash = hashlib.sha256(session_id.encode('utf-8')).hexdigest()[:16]
+        return f"conv_{user_hash}_{session_hash}"
+    
+    def _get_user_pattern_key(self, user_id: str) -> str:
+        """Generate secure user pattern key"""
+        if not user_id:
+            raise ValueError("user_id is required for user pattern tracking")
+        
+        return hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16]
+    
+    def track_conversation(self, user_id: str, session_id: str, user_input: str, 
+                          crisis_level: 'CrisisLevel', harm_type: 'HarmType') -> None:
+        """Track conversation with proper user isolation"""
+        try:
+            conv_key = self._get_secure_conversation_key(user_id, session_id)
+            user_key = self._get_user_pattern_key(user_id)
+            
+            # Add to conversation history with timestamp
+            conversation_entry = {
+                'timestamp': datetime.now().isoformat(),
+                'input': user_input[:200],  # Limit for memory
+                'crisis_level': crisis_level.value if crisis_level else 'none',
+                'harm_type': harm_type.value if harm_type else 'none'
+            }
+            
+            # Maintain conversation history with size limit
+            if len(self.conversation_history[conv_key]) >= 50:
+                self.conversation_history[conv_key] = self.conversation_history[conv_key][-40:]  # Keep last 40
+            
+            self.conversation_history[conv_key].append(conversation_entry)
+            
+            # Update user patterns (isolated by user)
+            words = user_input.lower().split()
+            for word in words[:10]:  # Limit for performance
+                self.user_patterns[user_key]['typical_language'][word] += 1
+                
+            # Track crisis history
+            if crisis_level and crisis_level.value != 'none':
+                self.user_patterns[user_key]['crisis_history'].append({
+                    'timestamp': datetime.now().isoformat(),
+                    'level': crisis_level.value,
+                    'session': session_id
+                })
+                
+        except Exception as e:
+            print(f"⚠️ Error tracking conversation: {e}")
+    
+    def get_user_conversation_pattern(self, user_id: str, session_id: str) -> Dict:
+        """Get conversation patterns for specific user/session with isolation"""
+        try:
+            conv_key = self._get_secure_conversation_key(user_id, session_id)
+            user_key = self._get_user_pattern_key(user_id)
+            
+            conversation_history = self.conversation_history.get(conv_key, [])
+            user_patterns = self.user_patterns.get(user_key, {})
+            
+            return {
+                'conversation_count': len(conversation_history),
+                'recent_crisis_levels': [c.get('crisis_level', 'none') for c in conversation_history[-5:]],
+                'crisis_history_count': len(user_patterns.get('crisis_history', [])),
+                'typical_language_patterns': dict(list(user_patterns.get('typical_language', {}).items())[:10])
+            }
+        except Exception as e:
+            print(f"⚠️ Error getting conversation patterns: {e}")
+            return {}
+
     def update_user_context(self, user_context: Dict) -> None:
         """Update the current user context dynamically"""
         if user_context:
@@ -3273,7 +3401,7 @@ crisis_detector = CrisisDetector(detection_mode="hybrid")  # Initialize with def
 
 @dataclass
 class SessionMemory:
-    """Enhanced session memory with strict isolation"""
+    """Enhanced session memory with strict isolation and user validation"""
     primary_issue: str = ""
     issue_details: Optional[Dict] = None
     progress_notes: Optional[List] = None
@@ -3283,6 +3411,9 @@ class SessionMemory:
     session_id: str = ""  #  Track specific session
     created_at: str = ""  #  Track when session was created
     complexity_history: Optional[List] = None  # Track interaction complexity over time
+    user_context_hash: str = ""  # Hash of user_id for validation
+    last_access: str = ""  # Track last access for cleanup
+    isolation_verified: bool = False  # Track if isolation has been verified
 
     def __post_init__(self):
         if self.issue_details is None:
@@ -3297,6 +3428,9 @@ class SessionMemory:
             self.complexity_history = []
         if not self.created_at:
             self.created_at = datetime.now().isoformat()
+        if not self.last_access:
+            self.last_access = datetime.now().isoformat()
+        # Note: user_context_hash should be set when memory is created with user context
 
 class TherapyBot:
     """Enhanced professional therapy chatbot with strict session isolation"""
@@ -3306,7 +3440,8 @@ class TherapyBot:
         self.crisis_detector = crisis_detector
         self.storage = storage
         self.active_sessions: Dict[str, UserSession] = {}
-        self.current_user_context = user_context
+        # REMOVED: self.current_user_context - this was causing memory leaks between users
+        # User context should be passed per-request, not stored globally
 
         #  Strict session memory isolation
         self.session_memories: Dict[str, SessionMemory] = {}
@@ -3356,9 +3491,10 @@ class TherapyBot:
         print("✅ Enhanced TherapyBot with strict session isolation initialized!")
 
     def update_user_context(self, user_context: Dict) -> None:
-        """Update user context for the therapy bot and all its components"""
+        """Update user context for therapy components (storage, crisis_detector) without storing shared state"""
         if user_context:
-            self.current_user_context = user_context
+            # DO NOT store user_context on self - this causes memory leaks between concurrent users
+            # Only update components that can handle per-request context
             
             # Update storage user context
             if hasattr(self.storage, 'update_user_context'):
@@ -3368,7 +3504,73 @@ class TherapyBot:
             if hasattr(self.crisis_detector, 'update_user_context'):
                 self.crisis_detector.update_user_context(user_context)
             
-            print(f"🔄 TherapyBot updated user context to: {user_context.get('login', 'unknown')}")
+            print(f"🔄 TherapyBot updated component contexts for: {user_context.get('login', 'unknown')}")
+    
+    def cleanup_expired_session_memories(self) -> int:
+        """Clean up expired session memories to prevent memory leaks"""
+        try:
+            from datetime import datetime, timedelta
+            current_time = datetime.now()
+            memories_to_remove = []
+            
+            for session_key, memory in self.session_memories.items():
+                try:
+                    # Check last access time
+                    if hasattr(memory, 'last_access') and memory.last_access:
+                        try:
+                            last_access_time = datetime.fromisoformat(memory.last_access)
+                            inactive_hours = (current_time - last_access_time).total_seconds() / 3600
+                            
+                            # Remove memories inactive for more than 24 hours
+                            if inactive_hours > 24:
+                                memories_to_remove.append(session_key)
+                                continue
+                        except (ValueError, TypeError) as e:
+                            print(f"⚠️ Error parsing last_access for {session_key}: {e}")
+                            # If we can't parse, check created_at as fallback
+                            if hasattr(memory, 'created_at') and memory.created_at:
+                                try:
+                                    created_time = datetime.fromisoformat(memory.created_at)
+                                    age_hours = (current_time - created_time).total_seconds() / 3600
+                                    if age_hours > 48:  # 48 hours if no access time
+                                        memories_to_remove.append(session_key)
+                                except (ValueError, TypeError):
+                                    # If we can't parse either, remove it (corrupted data)
+                                    memories_to_remove.append(session_key)
+                    else:
+                        # No last_access time - check created_at
+                        if hasattr(memory, 'created_at') and memory.created_at:
+                            try:
+                                created_time = datetime.fromisoformat(memory.created_at)
+                                age_hours = (current_time - created_time).total_seconds() / 3600
+                                if age_hours > 48:  # 48 hours if no access tracking
+                                    memories_to_remove.append(session_key)
+                            except (ValueError, TypeError):
+                                # Corrupted data - remove it
+                                memories_to_remove.append(session_key)
+                        else:
+                            # No timestamps at all - likely corrupted, remove it
+                            memories_to_remove.append(session_key)
+                            
+                except Exception as e:
+                    print(f"⚠️ Error checking session memory {session_key}: {e}")
+                    memories_to_remove.append(session_key)
+            
+            # Remove expired memories
+            removed_count = 0
+            for session_key in memories_to_remove:
+                if session_key in self.session_memories:
+                    del self.session_memories[session_key]
+                    removed_count += 1
+            
+            if removed_count > 0:
+                print(f"🧹 Cleaned up {removed_count} expired session memories (remaining: {len(self.session_memories)})")
+            
+            return removed_count
+            
+        except Exception as e:
+            print(f"❌ Error during session memory cleanup: {e}")
+            return 0
 
     def _count_words(self, text: str) -> int:
         """Count words in text for consistent word-based reporting"""
@@ -3814,9 +4016,24 @@ Be personal, empathetic, and specific to what they shared while maintaining prof
 Your professional, personalized crisis intervention response:"""
         )
 
+    def _get_secure_session_key(self, user_id: str, session_id: str) -> str:
+        """Generate secure session key with collision prevention"""
+        if not user_id or not user_id.strip():
+            raise ValueError("Invalid user_id for session key generation")
+        if not session_id or not session_id.strip():
+            raise ValueError("Invalid session_id for session key generation")
+            
+        # Generate secure session key with multiple hash components
+        user_hash = hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16]
+        session_hash = hashlib.sha256(session_id.encode('utf-8')).hexdigest()[:16]
+        combined_hash = hashlib.sha256(f"{user_id}_{session_id}_therapy".encode('utf-8')).hexdigest()[:8]
+        
+        return f"therapy_{user_hash}_{session_hash}_{combined_hash}"
+        
     def _get_or_create_session_memory(self, user_id: str, session_id: str) -> SessionMemory:
         """ Get or create session memory with strict isolation, loading from MongoDB if history exists"""
-        session_key = f"{user_id}_{session_id}"
+        # Generate secure session key
+        session_key = self._get_secure_session_key(user_id, session_id)
         if session_key not in self.session_memories:
             # Try to load existing history from MongoDB to populate memory
             try:
@@ -3880,7 +4097,7 @@ Category:"""
                             themes = self._extract_themes_from_text(user_input)
                             key_themes.extend(themes)
                     
-                    # Create session memory with loaded data
+                    # Create session memory with loaded data and user validation
                     memory = SessionMemory(
                         session_id=session_id,
                         created_at=history[0].get('timestamp', datetime.now().isoformat()) if history else datetime.now().isoformat(),
@@ -3888,7 +4105,10 @@ Category:"""
                         issue_details=issue_details if issue_details else {},
                         progress_notes=progress_notes,
                         key_themes=list(set(key_themes))[:10],  # Unique themes, max 10
-                        user_preferences={}
+                        user_preferences={},
+                        user_context_hash=hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16],
+                        last_access=datetime.now().isoformat(),
+                        isolation_verified=True
                     )
                     
                     # Create conversation summary from history
@@ -3901,57 +4121,143 @@ Category:"""
                     self.session_memories[session_key] = memory
                     print(f"✅ Restored session memory from MongoDB with {len(history)} conversations")
                 else:
-                    # No history found, create new empty memory
+                    # No history found, create new empty memory with user validation
                     self.session_memories[session_key] = SessionMemory(
                         session_id=session_id,
                         created_at=datetime.now().isoformat(),
                         issue_details={},
                         progress_notes=[],
                         key_themes=[],
-                        user_preferences={}
+                        user_preferences={},
+                        user_context_hash=hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16],
+                        last_access=datetime.now().isoformat(),
+                        isolation_verified=True
                     )
                     print(f"🆕 Created new isolated session memory for {session_key}")
             except Exception as e:
                 print(f"⚠️ Error loading session memory from history: {e}, creating new memory")
-                # Fallback to creating new memory
+                # Fallback to creating new memory with user validation
                 self.session_memories[session_key] = SessionMemory(
                     session_id=session_id,
                     created_at=datetime.now().isoformat(),
                     issue_details={},
                     progress_notes=[],
                     key_themes=[],
-                    user_preferences={}
+                    user_preferences={},
+                    user_context_hash=hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16],
+                    last_access=datetime.now().isoformat(),
+                    isolation_verified=True
                 )
                 print(f"🆕 Created new isolated session memory for {session_key} (fallback)")
         
-        return self.session_memories[session_key]
+        # Update last access time and return memory
+        session_memory = self.session_memories[session_key]
+        session_memory.last_access = datetime.now().isoformat()
+        
+        # Final validation check before returning
+        if session_memory.user_context_hash != hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16]:
+            print(f"🚨 CRITICAL: User context hash mismatch on memory access!")
+            raise ValueError(f"Session memory user validation failed")
+            
+        return session_memory
 
     def _verify_session_isolation(self, user_id: str, session_id: str) -> bool:
-        """ Verify that we're only accessing the correct session's memory"""
-        session_key = f"{user_id}_{session_id}"
+        """ Verify that we're only accessing the correct session's memory with enhanced validation"""
+        # Validate input parameters first
+        if not user_id or not user_id.strip():
+            print("⚠️ Session isolation check failed: Invalid user_id")
+            return False
+        if not session_id or not session_id.strip():
+            print("⚠️ Session isolation check failed: Invalid session_id")
+            return False
+            
+        session_key = self._get_secure_session_key(user_id, session_id)
         current_memory = self.session_memories.get(session_key)
 
-        if current_memory and current_memory.session_id != session_id:
-            print(f"⚠️ Session isolation breach detected! Clearing contaminated memory.")
-            # Clear contaminated memory
-            self.session_memories[session_key] = SessionMemory(
-                session_id=session_id,
-                created_at=datetime.now().isoformat(),
-                issue_details={},
-                progress_notes=[],
-                key_themes=[],
-                user_preferences={}
-            )
-            return False
+        # Enhanced isolation validation
+        if current_memory:
+            # Verify session ID match
+            if current_memory.session_id != session_id:
+                print(f"🚨 CRITICAL: Session isolation breach detected! Expected: {session_id}, Found: {current_memory.session_id}")
+                # Log the contamination for security audit
+                if hasattr(self, 'storage') and hasattr(self.storage, 'security_manager'):
+                    self.storage.security_manager.audit_log(
+                        'SESSION_ISOLATION_BREACH',
+                        user_id, session_id,
+                        {'contaminated_session': current_memory.session_id, 'session_key': session_key},
+                        'CRITICAL'
+                    )
+                
+                # Clear contaminated memory immediately
+                del self.session_memories[session_key]
+                
+                # Create new clean memory with user validation
+                self.session_memories[session_key] = SessionMemory(
+                    session_id=session_id,
+                    created_at=datetime.now().isoformat(),
+                    issue_details={},
+                    progress_notes=[],
+                    key_themes=[],
+                    user_preferences={},
+                    user_context_hash=hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16],
+                    last_access=datetime.now().isoformat(),
+                    isolation_verified=True
+                )
+                print(f"🧹 Cleared contaminated memory and created new isolated session")
+                return False
+                
+            # Additional validation: check if memory has correct user context
+            if hasattr(current_memory, 'user_context_hash'):
+                expected_user_hash = hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16]
+                if current_memory.user_context_hash != expected_user_hash:
+                    print(f"🚨 User context mismatch detected! Clearing memory.")
+                    del self.session_memories[session_key]
+                    return False
+            else:
+                # Add user context hash for future validation
+                current_memory.user_context_hash = hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16]
+                print(f"✅ Added user context validation to existing session")
+        
         return True
 
     def _update_session_memory(self, user_id: str, session_id: str, user_input: str, bot_response: str):
         """ Update session memory with strict isolation checks"""
-        # Verify session isolation first
-        if not self._verify_session_isolation(user_id, session_id):
-            print(f"🔒 Session isolation enforced for {user_id}_{session_id}")
+        # Validate parameters to prevent invalid session updates
+        if not user_id or not user_id.strip():
+            print("⚠️ Cannot update session memory: Invalid user_id")
+            return
+        if not session_id or not session_id.strip():
+            print("⚠️ Cannot update session memory: Invalid session_id")
+            return
+        # Comprehensive session validation before any updates
+        try:
+            # Generate secure session key
+            session_key = self._get_secure_session_key(user_id, session_id)
+            
+            # Verify session isolation with enhanced checks
+            if not self._verify_session_isolation(user_id, session_id):
+                print(f"🔒 Session isolation enforced for user {hashlib.sha256(user_id.encode()).hexdigest()[:8]}... session {session_id[:8]}...")
+                return
+                
+            # REMOVED: Shared current_user_context validation - this was causing memory leaks
+            # User validation is now done via user_context_hash in session memory instead
+                    
+        except Exception as e:
+            print(f"⚠️ Session validation failed: {e}")
+            return
 
-        memory = self._get_or_create_session_memory(user_id, session_id)
+        # Get session memory with validation
+        try:
+            memory = self._get_or_create_session_memory(user_id, session_id)
+            
+            # Double-check memory isolation before updates
+            if memory.user_context_hash != hashlib.sha256(user_id.encode('utf-8')).hexdigest()[:16]:
+                print(f"🚨 Memory context validation failed during update!")
+                return
+                
+        except Exception as e:
+            print(f"❌ Failed to get session memory for update: {e}")
+            return
 
         # Extract primary issue from first few messages of THIS session only
         progress_notes_len = len(memory.progress_notes) if memory.progress_notes else 0
@@ -4558,6 +4864,12 @@ Personalized Therapeutic Guidance:"""
             # Enhanced crisis detection
             crisis_level, harm_type = self.crisis_detector.detect_crisis_level(final_input, user_id)
             print(f"🔍 CRISIS DETECTION RESULT: Level={crisis_level.value}, Harm={harm_type.value}")
+            
+            # Track conversation with proper user isolation
+            try:
+                self.crisis_detector.track_conversation(user_id, session_id, final_input, crisis_level, harm_type)
+            except Exception as e:
+                print(f"⚠️ Error tracking conversation: {e}")
 
             # Get conversation count for THIS session only
             current_session_history = self.storage.get_conversation_history(user_id, session_id)
@@ -4657,20 +4969,26 @@ Personalized Therapeutic Guidance:"""
             self.storage.update_psychological_profile(user_id, final_input, crisis_level.value, mood_score, self.llm)
             print(f"🧠 Updated psychological profile based on conversation")
 
-            # Store complexity analysis for session learning
+            # Store complexity analysis for session learning with secure key
             if hasattr(self, 'session_memories') and user_id and session_id:
-                session_key = f"{user_id}_{session_id}"
-                if session_key in self.session_memories:
-                    memory = self.session_memories[session_key]
-                    if not hasattr(memory, 'complexity_history') or memory.complexity_history is None:
-                        memory.complexity_history = []
-                    memory.complexity_history.append({
-                        'input': final_input[:50],
-                        'complexity': complexity_analysis['complexity'],
-                        'confidence': complexity_analysis['confidence'],
-                        'response_type': response_type,
-                        'timestamp': datetime.now().isoformat()
-                    })
+                try:
+                    session_key = self._get_secure_session_key(user_id, session_id)
+                    if session_key in self.session_memories:
+                        memory = self.session_memories[session_key]
+                        if not hasattr(memory, 'complexity_history') or memory.complexity_history is None:
+                            memory.complexity_history = []
+                        memory.complexity_history.append({
+                            'input': final_input[:50],
+                            'complexity': complexity_analysis['complexity'],
+                            'confidence': complexity_analysis['confidence'],
+                            'response_type': response_type,
+                            'timestamp': datetime.now().isoformat()
+                        })
+                        print(f"📊 Stored complexity analysis for secure session {session_key[:20]}...")
+                    else:
+                        print(f"⚠️ Session memory not found for complexity storage: {session_key[:20]}...")
+                except Exception as e:
+                    print(f"⚠️ Error storing complexity analysis: {e}")
             
             return response, crisis_level, harm_type
 
@@ -4986,14 +5304,10 @@ Welcome back message:"""
                 if not security_manager.check_rate_limit(target_user_id):
                     raise ValueError("Rate limit exceeded for user")
             else:
-                # Generate secure user ID
-                if self.therapy_bot.current_user_context:
-                    base_login = self.therapy_bot.current_user_context.get('login', 'anonymous')
-                    target_user_id = f"{security_manager.sanitize_input(base_login)}_{int(time.time())}"
-                else:
-                    # Secure fallback
-                    target_user_id = f"secure_user_{secrets.token_hex(8)}"
-                    print(f"⚠️ WARNING: Using generated secure user ID")
+                # Generate secure user ID (removed dependency on shared current_user_context)
+                # Secure fallback - user_id should always be provided
+                target_user_id = f"secure_user_{secrets.token_hex(8)}"
+                print(f"⚠️ WARNING: Using generated secure user ID - user_id should be provided")
             
             # Validate user ID format
             if len(target_user_id) > 100 or not re.match(r'^[a-zA-Z0-9_-]+$', target_user_id):
