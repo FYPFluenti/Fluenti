@@ -1010,14 +1010,66 @@ class MongoDBStorage:
 
     def update_psychological_profile(self, user_id: str, conversation_text: str, 
                                    crisis_level: str, mood_score: Optional[float] = None, llm=None):
-        """Update psychological profile based on conversation analysis"""
+        """Update psychological profile based on conversation analysis - analyzes ALL user conversations"""
         try:
             profile = self.get_or_create_psychological_profile(user_id)
             pattern_analysis = {}
             
-            # AI-powered psychological pattern analysis
+            # CRITICAL FIX: Analyze ALL user conversations, not just the current one
+            # This ensures patterns are based on the user's complete history
             if llm:
-                pattern_analysis = self._analyze_psychological_patterns(conversation_text, profile, llm)
+                # Get all conversations for this user to analyze patterns comprehensively
+                user_hash = self.security_manager.hash_pii(user_id)
+                all_user_conversations = []
+                
+                # Try to get all conversations for this user
+                try:
+                    # Try multiple query formats to find all conversations
+                    conversation_queries = [
+                        {"$or": [{"user_id": user_hash}, {"user_id_raw": user_id}]},
+                        {"user_id": user_hash},
+                        {"user_id_raw": user_id},
+                        {"user_id": user_id}
+                    ]
+                    
+                    for query in conversation_queries:
+                        conversations = list(self.conversations.find(query).sort('timestamp', 1).limit(100))
+                        if conversations:
+                            # Validate all conversations belong to this user
+                            validated_conversations = []
+                            for conv in conversations:
+                                conv_user_id = conv.get('user_id') or conv.get('user_id_raw')
+                                if conv_user_id == user_hash or conv_user_id == user_id:
+                                    # Decrypt if needed
+                                    user_input = conv.get('user_input') or conv.get('encrypted_user_input', '')
+                                    if conv.get('data_version') == '2.0_encrypted' and conv.get('encrypted_user_input'):
+                                        try:
+                                            user_input = self.security_manager.decrypt_sensitive_data(conv.get('encrypted_user_input', ''))
+                                        except:
+                                            user_input = conv.get('user_input', '')
+                                    if user_input:
+                                        validated_conversations.append(user_input)
+                            
+                            if validated_conversations:
+                                all_user_conversations = validated_conversations
+                                print(f"📚 Found {len(validated_conversations)} conversations for pattern analysis")
+                                break
+                except Exception as e:
+                    print(f"⚠️ Error fetching user conversations for pattern analysis: {e}")
+                    # Fallback to current conversation only
+                    all_user_conversations = [conversation_text]
+                
+                # Combine all conversations for comprehensive analysis
+                if len(all_user_conversations) > 1:
+                    # Analyze all conversations together for better pattern detection
+                    combined_text = "\n\n".join(all_user_conversations[-20:])  # Last 20 conversations for context
+                    print(f"🧠 Analyzing {len(all_user_conversations)} conversations for psychological patterns")
+                else:
+                    # If only one conversation, use it
+                    combined_text = conversation_text
+                    print(f"🧠 Analyzing single conversation for psychological patterns")
+                
+                pattern_analysis = self._analyze_psychological_patterns(combined_text, profile, llm, user_id)
                 
                 # Update profile with new insights
                 if pattern_analysis:
@@ -1048,8 +1100,8 @@ class MongoDBStorage:
         except Exception as e:
             print(f"❌ Error updating psychological profile: {e}")
 
-    def _analyze_psychological_patterns(self, text: str, profile: PsychologicalProfile, llm=None) -> Dict[str, Any]:
-        """AI-powered deep psychological pattern analysis"""
+    def _analyze_psychological_patterns(self, text: str, profile: PsychologicalProfile, llm=None, user_id: str = None) -> Dict[str, Any]:
+        """AI-powered deep psychological pattern analysis - analyzes ALL user conversations for comprehensive patterns"""
         try:
             if not llm:
                 return {}
@@ -1062,28 +1114,51 @@ class MongoDBStorage:
                 'coping_mechanisms': profile.coping_mechanisms
             }
             
+            # Determine if this is a single conversation or multiple conversations
+            is_multiple_conversations = "\n\n" in text and len(text.split("\n\n")) > 1
+            conversation_count = len(text.split("\n\n")) if is_multiple_conversations else 1
+            
             analysis_prompt = f"""
 You are a clinical psychologist analyzing conversation text for deep psychological patterns.
 
-Current Text: "{text}"
+{"MULTIPLE CONVERSATIONS" if is_multiple_conversations else "SINGLE CONVERSATION"} ANALYSIS:
+{"This text contains " + str(conversation_count) + " conversations from the user's therapy history. Analyze patterns across ALL conversations for comprehensive insights." if is_multiple_conversations else "Analyze this single conversation for initial patterns."}
+
+Conversation Text: "{text[:3000]}"{"..." if len(text) > 3000 else ""}
 
 Existing Profile Context:
-- Known core patterns: {list(existing_patterns['core_patterns'].keys())[:5]}
-- Known cognitive patterns: {list(existing_patterns['cognitive_patterns'].keys())[:5]}
-- Known coping mechanisms: {list(existing_patterns['coping_mechanisms'].keys())[:3]}
+- Known core patterns: {list(existing_patterns['core_patterns'].keys())[:5] if existing_patterns['core_patterns'] else 'None'}
+- Known cognitive patterns: {list(existing_patterns['cognitive_patterns'].keys())[:5] if existing_patterns['cognitive_patterns'] else 'None'}
+- Known coping mechanisms: {list(existing_patterns['coping_mechanisms'].keys())[:3] if existing_patterns['coping_mechanisms'] else 'None'}
 
-Analyze this text for:
+CRITICAL ANALYSIS REQUIREMENTS:
 1. CORE PATTERNS: Fundamental psychological patterns (attachment style, defense mechanisms, core beliefs)
-2. COGNITIVE PATTERNS: Thinking patterns (cognitive distortions, rumination, catastrophizing)
-3. EMOTIONAL PATTERNS: Emotional regulation strategies and patterns
-4. COPING MECHANISMS: How the person deals with stress and challenges
-5. TRIGGER PATTERNS: What seems to trigger emotional responses
+   - Only identify patterns with STRONG evidence across conversations
+   - Confidence should be based on consistency across multiple conversations
+   - If analyzing single conversation, use lower confidence (0.3-0.6)
+   - If analyzing multiple conversations, use higher confidence (0.6-0.9) for consistent patterns
 
-For each pattern found, provide:
-- Pattern name
-- Evidence from text
-- Confidence level (0.1-1.0)
-- Therapeutic implications
+2. COGNITIVE PATTERNS: Thinking patterns (cognitive distortions, rumination, catastrophizing)
+   - Look for recurring thought patterns across conversations
+   - Identify cognitive distortions that appear consistently
+
+3. EMOTIONAL PATTERNS: Emotional regulation strategies and patterns
+   - Identify how the person manages emotions across different situations
+   - Look for patterns in emotional expression and regulation
+
+4. COPING MECHANISMS: How the person deals with stress and challenges
+   - Identify effective and ineffective coping strategies
+   - Note patterns in how they respond to stress
+
+5. TRIGGER PATTERNS: What seems to trigger emotional responses
+   - Identify common triggers across conversations
+
+IMPORTANT GUIDELINES:
+- For single conversation: Be conservative - only identify very clear patterns (confidence 0.3-0.6)
+- For multiple conversations: Identify patterns that appear consistently (confidence 0.6-0.9)
+- Only include patterns with sufficient evidence
+- Do NOT create patterns from insufficient data
+- Return empty objects {{}} if no clear patterns are evident
 
 IMPORTANT: Return ONLY valid JSON, no additional text or explanation.
 

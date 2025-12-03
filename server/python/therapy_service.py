@@ -907,37 +907,44 @@ def get_psychological_profile():
         profile = therapy_bot.storage.get_or_create_psychological_profile(user_id)
         user_hash = therapy_bot.storage.security_manager.hash_pii(user_id)
         
-        # Get actual session count from conversations collection - try multiple formats
+        # CRITICAL FIX: Get actual session count from conversations collection with proper user filtering
         print(f"🔍 [Profile] Looking for sessions with user_id: {user_id}")
         print(f"🔍 [Profile] Hashed user_id: {user_hash}")
-        print(f"🔍 [Profile] Total documents in conversations collection: {therapy_bot.storage.conversations.count_documents({})}")
         
-        # Sample some documents to see the structure
-        sample_docs = list(therapy_bot.storage.conversations.find({}).limit(3))
-        for i, doc in enumerate(sample_docs):
-            print(f"🔍 [Profile] Sample doc {i}: {list(doc.keys())}")
-            if 'user_id' in doc:
-                print(f"🔍 [Profile] Sample doc {i} user_id: {doc['user_id']}")
-            if 'user_context' in doc:
-                print(f"🔍 [Profile] Sample doc {i} user_context: {doc['user_context']}")
-            if 'userId' in doc:
-                print(f"🔍 [Profile] Sample doc {i} userId: {doc['userId']}")
-        
+        # CRITICAL: Use $or query to ensure we only get THIS user's conversations
         session_queries = [
+            {"$or": [{"user_id": user_hash}, {"user_id_raw": user_id}]},
             {"user_id": user_hash},
-            {"user_id": user_id},
-            {"user_id_raw": user_id},  # New format with raw user_id
-            {"user_context.login": user_id},
-            {"userId": user_id}
+            {"user_id_raw": user_id},
+            {"user_id": user_id}
         ]
         
         total_sessions = 0
+        distinct_session_ids = set()
         for query in session_queries:
-            count = therapy_bot.storage.conversations.count_documents(query)
-            print(f"🔍 [Profile] Query {query} found {count} sessions")
-            if count > 0:
-                total_sessions = count
-                break
+            try:
+                conversations = list(therapy_bot.storage.conversations.find(query))
+                # CRITICAL: Validate that all conversations belong to this user
+                validated_count = 0
+                for conv in conversations:
+                    conv_user_id = conv.get('user_id') or conv.get('user_id_raw')
+                    if conv_user_id == user_hash or conv_user_id == user_id:
+                        validated_count += 1
+                        session_id = conv.get('session_id')
+                        if session_id:
+                            distinct_session_ids.add(session_id)
+                
+                if validated_count > 0:
+                    total_sessions = len(distinct_session_ids)  # Count distinct sessions, not conversations
+                    print(f"🔍 [Profile] Query {query} found {validated_count} conversations in {total_sessions} distinct sessions for user {user_id}")
+                    break
+            except Exception as e:
+                print(f"⚠️ [Profile] Error with query {query}: {e}")
+                continue
+        
+        # If no sessions found with queries, total_sessions remains 0
+        if total_sessions == 0:
+            print(f"⚠️ [Profile] No sessions found for user {user_id} - profile may be new")
         
         # Get recent progress data - check both formats
         recent_progress = list(therapy_bot.storage.long_term_progress.find({
@@ -950,15 +957,36 @@ def get_psychological_profile():
         
         latest_progress = recent_progress[0] if recent_progress else {}
         
+        # CRITICAL FIX: Filter core patterns to only include those with sufficient confidence
+        # Patterns should only be shown if they have strong evidence (confidence > 0.5)
+        valid_core_patterns = {}
+        if profile.core_patterns:
+            for pattern_name, pattern_data in profile.core_patterns.items():
+                if isinstance(pattern_data, dict):
+                    confidence = pattern_data.get('confidence', 0)
+                    # Only include patterns with confidence > 0.5 (moderate to high confidence)
+                    if confidence > 0.5:
+                        valid_core_patterns[pattern_name] = pattern_data
+                elif isinstance(pattern_data, (str, int, float)):
+                    # Legacy format - include it
+                    valid_core_patterns[pattern_name] = pattern_data
+        
+        # CRITICAL: Only show patterns if we have actual user conversations
+        # Don't show patterns from a single conversation unless confidence is very high
+        if total_sessions == 0 and len(valid_core_patterns) > 0:
+            # If no sessions found but patterns exist, they might be from other users or invalid
+            print(f"⚠️ [Profile] Warning: Patterns found but no sessions for user {user_id} - clearing patterns")
+            valid_core_patterns = {}
+        
         # Format profile data for API response - simplified to only essential insights
         profile_data = {
             'userId': user_id,
-            'profileExists': bool(profile.core_patterns or total_sessions > 0),
+            'profileExists': bool(valid_core_patterns or total_sessions > 0),
             'lastUpdated': profile.last_updated or datetime.now().isoformat(),
             'insights': {
                 'corePatterns': {
-                    'count': len(profile.core_patterns),
-                    'patterns': list(profile.core_patterns.keys())[:10] if profile.core_patterns else []
+                    'count': len(valid_core_patterns),
+                    'patterns': list(valid_core_patterns.keys())[:10] if valid_core_patterns else []
                 },
                 'copingMechanisms': {
                     'count': len(profile.coping_mechanisms),
@@ -967,6 +995,11 @@ def get_psychological_profile():
                 }
             }
         }
+        
+        print(f"📊 [Profile] Final profile data for user {user_id}:")
+        print(f"   Total sessions: {total_sessions}")
+        print(f"   Core patterns (valid): {len(valid_core_patterns)}")
+        print(f"   Coping mechanisms: {len(profile.coping_mechanisms)}")
         
         return jsonify({
             'success': True,
@@ -1017,13 +1050,16 @@ def get_long_term_progress():
         print(f"🔍 Aggregating all sessions for user_id: {user_id}")
         print(f"🔍 Hashed user_id: {user_hash}")
         
-        # Try different user ID formats to find all conversations
+        # CRITICAL FIX: Use $or query to try all user_id formats but ensure we only get THIS user's data
+        # Priority: user_id_raw (most reliable), then user_hash, then other formats
         conversation_queries = [
+            {"$or": [
+                {"user_id": user_hash},
+                {"user_id_raw": user_id}
+            ]},
             {"user_id": user_hash},
-            {"user_id": user_id},
-            {"user_id_raw": user_id},  # New format with raw user_id
-            {"user_context.login": user_id},
-            {"userId": user_id}
+            {"user_id_raw": user_id},
+            {"user_id": user_id}
         ]
         
         all_conversations = []
@@ -1033,11 +1069,23 @@ def get_long_term_progress():
                 **query,
                 'timestamp': {'$gte': cutoff_date}
             }).sort('timestamp', 1))
+            
+            # CRITICAL: Validate that all conversations belong to this user
             if conversations:
-                all_conversations = conversations
-                query_used = query
-                print(f"🔍 Found {len(conversations)} conversations with query {query}")
-                break
+                validated_conversations = []
+                for conv in conversations:
+                    conv_user_id = conv.get('user_id') or conv.get('user_id_raw')
+                    # Only include if it matches this user
+                    if conv_user_id == user_hash or conv_user_id == user_id:
+                        validated_conversations.append(conv)
+                    else:
+                        print(f"⚠️ Filtered out conversation - user mismatch: {conv_user_id} != {user_id}")
+                
+                if validated_conversations:
+                    all_conversations = validated_conversations
+                    query_used = query
+                    print(f"🔍 Found {len(validated_conversations)} validated conversations for user {user_id} with query {query}")
+                    break
         
         # Also check EmotionalSession collection for chat sessions
         emotional_sessions = []
@@ -1049,8 +1097,16 @@ def get_long_term_progress():
             print(f"🔍 Found {len(emotional_sessions)} emotional sessions")
         
         # Get distinct session IDs from conversations
+        # CRITICAL FIX: Count crisis events per SESSION (not per conversation)
         distinct_sessions = {}
         for conv in all_conversations:
+            # CRITICAL: Validate that conversation belongs to this user
+            conv_user_id = conv.get('user_id') or conv.get('user_id_raw')
+            if conv_user_id != user_hash and conv_user_id != user_id:
+                # Skip conversations that don't belong to this user
+                print(f"⚠️ Skipping conversation - user mismatch: {conv_user_id} != {user_id}")
+                continue
+                
             session_id = conv.get('session_id')
             if session_id:
                 if session_id not in distinct_sessions:
@@ -1059,17 +1115,28 @@ def get_long_term_progress():
                         'crisis_level': conv.get('crisis_level', 'none'),
                         'mood_scores': [],
                         'patterns_identified': 0,
-                        'crisis_events': 0
+                        'has_crisis': False  # Track if session has ANY crisis, not count per conversation
                     }
                 # Aggregate data per session
                 if conv.get('mood_score'):
                     distinct_sessions[session_id]['mood_scores'].append(conv.get('mood_score'))
+                # FIXED: Mark session as having crisis if ANY conversation has crisis, but count ONCE per session
                 if conv.get('crisis_level') not in ['none', None, 'stable']:
-                    distinct_sessions[session_id]['crisis_events'] += 1
+                    distinct_sessions[session_id]['has_crisis'] = True
+                    # Update to highest crisis level in session
+                    current_level = distinct_sessions[session_id]['crisis_level']
+                    crisis_levels = {'none': 0, 'low': 1, 'medium': 2, 'high': 3, 'critical': 4}
+                    if crisis_levels.get(conv.get('crisis_level', 'none'), 0) > crisis_levels.get(current_level, 0):
+                        distinct_sessions[session_id]['crisis_level'] = conv.get('crisis_level', 'none')
                 distinct_sessions[session_id]['patterns_identified'] = max(
                     distinct_sessions[session_id]['patterns_identified'],
                     conv.get('patterns_identified', 0)
                 )
+        
+        # Convert has_crisis to crisis_events count (1 per session with crisis)
+        for session_id in distinct_sessions:
+            distinct_sessions[session_id]['crisis_events'] = 1 if distinct_sessions[session_id]['has_crisis'] else 0
+            del distinct_sessions[session_id]['has_crisis']  # Remove temporary flag
         
         # Get progress entries from long_term_progress collection - try both formats
         progress_queries = [
@@ -1101,24 +1168,36 @@ def get_long_term_progress():
                 session_progress_map[date_str]['crisisEvents'] += 1
         
         # Add sessions from conversations to progress map
+        # CRITICAL FIX: Ensure we only process sessions that belong to this user
         for session_id, session_data in distinct_sessions.items():
             date_str = session_data['date'].strftime('%Y-%m-%d') if hasattr(session_data['date'], 'strftime') else datetime.now().strftime('%Y-%m-%d')
             if date_str not in session_progress_map:
-                avg_mood = sum(session_data['mood_scores']) / len(session_data['mood_scores']) if session_data['mood_scores'] else None
+                # Calculate average mood only from valid mood scores (0-10 range)
+                valid_mood_scores = [m for m in session_data['mood_scores'] if m is not None and 0 <= m <= 10]
+                avg_mood = sum(valid_mood_scores) / len(valid_mood_scores) if valid_mood_scores else None
                 session_progress_map[date_str] = {
                     'date': date_str,
                     'crisisLevel': session_data['crisis_level'],
-                    'moodScore': avg_mood,
+                    'moodScore': round(avg_mood, 1) if avg_mood is not None else None,
                     'patternsIdentified': session_data['patterns_identified'],
                     'crisisEvents': session_data['crisis_events']
                 }
             else:
-                # Merge data
+                # Merge data - only merge if it's from the same user
                 if session_data['mood_scores']:
-                    existing_mood = session_progress_map[date_str]['moodScore']
-                    new_avg = sum(session_data['mood_scores']) / len(session_data['mood_scores'])
-                    session_progress_map[date_str]['moodScore'] = (existing_mood + new_avg) / 2 if existing_mood else new_avg
-                session_progress_map[date_str]['crisisEvents'] += session_data['crisis_events']
+                    valid_mood_scores = [m for m in session_data['mood_scores'] if m is not None and 0 <= m <= 10]
+                    if valid_mood_scores:
+                        new_avg = sum(valid_mood_scores) / len(valid_mood_scores)
+                        existing_mood = session_progress_map[date_str]['moodScore']
+                        if existing_mood is not None:
+                            # Average the two mood scores
+                            session_progress_map[date_str]['moodScore'] = round((existing_mood + new_avg) / 2, 1)
+                        else:
+                            session_progress_map[date_str]['moodScore'] = round(new_avg, 1)
+                # CRITICAL: Crisis events are already counted per session (0 or 1), so don't add them
+                # They should be set, not incremented
+                if session_data['crisis_events'] > 0:
+                    session_progress_map[date_str]['crisisEvents'] = 1
                 session_progress_map[date_str]['patternsIdentified'] = max(
                     session_progress_map[date_str]['patternsIdentified'],
                     session_data['patterns_identified']
@@ -1132,11 +1211,23 @@ def get_long_term_progress():
         if hasattr(therapy_bot.storage, 'emotional_sessions') and emotional_sessions:
             total_sessions += len(emotional_sessions)
         
-        # Calculate summary statistics
+        # Calculate summary statistics - CRITICAL: Only use data from this user's sessions
         mood_scores = [p['moodScore'] for p in progress_data if p.get('moodScore') is not None]
-        avg_mood = sum(mood_scores) / len(mood_scores) if mood_scores else 5.0
+        # FIXED: Only calculate average if we have actual mood scores, otherwise return None/0
+        avg_mood = sum(mood_scores) / len(mood_scores) if mood_scores else None
+        if avg_mood is None:
+            avg_mood = 0.0  # Default to 0 if no mood data available
         
+        # FIXED: Crisis events are now correctly counted (1 per session with crisis)
         crisis_events = sum(p.get('crisisEvents', 0) for p in progress_data)
+        
+        # CRITICAL: Log for debugging
+        print(f"📊 Progress Summary for user {user_id}:")
+        print(f"   Total sessions: {total_sessions}")
+        print(f"   Mood scores found: {len(mood_scores)}")
+        print(f"   Average mood: {avg_mood}")
+        print(f"   Crisis events: {crisis_events}")
+        print(f"   Progress entries: {len(progress_data)}")
         
         # Determine trend from mood scores
         if len(mood_scores) >= 2:
