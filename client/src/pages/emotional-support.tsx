@@ -63,11 +63,40 @@ const EmotionalSupport = () => {
   const { isAuthenticated, logout, user } = useAuth();
   const typedUser = user as User | null;
 
+  // Clear localStorage session data if userId doesn't match current user
+  useEffect(() => {
+    if (isAuthenticated && typedUser?.id) {
+      const activeSessionData = localStorage.getItem('activeSessionData');
+      if (activeSessionData) {
+        try {
+          const sessionInfo = JSON.parse(activeSessionData);
+          // If stored userId doesn't match current user, clear it to prevent memory leak
+          if (sessionInfo.userId && sessionInfo.userId !== typedUser.id) {
+            console.log('🚨 User mismatch detected - clearing previous user session data');
+            localStorage.removeItem('activeSessionData');
+            localStorage.removeItem('continuingSession');
+            setSessionData({});
+            setMessages([]);
+          }
+        } catch (error) {
+          console.error('Error validating session data:', error);
+          localStorage.removeItem('activeSessionData');
+        }
+      }
+    } else if (!isAuthenticated) {
+      // Clear session data if user is not authenticated
+      localStorage.removeItem('activeSessionData');
+      localStorage.removeItem('continuingSession');
+      setSessionData({});
+      setMessages([]);
+    }
+  }, [isAuthenticated, typedUser?.id]);
+
   // Check service health and handle session continuation on component mount
   useEffect(() => {
     checkServiceHealth();
     handleSessionContinuation();
-  }, [existingSession]);
+  }, [existingSession, isAuthenticated, typedUser?.id]);
 
   // Auto-scroll to bottom when new messages are added
   useEffect(() => {
@@ -95,10 +124,12 @@ const EmotionalSupport = () => {
 
   // Session persistence - save active session data
   useEffect(() => {
-    if (sessionData.sessionId && messages.length > 0) {
+    // CRITICAL FIX: Only save if user is authenticated and userId matches
+    if (isAuthenticated && typedUser?.id && sessionData.sessionId && messages.length > 0) {
+      // Ensure we're saving with the current authenticated user's ID
       const sessionToSave = {
         sessionId: sessionData.sessionId,
-        userId: sessionData.userId,
+        userId: typedUser.id, // Always use current authenticated user ID
         sessionKey: sessionData.sessionKey,
         messages: messages.map(msg => ({
           role: msg.user ? 'user' : 'assistant',
@@ -111,7 +142,7 @@ const EmotionalSupport = () => {
       localStorage.setItem('activeSessionData', JSON.stringify(sessionToSave));
       console.log('💾 Saved active session data:', sessionData.sessionId);
     }
-  }, [sessionData, messages]);
+  }, [sessionData, messages, isAuthenticated, typedUser?.id]);
 
   // Cleanup typing timeout and session data on unmount
   useEffect(() => {
@@ -126,16 +157,31 @@ const EmotionalSupport = () => {
 
   const handleSessionContinuation = () => {
     try {
+      // CRITICAL: Only restore session if user is authenticated and userId matches
+      if (!isAuthenticated || !typedUser?.id) {
+        console.log('⚠️ User not authenticated - skipping session restoration');
+        return;
+      }
+
       // First, check for active session data (from page refresh)
       const activeSessionData = localStorage.getItem('activeSessionData');
       if (activeSessionData && !sessionIdFromUrl) {
         const sessionInfo = JSON.parse(activeSessionData);
+        
+        // CRITICAL FIX: Validate userId matches current authenticated user
+        if (sessionInfo.userId && sessionInfo.userId !== typedUser.id) {
+          console.log('🚨 SECURITY: Stored session belongs to different user - clearing it');
+          localStorage.removeItem('activeSessionData');
+          localStorage.removeItem('continuingSession');
+          return;
+        }
+        
         console.log('🔄 Restoring active session from localStorage:', sessionInfo.sessionId);
         
-        // Set session data for continuation
+        // Set session data for continuation (ensure userId matches current user)
         setSessionData({
           sessionId: sessionInfo.sessionId,
-          userId: sessionInfo.userId,
+          userId: typedUser.id, // Use current authenticated user ID
           sessionKey: sessionInfo.sessionKey
         });
 
@@ -167,10 +213,16 @@ const EmotionalSupport = () => {
       
       // Check if we have an existing session from the database
       if (existingSession && !sessionLoading && !sessionError) {
-        // Set session data for continuation
+        // CRITICAL FIX: Validate userId matches current authenticated user
+        if (existingSession.userId && typedUser?.id && existingSession.userId !== typedUser.id) {
+          console.log('🚨 SECURITY: Database session belongs to different user - ignoring it');
+          return;
+        }
+        
+        // Set session data for continuation (ensure userId matches current user)
         setSessionData({
           sessionId: existingSession.sessionId,
-          userId: existingSession.userId,
+          userId: typedUser?.id || existingSession.userId, // Use current authenticated user ID
         });
 
         // Restore previous messages if available
@@ -204,10 +256,17 @@ const EmotionalSupport = () => {
       if (continuingSessionData && !existingSession) {
         const sessionInfo = JSON.parse(continuingSessionData);
         
-        // Set session data for continuation
+        // CRITICAL FIX: Validate userId matches current authenticated user
+        if (sessionInfo.userId && typedUser?.id && sessionInfo.userId !== typedUser.id) {
+          console.log('🚨 SECURITY: Legacy session belongs to different user - clearing it');
+          localStorage.removeItem('continuingSession');
+          return;
+        }
+        
+        // Set session data for continuation (ensure userId matches current user)
         setSessionData({
           sessionId: sessionInfo.sessionId,
-          userId: sessionInfo.userId,
+          userId: typedUser?.id || sessionInfo.userId, // Use current authenticated user ID
           sessionKey: sessionInfo.sessionKey
         });
 

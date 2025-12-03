@@ -8,6 +8,8 @@ import SharedSidebarEmotional from '@/components/layout/SharedSidebarEmotional';
 import FeedbackModal from '@/components/layout/FeedbackModel';
 import PageHeader from '@/components/layout/PageHeader';
 import { useSession } from '@/hooks/useSession';
+import { useAuth } from '@/hooks/useAuth';
+import type { User } from '@/types/auth';
 
 interface SessionData {
   sessionId?: string;
@@ -47,6 +49,10 @@ const EmotionalSupportVoice = () => {
   
   // Use the session hook to fetch session data if continuing
   const { session: existingSession, loading: sessionLoading, error: sessionError } = useSession(sessionIdFromUrl);
+  
+  // Use auth hook for authentication state
+  const { isAuthenticated, user } = useAuth();
+  const typedUser = user as User | null;
 
   // Manage avatar state transitions based on recording state
   useEffect(() => {
@@ -171,10 +177,12 @@ const EmotionalSupportVoice = () => {
 
   // Session persistence - save active session data for voice mode
   useEffect(() => {
-    if (sessionData.sessionId && history.length > 0) {
+    // CRITICAL FIX: Only save if user is authenticated and userId matches
+    if (isAuthenticated && typedUser?.id && sessionData.sessionId && history.length > 0) {
+      // Ensure we're saving with the current authenticated user's ID
       const sessionToSave = {
         sessionId: sessionData.sessionId,
-        userId: sessionData.userId,
+        userId: typedUser.id, // Always use current authenticated user ID
         sessionKey: sessionData.sessionKey,
         messages: history.flatMap(item => [
           ...(item.user ? [{ role: 'user', content: item.user, timestamp: new Date().toISOString() }] : []),
@@ -186,7 +194,7 @@ const EmotionalSupportVoice = () => {
       localStorage.setItem('activeVoiceSessionData', JSON.stringify(sessionToSave));
       console.log('💾 Saved active voice session data:', sessionData.sessionId);
     }
-  }, [sessionData, history]);
+  }, [sessionData, history, isAuthenticated, typedUser?.id]);
 
   // Check therapy service status on mount
   useEffect(() => {
@@ -218,20 +226,35 @@ const EmotionalSupportVoice = () => {
     // Check status every 30 seconds
     const interval = setInterval(checkServiceStatus, 30000);
     return () => clearInterval(interval);
-  }, [serviceStatus, existingSession]);
+  }, [serviceStatus, existingSession, isAuthenticated, typedUser?.id]);
 
   const handleSessionContinuation = () => {
     try {
+      // CRITICAL: Only restore session if user is authenticated and userId matches
+      if (!isAuthenticated || !typedUser?.id) {
+        console.log('⚠️ User not authenticated - skipping voice session restoration');
+        return;
+      }
+
       // First, check for active voice session data (from page refresh)
       const activeVoiceSessionData = localStorage.getItem('activeVoiceSessionData');
       if (activeVoiceSessionData && !sessionIdFromUrl) {
         const sessionInfo = JSON.parse(activeVoiceSessionData);
+        
+        // CRITICAL FIX: Validate userId matches current authenticated user
+        if (sessionInfo.userId && sessionInfo.userId !== typedUser.id) {
+          console.log('🚨 SECURITY: Stored voice session belongs to different user - clearing it');
+          localStorage.removeItem('activeVoiceSessionData');
+          localStorage.removeItem('continuingSession');
+          return;
+        }
+        
         console.log('🔄 Restoring active voice session from localStorage:', sessionInfo.sessionId);
         
-        // Set session data for continuation
+        // Set session data for continuation (ensure userId matches current user)
         setSessionData({
           sessionId: sessionInfo.sessionId,
-          userId: sessionInfo.userId,
+          userId: typedUser.id, // Use current authenticated user ID
           sessionKey: sessionInfo.sessionKey
         });
 
@@ -268,10 +291,16 @@ const EmotionalSupportVoice = () => {
       
       // Check if we have an existing session from the database
       if (existingSession && !sessionLoading && !sessionError) {
-        // Set session data for continuation
+        // CRITICAL FIX: Validate userId matches current authenticated user
+        if (existingSession.userId && typedUser?.id && existingSession.userId !== typedUser.id) {
+          console.log('🚨 SECURITY: Database voice session belongs to different user - ignoring it');
+          return;
+        }
+        
+        // Set session data for continuation (ensure userId matches current user)
         setSessionData({
           sessionId: existingSession.sessionId,
-          userId: existingSession.userId,
+          userId: typedUser?.id || existingSession.userId, // Use current authenticated user ID
         });
 
         // Restore previous history if available
@@ -304,10 +333,17 @@ const EmotionalSupportVoice = () => {
       if (continuingSessionData && !existingSession) {
         const sessionInfo = JSON.parse(continuingSessionData);
         
-        // Set session data for continuation
+        // CRITICAL FIX: Validate userId matches current authenticated user
+        if (sessionInfo.userId && typedUser?.id && sessionInfo.userId !== typedUser.id) {
+          console.log('🚨 SECURITY: Legacy voice session belongs to different user - clearing it');
+          localStorage.removeItem('continuingSession');
+          return;
+        }
+        
+        // Set session data for continuation (ensure userId matches current user)
         setSessionData({
           sessionId: sessionInfo.sessionId,
-          userId: sessionInfo.userId,
+          userId: typedUser?.id || sessionInfo.userId, // Use current authenticated user ID
           sessionKey: sessionInfo.sessionKey
         });
 
