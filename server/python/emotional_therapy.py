@@ -1100,7 +1100,7 @@ class MongoDBStorage:
         except Exception as e:
             print(f"❌ Error updating psychological profile: {e}")
 
-    def _analyze_psychological_patterns(self, text: str, profile: PsychologicalProfile, llm=None, user_id: str = None) -> Dict[str, Any]:
+    def _analyze_psychological_patterns(self, text: str, profile: PsychologicalProfile, llm=None, user_id: Optional[str] = None) -> Dict[str, Any]:
         """AI-powered deep psychological pattern analysis - analyzes ALL user conversations for comprehensive patterns"""
         try:
             if not llm:
